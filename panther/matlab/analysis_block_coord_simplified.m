@@ -13,7 +13,7 @@ opti = casadi.Opti();
 deg_pos=3;
 deg_yaw=2;
 num_seg =6; %number of segments
-num_max_of_obst=10; %This is the maximum num of the obstacles 
+num_max_of_obst=1; %This is the maximum num of the obstacles 
 num_samples_simpson=7;  %This will also be the num_of_layers in the graph yaw search of C++
 num_of_yaw_per_layer=40; %This will be used in the graph yaw search of C++
                          %Note that the initial layer will have only one yaw (which is given) 
@@ -114,6 +114,25 @@ const_y{end+1}=sy.getVelT(t0)== ydot0_scaled ;
 const_p{end+1}=sp.getVelT(tf)== vf_scaled;
 const_p{end+1}=sp.getAccelT(tf)== af_scaled;
 const_y{end+1}=sy.getVelT(tf)==ydotf_scaled; % Needed: if not (and if you are minimizing ddyaw), dyaw=cte --> yaw will explode
+
+
+%Obstacle constraints;
+for j=1:(sp.num_seg)
+
+    %Get the control points of the interval
+    Q=sp.getCPs_XX_Pos_ofInterval(basis, j);
+
+    %Plane constraints
+    for obst_index=1:num_max_of_obst
+      ip = (obst_index-1) * sp.num_seg + j;  % index plane
+           
+      %and the control points on the other side
+      for kk=1:size(Q,2)
+        const_p{end+1}= n{ip}'*Q{kk} + d{ip} <= 0;
+      end
+    end  
+end
+
 
 
 [const_p,const_y]=addDynLimConstraints(const_p,const_y, sp, sy, basis, v_max_scaled, a_max_scaled, j_max_scaled, ydot_max_scaled);
@@ -247,6 +266,16 @@ pf_value=[4.0;0.0;0.0];
 vf_value=[0;0;0];
 af_value=[0;0;0];
 
+% all_nd_value= zeros(4,num_max_of_obst*num_seg);
+all_nd_value=[];
+for j=1:floor(num_seg/2)
+    all_nd_value=[all_nd_value (1/sqrt(2))*[1; 1; 0; 2] ];
+end
+
+for j=(floor(num_seg/2)+1):num_seg
+    all_nd_value=[all_nd_value (1/sqrt(2))*[-1; 1; 0; 2] ];
+end
+
 
 all_params= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV_deg_value)},...
               {createStruct('thetay_FOV_deg', thetay_FOV_deg, thetay_FOV_deg_value)},...
@@ -266,7 +295,7 @@ all_params= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV_deg_val
               {createStruct('j_max', j_max, j_max_value)},...
               {createStruct('ydot_max', ydot_max, ydot_max_value)},... 
               {createStruct('total_time', total_time, total_time_value)},...
-              {createStruct('all_nd', all_nd, zeros(4,num_max_of_obst*num_seg))},...
+              {createStruct('all_nd', all_nd, all_nd_value)},...
               {createStruct('c_pos_smooth', c_pos_smooth, 10.0)},...
               {createStruct('c_yaw_smooth', c_yaw_smooth, 0.0)},...
               {createStruct('c_fov', c_fov, 1.0)},...
@@ -496,6 +525,15 @@ plotSphere(zeros(3,1),0.2,'g');
 grid on; xlabel('x'); ylabel('y'); zlabel('z'); 
 camlight
 lightangle(gca,45,0)
+
+
+syms x y z real
+for i=1:size(all_nd_value,2)
+   fimplicit3(all_nd_value(:,i)'*[x;y;z;1],[-4 4 -4 4 -2 2], 'MeshDensity',2, 'FaceAlpha',0.6) 
+end
+
+view(-91,90)
+
 
 
 %% Visualization of the hessians
