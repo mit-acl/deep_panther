@@ -4,6 +4,7 @@ NOTA: These instructions will make use of IPOPT 3.11.9 (the one installed by def
 
 These instructions partly follow [this](https://github.com/casadi/casadi/wiki/matlab):
 ```
+sudo apt-get install coinor-libipopt1v5 #This installs IPOPT
 sudo apt-get remove swig
 sudo apt-get remove swig3.0  #If you don't do this, the compilation of casadi may fail with the error "swig error : Unrecognized option -matlab"
 cd ~/installations
