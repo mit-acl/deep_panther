@@ -413,8 +413,7 @@ yline(full(sol_single.total_cost),'--')
 for i=1:num_outer_it
     plot(i*ones(size(inner_iterations_p{i})), inner_iterations_p{i},'-b')
     scatter(i*ones(size(inner_iterations_p{i})), inner_iterations_p{i},'b','filled')
-    legend('h')
-    
+
     plot(i*ones(size(inner_iterations_y{i})), inner_iterations_y{i},'-r')
     scatter(i*ones(size(inner_iterations_y{i})), inner_iterations_y{i},'r','filled')
     

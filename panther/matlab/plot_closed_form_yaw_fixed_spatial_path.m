@@ -97,9 +97,9 @@ for t=all_t
 %         Y=[Y  abc_T_b(1:2,2)];
 %          
         
-        b0=R(:,1)*norm(a);
+        b1=R(:,1)*norm(a);
         
-        value=norm(ee)*cosd(80)*norm(a)-b0'*ee; %This is the cost (the more negative it is--> the more in the FOV it is)
+        value=norm(ee)*cosd(80)*norm(a)-b1'*ee; %This is the cost (the more negative it is--> the more in the FOV it is)
         value=value/(norm(a)*norm(ee)); %This doesn't affect the constraint, and makes the value non-dimensional 
         all_values=[all_values value];
         all_circles_all_values(index_t,i)=value;
@@ -148,14 +148,14 @@ for t=all_t
 
     qabc=qabcFromAccel(a, 9.81);
     Rabc=toRotMat(qabc);
-    Tabc=[Rabc pos; 0 0 0 1];
+    w_Tabc_b0y=[Rabc pos; 0 0 0 1]; %The frame "b0y" stands for "body zero yaw", and has yaw=0
     
-    b_r0star=inv(Tabc)*[tmp;1];
-    b_r0star=b_r0star(1:3);
-    assert(abs(b_r0star(3))<0.0001)
+    b0y_r0star=inv(w_Tabc_b0y)*[tmp;1]; %express the vector in the frame "b0y" 
+    b0y_r0star=b0y_r0star(1:3); 
+    assert(abs(b0y_r0star(3))<0.0001)
     
-    dataPoints{end+1}=b_r0star(1:2)';
-    angles_datapoints=[angles_datapoints atan2(b_r0star(2),b_r0star(1))];
+    dataPoints{end+1}=b0y_r0star(1:2)';
+    angles_datapoints=[angles_datapoints atan2(b0y_r0star(2),b0y_r0star(1))]; %compute the yaw angle 
 %     
 %     u=r0_star; v=Rabc(:,1);
 %     CosTheta = max(min(dot(u,v)/(norm(u)*norm(v)),1),-1);
