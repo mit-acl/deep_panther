@@ -23,6 +23,7 @@ Add gurobi91 to the file cmake/FindGUROBI.cmake   #Or in general to the gurobi v
 mkdir build && cd build
 make clean 
 cmake . -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=ON -DWITH_MATLAB=ON -DWITH_PYTHON=ON -DWITH_DEEPBIND=ON -DWITH_GUROBI=ON ..
+make
 sudo make install
 ```
 
