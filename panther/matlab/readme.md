@@ -46,7 +46,7 @@ mkdir build && cd build
 make clean 
 cmake . -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=ON -DWITH_MATLAB=ON -DWITH_PYTHON=ON -DWITH_DEEPBIND=ON -DWITH_GUROBI=ON ..
 #For some reason, I needed to run the command above twice until `Ipopt` was detected (although `IPOPT` was being detected already)
-make
+make -j20
 sudo make install
 ```
 
