@@ -16,6 +16,7 @@ Follow [this](https://github.com/casadi/casadi/wiki/InstallationLinux#option-2-c
 
 ### From binaries.
 `sudo apt-get install coinor-libipopt1v5`
+
 You can check if this package is installed (using  `apt-get install`) by running `dpkg -l | grep ipopt`
 
 ## Install Casadi
