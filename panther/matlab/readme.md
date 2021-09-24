@@ -8,7 +8,7 @@ Instructions to install Casadi from source, with Gurobi and from Matlab [Sept. 2
 ```
 sudo apt-get install gcc g++ gfortran git cmake liblapack-dev pkg-config --install-recommends
 sudo apt-get install swig
-sudo apt-get install coinor-libipopt-dev
+sudo apt-get install coinor-libipopt-dev #Is this needed???
 ```
 ## Install IPOPT
 
