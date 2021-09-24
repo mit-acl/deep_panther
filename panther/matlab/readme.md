@@ -3,7 +3,7 @@ Instructions to install Casadi from source, with Gurobi and from Matlab [April 2
 NOTA: These instructions will make use of IPOPT 3.11.9 (the one installed by defaut when using `sudo apt-get install coinor-libipopt-dev` in Ubuntu 18.04). However, the binaries that Casadi provides have Ipopt 3.12.3 (see [this](https://github.com/casadi/casadi/releases#:~:text=3.12.3)). For a specific optimization problem I had, it worked perfectly when using Casadi from binaries (which uses IPOPT 3.12.3), but it reported `Restoration phase is called at point that is almost feasible` or `Restoration failed` when using Casadi from source (which uses IPOPT 3.11.9)
 
 
-========================
+## Preliminaries
 Follow the first section [here](https://github.com/casadi/casadi/wiki/InstallationLinux#installation-on-linux)
 
 ## Install IPOPT
