@@ -64,6 +64,9 @@ x = MX.sym('x')
 disp(jacobian(sin(x),x))
 ```
 
+## Install additional linear solvers
+Follow [this](https://github.com/jtorde/panther_plus_plus#:~:text=Optional%20(recommended%20for%20better%20performance)
+
 
 ===
 
