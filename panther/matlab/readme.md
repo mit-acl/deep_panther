@@ -13,11 +13,10 @@ sudo apt-get install coinor-libipopt-dev #Is this needed???
 ## Install IPOPT
 
 ### From source. 
-Follow [this](https://github.com/casadi/casadi/wiki/InstallationLinux#option-2-compiling-ipopt-from-sources). But, if you wanna use MLK, use this configure command instead:
+Follow [this](https://github.com/casadi/casadi/wiki/InstallationLinux#option-2-compiling-ipopt-from-sources). But, if you wanna use MLK, use this configure command instead (Note that if you wanna use MLK, you need to first have `Intel(R) Parallel Studio XE 2018` installed. (TODO: Write instructions for this)):
 ```
 ../configure --prefix=/usr/local --with-blas="-L$MKLROOT/lib/intel64 -lmkl_rt -liomp5 -lpthread -lm -ldl" ADD_FFLAGS=-fPIC ADD_CFLAGS=-fPIC ADD_CXXFLAGS=-fPIC
 ```
-*Note that if you wanna use MLK, you need to first have `Intel(R) Parallel Studio XE 2018` installed. (TODO: Write instructions for this)*
 
 ### From binaries.
 `sudo apt-get install coinor-libipopt1v5`
