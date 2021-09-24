@@ -50,7 +50,7 @@ make
 sudo make install
 ```
 
-See also https://github.com/jtorde/casadi  for some modifications I did!!
+See also https://github.com/jtorde/casadi  for some modifications I did!!. I've modified the casadi source files to be able to do directly opti.change_problem_type('nlp') (or 'gurobi'), see also https://github.com/casadi/casadi/issues/2775
 
 Then, type matlab in the terminal, run `edit(fullfile(userpath,'startup.m'))`, and add this line to that file:
 
@@ -66,10 +66,3 @@ disp(jacobian(sin(x),x))
 
 ## Install additional linear solvers
 Follow [this](https://github.com/jtorde/panther_plus_plus#:~:text=Optional%20(recommended%20for%20better%20performance))
-
-
-===
-
-I've modified the casadi source files to be able to do directly opti.change_problem_type('nlp') (or 'gurobi'), see also https://github.com/casadi/casadi/issues/2775
-
-=======================================
