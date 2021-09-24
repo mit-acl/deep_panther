@@ -4,8 +4,12 @@ NOTA: These instructions will make use of IPOPT 3.11.9 (the one installed by def
 
 
 ## Preliminaries
-Follow the first section [here](https://github.com/casadi/casadi/wiki/InstallationLinux#installation-on-linux)
-
+(Partly taken from [here](https://github.com/casadi/casadi/wiki/InstallationLinux#installation-on-linux))
+```
+sudo apt-get install gcc g++ gfortran git cmake liblapack-dev pkg-config --install-recommends
+sudo apt-get install swig
+sudo apt-get install coinor-libipopt-dev
+```
 ## Install IPOPT
 
 ### From source. 
