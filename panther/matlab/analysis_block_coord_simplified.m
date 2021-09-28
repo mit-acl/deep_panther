@@ -28,7 +28,7 @@ opti = casadi.Opti();
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CONSTANTS! %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-use_yaw_closed_form=false; %If false, yaw will be optimized.
+use_yaw_closed_form=true; %If false, yaw will be optimized.
 
 deg_pos=3;
 deg_yaw=2;
@@ -78,6 +78,7 @@ thetay_half_FOV_rad=thetay_half_FOV_deg*pi/180.0;
 %total_time=opti.parameter(1,1); %This allows a different t0 and tf than the one above
 
 alpha=opti.variable(1,1); %Total time is (tf_n-t0_n)*alpha. 
+total_time=alpha*(tf_n-t0_n);
 
 % scaling=(tf_n-t0_n)/total_time;
 
@@ -184,8 +185,8 @@ vel_im_cost=0;
 fov_cost=0;
 
 clear i
-t_simpson=linspace(t0_n,tf_n,num_samples_simpson);
-delta_simpson=(t_simpson(2)-t_simpson(1));
+t_simpson_n=linspace(t0_n,tf_n,num_samples_simpson);
+h=alpha*(t_simpson_n(2)-t_simpson_n(1));
 
 
 % u=MX.sym('u',1,1); %it must be defined outside the loop (so that then I can use substitute it regardless of the interval
@@ -195,16 +196,16 @@ w_velfewrtworldvar=MX.sym('w_velfewrtworld',3,1);
 simpson_index=1;
 simpson_coeffs=[];
 all_fov_costs=[];
-
+all_simpson_constants=[];
 all_target_isInFOV=[];
 
 f=0.05;%focal length in meters
 
 
-for t=t_simpson
+for t_n=t_simpson_n
     
-    w_t_b = sp.getPosT(t);
-    a=sp.getAccelT(t)/(alpha^(2));
+    w_t_b = sp.getPosT(t_n);
+    a=sp.getAccelT(t_n)/(alpha^(2));
     xi=a+[0;0;g];
     
     if(use_yaw_closed_form==false)
@@ -214,7 +215,7 @@ for t=t_simpson
         nxi=sqrt(nxi2);    
         nxi2_plus_xi3nxi=nxi2 + xi(3)*nxi;
         
-        yaw=sy.getPosT(t);
+        yaw=sy.getPosT(t_n);
         b1= [ (1-(xi1^2)/nxi2_plus_xi3nxi)*cos(yaw) -    xi1*xi2*sin(yaw)/nxi2_plus_xi3nxi;
               -xi1*xi2*cos(yaw)/nxi2_plus_xi3nxi     +    (1 - (xi2^2)/nxi2_plus_xi3nxi)*sin(yaw);
                (xi1/nxi)*cos(yaw)                 +    (xi2/nxi)*sin(yaw)         ]; %note that, by construction, norm(b1)=1;
@@ -230,17 +231,24 @@ for t=t_simpson
     
     fov_cost_j=max(0,f)^3; %Penalty associated with the constraint
     
-    simpson_coeff=getSimpsonCoeff(simpson_index,num_samples_simpson);
-    fov_cost=fov_cost + (delta_simpson/3.0)*simpson_coeff*fov_cost_j; %See https://en.wikipedia.org/wiki/Simpson%27s_rule#Composite_Simpson's_rule
+    simpson_constant=(h/3.0)*getSimpsonCoeff(simpson_index,num_samples_simpson);
+    
+    fov_cost=fov_cost + simpson_constant*fov_cost_j; %See https://en.wikipedia.org/wiki/Simpson%27s_rule#Composite_Simpson's_rule
     
     all_fov_costs=[all_fov_costs fov_cost_j];
     
     simpson_index=simpson_index+1;
+    all_simpson_constants=[all_simpson_constants simpson_constant];
     
 end
 
+%At this point, fov_cost must be in [0, sum(all_simpson_constants)]
+%Let's normalize it in [0,1]
+fov_cost=fov_cost/sum(all_simpson_constants);  %This is to make sure that this term is in [0,1]
+
 %Cost
-pos_smooth_cost=sp.getControlCost()/(alpha^(sp.p-1));
+pos_smooth_cost=sp.getControlCost()/(alpha^(sp.p-1)); %This is integral of jerk^2 over total_time=alpha*(tf_n-t0_n);
+pos_smooth_cost=pos_smooth_cost/((j_max'*j_max)*total_time); %This is to make sure that this term is in [0,1]
 
 
 final_pos_cost=(sp.getPosT(tf_n)- pf)'*(sp.getPosT(tf_n)- pf);
@@ -415,9 +423,13 @@ sol=my_func( names_value{:});
 full(sol.pCPs)
 
 all_var_solved=[{createStruct('pCPs', pCPs, full(sol.pCPs))},...
-                {createStruct('yCPs', yCPs, full(sol.yCPs))},...
                 {createStruct('alpha', alpha, full(sol.alpha))}];
-
+            
+if(use_yaw_closed_form==false)
+    all_var_solved=[{createStruct('yCPs', yCPs, full(sol.yCPs))},...
+                    all_var_solved];
+end
+            
 if(use_yaw_closed_form==false)
   full(sol.yCPs)
 end
@@ -475,7 +487,7 @@ plotSphere( sp.getPosT(t0_n),0.2,'b'); plotSphere( sp.getPosT(tf_n),0.2,'r');
 view([280,15]); axis equal
 % 
 disp("Plotting")
-for t_i=t_simpson %t0:0.3:tf  
+for t_i=t_simpson_n %t0:0.3:tf  
     
     w_t_b = sp.getPosT(t_i);
     accel = sp.getAccelT(t_i)/(alpha_result^2);
@@ -518,10 +530,10 @@ plotSphere(zeros(3,1),0.2,'g');
 grid on; xlabel('x'); ylabel('y'); zlabel('z'); camlight; lightangle(gca,45,0)
 
 
-% syms x y z real
-% for i=1:size(all_nd_value,2)
-%    fimplicit3(all_nd_value(:,i)'*[x;y;z;1],[-4 4 -4 4 -2 2], 'MeshDensity',2, 'FaceAlpha',0.6) 
-% end
+syms x y z real
+for i=1:size(all_nd_value,2)
+   fimplicit3(all_nd_value(:,i)'*[x;y;z;1],[-4 4 -4 4 -2 2], 'MeshDensity',2, 'FaceAlpha',0.6) 
+end
 
 view(-91,90)
 
@@ -529,7 +541,7 @@ view(-91,90)
 
 all_fov_costs_evaluated=substituteWithSolution(all_fov_costs, all_var_solved, all_params_and_init_guesses);
 
-
+figure;
 plot(all_fov_costs_evaluated,'-o'); title('Fov cost. $>$0 means not in FOV')
 
 %%
