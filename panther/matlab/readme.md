@@ -18,6 +18,8 @@ Follow [this](https://github.com/casadi/casadi/wiki/InstallationLinux#option-2-c
 ../configure --prefix=/usr/local --with-blas="-L$MKLROOT/lib/intel64 -lmkl_rt -liomp5 -lpthread -lm -ldl" ADD_FFLAGS=-fPIC ADD_CFLAGS=-fPIC ADD_CXXFLAGS=-fPIC
 ```
 
+A benchmark (for 20 runs of the same opt problem using different initial guess) is available [here](https://github.com/jtorde/panther_plus_plus/blob/master/panther/other/comparison.pdf)
+
 ### From binaries.
 `sudo apt-get install coinor-libipopt1v5`
 
