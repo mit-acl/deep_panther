@@ -2,14 +2,34 @@
 
 close all; clc;clear;
 
+
+
 doSetup();
 
 import casadi.*
+% 
+% all_comp_times_t_wall=[];
+% all_comp_times_t_proc=[];
+% 
+% %%
+% close all;
+% subplot(2,1,1);
+% histogram(1000*all_comp_times_t_proc,numel(all_comp_times_t_proc)); title ('Proc time'); xlabel('time(ms)')
+% subplot(2,1,2);
+% histogram(1000*all_comp_times_t_wall,numel(all_comp_times_t_wall)); title ('Wall time'); xlabel('time(ms)')
+% 
+% fprintf('Mean (ms), t_proc=%.2f ms\n', mean(1000*all_comp_times_t_proc))
+% fprintf('Mean (ms), t_wall=%.2f ms\n', mean(1000*all_comp_times_t_wall))
+% for novale=1:20
+
 opti = casadi.Opti();
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CONSTANTS! %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+use_yaw_closed_form=true; %If false, yaw will be optimized.
+
 deg_pos=3;
 deg_yaw=2;
 num_seg =6; %number of segments
@@ -53,11 +73,37 @@ thetax_half_FOV_rad=thetax_half_FOV_deg*pi/180.0;
 thetay_half_FOV_deg=thetay_FOV_deg/2.0; %half of the angle of the cone
 thetay_half_FOV_rad=thetay_half_FOV_deg*pi/180.0;
 
-%%%%% Initial and final conditions
+total_time=opti.parameter(1,1); %This allows a different t0 and tf than the one above
+scaling=(tf-t0)/total_time;
+
+%%%%% Initial and final conditions, and max values
+%FOR POSITION
 p0=opti.parameter(3,1); v0=opti.parameter(3,1); a0=opti.parameter(3,1);
 pf=opti.parameter(3,1); vf=opti.parameter(3,1); af=opti.parameter(3,1);
-y0=opti.parameter(1,1); ydot0=opti.parameter(1,1); 
-yf=opti.parameter(1,1); ydotf=opti.parameter(1,1);
+
+v_max=opti.parameter(3,1);
+a_max=opti.parameter(3,1);
+j_max=opti.parameter(3,1);
+
+v0_scaled=v0/scaling;
+a0_scaled=a0/(scaling^2);
+vf_scaled=vf/scaling;
+af_scaled=af/(scaling^2);
+v_max_scaled=v_max/scaling;
+a_max_scaled=a_max/(scaling^2); 
+j_max_scaled=j_max/(scaling^3);
+
+%FOR YAW
+if(use_yaw_closed_form==false)
+    y0=opti.parameter(1,1); ydot0=opti.parameter(1,1); 
+    yf=opti.parameter(1,1); ydotf=opti.parameter(1,1);
+    ydot_max=opti.parameter(1,1);
+    
+    ydot0_scaled=ydot0/scaling;
+    ydotf_scaled=ydotf/scaling;
+    ydot_max_scaled=ydot_max/scaling; %v_max for yaw
+    
+end
 
 %%%%% Planes
 n={}; d={};
@@ -66,54 +112,44 @@ for i=1:(num_max_of_obst*num_seg)
     d{i}=opti.parameter(1,1);
 end
 
-%%% Maximum velocity and acceleration
-v_max=opti.parameter(3,1);
-a_max=opti.parameter(3,1);
-j_max=opti.parameter(3,1);
-ydot_max=opti.parameter(1,1);
-
-total_time=opti.parameter(1,1); %This allows a different t0 and tf than the one above 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CREATION OF THE SPLINES! %%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 sp=MyClampedUniformSpline(t0,tf,deg_pos, dim_pos, num_seg, opti); %spline position.
-sy=MyClampedUniformSpline(t0,tf,deg_yaw, dim_yaw, num_seg, opti); %spline yaw.
+
+if(use_yaw_closed_form==false)
+    sy=MyClampedUniformSpline(t0,tf,deg_yaw, dim_yaw, num_seg, opti); %spline yaw.
+end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CONSTRAINTS! %%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-scaling=(tf-t0)/total_time;
-
-v0_scaled=v0/scaling;
-a0_scaled=a0/(scaling^2);
-ydot0_scaled=ydot0/scaling;
 
 
-vf_scaled=vf/scaling;
-af_scaled=af/(scaling^2);
-ydotf_scaled=ydotf/scaling;
-
-v_max_scaled=v_max/scaling;
-a_max_scaled=a_max/(scaling^2); 
-j_max_scaled=j_max/(scaling^3);
-
-ydot_max_scaled=ydot_max/scaling; %v_max for yaw
-
-%Initial conditions
+%%Initial and final conditions for POSITION
 const_p{end+1}=sp.getPosT(t0)== p0;
 const_p{end+1}=sp.getVelT(t0)== v0_scaled;
 const_p{end+1}=sp.getAccelT(t0)== a0_scaled;
-const_y{end+1}=sy.getPosT(t0)== y0;
-const_y{end+1}=sy.getVelT(t0)== ydot0_scaled ;
-
-%Final conditions
 % opti.subject_to( sp.getPosT(tf)== pf );
 const_p{end+1}=sp.getVelT(tf)== vf_scaled;
 const_p{end+1}=sp.getAccelT(tf)== af_scaled;
-const_y{end+1}=sy.getVelT(tf)==ydotf_scaled; % Needed: if not (and if you are minimizing ddyaw), dyaw=cte --> yaw will explode
+
+%Dynamic limits for POSITION
+const_p=[const_p sp.getMaxVelConstraints(basis, v_max_scaled)];      %Max vel constraints (position)
+const_p=[const_p sp.getMaxAccelConstraints(basis, a_max_scaled)];    %Max accel constraints (position)
+const_p=[const_p sp.getMaxJerkConstraints(basis, j_max_scaled)];     %Max jerk constraints (position)
+
+if(use_yaw_closed_form==false)
+    %%Initial and final conditions for POSITION
+    const_y{end+1}=sy.getPosT(t0)== y0;
+    const_y{end+1}=sy.getVelT(t0)== ydot0_scaled ;
+    const_y{end+1}=sy.getVelT(tf)==ydotf_scaled; % Needed: if not (and if you are minimizing ddyaw), dyaw=cte --> yaw will explode
+    
+    %Dynamic limits for YAW
+    const_y=[const_y sy.getMaxVelConstraints(basis, ydot_max_scaled)];   %Max vel constraints (yaw)
+end
 
 
 %Obstacle constraints;
@@ -135,9 +171,6 @@ end
 
 
 
-[const_p,const_y]=addDynLimConstraints(const_p,const_y, sp, sy, basis, v_max_scaled, a_max_scaled, j_max_scaled, ydot_max_scaled);
-
-
 g=9.81;
 %Compute perception cost
 dist_im_cost=0;
@@ -153,7 +186,7 @@ delta_simpson=(t_simpson(2)-t_simpson(1));
 u=MX.sym('u',1,1); %it must be defined outside the loop (so that then I can use substitute it regardless of the interval
 w_fevar=MX.sym('w_fevar',3,1); %it must be defined outside the loop (so that then I can use substitute it regardless of the interval
 w_velfewrtworldvar=MX.sym('w_velfewrtworld',3,1);
-yaw= MX.sym('yaw',1,1);  
+% yaw= MX.sym('yaw',1,1);  
 simpson_index=1;
 simpson_coeffs=[];
 
@@ -164,24 +197,34 @@ f=0.05;%focal length in meters
 for j=1:sp.num_seg
     
 
-    w_p = sp.getPosU(u,j);
-    a=sp.getAccelU(u,j)+[0;0;g];
+    w_t_b = sp.getPosU(u,j);
+    a=sp.getAccelU(u,j);
+    xi=a+[0;0;g];
     
     %%%%
-    a1=a(1); a2=a(2); a3=a(3);
-    na2= a1*a1 + a2*a2 + a3*a3;
-    na=sqrt(na2);    
-    na2_plus_a3na=na2 + a(3)*na;
+    xi1=xi(1); xi2=xi(2); xi3=xi(3);
+    nxi2= xi1*xi1 + xi2*xi2 + xi3*xi3;
+    nxi=sqrt(nxi2);    
+    nxi2_plus_xi3nxi=nxi2 + xi(3)*nxi;
     
-    yaw=sy.getPosU(u,j);
+   
     
-    b1= [ (1-(a1^2)/na2_plus_a3na)*cos(yaw) -    a1*a2*sin(yaw)/na2_plus_a3na;
-        
-          -a1*a2*cos(yaw)/na2_plus_a3na     +    (1 - (a2^2)/na2_plus_a3na)*sin(yaw);
-          
-           (a1/na)*cos(yaw)                 +    (a2/na)*sin(yaw)         ]; %note that, by construction, norm(b1)=1;
+    if(use_yaw_closed_form==false)
+  
+         yaw=sy.getPosU(u,j);
+        b1= [ (1-(xi1^2)/nxi2_plus_xi3nxi)*cos(yaw) -    xi1*xi2*sin(yaw)/nxi2_plus_xi3nxi;
+
+              -xi1*xi2*cos(yaw)/nxi2_plus_xi3nxi     +    (1 - (xi2^2)/nxi2_plus_xi3nxi)*sin(yaw);
+
+               (xi1/nxi)*cos(yaw)                 +    (xi2/nxi)*sin(yaw)         ]; %note that, by construction, norm(b1)=1;
     
-    w_e=-w_p; %Asumming feature is in [0 0 0]';
+    else
+    
+          b1=optimalb1FromPosPosFeatureAndAccel(w_t_b, zeros(3,1), a);
+    end
+
+       
+    w_e=-w_t_b; %Asumming feature is in [0 0 0]';
     
     f=cos(thetax_half_FOV_deg*pi/180.0)*norm(w_e) - b1'*w_e; %Constraint is f<=0
     
@@ -214,17 +257,22 @@ end
 
 %Cost
 pos_smooth_cost=sp.getControlCost();
-yaw_smooth_cost=sy.getControlCost();
+
 
 final_pos_cost=(sp.getPosT(tf)- pf)'*(sp.getPosT(tf)- pf);
-final_yaw_cost=(sy.getPosT(tf)- yf)^2;
 
 total_cost=c_pos_smooth*pos_smooth_cost+...
-           c_yaw_smooth*yaw_smooth_cost+... 
            c_fov*fov_cost+...
-           c_final_pos*final_pos_cost+...
-           c_final_yaw*final_yaw_cost;
+           c_final_pos*final_pos_cost;
 
+if(use_yaw_closed_form==false)
+    yaw_smooth_cost=sy.getControlCost();
+    final_yaw_cost=(sy.getPosT(tf)- yf)^2;
+ 
+    total_cost=total_cost+ c_yaw_smooth*yaw_smooth_cost + c_final_yaw*final_yaw_cost;
+    
+end
+    
 opti.minimize(simplify(total_cost));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -237,32 +285,35 @@ for i=1:(num_max_of_obst*num_seg)
 end
 
 pCPs=sp.getCPsAsMatrix();
-yCPs=sy.getCPsAsMatrix();
+ pCPs_par=opti.parameter(3,size(pCPs,2));
 
-
-yCPs_par=opti.parameter(1,size(yCPs,2));
-pCPs_par=opti.parameter(3,size(pCPs,2));
-
-
-v_max_value=1.6*ones(3,1);
-a_max_value=50*ones(3,1);
-j_max_value=50*ones(3,1);
-ydot_max_value=1.0;
+v_max_value=50*ones(3,1);
+a_max_value=200*ones(3,1);
+j_max_value=300*ones(3,1);
 
 total_time_value=10.5;
-thetax_FOV_deg_value=80;
-thetay_FOV_deg_value=80;
+thetax_FOV_deg_value=30;
+thetay_FOV_deg_value=30;
 Ra_value=12.0;
-y0_value=0.0;
-yf_value=0.0;
-ydot0_value=0.0;
-ydotf_value=0.0;
 
-p0_value=[-4;0.0;0.0];
+if(use_yaw_closed_form==false)
+    
+    yCPs=sy.getCPsAsMatrix();
+    yCPs_par=opti.parameter(1,size(yCPs,2));
+   
+    
+    y0_value=0.0;
+    yf_value=0.0;
+    ydot0_value=0.0;
+    ydotf_value=0.0;
+    ydot_max_value=1.0;
+end
+
+p0_value=[-4;0.0; 0.0];
 v0_value=[0;0;0];
 a0_value=[0;0;0];
 
-pf_value=[4.0;0.0;0.0];
+pf_value=[4.0;0.0; 0.0];
 vf_value=[0;0;0];
 af_value=[0;0;0];
 
@@ -276,8 +327,25 @@ for j=(floor(num_seg/2)+1):num_seg
     all_nd_value=[all_nd_value (1/sqrt(2))*[-1; 1; 0; 2] ];
 end
 
+tmp1=[   -4.0000   -4.0000   -4.0000    0.7111  1.0 2.0   4         4          4;
+         0         0         0           0.5    1.0    0.5  0           0         0;
+         0         0         0             0       0   0    0           0         0];
+     
+tmp2=[   -0.0000   -0.0000    0.2754  1.0 1.5  2.1131    2.6791    2.6791];
 
-all_params= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV_deg_value)},...
+
+% tmp1=rand(size(tmp1));
+% tmp2=rand(size(tmp2));
+
+% 
+% tmp1=[   -4.0000   -4.0000   -4.0000  -23.7331  -12.3799   -9.7726    1.8451    1.8451    1.8451
+%          0         0    0.0000  -13.0382  -33.4583  -31.3069  -21.0817  -21.0817  -21.0817
+%   -10.0000  -10.0000  -10.0000   15.0714   27.1907   20.4458   -2.0376   -2.0376   -2.0376];
+% 
+% tmp2=[ 0 0 0 0 0 0 0 0];
+
+all_params_and_init_guesses=[...
+              {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV_deg_value)},...
               {createStruct('thetay_FOV_deg', thetay_FOV_deg, thetay_FOV_deg_value)},...
               {createStruct('Ra', Ra, Ra_value)},...
               {createStruct('p0', p0, p0_value)},...
@@ -286,34 +354,32 @@ all_params= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV_deg_val
               {createStruct('pf', pf, pf_value)},...
               {createStruct('vf', vf, vf_value)},...
               {createStruct('af', af, af_value)},...
-              {createStruct('y0', y0, y0_value)},...
-              {createStruct('ydot0', ydot0, ydot0_value)},...
-              {createStruct('yf', yf, yf_value)},...
-              {createStruct('ydotf', ydotf, ydotf_value)},...
               {createStruct('v_max', v_max, v_max_value)},...
               {createStruct('a_max', a_max, a_max_value)},...
               {createStruct('j_max', j_max, j_max_value)},...
-              {createStruct('ydot_max', ydot_max, ydot_max_value)},... 
               {createStruct('total_time', total_time, total_time_value)},...
               {createStruct('all_nd', all_nd, all_nd_value)},...
-              {createStruct('c_pos_smooth', c_pos_smooth, 10.0)},...
-              {createStruct('c_yaw_smooth', c_yaw_smooth, 0.0)},...
+              {createStruct('c_pos_smooth', c_pos_smooth, 1.0)},...
               {createStruct('c_fov', c_fov, 1.0)},...
               {createStruct('c_final_pos', c_final_pos, 10.0)},...
-              {createStruct('c_final_yaw', c_final_yaw, 0.0)}];
-
-
-tmp1=[   -4.0000   -4.0000   -4.0000    0.7111  1.0 2.0   4         4          4;
-         0         0         0           0.5    1.0    0.5  0           0         0;
-         0         0         0             0       0   0    0           0         0];
-     
-tmp2=[   -0.0000   -0.0000    0.2754  1.0 1.5  2.1131    2.6791    2.6791];
-
-all_params_and_init_guesses=[{createStruct('pCPs', pCPs, tmp1)},...
-                             {createStruct('yCPs', yCPs, tmp2)},...
-                             {createStruct('pCPs_par', pCPs_par, tmp1)},...
-                             {createStruct('yCPs_par', yCPs_par, tmp2)},...
-                             all_params];
+              {createStruct('pCPs', pCPs, tmp1)},...
+              {createStruct('pCPs_par', pCPs_par, tmp1)}];
+          
+if(use_yaw_closed_form==false)
+    
+    all_params_and_init_guesses=[...
+             {createStruct('y0', y0, y0_value)},...
+             {createStruct('ydot0', ydot0, ydot0_value)},...
+             {createStruct('yf', yf, yf_value)},...
+             {createStruct('ydotf', ydotf, ydotf_value)},...
+             {createStruct('ydot_max', ydot_max, ydot_max_value)},... 
+             {createStruct('yCPs_par', yCPs_par, tmp2)},...
+             {createStruct('yCPs', yCPs, tmp2)},...
+             {createStruct('c_final_yaw', c_final_yaw, 0.0)},...
+             {createStruct('c_yaw_smooth', c_yaw_smooth, 0.0)},...
+             all_params_and_init_guesses];
+    
+end
 
 vars=[];
 names=[];
@@ -336,145 +402,154 @@ opts.print_time=true;
 opts.ipopt.print_level=print_level; 
 %opts.ipopt.print_frequency_iter=1e10;%1e10 %Big if you don't want to print all the iteratons
 opts.ipopt.linear_solver=linear_solver_name;
+opts.jit=true;%If true, when I call solve(), Matlab will automatically generate a .c file, convert it to a .mex and then solve the problem using that compiled code
+opts.compiler='shell';
+opts.jit_options.flags='-Ofast';  %Takes ~15 seconds to generate if O0 (much more if O1,...,O3)
+opts.jit_options.verbose=true;  %See example in shallow_water.cpp
+% opts.ipopt.hessian_approximation='limited-memory';
+% opts.ipopt.line_search_method='cg-penalty';
+% opts.ipopt.accept_every_trial_step='yes';
+% opts.ipopt.alpha_for_y='max';
 opti.solver('ipopt',opts); %{"ipopt.hessian_approximation":"limited-memory"} 
+
 
 
 opti.subject_to([const_p, const_y])
 
-results_vars={pCPs,yCPs, total_cost,pos_smooth_cost, yaw_smooth_cost, fov_cost, final_pos_cost, final_yaw_cost};
-results_names={'pCPs','yCPs','total_cost','pos_smooth_cost','yaw_smooth_cost','fov_cost','final_pos_cost','final_yaw_cost'};
+results_vars={pCPs, total_cost, pos_smooth_cost, fov_cost, final_pos_cost};
+results_names={'pCPs','total_cost','pos_smooth_cost','fov_cost','final_pos_cost'};
+
+if(use_yaw_closed_form==false)
+    results_vars=[results_vars {yCPs,  yaw_smooth_cost, final_yaw_cost}];
+    results_names=[results_names {'yCPs', 'yaw_smooth_cost', 'final_yaw_cost'}];
+end
 
 my_func = opti.to_function('my_func', vars, results_vars, names, results_names);
 sol=my_func( names_value{:});
 full(sol.pCPs)
-full(sol.yCPs)
-%%
-import casadi.*
-clc
-%CREATE SOLVER FOR POSITION, YAW IS FIXED
-opti_p=opti.copy;
 
- 
-%See https://github.com/casadi/casadi/wiki/FAQ:-how-to-perform-jit-for-function-evaluations-of-my-optimization-problem%3F
-opts.jit=true;%If true, when I call solve(), Matlab will automatically generate a .c file, convert it to a .mex and then solve the problem using that compiled code
-opts.compiler='shell';
-opts.jit_options.flags='-O3';  %Takes ~15 seconds to generate if O0 (much more if O1,...,O3)
-opts.jit_options.verbose=true;  %See example in shallow_water.cpp
-opti.solver('ipopt',opts); 
+if(use_yaw_closed_form==false)
+  full(sol.yCPs)
+end
 
-opti_p.subject_to(); %Remove all the constraints
-opti_p.subject_to(const_p);
-opti_p.minimize(substitute(total_cost,yCPs,yCPs_par)); 
-my_func_p = opti_p.to_function('my_func_p', vars, results_vars, names, results_names);
+[t_proc_total, t_wall_total]= timeInfo(my_func);
 
-%CREATE SOLVER FOR YAW, POSITION IS FIXED
-opti_y=opti.copy;
-opti_y.subject_to(); %Remove all the constraints
-opti_y.subject_to(const_y);
-opti_y.minimize(substitute(total_cost,pCPs,pCPs_par)); 
-my_func_y = opti_y.to_function('my_func_y', vars, results_vars, names, results_names);
-%%
-
-
-
-%%
 % 
-% sol=my_func_p( names_value{:}); %Dummy call to avoid the overhead of the first iteration (not sure why it happens)
-% sol=my_func_y( names_value{:}); %Dummy call to avoid the overhead of the first iteration (not sure why it happens)
+% all_comp_times_t_proc(end+1)=t_proc_total;
+% all_comp_times_t_wall(end+1)=t_wall_total;
+
+
+% end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %% BLOCK COORDINATE DESCENT [works, but select use_yaw_closed_form=true]
 % 
-% sol=my_func_p( names_value{:}); %Dummy call to avoid the overhead of the first iteration (not sure why it happens)
-% sol=my_func_y( names_value{:}); %Dummy call to avoid the overhead of the first iteration (not sure why it happens)
+% import casadi.*
+% clc
+% opti_p=opti.copy;
 % 
-% sol=my_func_p( names_value{:}); %Dummy call to avoid the overhead of the first iteration (not sure why it happens)
-% sol=my_func_y( names_value{:}); %Dummy call to avoid the overhead of the first iteration (not sure why it happens)
+% %CREATE SOLVER FOR POSITION, YAW IS FIXED 
+% %See https://github.com/casadi/casadi/wiki/FAQ:-how-to-perform-jit-for-function-evaluations-of-my-optimization-problem%3F
+% opts.jit=true;%If true, when I call solve(), Matlab will automatically generate a .c file, convert it to a .mex and then solve the problem using that compiled code
+% opts.compiler='shell';
+% opts.jit_options.flags='-O3';  %Takes ~15 seconds to generate if O0 (much more if O1,...,O3)
+% opts.jit_options.verbose=true;  %See example in shallow_water.cpp
+% opti.solver('ipopt',opts); 
+% 
+% opti_p.subject_to(); %Remove all the constraints
+% opti_p.subject_to(const_p);
+% opti_p.minimize(substitute(total_cost,yCPs,yCPs_par)); 
+% my_func_p = opti_p.to_function('my_func_p', vars, results_vars, names, results_names);
+% 
+% %CREATE SOLVER FOR YAW, POSITION IS FIXED
+% opti_y=opti.copy;
+% opti_y.subject_to(); %Remove all the constraints
+% opti_y.subject_to(const_y);
+% opti_y.minimize(substitute(total_cost,pCPs,pCPs_par)); 
+% my_func_y = opti_y.to_function('my_func_y', vars, results_vars, names, results_names);
+% 
+% % sol=my_func_p( names_value{:}); %Dummy call to avoid the overhead of the first iteration (not sure why it happens)
+% % sol=my_func_y( names_value{:}); %Dummy call to avoid the overhead of the first iteration (not sure why it happens)
+%   
 %  
- 
-all_costs=[];
-ms_p=[];
-ms_y=[];
-inner_iterations_p={};
-inner_iterations_y={};
-num_outer_it=10;
-for i=1:num_outer_it
-    
-    disp('==============================================')
-    
-    tic()
-    sol=my_func_p( names_value{:});     ms_p=[ms_p 1000*toc()];
-%     if(i==1)
-    tmp_p=get_stats(my_func_p);
-    tmp_p.iterations.obj
-    inner_iterations_p{end+1}=tmp_p.iterations.obj;
+% all_costs=[];
+% ms_p=[];
+% ms_y=[];
+% inner_iterations_p={};
+% inner_iterations_y={};
+% num_outer_it=10;
+% for i=1:num_outer_it 
+%     disp('==============================================')
+%     
+%     tic()
+%     sol=my_func_p( names_value{:});     ms_p=[ms_p 1000*toc()];
+% 
+%     tmp_p=get_stats(my_func_p);
+%     tmp_p.iterations.obj
+%     inner_iterations_p{end+1}=tmp_p.iterations.obj;
+% 
+%     names_value{2}= sol.pCPs;%Update Pos
+%     names_value{6}= sol.pCPs;%Update Pos par
+% 
+%     tic()
+%     sol=my_func_y( names_value{:});
+%     ms_y=[ms_y 1000*toc()];
+%     
+%     tmp_y=get_stats(my_func_y);
+%     inner_iterations_y{end+1}=tmp_y.iterations.obj;
+% 
+%     
+%     names_value{4}= sol.yCPs;%Update Pos
+%     names_value{8}= sol.yCPs;%Update Pos
+% 
+%     all_costs=[all_costs full(sol.total_cost)];
+% 
+% end
+% 
+% toc();
+% 
+% 
+% tic();
+% sol_single=my_func( names_value{:} );
+% ms_single=1000*toc();
+% 
+% close all;
+% figure; hold on;
+% yline(full(sol_single.total_cost),'--')
+% 
+% for i=1:num_outer_it
+%     plot(i*ones(size(inner_iterations_p{i})), inner_iterations_p{i},'-b')
+%     scatter(i*ones(size(inner_iterations_p{i})), inner_iterations_p{i},'b','filled')
+% 
+%     plot(i*ones(size(inner_iterations_y{i})), inner_iterations_y{i},'-r')
+%     scatter(i*ones(size(inner_iterations_y{i})), inner_iterations_y{i},'r','filled')
+%     
+%     if(i<num_outer_it)
+%         plot([i,i+1],[inner_iterations_y{i}(end),inner_iterations_p{i+1}(1)], '--m')
 %     end
-    names_value{2}= sol.pCPs;%Update Pos
-    names_value{6}= sol.pCPs;%Update Pos par
-
-    % all_costs=[all_costs full(sol.cost)];
-
-    tic()
-    sol=my_func_y( names_value{:});
-    ms_y=[ms_y 1000*toc()];
-    
-    tmp_y=get_stats(my_func_y);
-    inner_iterations_y{end+1}=tmp_y.iterations.obj;
-
-    
-    names_value{4}= sol.yCPs;%Update Pos
-    names_value{8}= sol.yCPs;%Update Pos
-
-    all_costs=[all_costs full(sol.total_cost)];
-
-end
-
-%%
-
-toc();
+% end
+% 
+% plot([0,1],[inner_iterations_p{1}(1),inner_iterations_p{1}(1)], '--m')
+% 
+%  
+% xlabel('Outer iteration'); ylabel('Cost');
+% 
+% figure; hold on; plot(ms_p); plot(ms_y); yline(ms_single,'--')
+% legend('opt. pos','opt. yaw','joint'); xlabel('Outer iteration'); ylabel('time (ms)');
+% 
+%                                           
+% sol=my_func_p( names_value{:});
 
 
-tic();
-sol_single=my_func( names_value{:} );
-ms_single=1000*toc();
-
-close all;
-figure; hold on;
-yline(full(sol_single.total_cost),'--')
-
-for i=1:num_outer_it
-    plot(i*ones(size(inner_iterations_p{i})), inner_iterations_p{i},'-b')
-    scatter(i*ones(size(inner_iterations_p{i})), inner_iterations_p{i},'b','filled')
-
-    plot(i*ones(size(inner_iterations_y{i})), inner_iterations_y{i},'-r')
-    scatter(i*ones(size(inner_iterations_y{i})), inner_iterations_y{i},'r','filled')
-    
-    if(i<num_outer_it)
-        plot([i,i+1],[inner_iterations_y{i}(end),inner_iterations_p{i+1}(1)], '--m')
-    end
-end
-
-plot([0,1],[inner_iterations_p{1}(1),inner_iterations_p{1}(1)], '--m')
-
-% full(sol_single.pCPs)
-% full(sol_single.yCPs)
-
-
-% plot(all_costs); 
-xlabel('Outer iteration'); ylabel('Cost');
-
-figure;
-plot(ms_p); hold on
-plot(ms_y); xlabel('Outer iteration'); ylabel('time (ms)');
-yline(ms_single,'--')
-legend('opt. pos','opt. yaw','joint')
-
-                                          
-sol=my_func_p( names_value{:});
-
-
-%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% [end of block coordinate descent]
 
 %Store solution
 sp.updateCPsWithSolution(full(sol.pCPs))
-sy.updateCPsWithSolution(full(sol.yCPs))
+if(use_yaw_closed_form==false)
+    sy.updateCPsWithSolution(full(sol.yCPs))
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% PLOTTING! %%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -493,16 +568,24 @@ disp("Plotting")
 for t_i=t_simpson %t0:0.3:tf  
     
     w_t_b = sp.getPosT(t_i);
-    accel = sp.getAccelT(t_i);% sol.value(A{n})*Tau_i;
-    yaw = sy.getPosT(t_i);
-%         psiT=sol.value(Psi{n})*Tau_i;
-
-    qabc=qabcFromAccel(accel, 9.81);
-
-    qpsi=[cos(yaw/2), 0, 0, sin(yaw/2)]; %Note that qpsi has norm=1
-    q=multquat(qabc,qpsi); %Note that q is guaranteed to have norm=1
-
-    w_R_b=toRotMat(q);
+    accel = sp.getAccelT(t_i);
+    
+    %Obtain w_R_b from accel and psi
+    if(use_yaw_closed_form==false)
+        yaw = sy.getPosT(t_i);
+        qabc=qabcFromAccel(accel, 9.81);
+        qpsi=[cos(yaw/2), 0, 0, sin(yaw/2)]; %Note that qpsi has norm=1
+        q=multquat(qabc,qpsi); %Note that q is guaranteed to have norm=1
+        w_R_b=toRotMat(q);
+    else
+        xi=accel+[0;0;g];
+        b3=xi/norm(xi);
+        b1=optimalb1FromPosPosFeatureAndAccel(w_t_b, zeros(3,1), accel);
+        b2=cross(b3, b1);
+        w_R_b=[b1 b2 b3];
+        assert(norm(w_R_b'*w_R_b-eye(3))<1e-6)
+    end
+    
     w_T_b=[w_R_b w_t_b; 0 0 0 1];
     plotAxesArrowsT(0.5,w_T_b)
     
@@ -549,16 +632,35 @@ figure;spy(hessian(opti.f,opti.x),15,'sk'); set(get(gca,'Children'),'MarkerFaceC
 % full(sol.pCPs)
 % full(sol.yCPs)
 
-function [const_p,const_y]=addDynLimConstraints(const_p,const_y, sp, sy, basis, v_max_scaled, a_max_scaled, j_max_scaled, ydot_max_scaled)
-
-    const_p=[const_p sp.getMaxVelConstraints(basis, v_max_scaled)];      %Max vel constraints (position)
-    const_p=[const_p sp.getMaxAccelConstraints(basis, a_max_scaled)];    %Max accel constraints (position)
-    const_p=[const_p sp.getMaxJerkConstraints(basis, j_max_scaled)];     %Max jerk constraints (position)
-    const_y=[const_y sy.getMaxVelConstraints(basis, ydot_max_scaled)];   %Max vel constraints (yaw)
-
-end
+% function [const_p,const_y]=addDynLimConstraints(const_p,const_y, sp, sy, basis, v_max_scaled, a_max_scaled, j_max_scaled, ydot_max_scaled)
+% 
+%     const_p=[const_p sp.getMaxVelConstraints(basis, v_max_scaled)];      %Max vel constraints (position)
+%     const_p=[const_p sp.getMaxAccelConstraints(basis, a_max_scaled)];    %Max accel constraints (position)
+%     const_p=[const_p sp.getMaxJerkConstraints(basis, j_max_scaled)];     %Max jerk constraints (position)
+%     const_y=[const_y sy.getMaxVelConstraints(basis, ydot_max_scaled)];   %Max vel constraints (yaw)
+% 
+% end
 
 %% Functions
+
+function [t_proc_total, t_wall_total]= timeInfo(my_func)
+    tmp=get_stats(my_func);
+    
+    %%See https://github.com/casadi/casadi/wiki/FAQ:-is-the-bottleneck-of-my-optimization-in-CasADi-function-evaluations-or-in-the-solver%3F
+    
+    %This is the time spent evaluating the functions
+    t_casadi=  (tmp.t_wall_nlp_f+tmp.t_wall_nlp_g+tmp.t_wall_nlp_grad+tmp.t_wall_nlp_grad_f+tmp.t_wall_nlp_hess_l+tmp.t_wall_nlp_jac_g);
+    
+    t_ipopt= tmp.t_wall_total-t_casadi;
+
+    cprintf('key','Total time=%.2f ms [Casadi=%.2f%%, IPOPT=%.2f%%]\n',tmp.t_wall_total*1000, 100*t_casadi/tmp.t_wall_total, 100*t_ipopt/tmp.t_wall_total    )
+    
+    
+    
+    t_wall_total=tmp.t_wall_total;
+    t_proc_total=tmp.t_proc_total;    
+    
+end
 
 %Taken from https://gist.github.com/jgillis/9d12df1994b6fea08eddd0a3f0b0737f
 %See discussion at https://groups.google.com/g/casadi-users/c/1061E0eVAXM/m/dFHpw1CQBgAJ
