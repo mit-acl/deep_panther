@@ -6,7 +6,7 @@ function plotCone(position,direction,theta_deg,length)
     start_radius=0.0;
     end_radius=tand(theta_deg/2.0)*length;
     r=[start_radius end_radius]; %starting radius and end radius
-    n=20;
+    n=8;
     cyl_color='b';
     closed=1;
     lines=0;
