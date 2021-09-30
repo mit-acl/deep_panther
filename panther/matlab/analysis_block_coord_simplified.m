@@ -28,13 +28,17 @@ opti = casadi.Opti();
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CONSTANTS! %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-use_yaw_closed_form=true; %If false, yaw will be optimized.
-optimize_planes=false;
+use_yaw_closed_form=false; %If false, yaw will be optimized.
+
+optimize_n_planes=false; %Optimize the normal vector "n" of the planes
+optimize_d_planes=true; %Optimize the scalar "d" of the planes
+optimize_time_alloc=true;
 
 num_samples_bostacle_per_segment=2;
 half_side_bbox=0.5;
 
-jit=true;
+jit=false;
+make_plots=true;
 
 deg_pos=3;
 deg_yaw=2;
@@ -85,8 +89,12 @@ thetay_half_FOV_rad=thetay_half_FOV_deg*pi/180.0;
 
 %total_time=opti.parameter(1,1); %This allows a different t0 and tf than the one above
 
-alpha=opti.variable(1,1); %Total time is (tf_n-t0_n)*alpha. 
-total_time=alpha*(tf_n-t0_n);
+if(optimize_time_alloc)
+    alpha=opti.variable(1,1); 
+else
+    alpha=opti.parameter(1,1); 
+end
+total_time=alpha*(tf_n-t0_n); %Total time is (tf_n-t0_n)*alpha. 
 
 % scaling=(tf_n-t0_n)/total_time;
 
@@ -123,15 +131,19 @@ end
 %%%%% Planes
 n={}; d={};
 for i=1:(num_obs*num_seg)
-    if(optimize_planes)
+    
+    if(optimize_n_planes)
         n{i}=opti.variable(3,1); 
-        d{i}=opti.variable(1,1);
     else
         n{i}=opti.parameter(3,1); 
+    end
+  
+    if(optimize_d_planes)
+        d{i}=opti.variable(1,1);
+    else
         d{i}=opti.parameter(1,1); 
     end
-
-
+    
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -259,6 +271,10 @@ for j=1:(sp.num_seg)
       ip = (obst_index-1) * sp.num_seg + j;  % index plane
       
       %The obstacle should be on one side
+      %I need this constraint if alpha is a dec. variable OR if n is a dec
+      %variable OR if d is a dec variable
+      
+      
       for i=1:num_obs
         vertexes_ij=obst{i}{j};
         for kk=1:size(vertexes_ij,2)
@@ -384,8 +400,8 @@ a_max_value=4*ones(3,1);
 j_max_value=10*ones(3,1);
 
 alpha_value=1.0;
-thetax_FOV_deg_value=30;
-thetay_FOV_deg_value=30;
+thetax_FOV_deg_value=70;
+thetay_FOV_deg_value=70;
 Ra_value=12.0;
 
 if(use_yaw_closed_form==false)
@@ -457,7 +473,7 @@ deltat_fromInitTrajObs_toEndTrajObs_value=8.0;
 % 
 % tmp2=[ 0 0 0 0 0 0 0 0];
 
-all_params_and_init_guesses=[...
+par_and_init_guess=[...
               {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV_deg_value)},...
               {createStruct('thetay_FOV_deg', thetay_FOV_deg, thetay_FOV_deg_value)},...
               {createStruct('Ra', Ra, Ra_value)},...
@@ -483,7 +499,7 @@ all_params_and_init_guesses=[...
           
 if(use_yaw_closed_form==false)
     
-    all_params_and_init_guesses=[...
+    par_and_init_guess=[...
              {createStruct('y0', y0, y0_value)},...
              {createStruct('ydot0', ydot0, ydot0_value)},...
              {createStruct('yf', yf, yf_value)},...
@@ -492,22 +508,22 @@ if(use_yaw_closed_form==false)
              {createStruct('yCPs', yCPs, tmp2)},...
              {createStruct('c_final_yaw', c_final_yaw, 0.0)},...
              {createStruct('c_yaw_smooth', c_yaw_smooth, 0.0)},...
-             all_params_and_init_guesses];
+             par_and_init_guess];
     
 end
 
 %{createStruct('yCPs_par', yCPs_par, tmp2)},...
 %{createStruct('pCPs_par', pCPs_par, tmp1)}
 
-vars=[];
-names=[];
+par_and_init_guess_exprs=[]; %expressions
+par_and_init_guess_names=[]; %guesses
 names_value={};
-for i=1:numel(all_params_and_init_guesses)
-    vars=[vars {all_params_and_init_guesses{i}.param}];
-    names=[names {all_params_and_init_guesses{i}.name}];
+for i=1:numel(par_and_init_guess)
+    par_and_init_guess_exprs=[par_and_init_guess_exprs {par_and_init_guess{i}.expression}];
+    par_and_init_guess_names=[par_and_init_guess_names {par_and_init_guess{i}.name}];
 
-    names_value{end+1}=all_params_and_init_guesses{i}.name;
-    names_value{end+1}=double2DM(all_params_and_init_guesses{i}.value); 
+    names_value{end+1}=par_and_init_guess{i}.name;
+    names_value{end+1}=double2DM(par_and_init_guess{i}.value); 
 
 end
 
@@ -532,33 +548,24 @@ opti.solver('ipopt',opts); %{"ipopt.hessian_approximation":"limited-memory"}
 
 opti.subject_to([const_p, const_y])
 
-results_vars={pCPs, all_nd, total_cost, pos_smooth_cost, alpha, fov_cost, final_pos_cost};
+results_expresion={pCPs, all_nd, total_cost, pos_smooth_cost, alpha, fov_cost, final_pos_cost}; %Note that this containts both parameters, variables, and combination of both. If they are parameters, the corresponding value will be returned
 results_names={'pCPs','all_nd','total_cost','pos_smooth_cost','alpha','fov_cost','final_pos_cost'};
 
 if(use_yaw_closed_form==false)
-    results_vars=[results_vars {yCPs,  yaw_smooth_cost, final_yaw_cost}];
+    results_expresion=[results_expresion {yCPs,  yaw_smooth_cost, final_yaw_cost}];
     results_names=[results_names {'yCPs', 'yaw_smooth_cost', 'final_yaw_cost'}];
 end
 
-my_func = opti.to_function('my_func', vars, results_vars, names, results_names);
-
-% disp("Going to save function")
-% my_func.save('./casadi_generated_files/my_func.casadi')
-% disp("Going to load function")
-% my_func=casadi.Function.load('./casadi_generated_files/my_func.casadi'); %Here the jit happens again
-% disp("Function loaded")
+my_func = opti.to_function('my_func', par_and_init_guess_exprs, results_expresion, par_and_init_guess_names, results_names);
 
 sol=my_func( names_value{:});
-full(sol.pCPs)
 
-all_var_solved=[{createStruct('pCPs', pCPs, full(sol.pCPs))},...
-                {createStruct('alpha', alpha, full(sol.alpha))}];
-            
-if(use_yaw_closed_form==false)
-    all_var_solved=[{createStruct('yCPs', yCPs, full(sol.yCPs))},...
-                    all_var_solved];
+results_solved=[];
+for i=1:numel(results_expresion)
+    results_solved=[results_solved,    {createStruct(results_names{i}, results_expresion{i}, full(sol.(results_names{i})))} ];
 end
-            
+
+full(sol.pCPs)          
 if(use_yaw_closed_form==false)
   full(sol.yCPs)
 end
@@ -568,29 +575,11 @@ cprintf('Green','Total time trajec=%.2f s (alpha=%.2f) \n', full(sol.alpha*(tf_n
 
 [t_proc_total, t_wall_total]= timeInfo(my_func);
 
+% sp_cpoints_var=sp.getCPsAsMatrix();
 
-% %%
-% sp_normalized=MyClampedUniformSpline(t0_n,tf_n,deg_pos, dim_pos, num_seg, opti); %spline position.
-% sp_normalized.updateCPsWithSolution(full(sol.pCPs))
-% 
-% sp_real=MyClampedUniformSpline(t0_n,full(sol.alpha)*tf_n,deg_pos, dim_pos, num_seg, opti); %spline position.
-% sp_real.updateCPsWithSolution(full(sol.pCPs))
-% 
-% real_cost=sp_real.getControlCost();
-% 
-% norm_cost=sp_normalized.getControlCost();
-% 
-% %norm_cost=real_cost*alpha^(sp.p-1)
-% assert(abs(norm_cost-real_cost*full(sol.alpha)^(2*sp.p-1))<1e-7)
-% 
-% % sp_normalized.getControlCost()/sp_real.getControlCost()
+%%%%%%%%%%%%%%%%%%%%%%%%%%% Store solution! %%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-sp_cpoints_var=sp.getCPsAsMatrix();
-
-
-
-%Store solution
 sp.updateCPsWithSolution(full(sol.pCPs))
 if(use_yaw_closed_form==false)
     sy_cpoints_var=sy.getCPsAsMatrix();
@@ -603,6 +592,9 @@ alpha_result=full(sol.alpha);
 v_max_value_n=v_max_value*alpha_result;
 a_max_value_n=a_max_value*alpha_result^2;
 j_max_value_n=j_max_value*alpha_result^3;
+
+
+if(make_plots)
 
 sp.plotPosVelAccelJerk(v_max_value_n, a_max_value_n, j_max_value_n)
 
@@ -671,10 +663,38 @@ view(-91,90)
 
 
 
-all_fov_costs_evaluated=substituteWithSolution(all_fov_costs, all_var_solved, all_params_and_init_guesses);
+all_fov_costs_evaluated=substituteWithSolution(all_fov_costs, results_solved, par_and_init_guess);
 
 figure;
 plot(all_fov_costs_evaluated,'-o'); title('Fov cost. $>$0 means not in FOV')
+
+end
+
+
+% disp("Going to save function")
+% my_func.save('./casadi_generated_files/my_func.casadi')
+% disp("Going to load function")
+% my_func=casadi.Function.load('./casadi_generated_files/my_func.casadi'); %Here the jit happens again
+% disp("Function loaded")
+
+
+%%
+
+% %%
+% sp_normalized=MyClampedUniformSpline(t0_n,tf_n,deg_pos, dim_pos, num_seg, opti); %spline position.
+% sp_normalized.updateCPsWithSolution(full(sol.pCPs))
+% 
+% sp_real=MyClampedUniformSpline(t0_n,full(sol.alpha)*tf_n,deg_pos, dim_pos, num_seg, opti); %spline position.
+% sp_real.updateCPsWithSolution(full(sol.pCPs))
+% 
+% real_cost=sp_real.getControlCost();
+% 
+% norm_cost=sp_normalized.getControlCost();
+% 
+% %norm_cost=real_cost*alpha^(sp.p-1)
+% assert(abs(norm_cost-real_cost*full(sol.alpha)^(2*sp.p-1))<1e-7)
+% 
+% % sp_normalized.getControlCost()/sp_real.getControlCost()
 
 %%
 % clc
@@ -852,14 +872,17 @@ function result=substituteWithSolution(expression, all_var_solved, all_params_an
             
                 tmp=expression(i,j);
                 
-                %Substitute first the solution
+                %Substitute FIRST the solution [note that this one needs to be first because in all_params_and_init_guesses we have also the initial guesses, which we don't want to use]
                 for ii=1:numel(all_var_solved)
-                    tmp=substitute(tmp,all_var_solved{ii}.param, all_var_solved{ii}.value);
+                    if(isPureParamOrVariable(all_var_solved{ii}.expression)==false) 
+                        continue;
+                    end
+                    tmp=substitute(tmp,all_var_solved{ii}.expression, all_var_solved{ii}.value);
                 end
                 
-                 %And then substitute the parameters
+                 %And THEN substitute the parameters
                 for ii=1:numel(all_params_and_init_guesses)
-                    tmp=substitute(tmp,all_params_and_init_guesses{ii}.param, all_params_and_init_guesses{ii}.value);
+                    tmp=substitute(tmp,all_params_and_init_guesses{ii}.expression, all_params_and_init_guesses{ii}.value);
                 end
             
             result(i,j)=convertMX2Matlab(tmp);
@@ -867,6 +890,11 @@ function result=substituteWithSolution(expression, all_var_solved, all_params_an
     end
 
 
+end
+
+%This checks whether it is a pure variable/parameter in the optimization (returns true) or not (returns false). Note that with an expression that is a combination of several double/variables/parameters will return false
+function result=isPureParamOrVariable(expression)
+    result=expression.is_valid_input();
 end
 
 
@@ -914,9 +942,9 @@ function [stats] = get_stats(f)
   end
 end
 
-function a=createStruct(name,param,value)
+function a=createStruct(name,expression,value)
     a.name=name;
-    a.param=param;
+    a.expression=expression;
     a.value=value;
 end
 
