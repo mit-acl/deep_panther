@@ -29,11 +29,17 @@ opti = casadi.Opti();
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 use_yaw_closed_form=true; %If false, yaw will be optimized.
+optimize_planes=false;
+
+num_samples_bostacle_per_segment=2;
+half_side_bbox=0.5;
+
+jit=true;
 
 deg_pos=3;
 deg_yaw=2;
 num_seg =6; %number of segments
-num_max_of_obst=1; %This is the maximum num of the obstacles 
+num_obs=1; %This is the maximum num of the obstacles 
 num_samples_simpson=7;  %This will also be the num_of_layers in the graph yaw search of C++
 num_of_yaw_per_layer=40; %This will be used in the graph yaw search of C++
                          %Note that the initial layer will have only one yaw (which is given) 
@@ -75,6 +81,8 @@ thetax_half_FOV_rad=thetax_half_FOV_deg*pi/180.0;
 thetay_half_FOV_deg=thetay_FOV_deg/2.0; %half of the angle of the cone
 thetay_half_FOV_rad=thetay_half_FOV_deg*pi/180.0;
 
+
+
 %total_time=opti.parameter(1,1); %This allows a different t0 and tf than the one above
 
 alpha=opti.variable(1,1); %Total time is (tf_n-t0_n)*alpha. 
@@ -114,9 +122,16 @@ end
 
 %%%%% Planes
 n={}; d={};
-for i=1:(num_max_of_obst*num_seg)
-    n{i}=opti.parameter(3,1); 
-    d{i}=opti.parameter(1,1);
+for i=1:(num_obs*num_seg)
+    if(optimize_planes)
+        n{i}=opti.variable(3,1); 
+        d{i}=opti.variable(1,1);
+    else
+        n{i}=opti.parameter(3,1); 
+        d{i}=opti.parameter(1,1); 
+    end
+
+
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -126,6 +141,79 @@ sp=MyClampedUniformSpline(t0_n,tf_n,deg_pos, dim_pos, num_seg, opti); %spline po
 
 if(use_yaw_closed_form==false)
     sy=MyClampedUniformSpline(t0_n,tf_n,deg_yaw, dim_yaw, num_seg, opti); %spline yaw.
+end
+
+import casadi.*
+%%%%%%%% Trajectory of the obstacle
+N=num_seg+deg_pos+1;
+deg_obstacle=deg_pos;
+dim_obstacle=dim_pos;
+ctrl_pts_obstacle=opti.parameter(dim_obstacle,size(sp.CPoints,2)); %This comes from C++
+
+p=deg_obstacle;
+tmp=linspace(0,1,num_seg+1);
+knots_obstacle=[zeros(1,p+1)      tmp(2:end-1)          ones(1,p+1)];
+
+
+bs_obstacle=MyCasadiClampedUniformSpline(0,1,deg_obstacle,dim_obstacle,num_seg,ctrl_pts_obstacle, false);
+
+
+%This part below uses the Casadi implementation of a BSpline. However, that
+%implementation does not allow SX variables (which means that it cannot be
+%expanded). See more at https://github.com/jtorde/useful_things/blob/master/casadi/bspline_example/bspline_example.m
+% t_eval_sym=MX.sym('t_eval_sym',1,1); 
+% %See https://github.com/jtorde/useful_things/blob/master/casadi/bspline_example/bspline_example.m
+% my_bs_parametric_tmp=casadi.bspline(t_eval_sym, ctrl_pts_obstacle(:), {knots_obstacle}, {[deg_obstacle]}, dim_obstacle); %Note that here we use casadi.bspline, NOT casadi.Function.bspline
+% my_bs_parametric = Function('my_bs_parametric',{t_eval_sym,ctrl_pts_obstacle},{my_bs_parametric_tmp});
+
+
+%TODO: See short_circuit parameter of if_else, https://groups.google.com/g/casadi-users/c/KobfQ47ZAG8
+%But note that SX does not support short-circuiting--> If I use short-circuiting, I cannot call expand()
+%But it's weird, because with short_circuit=true me funciona expand...
+
+deltat_fromInitTrajObs_toPointD =opti.parameter(1,1);
+deltat_fromInitTrajObs_toEndTrajObs =opti.parameter(1,1);
+
+
+all_vertexes=[];
+
+deltaT=total_time/num_seg; %Time allocated for each segment
+
+obst={}; %Obs{i}{j} Contains the vertexes (as columns) of the obstacle i in the interval j
+
+for i=1:num_obs
+
+    for j=1:num_seg
+
+        t_begin_segment= deltaT*(j-1);
+
+        all_vertexes=[];
+        for k=1:num_samples_bostacle_per_segment
+            %This takes a sample at the end, but not at the beginning
+            tmp=t_begin_segment + (k/num_samples_bostacle_per_segment)*deltaT; %This is the delta time that goes from 
+
+%             t_i= max( (t_d_ros +  tmp -t_initTrajObs_ros)/(t_endTrajObs_ros-t_initTrajObs_ros),  1.0 );    
+            
+            t_i= max( (deltat_fromInitTrajObs_toPointD +  tmp  )/deltat_fromInitTrajObs_toEndTrajObs,  1.0 );  
+            
+            pos_center_obs=bs_obstacle.getPosT(t_i);
+
+            all_vertexes=[all_vertexes ...
+                pos_center_obs + half_side_bbox*[1;1;1] ...
+                pos_center_obs + half_side_bbox*[1;1;-1] ...
+                pos_center_obs + half_side_bbox*[1;-1;1] ...
+                pos_center_obs + half_side_bbox*[1;-1;-1] ...
+                pos_center_obs + half_side_bbox*[-1;1;1] ...
+                pos_center_obs + half_side_bbox*[-1;1;-1] ...
+                pos_center_obs + half_side_bbox*[-1;-1;1] ...
+                pos_center_obs + half_side_bbox*[-1;-1;-1] ...
+                ];
+
+        end
+
+        obst{i}{j}=all_vertexes;
+
+    end
 end
 
 
@@ -158,6 +246,7 @@ if(use_yaw_closed_form==false)
     const_y=[const_y sy.getMaxVelConstraints(basis, ydot_max_n)];   %Max vel constraints (yaw)
 end
 
+epsilon=0.001;
 
 %Obstacle constraints;
 for j=1:(sp.num_seg)
@@ -166,16 +255,26 @@ for j=1:(sp.num_seg)
     Q=sp.getCPs_XX_Pos_ofInterval(basis, j);
 
     %Plane constraints
-    for obst_index=1:num_max_of_obst
+    for obst_index=1:num_obs
       ip = (obst_index-1) * sp.num_seg + j;  % index plane
-           
+      
+      %The obstacle should be on one side
+      for i=1:num_obs
+        vertexes_ij=obst{i}{j};
+        for kk=1:size(vertexes_ij,2)
+            const_p{end+1}= n{ip}'*vertexes_ij(:,kk) + d{ip} >= 1;   %TODO: make sure this follows the convention from C++
+        end
+      end
+      
       %and the control points on the other side
       for kk=1:size(Q,2)
-        const_p{end+1}= n{ip}'*Q{kk} + d{ip} <= 0;
+        const_p{end+1}= n{ip}'*Q{kk} + d{ip} <= -1;   %TODO: make sure this follows the convention from C++
       end
     end  
 end
 
+
+%TODO: Why does the result of n, d is so big??
 
 
 g=9.81;
@@ -189,7 +288,6 @@ t_simpson_n=linspace(t0_n,tf_n,num_samples_simpson);
 h=alpha*(t_simpson_n(2)-t_simpson_n(1));
 
 
-% u=MX.sym('u',1,1); %it must be defined outside the loop (so that then I can use substitute it regardless of the interval
 w_fevar=MX.sym('w_fevar',3,1); %it must be defined outside the loop (so that then I can use substitute it regardless of the interval
 w_velfewrtworldvar=MX.sym('w_velfewrtworld',3,1);
 % yaw= MX.sym('yaw',1,1);  
@@ -202,7 +300,7 @@ all_target_isInFOV=[];
 f=0.05;%focal length in meters
 
 
-for t_n=t_simpson_n
+for t_n=t_simpson_n %TODO: Use a casadi MAP for this sum
     
     w_t_b = sp.getPosT(t_n);
     a=sp.getAccelT(t_n)/(alpha^(2));
@@ -274,7 +372,7 @@ opti.minimize(simplify(total_cost));
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 all_nd=[];
-for i=1:(num_max_of_obst*num_seg)
+for i=1:(num_obs*num_seg)
     all_nd=[all_nd [n{i};d{i}]];
 end
 
@@ -312,21 +410,42 @@ vf_value=[0;0;0];
 af_value=[0;0;0];
 
 % all_nd_value= zeros(4,num_max_of_obst*num_seg);
+
+dist_betw_planes=0.01; %See last figure of https://github.com/mit-acl/separator
+norm_n=2/dist_betw_planes;
+
 all_nd_value=[];
 for j=1:floor(num_seg/2)
-    all_nd_value=[all_nd_value (1/sqrt(2))*[1; 1; 0; 2] ];
+    all_nd_value=[all_nd_value norm_n*(1/sqrt(2))*[1; 1; 0; 2] ];
 end
 
 for j=(floor(num_seg/2)+1):num_seg
-    all_nd_value=[all_nd_value (1/sqrt(2))*[-1; 1; 0; 2] ];
+    all_nd_value=[all_nd_value norm_n*(1/sqrt(2))*[-1; 1; 0; 2] ];
 end
 
+% all_nd_value=[[47670.8, 56987.2, 83168.5, -21455.3, -121005, -84975.9]; 
+%  [384.705, 8785.85, 58106.5, 209095, 72242.3, 1528.36]; 
+%  [-136.412, -2917.34, -11092.6, -54.376, -3857.97, -389.175]; 
+%  [102550, 102535, 103173, 115379, 104680, 106584]];
+
+%For 6 segments
 tmp1=[   -4.0000   -4.0000   -4.0000    0.7111 1.0 2.0   4         4          4;
          0         0         0           0.5     1.0    0.5  0           0         0;
          0         0         0             0    0   0    0           0         0];
      
 tmp2=[   -0.0000   -0.0000    0.2754  1.0  1.5  2.1131    2.6791    2.6791];
 
+% tmp1=[   -4.0000   -4.0000   -4.0000     2.0   4         4          4;
+%          0         0         0              0.5  0           0         0;
+%          0         0         0             0    0           0         0];
+%      
+% tmp2=[   -0.0000   -0.0000    0.2754    2.1131    2.6791    2.6791];
+
+
+ctrl_pts_obstacle_value=zeros(size(tmp1));
+
+deltat_fromInitTrajObs_toPointD_value=0.0;
+deltat_fromInitTrajObs_toEndTrajObs_value=8.0;
 
 % tmp1=rand(size(tmp1));
 % tmp2=rand(size(tmp2));
@@ -352,6 +471,9 @@ all_params_and_init_guesses=[...
               {createStruct('a_max', a_max, a_max_value)},...
               {createStruct('j_max', j_max, j_max_value)},...
               {createStruct('all_nd', all_nd, all_nd_value)},...
+              {createStruct('ctrl_pts_obstacle', ctrl_pts_obstacle, ctrl_pts_obstacle_value)},...
+              {createStruct('deltat_fromInitTrajObs_toPointD', deltat_fromInitTrajObs_toPointD, deltat_fromInitTrajObs_toPointD_value)},...
+              {createStruct('deltat_fromInitTrajObs_toEndTrajObs', deltat_fromInitTrajObs_toEndTrajObs, deltat_fromInitTrajObs_toEndTrajObs_value)},...
               {createStruct('c_pos_smooth', c_pos_smooth, 0.01)},...
               {createStruct('c_fov', c_fov, 1.0)},...
               {createStruct('c_final_pos', c_final_pos, 10.0)},... 
@@ -396,7 +518,7 @@ opts.print_time=true;
 opts.ipopt.print_level=print_level; 
 %opts.ipopt.print_frequency_iter=1e10;%1e10 %Big if you don't want to print all the iteratons
 opts.ipopt.linear_solver=linear_solver_name;
-opts.jit=true;%If true, when I call solve(), Matlab will automatically generate a .c file, convert it to a .mex and then solve the problem using that compiled code
+opts.jit=jit;%If true, when I call solve(), Matlab will automatically generate a .c file, convert it to a .mex and then solve the problem using that compiled code
 opts.compiler='shell';
 opts.jit_options.flags='-Ofast';  %Takes ~15 seconds to generate if O0 (much more if O1,...,O3)
 opts.jit_options.verbose=true;  %See example in shallow_water.cpp
@@ -410,8 +532,8 @@ opti.solver('ipopt',opts); %{"ipopt.hessian_approximation":"limited-memory"}
 
 opti.subject_to([const_p, const_y])
 
-results_vars={pCPs, total_cost, pos_smooth_cost, alpha, fov_cost, final_pos_cost};
-results_names={'pCPs','total_cost','pos_smooth_cost','alpha','fov_cost','final_pos_cost'};
+results_vars={pCPs, all_nd, total_cost, pos_smooth_cost, alpha, fov_cost, final_pos_cost};
+results_names={'pCPs','all_nd','total_cost','pos_smooth_cost','alpha','fov_cost','final_pos_cost'};
 
 if(use_yaw_closed_form==false)
     results_vars=[results_vars {yCPs,  yaw_smooth_cost, final_yaw_cost}];
@@ -419,6 +541,13 @@ if(use_yaw_closed_form==false)
 end
 
 my_func = opti.to_function('my_func', vars, results_vars, names, results_names);
+
+% disp("Going to save function")
+% my_func.save('./casadi_generated_files/my_func.casadi')
+% disp("Going to load function")
+% my_func=casadi.Function.load('./casadi_generated_files/my_func.casadi'); %Here the jit happens again
+% disp("Function loaded")
+
 sol=my_func( names_value{:});
 full(sol.pCPs)
 
@@ -531,8 +660,11 @@ grid on; xlabel('x'); ylabel('y'); zlabel('z'); camlight; lightangle(gca,45,0)
 
 
 syms x y z real
-for i=1:size(all_nd_value,2)
-   fimplicit3(all_nd_value(:,i)'*[x;y;z;1],[-4 4 -4 4 -2 2], 'MeshDensity',2, 'FaceAlpha',0.6) 
+
+all_nd_solved=full(sol.all_nd)/1e5;
+
+for i=1:size(all_nd_solved,2)
+   fimplicit3(all_nd_solved(:,i)'*[x;y;z;1],[-4 4 -4 4 -2 2], 'MeshDensity',2, 'FaceAlpha',0.6) 
 end
 
 view(-91,90)
@@ -543,6 +675,36 @@ all_fov_costs_evaluated=substituteWithSolution(all_fov_costs, all_var_solved, al
 
 figure;
 plot(all_fov_costs_evaluated,'-o'); title('Fov cost. $>$0 means not in FOV')
+
+%%
+% clc
+% %Example of how to use a bspline function with Casadi:
+% %Taken partly from https://groups.google.com/g/casadi-users/c/sNnqsGEYMZQ/m/XVCXKRhxDgAJ
+% dim = 2;
+% deg = 3;
+% n_knots = 20;
+% knots = [zeros(1,deg), linspace(0, 1, n_knots-2*deg), ones(1,deg)];
+% n_ctrl_pts_x = n_knots - deg - 1;
+% ctrl_pts = [linspace(0, 10, n_ctrl_pts_x);
+%             2*linspace(0, 10, n_ctrl_pts_x)];
+% my_bspline = casadi.Function.bspline('my_bspline', {knots}, ctrl_pts(:), {deg}, dim);
+% % N = 1000;
+% % lut_map = lut.map(N);
+% % par_vec = linspace(0, 1, N);
+% % val_mat = full(lut_map(par_vec));
+% % plot(par_vec, val_mat)
+% t_eval=0.1;
+% 
+% % import casadi.*
+% % t_eval= MX.sym('t_eval',1,1); 
+% 
+% casadi_bspline_result=my_bspline(t_eval)
+% 
+% M=numel(knots)-1;
+% num_seg=M-2*deg;
+% snovale=MyClampedUniformSpline(min(knots),max(knots),deg, dim, num_seg, opti); %spline position.
+% snovale.updateCPsWithSolution(ctrl_pts);
+% snovale.getPosT(t_eval)
 
 %%
 
