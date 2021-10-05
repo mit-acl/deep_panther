@@ -10,17 +10,19 @@ import casadi.*
 % 
 % all_comp_times_t_wall=[];
 % all_comp_times_t_proc=[];
-% 
+% % 
 % %%
 % close all;
 % subplot(2,1,1);
-% histogram(1000*all_comp_times_t_proc,numel(all_comp_times_t_proc)); title ('Proc time'); xlabel('time(ms)')
+% histogram(1000*all_comp_times_t_proc,2*numel(all_comp_times_t_proc)); title ('\textbf{Proc time}'); xlabel('time(ms)'); xlim([0,150])
 % subplot(2,1,2);
-% histogram(1000*all_comp_times_t_wall,numel(all_comp_times_t_wall)); title ('Wall time'); xlabel('time(ms)')
-% 
+% histogram(1000*all_comp_times_t_wall,2*numel(all_comp_times_t_wall)); title ('\textbf{Wall time}'); xlabel('time(ms)'); xlim([0,150])
+% % 
 % fprintf('Mean (ms), t_proc=%.2f ms\n', mean(1000*all_comp_times_t_proc))
 % fprintf('Mean (ms), t_wall=%.2f ms\n', mean(1000*all_comp_times_t_wall))
-% for novale=1:20
+% 
+% %%
+% for novale=1:10
 
 opti = casadi.Opti();
 
@@ -28,17 +30,18 @@ opti = casadi.Opti();
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CONSTANTS! %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-use_yaw_closed_form=false; %If false, yaw will be optimized.
+% use_yaw_closed_form=false; %If false, yaw will be optimized.
 
-optimize_n_planes=false; %Optimize the normal vector "n" of the planes
-optimize_d_planes=true; %Optimize the scalar "d" of the planes
+optimize_yaw=false;          %If false, the closed form for yaw (which depends on accel and pos) will be used
+optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
+optimize_d_planes=true;     %Optimize the scalar "d" of the planes
 optimize_time_alloc=true;
 
 num_samples_bostacle_per_segment=2;
 half_side_bbox=0.5;
 
 jit=false;
-make_plots=true;
+make_plots=false;
 
 deg_pos=3;
 deg_yaw=2;
@@ -117,7 +120,7 @@ a_max_n=a_max*(alpha^2);
 j_max_n=j_max*(alpha^3);
 
 %FOR YAW
-if(use_yaw_closed_form==false)
+if(optimize_yaw==true)
     y0=opti.parameter(1,1); ydot0=opti.parameter(1,1); 
     yf=opti.parameter(1,1); ydotf=opti.parameter(1,1);
     ydot_max=opti.parameter(1,1);
@@ -151,7 +154,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 sp=MyClampedUniformSpline(t0_n,tf_n,deg_pos, dim_pos, num_seg, opti); %spline position.
 
-if(use_yaw_closed_form==false)
+if(optimize_yaw==true)
     sy=MyClampedUniformSpline(t0_n,tf_n,deg_yaw, dim_yaw, num_seg, opti); %spline yaw.
 end
 
@@ -248,7 +251,7 @@ const_p=[const_p sp.getMaxVelConstraints(basis, v_max_n)];      %Max vel constra
 const_p=[const_p sp.getMaxAccelConstraints(basis, a_max_n)];    %Max accel constraints (position)
 const_p=[const_p sp.getMaxJerkConstraints(basis, j_max_n)];     %Max jerk constraints (position)
 
-if(use_yaw_closed_form==false)
+if(optimize_yaw==true)
     %%Initial and final conditions for POSITION
     const_y{end+1}=sy.getPosT(t0_n)== y0;
     const_y{end+1}=sy.getVelT(t0_n)== ydot0_n ;
@@ -274,12 +277,15 @@ for j=1:(sp.num_seg)
       %I need this constraint if alpha is a dec. variable OR if n is a dec
       %variable OR if d is a dec variable
       
+      if(optimize_n_planes || optimize_d_planes || optimize_time_alloc)
       
-      for i=1:num_obs
-        vertexes_ij=obst{i}{j};
-        for kk=1:size(vertexes_ij,2)
-            const_p{end+1}= n{ip}'*vertexes_ij(:,kk) + d{ip} >= 1;   %TODO: make sure this follows the convention from C++
-        end
+          for i=1:num_obs
+            vertexes_ij=obst{i}{j};
+            for kk=1:size(vertexes_ij,2)
+                const_p{end+1}= n{ip}'*vertexes_ij(:,kk) + d{ip} >= 1;   %TODO: make sure this follows the convention from C++
+            end
+          end
+      
       end
       
       %and the control points on the other side
@@ -316,13 +322,13 @@ all_target_isInFOV=[];
 f=0.05;%focal length in meters
 
 
-for t_n=t_simpson_n %TODO: Use a casadi MAP for this sum
+for t_n=t_simpson_n %TODO: Use a casadi map for this sum
     
     w_t_b = sp.getPosT(t_n);
     a=sp.getAccelT(t_n)/(alpha^(2));
     xi=a+[0;0;g];
     
-    if(use_yaw_closed_form==false)
+    if(optimize_yaw==true)
   
         xi1=xi(1); xi2=xi(2); xi3=xi(3);
         nxi2= xi1*xi1 + xi2*xi2 + xi3*xi3;
@@ -373,7 +379,7 @@ total_cost=c_pos_smooth*pos_smooth_cost+...
            c_final_pos*final_pos_cost+...
            c_total_time*total_time_cost;
 
-if(use_yaw_closed_form==false)
+if(optimize_yaw==true)
     yaw_smooth_cost=sy.getControlCost()/(alpha^(sy.p-1));
     final_yaw_cost=(sy.getPosT(tf_n)- yf)^2;
  
@@ -404,7 +410,7 @@ thetax_FOV_deg_value=70;
 thetay_FOV_deg_value=70;
 Ra_value=12.0;
 
-if(use_yaw_closed_form==false)
+if(optimize_yaw==true)
     
     yCPs=sy.getCPsAsMatrix();
 %     yCPs_par=opti.parameter(1,size(yCPs,2));
@@ -463,8 +469,8 @@ ctrl_pts_obstacle_value=zeros(size(tmp1));
 deltat_fromInitTrajObs_toPointD_value=0.0;
 deltat_fromInitTrajObs_toEndTrajObs_value=8.0;
 
-% tmp1=rand(size(tmp1));
-% tmp2=rand(size(tmp2));
+tmp1=rand(size(tmp1));
+tmp2=rand(size(tmp2));
 
 % 
 % tmp1=[   -4.0000   -4.0000   -4.0000  -23.7331  -12.3799   -9.7726    1.8451    1.8451    1.8451
@@ -497,7 +503,7 @@ par_and_init_guess=[...
               {createStruct('alpha', alpha, alpha_value)},...
               {createStruct('pCPs', pCPs, tmp1)}];
           
-if(use_yaw_closed_form==false)
+if(optimize_yaw==true)
     
     par_and_init_guess=[...
              {createStruct('y0', y0, y0_value)},...
@@ -551,7 +557,7 @@ opti.subject_to([const_p, const_y])
 results_expresion={pCPs, all_nd, total_cost, pos_smooth_cost, alpha, fov_cost, final_pos_cost}; %Note that this containts both parameters, variables, and combination of both. If they are parameters, the corresponding value will be returned
 results_names={'pCPs','all_nd','total_cost','pos_smooth_cost','alpha','fov_cost','final_pos_cost'};
 
-if(use_yaw_closed_form==false)
+if(optimize_yaw==true)
     results_expresion=[results_expresion {yCPs,  yaw_smooth_cost, final_yaw_cost}];
     results_names=[results_names {'yCPs', 'yaw_smooth_cost', 'final_yaw_cost'}];
 end
@@ -566,7 +572,7 @@ for i=1:numel(results_expresion)
 end
 
 full(sol.pCPs)          
-if(use_yaw_closed_form==false)
+if(optimize_yaw==true)
   full(sol.yCPs)
 end
 
@@ -581,7 +587,7 @@ cprintf('Green','Total time trajec=%.2f s (alpha=%.2f) \n', full(sol.alpha*(tf_n
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 sp.updateCPsWithSolution(full(sol.pCPs))
-if(use_yaw_closed_form==false)
+if(optimize_yaw==true)
     sy_cpoints_var=sy.getCPsAsMatrix();
     sy.updateCPsWithSolution(full(sol.yCPs))
 end
@@ -614,7 +620,7 @@ for t_i=t_simpson_n %t0:0.3:tf
     accel = sp.getAccelT(t_i)/(alpha_result^2);
     
     %Obtain w_R_b from accel and psi
-    if(use_yaw_closed_form==false)
+    if(optimize_yaw==true)
         yaw = sy.getPosT(t_i);
         qabc=qabcFromAccel(accel, 9.81);
         qpsi=[cos(yaw/2), 0, 0, sin(yaw/2)]; %Note that qpsi has norm=1
@@ -670,6 +676,10 @@ plot(all_fov_costs_evaluated,'-o'); title('Fov cost. $>$0 means not in FOV')
 
 end
 
+% all_comp_times_t_proc(end+1)=t_proc_total;
+% all_comp_times_t_wall(end+1)=t_wall_total;
+
+% end
 
 % disp("Going to save function")
 % my_func.save('./casadi_generated_files/my_func.casadi')
