@@ -125,7 +125,7 @@ void OctopusSearch::setVisual(bool visual)
 void OctopusSearch::getBestTrajFound(mt::trajectory& best_traj_found, mt::PieceWisePol& pwp, double dc)
 {
   mt::trajectory traj;
-  CPs2TrajAndPwp_old(result_, best_traj_found, pwp, N_, p_, num_seg_, knots_, dc);
+  CPs2TrajAndPwp_old(best_solution_.qp, best_traj_found, pwp, N_, p_, num_seg_, knots_, dc);
 }
 
 void OctopusSearch::getEdgesConvexHulls(mt::Edges& edges_convex_hulls)
@@ -133,12 +133,12 @@ void OctopusSearch::getEdgesConvexHulls(mt::Edges& edges_convex_hulls)
   Eigen::Matrix<double, 3, 4> last4Cps;
   Eigen::Matrix<double, 3, 4> last4Cps_new_basis;
 
-  for (int i = 3; i < result_.size(); i++)
+  for (int i = 3; i < best_solution_.qp.size(); i++)
   {
-    last4Cps.col(0) = result_[i - 3];
-    last4Cps.col(1) = result_[i - 2];
-    last4Cps.col(2) = result_[i - 1];
-    last4Cps.col(3) = result_[i];
+    last4Cps.col(0) = best_solution_.qp[i - 3];
+    last4Cps.col(1) = best_solution_.qp[i - 2];
+    last4Cps.col(2) = best_solution_.qp[i - 1];
+    last4Cps.col(3) = best_solution_.qp[i];
 
     int interval = i - 3;
 
@@ -161,6 +161,35 @@ void OctopusSearch::getEdgesConvexHulls(mt::Edges& edges_convex_hulls)
         }
       }
     }
+  }
+}
+
+void OctopusSearch::getBestTrajsFound(std::vector<mt::trajectory>& all_trajs_found)
+{
+  all_trajs_found.clear();
+
+  for (auto node_ptr : nodesptr_cg_)
+  {
+    std::vector<Eigen::Vector3d> cps;
+
+    Node* tmp = node_ptr;
+
+    while (tmp != NULL)
+    {
+      cps.push_back(Eigen::Vector3d(tmp->qi.x(), tmp->qi.y(), tmp->qi.z()));
+      tmp = tmp->previous;
+    }
+
+    cps.push_back(q1_);
+    cps.push_back(q0_);  // cps = [....q4 q3 q2 q1 q0}
+
+    std::reverse(std::begin(cps), std::end(cps));  // cps=[q0 q1 q2 q3 q4 ...]
+
+    mt::trajectory traj;
+    mt::PieceWisePol pwp;
+    CPs2TrajAndPwp_old(cps, traj, pwp, N_, p_, num_seg_, knots_, 0.01);  // Last number is the resolution
+
+    all_trajs_found.push_back(traj);
   }
 }
 
@@ -657,16 +686,19 @@ void OctopusSearch::printPath(Node& node1)
   std::cout << std::endl;
 }
 
-void OctopusSearch::recoverPath(Node* result_ptr)
+std::vector<Eigen::Vector3d> OctopusSearch::recoverCPsFromNodePtr(Node* result_ptr)
 {
   // std::cout << "Recovering path" << std::endl;
-  result_.clear();
+
+  std::vector<Eigen::Vector3d> result;
+
+  result.clear();
 
   if (result_ptr == NULL)
   {
-    result_.push_back(q0_);
-    result_.push_back(q1_);
-    return;
+    result.push_back(q0_);
+    result.push_back(q1_);
+    return result;
   }
 
   Node* tmp = result_ptr;
@@ -678,22 +710,24 @@ void OctopusSearch::recoverPath(Node* result_ptr)
   // std::cout << tmp->qi.transpose() << std::endl;
 
   //  std::cout << "qi is" << tmp->qi.transpose() << std::endl;
-  result_.push_back(tmp->qi);  // qN
-  result_.push_back(tmp->qi);  // qN-1
+  result.push_back(tmp->qi);  // qN
+  result.push_back(tmp->qi);  // qN-1
 
   while (tmp != NULL)
   {
-    result_.push_back(tmp->qi);
+    result.push_back(tmp->qi);
 
     tmp = tmp->previous;
   }
 
-  result_.push_back(q1_);
-  result_.push_back(q0_);
+  result.push_back(q1_);
+  result.push_back(q0_);
 
   // std::cout << "reverse" << std::endl;
 
-  std::reverse(std::begin(result_), std::end(result_));  // result_ is [q0 q1 q2 q3 ...]
+  std::reverse(std::begin(result), std::end(result));  // result is [q0 q1 q2 q3 ...]
+
+  return result;
 }
 
 Eigen::Matrix<double, 3, 4> OctopusSearch::transformBSpline2otherBasis(const Eigen::Matrix<double, 3, 4>& Qbs,
@@ -739,8 +773,8 @@ bool OctopusSearch::checkFeasAndFillND(std::vector<Eigen::Vector3d>& q, std::vec
       if (solved == false)
       {
         ////////////////////////////// For debugging
-        // std::cout << red << "\nThis does NOT satisfy the LP:  obstacle= " << obst_index
-        //          << ", last index=" << index_interv + 3 << reset << std::endl;
+        std::cout << red << "\nThis does NOT satisfy the LP:  obstacle= " << obst_index
+                  << ", last index=" << index_interv + 3 << reset << std::endl;
 
         // std::cout << " (in basis_ form)" << std::endl;
 
@@ -1025,7 +1059,7 @@ exit:
   return (!satisfies_LP);
 }
 
-bool OctopusSearch::run(std::vector<Eigen::Vector3d>& result, std::vector<Eigen::Vector3d>& n, std::vector<double>& d)
+bool OctopusSearch::run(std::vector<os::solution>& solutions, int num_of_trajs_per_replan)
 {
   /////////// reset some stuff
   // stores the closest node found
@@ -1037,8 +1071,10 @@ bool OctopusSearch::run(std::vector<Eigen::Vector3d>& result, std::vector<Eigen:
   complete_closest_result_so_far_ptr_ = NULL;
 
   expanded_valid_nodes_.clear();
-  result_.clear();
   map_open_list_.clear();
+
+  nodesptr_cg_.clear();
+  nodesptr_cng_.clear();
 
   ////////////////////////////
 
@@ -1064,19 +1100,13 @@ bool OctopusSearch::run(std::vector<Eigen::Vector3d>& result, std::vector<Eigen:
 
   Node* current_ptr;
 
-  int status;
-
-  int RUNTIME_REACHED = 0;
-  int GOAL_REACHED = 1;
-  int EMPTY_OPENLIST = 2;
-
   while (openList_.size() > 0)
   {
     // Check if runtime is over
     if (timer_astar.elapsedSoFarMs() > (max_runtime_ * 1000))
     {
       std::cout << "[A*] Max Runtime was reached" << std::endl;
-      status = RUNTIME_REACHED;
+
       goto exitloop;
     }
 
@@ -1154,46 +1184,24 @@ bool OctopusSearch::run(std::vector<Eigen::Vector3d>& result, std::vector<Eigen:
     bool collides = collidesWithObstacles(*current_ptr);
     // std::cout << "collision check took " << timer_collision_check << std::endl;
 
-    // already_exist = false;
     if (collides)
     {
-      // Node* tmp = current_ptr;
-      // while (tmp != NULL)
-      // {
-      //   // cps.push_back(Eigen::Vector3d(tmp->qi.x(), tmp->qi.y(), tmp->qi.z()));
-      //   unsigned int ix2, iy2, iz2;
-      //   ix2 = round((tmp->qi.x() - orig_.x()) / voxel_size_);
-      //   iy2 = round((tmp->qi.y() - orig_.y()) / voxel_size_);
-      //   iz2 = round((tmp->qi.z() - orig_.z()) / voxel_size_);
-      //   map_open_list_[Eigen::Vector3i(ix2, iy2, iz2)] = false;
-      //   tmp = tmp->previous;
-      // }
-
-      // map_open_list_[Eigen::Vector3i(ix, iy, iz)] = false;
       continue;
     }
     else
     {
-      // std::cout << green << bold << "does not collide: " << (*current_ptr).qi.transpose() << "(i= " << i << ")" <<
-      // reset
-      //           << std::endl;
-
-      // std::cout << "pushing, index= " << (*current_ptr).index << std::endl;
       map_open_list_[Eigen::Vector3i(ix, iy, iz)] = true;
       expanded_valid_nodes_.push_back(*current_ptr);
     }
 
-    if ((*current_ptr).index == (N_ - 2) &&
-        dist < std::max(0.0, complete_closest_dist_so_far_ - 1e-4))  // the 1e-4 is to avoid numerical issues of paths
-                                                                     // essentially with the same dist to the goal. In
-                                                                     // those cases, this gives priority to the
-                                                                     // trajectories found first
+    //////
+
+    //////
+
+    if ((*current_ptr).index == (N_ - 2) && dist < std::max(0.0, complete_closest_dist_so_far_ - 1e-4))
     {
       complete_closest_dist_so_far_ = dist;
       complete_closest_result_so_far_ptr_ = current_ptr;
-
-      // std::cout << bold << blue << "complete_closest_dist_so_far_= " << std::setprecision(10)
-      //           << complete_closest_dist_so_far_ << reset << std::endl;
     }
 
     if (dist < closest_dist_so_far_)
@@ -1205,109 +1213,114 @@ bool OctopusSearch::run(std::vector<Eigen::Vector3d>& result, std::vector<Eigen:
     // check if we are already in the goal
     if ((dist < goal_size_) && (*current_ptr).index == (N_ - 2))
     {
+      nodesptr_cg_.push_back(current_ptr);
+
       std::cout << "[A*] Goal was reached!" << std::endl;
-      status = GOAL_REACHED;
-      goto exitloop;
+      std::cout << "nodesptr_cg_.size()==" << nodesptr_cg_.size() << std::endl;
+
+      if (nodesptr_cg_.size() == 60)
+      {
+        goto exitloop;
+      }
+      else
+      {
+        continue;
+      }
     }
+
     if ((*current_ptr).index == (N_ - 2))
     {
-      continue;
+      // std::cout << "dist= " << dist << std::endl;
+      nodesptr_cng_.push_back(current_ptr);
+
+      continue;  // complete path but that does not reach the goal
     }
     expandAndAddToQueue(*current_ptr, constraint_xL, constraint_xU, constraint_yL, constraint_yU, constraint_zL,
                         constraint_zU);
   }
 
   std::cout << "[A*] openList_ is empty" << std::endl;
-  status = EMPTY_OPENLIST;
   goto exitloop;
 
 exitloop:
 
-  // std::cout << "status= " << status << std::endl;
-  // std::cout << "expanded_nodes_.size()= " << expanded_nodes_.size() << std::endl;
-  // std::cout << "complete_closest_dist_so_far_= " << complete_closest_dist_so_far_ << std::endl;
+  ///
 
-  Node* best_node_ptr = NULL;
+  std::cout << "nodesptr_cng_.size()==" << nodesptr_cng_.size() << std::endl;
+  std::cout << "nodesptr_cg_.size()==" << nodesptr_cg_.size() << std::endl;
 
-  bool have_a_solution = (complete_closest_result_so_far_ptr_ != NULL) || (closest_result_so_far_ptr_ != NULL);
+  // Concatenate: First the nodes that are complete and reached the goal, and then the ones that are only complete
+  std::vector<Node*> nodesptr;
 
-  if (status == GOAL_REACHED)
+  for (int i = 0; (nodesptr.size() < num_of_trajs_per_replan)  ////////
+                  && (i < nodesptr_cg_.size());
+       i++)
   {
-    std::cout << "[A*] choosing current_ptr as solution" << std::endl;
-    best_node_ptr = current_ptr;
+    nodesptr.push_back(nodesptr_cg_[i]);
   }
-  else if ((status == RUNTIME_REACHED || status == EMPTY_OPENLIST) && have_a_solution)
+
+  // And then fill with complete paths that did not reach the goal
+  for (int i = 0; (nodesptr.size() < num_of_trajs_per_replan) && (i < nodesptr_cng_.size()); i++)
   {
-    // if (complete_closest_result_so_far_ptr_ != NULL)
+    nodesptr.push_back(nodesptr_cng_[i]);
+  }
+
+  if (nodesptr.size() != num_of_trajs_per_replan)
+  {
+    std::cout << red << bold << "Not enough pats found. Increase time allowed for Oct. Search" << reset << std::endl;
+
+    std::cout << "Returning false" << std::endl;
+    return false;
+    // abort();
+  }
+
+  // // And then fill with incomplete paths
+  // for (int i = 0; (nodesptr.size() < num_of_trajs_per_replan) &&  //////////
+  //                 (i < openList_.size());                                 //////////
+  //      i++)
+  // {
+  //   nodesptr.push_back(&openList_[i]);
+  // }
+
+  // //////////////////// And if there are still , just copy the first element
+  // for (int i = 0; nodesptr.size() < num_of_trajs_per_replan; i++)
+  // {
+  //   nodesptr.push_back(nodesptr[0]);
+  // }
+
+  ////
+  std::cout << "nodesptr.size()==" << nodesptr.size() << std::endl;
+
+  solutions.clear();
+
+  ////
+  for (Node* best_node_ptr : nodesptr)
+  {
+    os::solution solution;
+
+    solution.qp = recoverCPsFromNodePtr(best_node_ptr);
+
+    // std::cout << "____________" << std::endl;
+    // for (auto qi : result_)
     // {
-    //   std::cout << "THERE EXISTS AT LEAST ONE COMPLETE PATH, with distance= " << complete_closest_dist_so_far_
-    //             << std::endl;
+    //   std::cout << qi.transpose() << std::endl;
     // }
 
-    if (complete_closest_result_so_far_ptr_ != NULL)
+    bool isFeasible = checkFeasAndFillND(solution.qp, solution.n, solution.d);
+
+    if (isFeasible == false)
     {
-      std::cout << "[A*] choosing closest complete path as solution" << std::endl;
-      best_node_ptr = complete_closest_result_so_far_ptr_;
-      std::cout << bold << blue << "complete_closest_dist_so_far_= " << complete_closest_dist_so_far_ << reset
+      std::cout << red << bold << "This should never happen: All complete paths are guaranteed to be feasible" << reset
                 << std::endl;
+      abort();
     }
-    else
-    {
-      std::cout << "[A*] choosing closest path as solution" << std::endl;
-      best_node_ptr = closest_result_so_far_ptr_;
-    }
-  }
-  else
-  {
-    std::cout << red << "This mt::state should never occur" << reset << std::endl;
-    abort();
-    return false;
+
+    solutions.push_back(solution);
   }
 
-  // Fill (until we arrive to N_-2), with the same qi
-  // Note that, by doing this, it's not guaranteed feasibility wrt a dynamic obstacle
-  // and hence the need of the function checkFeasAndFillND()
+  best_solution_ = solutions[0];
 
-  bool path_found_is_not_complete = (best_node_ptr->index < (N_ - 2));
+  // result_ = solutions[0].qp;
 
-  if (path_found_is_not_complete)
-  {
-    for (int j = (best_node_ptr->index) + 1; j <= N_ - 2; j++)
-    {
-      // return false;
-
-      Node* node_ptr = new Node;
-      node_ptr->qi = best_node_ptr->qi;
-      node_ptr->index = j;
-
-      std::cout << red << "Filled " << j << ", " << reset;
-
-      // << node_ptr->qi.transpose() << std::endl;
-      node_ptr->previous = best_node_ptr;
-      best_node_ptr = node_ptr;
-    }
-  }
-
-  recoverPath(best_node_ptr);  // saved in result_
-
-  // std::cout << "____________" << std::endl;
-  // for (auto qi : result_)
-  // {
-  //   std::cout << qi.transpose() << std::endl;
-  // }
-  result = result_;
-
-  bool isFeasible = checkFeasAndFillND(result_, n, d);
-
-  if (isFeasible == false && path_found_is_not_complete == false)
-  {
-    std::cout << red << "This should never happen: All complete paths are guaranteed to be feasible" << reset
-              << std::endl;
-
-    std::cout << red << "=====================================================" << std::endl;
-
-    abort();
-  }
-
-  return isFeasible;
+  return true;  // Todo
 }

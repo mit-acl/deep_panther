@@ -210,12 +210,14 @@ int main(int argc, char** argv)
   int samples_y = 5;  // odd number
   int samples_z = 5;  // odd number
 
+  double bias = 1.0;
+
   double alpha_shrink = 0.9;
 
   double fraction_voxel_size = 0.0;  // grid used to prune nodes that are on the same cell
 
-  double runtime = 0.1;    //[seconds]
-  double goal_size = 0.1;  //[meters]
+  double runtime = 3.5;    //[seconds]
+  double goal_size = 2.0;  //[meters]
 
   Eigen::Vector3d v_max(7.0, 7.0, 7.0);
   Eigen::Vector3d a_max(400000.0, 4000000.0, 4000000.0);
@@ -226,7 +228,7 @@ int main(int argc, char** argv)
   Eigen::Vector3d goal(5.0, 0, 1);
 
   double t_min = 0.0;
-  double t_max = t_min + (goal - q0).norm() / (0.8 * v_max(0));
+  double t_max = t_min + (goal - q0).norm() / (0.5 * v_max(0));
 
   std::cout << "t_min= " << t_min << std::endl;
   std::cout << "t_max= " << t_max << std::endl;
@@ -242,6 +244,8 @@ int main(int argc, char** argv)
 
   int num_of_obs = 1;  // odd number
   double separation = 0.4;
+
+  int num_of_trajs_per_replan = 10;
 
   int num_of_obs_up = (num_of_obs - 1) / 2.0;
 
@@ -283,7 +287,7 @@ int main(int argc, char** argv)
     // convert the obstacles polyhedron arrays
     decomp_ros_msgs::PolyhedronArray poly_msg = DecompROS::polyhedron_array_to_ros(vectorGCALPol2vectorJPSPol(tmp));
     poly_msg.header.frame_id = "world";
-    jps_poly_pubs[i].publish(poly_msg);
+    // jps_poly_pubs[i].publish(poly_msg);
   }
 
   // hull.push_back(Eigen::Vector3d(-1.0, -1.0, -700.0));
@@ -317,18 +321,18 @@ int main(int argc, char** argv)
   myAStarSolver.setRunTime(runtime);
   myAStarSolver.setGoalSize(goal_size);
 
-  myAStarSolver.setBias(1.0);
+  myAStarSolver.setBias(bias);
 
   myAStarSolver.setVisual(false);
 
-  std::vector<Eigen::Vector3d> q;
-  std::vector<Eigen::Vector3d> n;
-  std::vector<double> d;
-  bool solved = myAStarSolver.run(q, n, d);
+  std::vector<os::solution> solutions;
+
+  bool solved = myAStarSolver.run(solutions, num_of_trajs_per_replan);
 
   // Recover all the trajectories found and the best trajectory
   std::vector<mt::trajectory> all_trajs_found;
-  myAStarSolver.getAllTrajsFound(all_trajs_found);
+  // myAStarSolver.getAllTrajsFound(all_trajs_found);
+  myAStarSolver.getBestTrajsFound(all_trajs_found);
 
   mt::trajectory best_traj_found;
   mt::PieceWisePol pwp_best_traj_found;
@@ -343,7 +347,7 @@ int main(int argc, char** argv)
 
   // Convert to marker arrays
   //---> all the trajectories found
-  int increm = 2;
+  int increm = 1;
   int increm_best = 1;
   double scale = 0.02;
   int j = 0;

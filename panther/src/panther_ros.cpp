@@ -64,6 +64,8 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "use_ff", par_.use_ff);
   safeGetParam(nh1_, "visual", par_.visual);
   safeGetParam(nh1_, "color_type", par_.color_type);
+  safeGetParam(nh1_, "num_of_trajs_per_replan", par_.num_of_trajs_per_replan);
+
   safeGetParam(nh1_, "n_agents", par_.n_agents);
 
   safeGetParam(nh1_, "dc", par_.dc);
@@ -221,6 +223,10 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   pub_actual_traj_ = nh1_.advertise<visualization_msgs::Marker>("actual_traj", 1);
   poly_safe_pub_ = nh1_.advertise<decomp_ros_msgs::PolyhedronArray>("polys", 1, true);
   pub_traj_safe_colored_ = nh1_.advertise<visualization_msgs::MarkerArray>("traj_obtained", 1);
+
+  pub_best_trajs_colored_ = nh1_.advertise<visualization_msgs::MarkerArray>("best_trajs", 1);
+  pub_guesses_colored_ = nh1_.advertise<visualization_msgs::MarkerArray>("guesses", 1);
+
   pub_traj_ = nh1_.advertise<panther_msgs::DynTraj>("/trajs", 1, true);  // The last boolean is latched or not
   pub_fov_ = nh1_.advertise<visualization_msgs::Marker>("fov", 1);
   pub_obstacles_ = nh1_.advertise<visualization_msgs::Marker>("obstacles", 1);
@@ -419,14 +425,17 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
   if (ros::ok() && published_initial_position_ == true)
   {
     mt::Edges edges_obstacles;
-    std::vector<mt::state> X_safe;
+    mt::trajectory X_safe;
+
+    std::vector<si::solOrGuess> best_solutions;
+    std::vector<si::solOrGuess> guesses;
 
     std::vector<Hyperplane3D> planes;
     mt::PieceWisePol pwp;
     mt::log log;
 
-    bool replanned =
-        panther_ptr_->replan(edges_obstacles, X_safe, planes, num_of_LPs_run_, num_of_QCQPs_run_, pwp, log);
+    bool replanned = panther_ptr_->replan(edges_obstacles, X_safe, best_solutions, guesses, planes, num_of_LPs_run_,
+                                          num_of_QCQPs_run_, pwp, log);
 
     if (log.drone_status != DroneStatus::GOAL_REACHED)  // log.replanning_was_needed
     {
@@ -442,6 +451,11 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
       pubObstacles(edges_obstacles);
       pubTraj(X_safe);
       publishPlanes(planes);
+
+      // pubBestTrajs(best_solutions);
+
+      pubVectorOfsolOrGuess(best_solutions, pub_best_trajs_colored_);
+      pubVectorOfsolOrGuess(guesses, pub_guesses_colored_);
     }
 
     if (replanned)
@@ -557,7 +571,7 @@ void PantherRos::whoPlansCB(const panther_msgs::WhoPlans& msg)
   {  // PANTHER is the one who plans now (this happens when the take-off is finished)
     sub_term_goal_ = nh1_.subscribe("term_goal", 1, &PantherRos::terminalGoalCB, this);  // TODO: duplicated from above
     sub_state_ = nh1_.subscribe("state", 1, &PantherRos::stateCB, this);                 // TODO: duplicated from above
-    pubCBTimer_.start();
+    pubCBTimer_.start();                                                                 /////// Oct-12-2021
     replanCBTimer_.start();
     std::cout << on_blue << "**************PANTHER STARTED" << reset << std::endl;
   }
@@ -617,6 +631,39 @@ void PantherRos::clearMarkerArray(visualization_msgs::MarkerArray* tmp, ros::Pub
 
   (*publisher).publish(*tmp);
   (*tmp).markers.clear();
+}
+
+void PantherRos::pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_or_guesses, ros::Publisher& publisher)
+{
+  visualization_msgs::MarkerArray best_trajs;
+
+  int j = 0;
+
+  for (auto sol_or_guess : sols_or_guesses)
+  {
+    std::string ns = (sol_or_guess.is_guess) ? name_drone_ + "_guess" : name_drone_ + "_sol";
+    double scale = (sol_or_guess.is_guess) ? 0.05 : 0.15;
+
+    if (sol_or_guess.solver_succeeded || sol_or_guess.is_guess)
+    {
+      // std::cout << "Solver succeeded here!" << std::endl;
+      // sol_or_guess.print();
+
+      int increm = (int)std::max(sol_or_guess.traj.size() / par_.res_plot_traj, 1.0);  // this is to speed up rviz
+
+      visualization_msgs::MarkerArray tmp;
+      tmp = trajectory2ColoredMarkerArray(sol_or_guess.traj, par_.v_max.maxCoeff(), increm, ns + std::to_string(j),
+                                          scale, par_.color_type, id_, par_.n_agents);
+
+      // append to best_trajs
+      best_trajs.markers.insert(best_trajs.markers.end(), tmp.markers.begin(), tmp.markers.end());
+
+      // std::cout << "best_trajs.markers.size()" << best_trajs.markers.size() << std::endl;
+    }
+    j = j + 1;
+  }
+
+  publisher.publish(best_trajs);
 }
 
 void PantherRos::pubTraj(const std::vector<mt::state>& data)

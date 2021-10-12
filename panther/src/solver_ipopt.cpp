@@ -409,26 +409,23 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
   return true;
 }
 
-bool SolverIpopt::optimize()
+bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<si::solOrGuess> &guesses)
 {
   std::cout << "in SolverIpopt::optimize" << std::endl;
 
   // reset some stuff
-  traj_solution_.clear();
-  bool guess_found = generateAStarGuess();  // I obtain q_quess_, n_guess_, d_guess_
+  bool guess_found = generateAStarGuess();  // I obtain p_guesses_
   if (guess_found == false)
   {
-    std::cout << bold << red << "Planes haven't been found" << reset << std::endl;
+    std::cout << bold << red << "Necessary guesses for pos haven't been found" << reset << std::endl;
     return false;
   }
-  n_ = n_guess_;
-  d_ = d_guess_;
 
   int max_num_of_planes = par_.num_max_of_obst * par_.num_seg;
-  if ((n_guess_.size() > max_num_of_planes))
+  if ((p_guesses_[0].n.size() > max_num_of_planes))
   {
     std::cout << red << bold << "the casadi function does not support so many planes" << reset << std::endl;
-    std::cout << red << bold << "you have " << num_of_obst_ << "*" << par_.num_seg << "=" << n_guess_.size()
+    std::cout << red << bold << "you have " << num_of_obst_ << "*" << par_.num_seg << "=" << p_guesses_[0].n.size()
               << " planes" << std::endl;
     std::cout << red << bold << "and max is  " << par_.num_max_of_obst << "*" << par_.num_seg << "="
               << max_num_of_planes << " planes" << std::endl;
@@ -481,234 +478,107 @@ bool SolverIpopt::optimize()
   map_arguments["c_final_pos"] = par_.c_final_pos;  // / pow((final_state_.pos - initial_state_.pos).norm(), 4);
   map_arguments["c_final_yaw"] = par_.c_final_yaw;
 
-  static casadi::DM all_nd(4, max_num_of_planes);
-  all_nd = casadi::DM::zeros(4, max_num_of_planes);
-  for (int i = 0; i < n_guess_.size(); i++)
+  /////////////////////////////////////////// SOLVE AN OPIMIZATION FOR ECH OF THE GUESSES FOUND
+
+  solutions.clear();
+  guesses.clear();
+
+  for (auto p_guess : p_guesses_)
   {
-    // Casadi needs the plane equation as n_casadi'x+d_casadi<=0
-    // The free space is on the side n'x+d <= -1 (and also on the side n'x+d <= 1)
-    // Hence, n_casadi=n, and d_casadi=d-1
-    all_nd(0, i) = n_guess_[i].x();
-    all_nd(1, i) = n_guess_[i].y();
-    all_nd(2, i) = n_guess_[i].z();
-    all_nd(3, i) = d_guess_[i] - 1;
-  }
-
-  map_arguments["all_nd"] = all_nd;
-
-  ///////////////// GUESS FOR POSITION CONTROL POINTS
-  casadi::DM matrix_qp_guess(3, (N_ + 1));  // TODO: do this just once?
-  for (int i = 0; i < matrix_qp_guess.columns(); i++)
-  {
-    matrix_qp_guess(0, i) = qp_guess_[i].x();
-    matrix_qp_guess(1, i) = qp_guess_[i].y();
-    matrix_qp_guess(2, i) = qp_guess_[i].z();
-  }
-  map_arguments["pCPs"] = matrix_qp_guess;
-
-  ////////////////////////////////Generate Yaw Guess
-  casadi::DM matrix_qy_guess(1, N_);  // TODO: do this just once?
-
-  // if (use_straight_yaw_guess_ == false)
-  // {
-  matrix_qy_guess = generateYawGuess(matrix_qp_guess, all_w_fe_, initial_state_.yaw, initial_state_.dyaw,
-                                     final_state_.dyaw, t_init_, t_final_);
-  // }
-  // else
-  // {
-  //   std::cout << "Using straight line guess" << std::endl;
-  //   for (int i = 0; i < matrix_qy_guess.columns(); i++)
-  //   {
-  //     matrix_qy_guess(0, i) = initial_state_.yaw + i * (final_state_.yaw - initial_state_.yaw) / (1.0 * N_);
-  //   }
-  // }
-  // std::cout << bold << blue << "Guess for yaw\n" << matrix_qy_guess << reset << std::endl;
-
-  map_arguments["yCPs"] = matrix_qy_guess;
-
-  // for(std::map<std::string, casadi::DM>::const_iterator it = map_arguments.begin();
-  //     it != map_arguments.end(); ++it)
-  // {
-  //     std::cout << it->first << " " << it->second<< "\n";
-  // }
-  ////////////////////////// CALL THE SOLVER
-  std::map<std::string, casadi::DM> result;
-  log_ptr_->tim_opt.tic();
-  // if (par_.force_final_pos == true)
-  // {
-  //   result = cf_op_force_final_pos_(map_arguments);
-  // }
-  // else
-  // {
-  // result = cf_op_(map_arguments);
-  // }
-
-  /////////////////////////////////
-
-  if (par_.mode == "panther" && focus_on_obstacle_ == true)
-  {
-    map_arguments["c_yaw_smooth"] = par_.c_yaw_smooth;
-    map_arguments["c_fov"] = par_.c_fov;
-    std::cout << bold << green << "Optimizing for YAW and POSITION!" << reset << std::endl;
-    result = cf_op_(map_arguments);
-  }
-  else if (par_.mode == "py" && focus_on_obstacle_ == true)
-  {
-    // first solve for the position spline
-    map_arguments["c_yaw_smooth"] = 0.0;
-    map_arguments["c_fov"] = 0.0;
-    std::cout << bold << green << "Optimizing first for POSITION!" << reset << std::endl;
-    result = cf_op_(map_arguments);
-
-    // Use the position control points obtained for solve for yaw. Note that here the pos spline is FIXED
-    map_arguments["c_yaw_smooth"] = par_.c_yaw_smooth;
-    map_arguments["c_fov"] = par_.c_fov;
-    map_arguments["pCPs"] = result["pCPs"];
-
-    std::cout << bold << green << "and then for YAW!" << reset << std::endl;
-
-    std::map<std::string, casadi::DM> result_for_yaw = cf_fixed_pos_op_(map_arguments);
-
-    //////////// Debugging
-    if (result["yCPs"].columns() != result_for_yaw["yCPs"].columns())
+    static casadi::DM all_nd(4, max_num_of_planes);
+    all_nd = casadi::DM::zeros(4, max_num_of_planes);
+    for (int i = 0; i < p_guess.n.size(); i++)
     {
-      std::cout << "Sizes do not match. This is likely because you did not run main.m with both pos_is_fixed=true and "
-                   "pos_is_fixed=false"
-                << std::endl;
-      abort();
-    }
-    ///////////////////
-
-    result["yCPs"] = result_for_yaw["yCPs"];
-
-    // The costs logged will not be the right ones, so don't use them in this mode
-  }
-  else if (par_.mode == "noPA" || par_.mode == "ysweep" || focus_on_obstacle_ == false)
-  {
-    map_arguments["c_yaw_smooth"] = 0.0;
-    map_arguments["c_fov"] = 0.0;
-    std::cout << bold << green << "Optimizing for POSITION!" << reset << std::endl;
-    result = cf_op_(map_arguments);
-  }
-  else
-  {
-    std::cout << "Mode not implemented yet. Aborting" << std::endl;
-    abort();
-  }
-  ////////////////////////////
-
-  log_ptr_->tim_opt.toc();
-
-  ///////////////// GET STATUS FROM THE SOLVER
-  // Very hacky solution, see discussion at https://groups.google.com/g/casadi-users/c/1061E0eVAXM/m/dFHpw1CQBgAJ
-  // Inspired from https://gist.github.com/jgillis/9d12df1994b6fea08eddd0a3f0b0737f
-  // auto optimstatus = cf_op_.instruction_MX(index_instruction_).which_function().stats(1)["return_status"];
-
-  std::string optimstatus;
-  // if (par_.force_final_pos == true)
-  // {
-  //   optimstatus = std::string(
-  //       cf_op_force_final_pos_.instruction_MX(index_instruction_).which_function().stats(1)["return_status"]);
-  // }
-  // else
-  // {
-  optimstatus = std::string(cf_op_.instruction_MX(index_instruction_).which_function().stats(1)["return_status"]);
-  // }
-
-  ////// Example of how to obtain inf_pr and inf_du
-  // std::vector<double> inf_pr_all = std::map<std::string, casadi::GenericType>(
-  //     cf_op_.instruction_MX(index_instruction_).which_function().stats(1)["iterations"])["inf_pr"];
-  // std::vector<double> inf_du_all = std::map<std::string, casadi::GenericType>(
-  //     cf_op_.instruction_MX(index_instruction_).which_function().stats(1)["iterations"])["inf_du"];
-  // double inf_pr = inf_pr_all.back();
-  // double inf_du = inf_du_all.back();
-  // std::cout << "inf_pr= " << inf_pr << std::endl;
-  // std::cout << "inf_du= " << inf_du << std::endl;
-
-  //////////////// LOG COSTS OBTAINED
-  log_ptr_->pos_smooth_cost = double(result["pos_smooth_cost"]);
-  log_ptr_->yaw_smooth_cost = double(result["yaw_smooth_cost"]);
-  log_ptr_->fov_cost = double(result["fov_cost"]);
-  log_ptr_->final_pos_cost = double(result["final_pos_cost"]);
-  log_ptr_->final_yaw_cost = double(result["final_yaw_cost"]);
-
-  ///////////////// DECIDE ACCORDING TO STATUS OF THE SOLVER
-  std::vector<Eigen::Vector3d> qp;  // Solution found (Control points for position)
-  std::vector<double> qy;           // Solution found (Control points for yaw)
-  std::cout << "optimstatus= " << optimstatus << std::endl;
-  // See names here:
-  // https://github.com/casadi/casadi/blob/fadc86444f3c7ab824dc3f2d91d4c0cfe7f9dad5/casadi/interfaces/ipopt/ipopt_interface.cpp
-  if (optimstatus == "Solve_Succeeded" || optimstatus == "Solved_To_Acceptable_Level")
-  {
-    std::cout << green << "IPOPT found a solution" << reset << std::endl;
-    log_ptr_->success_opt = true;
-    // copy the solution
-    auto qp_casadi = result["pCPs"];
-    for (int i = 0; i < qp_casadi.columns(); i++)
-    {
-      qp.push_back(Eigen::Vector3d(double(qp_casadi(0, i)), double(qp_casadi(1, i)), double(qp_casadi(2, i))));
+      // Casadi needs the plane equation as n_casadi'x+d_casadi<=0
+      // The free space is on the side n'x+d <= -1 (and also on the side n'x+d <= 1)
+      // Hence, n_casadi=n, and d_casadi=d-1
+      all_nd(0, i) = p_guess.n[i].x();
+      all_nd(1, i) = p_guess.n[i].y();
+      all_nd(2, i) = p_guess.n[i].z();
+      all_nd(3, i) = p_guess.d[i] - 1;
     }
 
-    // std::cout<<"SOLUTION OPTIMIZATION: "<<result["yCps"]<<std::endl;
-    // std::cout<<"all_w_fe="<<map_arguments["all_w_fe"]<<std::endl;
-    // std::cout<<"all_w_velfewrtworld="<<map_arguments["all_w_velfewrtworld"]<<std::endl;
+    map_arguments["all_nd"] = all_nd;
 
-    ///////////////////////////////////
-    if (par_.mode == "panther" || par_.mode == "py")
+    ///////////////// GUESS FOR POSITION CONTROL POINTS
+    casadi::DM matrix_qp_guess(3, (N_ + 1));  // TODO: do this just once?
+    for (int i = 0; i < matrix_qp_guess.columns(); i++)
     {
-      if (focus_on_obstacle_ == true)
+      matrix_qp_guess(0, i) = p_guess.qp[i].x();
+      matrix_qp_guess(1, i) = p_guess.qp[i].y();
+      matrix_qp_guess(2, i) = p_guess.qp[i].z();
+    }
+    map_arguments["pCPs"] = matrix_qp_guess;
+
+    ////////////////////////////////Generate Yaw Guess
+    casadi::DM matrix_qy_guess(1, N_);  // TODO: do this just once?
+
+    matrix_qy_guess = generateYawGuess(matrix_qp_guess, all_w_fe_, initial_state_.yaw, initial_state_.dyaw,
+                                       final_state_.dyaw, t_init_, t_final_);
+
+    map_arguments["yCPs"] = matrix_qy_guess;
+
+    si::solOrGuess guess;
+    guess.is_guess = true;
+    guess.qp = p_guess.qp;
+    guess.qy = static_cast<std::vector<double>>(matrix_qy_guess);
+
+    // for(std::map<std::string, casadi::DM>::const_iterator it = map_arguments.begin();
+    //     it != map_arguments.end(); ++it)
+    // {
+    //     std::cout << it->first << " " << it->second<< "\n";
+    // }
+    ////////////////////////// CALL THE SOLVER
+    std::map<std::string, casadi::DM> result;
+    log_ptr_->tim_opt.tic();
+
+    /////////////////////////////////
+
+    if (par_.mode == "panther" && focus_on_obstacle_ == true)
+    {
+      map_arguments["c_yaw_smooth"] = par_.c_yaw_smooth;
+      map_arguments["c_fov"] = par_.c_fov;
+      std::cout << bold << green << "Optimizing for YAW and POSITION!" << reset << std::endl;
+      result = cf_op_(map_arguments);
+    }
+    else if (par_.mode == "py" && focus_on_obstacle_ == true)
+    {
+      // first solve for the position spline
+      map_arguments["c_yaw_smooth"] = 0.0;
+      map_arguments["c_fov"] = 0.0;
+      std::cout << bold << green << "Optimizing first for POSITION!" << reset << std::endl;
+      result = cf_op_(map_arguments);
+
+      // Use the position control points obtained for solve for yaw. Note that here the pos spline is FIXED
+      map_arguments["c_yaw_smooth"] = par_.c_yaw_smooth;
+      map_arguments["c_fov"] = par_.c_fov;
+      map_arguments["pCPs"] = result["pCPs"];
+
+      std::cout << bold << green << "and then for YAW!" << reset << std::endl;
+
+      std::map<std::string, casadi::DM> result_for_yaw = cf_fixed_pos_op_(map_arguments);
+
+      //////////// Debugging
+      if (result["yCPs"].columns() != result_for_yaw["yCPs"].columns())
       {
-        qy = static_cast<std::vector<double>>(result["yCPs"]);
+        std::cout << "Sizes do not match. This is likely because you did not run main.m with both pos_is_fixed=true "
+                     "and "
+                     "pos_is_fixed=false"
+                  << std::endl;
+        abort();
       }
-      else
-      {  // find the yaw spline that goes to final_state_.yaw as fast as possible
+      ///////////////////
 
-        double y0 = initial_state_.yaw;
-        double yf = final_state_.yaw;
-        double ydot0 = initial_state_.dyaw;
-        int p = par_.deg_yaw;
+      result["yCPs"] = result_for_yaw["yCPs"];
 
-        qy.clear();
-        qy.push_back(y0);
-        qy.push_back(y0 + deltaT_ * ydot0 / (double(p)));  // y0 and ydot0 fix the second control point
-
-        int num_cps_yaw = par_.num_seg + p;
-
-        for (int i = 0; i < (num_cps_yaw - 3); i++)
-        {
-          double v_needed = p * (yf - qy.back()) / (p * deltaT_);
-
-          saturate(v_needed, -par_.ydot_max, par_.ydot_max);  // Make sure it's within the limits
-
-          double next_qy = qy.back() + (p * deltaT_) * v_needed / (double(p));
-
-          qy.push_back(next_qy);
-        }
-
-        qy.push_back(qy.back());  // TODO: HERE I'M ASSUMMING FINAL YAW VELOCITY=0 (i.e., final_state_.dyaw==0)
-
-        // std::cout << "HERE 4!" << std::endl;
-        // std::cout << "qy= " << std::endl;
-        // for (auto qi : qy)
-        // {
-        //   std::cout << qi << " ";
-        // }
-
-        // std::cout << std::endl;
-        // std::cout << "deltaT_= " << deltaT_ << std::endl;
-
-        // std::cout << "yf= " << yf << std::endl;
-        // std::cout << "y0= " << y0 << std::endl;
-      }
+      // The costs logged will not be the right ones, so don't use them in this mode
     }
-    else if (par_.mode == "noPA" || par_.mode == "ysweep")
-    {  // constant yaw
-      // Note that in ysweep, the yaw will be a sinusoidal function, see Panther::getNextGoal
-      qy.clear();
-      for (int i = 0; i < result["yCPs"].columns(); i++)
-      {
-        qy.push_back(initial_state_.yaw);
-      }
+    else if (par_.mode == "noPA" || par_.mode == "ysweep" || focus_on_obstacle_ == false)
+    {
+      map_arguments["c_yaw_smooth"] = 0.0;
+      map_arguments["c_fov"] = 0.0;
+      std::cout << bold << green << "Optimizing for POSITION!" << reset << std::endl;
+      result = cf_op_(map_arguments);
     }
     else
     {
@@ -716,19 +586,155 @@ bool SolverIpopt::optimize()
       abort();
     }
 
-    ///////////////////////////
-  }
-  else
-  {
-    std::cout << red << "IPOPT failed to find a solution" << reset << std::endl;
-    log_ptr_->success_opt = false;
-    // qp = qp_guess_;
-    // qy = qy_guess_;
-    // TODO: If I want to commit to the guesses, they need to be feasible (right now they aren't
-    // because of j_max and yaw_dot_max) For now, let's not commit to them and return false
-    return false;
+    ////////////////////////////
+
+    log_ptr_->tim_opt.toc();
+
+    ///////////////// GET STATUS FROM THE SOLVER
+    // See discussion at https://groups.google.com/g/casadi-users/c/1061E0eVAXM/m/dFHpw1CQBgAJ
+    // Inspired from https://gist.github.com/jgillis/9d12df1994b6fea08eddd0a3f0b0737f
+    std::string optimstatus =
+        std::string(cf_op_.instruction_MX(index_instruction_).which_function().stats(1)["return_status"]);
+
+    //////////////// LOG COSTS OBTAINED
+    log_ptr_->pos_smooth_cost = double(result["pos_smooth_cost"]);
+    log_ptr_->yaw_smooth_cost = double(result["yaw_smooth_cost"]);
+    log_ptr_->fov_cost = double(result["fov_cost"]);
+    log_ptr_->final_pos_cost = double(result["final_pos_cost"]);
+    log_ptr_->final_yaw_cost = double(result["final_yaw_cost"]);
+
+    ///////////////////
+
+    si::solOrGuess solution;
+    solution.is_guess = false;
+
+    ///////////////// DECIDE ACCORDING TO STATUS OF THE SOLVER
+
+    std::vector<Eigen::Vector3d> qp;  // Solution found (Control points for position)
+    std::vector<double> qy;           // Solution found (Control points for yaw)
+    std::cout << "optimstatus= " << optimstatus << std::endl;
+    // See names here:
+    // https://github.com/casadi/casadi/blob/fadc86444f3c7ab824dc3f2d91d4c0cfe7f9dad5/casadi/interfaces/ipopt/ipopt_interface.cpp
+    if (optimstatus == "Solve_Succeeded" || optimstatus == "Solved_To_Acceptable_Level")
+    {
+      std::cout << green << "IPOPT found a solution" << reset << std::endl;
+      log_ptr_->success_opt = true;
+      // copy the solution
+      auto qp_casadi = result["pCPs"];
+      for (int i = 0; i < qp_casadi.columns(); i++)
+      {
+        qp.push_back(Eigen::Vector3d(double(qp_casadi(0, i)), double(qp_casadi(1, i)), double(qp_casadi(2, i))));
+      }
+
+      // std::cout<<"SOLUTION OPTIMIZATION: "<<result["yCps"]<<std::endl;
+      // std::cout<<"all_w_fe="<<map_arguments["all_w_fe"]<<std::endl;
+      // std::cout<<"all_w_velfewrtworld="<<map_arguments["all_w_velfewrtworld"]<<std::endl;
+
+      ///////////////////////////////////
+      if (par_.mode == "panther" || par_.mode == "py")
+      {
+        if (focus_on_obstacle_ == true)
+        {
+          qy = static_cast<std::vector<double>>(result["yCPs"]);
+        }
+        else
+        {  // find the yaw spline that goes to final_state_.yaw as fast as possible
+
+          double y0 = initial_state_.yaw;
+          double yf = final_state_.yaw;
+          double ydot0 = initial_state_.dyaw;
+          int p = par_.deg_yaw;
+
+          qy.clear();
+          qy.push_back(y0);
+          qy.push_back(y0 + deltaT_ * ydot0 / (double(p)));  // y0 and ydot0 fix the second control point
+
+          int num_cps_yaw = par_.num_seg + p;
+
+          for (int i = 0; i < (num_cps_yaw - 3); i++)
+          {
+            double v_needed = p * (yf - qy.back()) / (p * deltaT_);
+
+            saturate(v_needed, -par_.ydot_max, par_.ydot_max);  // Make sure it's within the limits
+
+            double next_qy = qy.back() + (p * deltaT_) * v_needed / (double(p));
+
+            qy.push_back(next_qy);
+          }
+
+          qy.push_back(qy.back());  // TODO: HERE I'M ASSUMMING FINAL YAW VELOCITY=0 (i.e., final_state_.dyaw==0)
+        }
+      }
+      else if (par_.mode == "noPA" || par_.mode == "ysweep")
+      {  // constant yaw
+        // Note that in ysweep, the yaw will be a sinusoidal function, see Panther::getNextGoal
+        qy.clear();
+        for (int i = 0; i < result["yCPs"].columns(); i++)
+        {
+          qy.push_back(initial_state_.yaw);
+        }
+      }
+      else
+      {
+        std::cout << "Mode not implemented yet. Aborting" << std::endl;
+        abort();
+      }
+
+      ///////////////////////////
+
+      solution.qp = qp;
+      solution.qy = qy;
+    }
+    else
+    {
+      std::cout << red << "IPOPT failed to find a solution" << reset << std::endl;
+      log_ptr_->success_opt = false;
+      // qp = p_guesses_.qp;
+      // qy = qy_guess_;
+      // TODO: If I want to commit to the guesses, they need to be feasible (right now they aren't
+      // because of j_max and yaw_dot_max) For now, let's not commit to them and return false
+    }
+
+    solution.solver_succeeded = log_ptr_->success_opt;
+
+    ////////////////////////////////////
+    //////// Only needed for visualization:
+    CPs2TrajAndPwp(guess.qp, guess.qy, guess.traj, guess.pwp, par_.deg_pos, par_.deg_yaw, knots_, par_.dc);
+
+    if (solution.solver_succeeded == true)
+    {
+      CPs2TrajAndPwp(solution.qp, solution.qy, solution.traj, solution.pwp, par_.deg_pos, par_.deg_yaw, knots_,
+                     par_.dc);
+      // Force last vel and jerk =final_state_ (which it's not guaranteed because of the discretization with par_.dc)
+      solution.traj.back().vel = final_state_.vel;
+      solution.traj.back().accel = final_state_.accel;
+      solution.traj.back().jerk = Eigen::Vector3d::Zero();
+      solution.traj.back().ddyaw = final_state_.ddyaw;
+    }
+
+    solutions.push_back(solution);
+    guesses.push_back(guess);
+    //////////////////////////////////
+    //////////////////////////////////
+
+    // TODO: Fill here n and d (if they are included as decision variables)
   }
 
+  for (int i = 0; i < solutions.size(); i++)
+  {
+    // if (solution.solver_succeeded)
+    // {
+    //   std::cout << "Solver succeeded here!" << std::endl;
+
+    std::cout << bold << "Guess:" << reset << std::endl;
+
+    guesses[i].print();
+
+    std::cout << bold << "Solution:" << reset << std::endl;
+
+    solutions[i].print();
+    // }
+  }
   ///////////////// PRINT SOLUTION
   // std::cout << "Position control Points obtained= " << std::endl;
   // printStd(qp);
@@ -736,22 +742,24 @@ bool SolverIpopt::optimize()
   // std::cout << "Yaw control Points obtained= " << std::endl;
   // printStd(qy);
 
-  ///////////////// Fill  traj_solution_ and pwp_solution_
-  int param_pp = 3;
-  int param_py = 2;
-  // std::cout << "qy.size()= " << qy.size() << std::endl;
-  CPs2TrajAndPwp(qp, qy, traj_solution_, pwp_solution_, param_pp, param_py, knots_, par_.dc);
+  std::cout << "solutions.size()==" << solutions.size() << std::endl;
 
-  // Force last vel and jerk =final_state_ (which it's not guaranteed because of the discretization with par_.dc)
-  traj_solution_.back().vel = final_state_.vel;
-  traj_solution_.back().accel = final_state_.accel;
-  traj_solution_.back().jerk = Eigen::Vector3d::Zero();
-  traj_solution_.back().ddyaw = final_state_.ddyaw;
+  if (solutions[0].solver_succeeded == true)
+  {
+    ///////////////// Fill  traj_solution_ and pwp_solution_
+    traj_solution_.clear();
 
-  // Uncomment the following line if you wanna visualize the planes
-  // fillPlanesFromNDQ(n_, d_, qp);
+    traj_solution_ = solutions[0].traj;
+    pwp_solution_ = solutions[0].pwp;
 
-  return true;
+    // Uncomment the following line if you wanna visualize the planes
+    // fillPlanesFromNDQ(n_, d_, qp);
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 void SolverIpopt::getSolution(mt::PieceWisePol &solution)

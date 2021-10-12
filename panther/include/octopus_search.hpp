@@ -37,6 +37,39 @@ struct Node
   int idz;
 };
 
+namespace os  // Octopus Search
+{
+struct solution
+{
+  std::vector<Eigen::Vector3d> qp;
+  std::vector<Eigen::Vector3d> n;
+  std::vector<double> d;
+
+  void print()
+  {
+    using namespace termcolor;
+    std::cout << "Pos Control points:" << std::endl;
+
+    Eigen::Matrix<double, 3, -1> tmp(3, qp.size());
+
+    for (int i = 0; i < qp.size(); i++)
+    {
+      tmp.col(i) = qp[i];
+    }
+
+    std::cout << red << tmp << reset << std::endl;
+
+    // std::cout << "Yaw Control points:" << std::endl;
+
+    // for (auto qy_i : qy)
+    // {
+    //   std::cout << yellow << qy_i << " ";
+    // }
+    // std::cout << reset << std::endl;
+  }
+};
+}  // namespace os
+
 // Taken from https://wjngkoh.wordpress.com/2015/03/04/c-hash-function-for-eigen-matrix-and-vector/
 template <typename T>
 struct matrix_hash : std::unary_function<T, size_t>
@@ -76,11 +109,13 @@ public:
 
   void setBias(double bias);
 
-  bool run(std::vector<Eigen::Vector3d>& result, std::vector<Eigen::Vector3d>& n, std::vector<double>& d);
+  bool run(std::vector<os::solution>& solutions, int num_of_trajs_per_replan);
 
-  void recoverPath(Node* node1_ptr);
+  std::vector<Eigen::Vector3d> recoverCPsFromNodePtr(Node* node1_ptr);
 
   void getAllTrajsFound(std::vector<mt::trajectory>& all_trajs_found);
+
+  void getBestTrajsFound(std::vector<mt::trajectory>& all_trajs_found);
 
   void computeInverses();
 
@@ -223,13 +258,18 @@ private:
 
   int num_seg_;
 
-  std::vector<Eigen::Vector3d> result_;
+  // std::vector<Eigen::Vector3d> result_;
+
+  os::solution best_solution_;
 
   std::vector<Node> expanded_valid_nodes_;
 
   std::unordered_map<Eigen::Vector3i, bool, matrix_hash<Eigen::Vector3i>> map_open_list_;
 
   std::priority_queue<Node, std::vector<Node>, CompareCost> openList_;  //= OpenSet, = Q
+
+  std::vector<Node*> nodesptr_cg_;   // Complete and  reach the goal
+  std::vector<Node*> nodesptr_cng_;  // Complete but don't reach the goal
 
   double Ra_ = 1e10;
 

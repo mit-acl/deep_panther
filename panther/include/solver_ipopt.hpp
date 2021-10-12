@@ -30,6 +30,74 @@
 
 typedef PANTHER_timers::Timer MyTimer;
 
+namespace si  // Solver Ipopt
+{
+struct solOrGuess
+{
+  std::vector<Eigen::Vector3d> qp;
+  std::vector<double> qy;
+  mt::trajectory traj;
+  mt::PieceWisePol pwp;
+  bool solver_succeeded = false;
+  bool is_guess;
+
+  void print()
+  {
+    using namespace termcolor;
+    std::cout << "Pos Control points:" << std::endl;
+
+    Eigen::Matrix<double, 3, -1> tmp(3, qp.size());
+
+    for (int i = 0; i < qp.size(); i++)
+    {
+      tmp.col(i) = qp[i];
+    }
+
+    std::cout << red << tmp << reset << std::endl;
+
+    std::cout << "Yaw Control points:" << std::endl;
+
+    for (auto qy_i : qy)
+    {
+      std::cout << yellow << qy_i << " ";
+    }
+    std::cout << reset << std::endl;
+  }
+};
+
+// struct guess
+// {
+//   std::vector<Eigen::Vector3d> qp;
+//   std::vector<double> qy;
+//   mt::trajectory traj;
+//   mt::PieceWisePol pwp;
+
+//   void print()
+//   {
+//     using namespace termcolor;
+//     std::cout << "Pos Control points:" << std::endl;
+
+//     Eigen::Matrix<double, 3, -1> tmp(3, qp.size());
+
+//     for (int i = 0; i < qp.size(); i++)
+//     {
+//       tmp.col(i) = qp[i];
+//     }
+
+//     std::cout << red << tmp << reset << std::endl;
+
+//     std::cout << "Yaw Control points:" << std::endl;
+
+//     for (auto qy_i : qy)
+//     {
+//       std::cout << yellow << qy_i << " ";
+//     }
+//     std::cout << reset << std::endl;
+//   }
+// };
+
+}  // namespace si
+
 class SolverIpopt
 {
 public:
@@ -37,7 +105,7 @@ public:
 
   ~SolverIpopt();
 
-  bool optimize();
+  bool optimize(std::vector<si::solOrGuess> &solutions, std::vector<si::solOrGuess> &guesses);
 
   // setters
   void setMaxRuntimeKappaAndMu(double runtime, double kappa, double mu);
@@ -57,6 +125,7 @@ public:
   int getNumOfLPsRun();
   int getNumOfQCQPsRun();
   void getSolution(mt::PieceWisePol &solution);
+
   double getTimeNeeded();
 
   int B_SPLINE = 1;  // B-Spline Basis
@@ -156,10 +225,10 @@ private:
   double max_runtime_ = 2;  //[seconds]
 
   // Guesses
-  std::vector<Eigen::Vector3d> n_guess_;   // Guesses for the normals
-  std::vector<double> d_guess_;            // Guesses for the d of the planes
-  std::vector<Eigen::Vector3d> qp_guess_;  // Guesses for the position control points
-  std::vector<double> qy_guess_;           // Guesses for the yaw control points
+  // std::vector<Eigen::Vector3d> n_guess_;   // Guesses for the normals
+  // std::vector<double> d_guess_;            // Guesses for the d of the planes
+  // std::vector<Eigen::Vector3d> qp_guess_;  // Guesses for the position control points
+  // std::vector<double> qy_guess_;           // Guesses for the yaw control points
 
   double kappa_ = 0.2;  // kappa_*max_runtime_ is spent on the initial guess
   double mu_ = 0.5;     // mu_*max_runtime_ is spent on the optimization
@@ -230,6 +299,8 @@ private:
   casadi::DM eigen2casadi(const Eigen::Vector3d &a);
 
   bool focus_on_obstacle_;
+
+  std::vector<os::solution> p_guesses_;
 
   // std::unique_ptr<mygraph_t> mygraph_ptr;
   //////////////////////////////////

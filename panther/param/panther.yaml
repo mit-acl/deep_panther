@@ -3,6 +3,8 @@ visual: true #publish visualization stuff
 color_type: "vel" #"vel" or "plain"
 n_agents: 16 #only used for the color in the trajectory
 
+num_of_trajs_per_replan: 10
+
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 goal_radius: 0.5    #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
 drone_radius: 0.1  #(m) Used for collision checking
@@ -13,8 +15,8 @@ drone_radius_extra_safety: 0.1  #(m) Used for collision checking
 x_min: -100.0  # [m] don't forget the .0
 x_max: 100.0  # [m] don't forget the .0
 
-y_min: -4.0  # [m] don't forget the .0
-y_max: 4.0   # [m] don't forget the .0
+y_min: -100.0  # [m] don't forget the .0
+y_max: 100.0   # [m] don't forget the .0
 
 z_min: -4.0        #[m] points below this are considered ground
 z_max: 4.0         #[m] 
@@ -22,10 +24,10 @@ z_max: 4.0         #[m]
 # [IN THE LAUNCH FILE] mode: "py" #no_perception_aware (noPA), first_pos_then_yaw (py), panther (panther)
 
 #Angle to decide whether to focus on an obstacle or to focus on front of me
-angle_deg_focus_front: 90 #Set to very big if you wanna focus always on obstacle
+angle_deg_focus_front: 9000 #Set to very big if you wanna focus always on obstacle
 
 
-impose_FOV_in_trajCB: true
+impose_FOV_in_trajCB: false
 #============================================
 #============================================
 #============================================
@@ -66,15 +68,15 @@ max_seconds_keeping_traj: 0.3     #% If a trajectory has been kept for this long
 a_star_samp_x: 5
 a_star_samp_y: 5 
 a_star_samp_z: 5 
-a_star_fraction_voxel_size: 0.5 #\in [0,1] The higher, the bigger the voxel size in A* is(i.e. more prunning)
+a_star_fraction_voxel_size: 0.2 #\in [0,1] The higher, the bigger the voxel size in A* is(i.e. more prunning)
 allow_infeasible_guess: true  #whether allow infeasible guesses to be used for the optimization. If false, straight line guess will be used in the case of an infeasible guess
 
-a_star_bias: 1.0 #Bias (cost=g+bias*h) in the A* search 
+a_star_bias: 0.5 #Bias (cost=g+bias*h) in the A* search 
 
-res_plot_traj: 9.0  #Higher --> More resolution when plotting the trajectory 
-factor_alloc: 1.2 #>=1. Used to find the total duration of a given trajectory.
+res_plot_traj: 20.0  #Higher --> More resolution when plotting the trajectory 
+factor_alloc: 1.6 #>=1. Used to find the total duration of a given trajectory.
 # factor_alloc_when_forcing_final_pos: 2.0 #>=1. Used to find the total duration of a given trajectory.
-alpha_shrink: 0.95 #\in [0,1] Only used for MINVO/Bezier
+alpha_shrink: 0.9 #\in [0,1] Only used for MINVO/Bezier
 
 # alpha: 0.0 #[m] Error in position
 # beta: 0.0 #[m] Deviation between the trajectory and the segment between two discretization points
@@ -92,7 +94,7 @@ gamma: 0.1 #[seconds] >0 Time step between discretization points
 
 # TODO: some params here are not used
 # kappa + mu <=1 
-upper_bound_runtime_snlopt: 0.350 #[seconds] 
-lower_bound_runtime_snlopt: 0.005 #[seconds] 
+upper_bound_runtime_snlopt: 1.0 #[seconds] 
+lower_bound_runtime_snlopt: 1.0 #[seconds] 
 kappa: 1.0 #% of time spent to find initial guess
 mu: 0.0    #% of time spent to solve the optimization. CURRENTLY NOT USED

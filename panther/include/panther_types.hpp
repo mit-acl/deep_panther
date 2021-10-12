@@ -770,6 +770,8 @@ struct parameters
   std::string color_type;
   int n_agents;
 
+  int num_of_trajs_per_replan;
+
   double dc;
   double goal_radius;
   double drone_radius;

@@ -33,14 +33,14 @@ pos_is_fixed=false; %you need to run this file twice to produce the necessary ca
 
 deg_pos=3;
 deg_yaw=2;
-num_seg =4; %number of segments
+num_seg =6; %number of segments
 num_max_of_obst=10; %This is the maximum num of the obstacles 
 num_samples_simpson=14;  %This will also be the num_of_layers in the graph yaw search of C++
 num_of_yaw_per_layer=40; %This will be used in the graph yaw search of C++
                          %Note that the initial layer will have only one yaw (which is given) 
 basis="MINVO"; %MINVO OR B_SPLINE or BEZIER. This is the basis used for collision checking (in position, velocity, accel and jerk space), both in Matlab and in C++
 linear_solver_name='ma27'; %mumps [default, comes when installing casadi], ma27, ma57, ma77, ma86, ma97 
-print_level=5; %From 0 (no verbose) to 12 (very verbose), default is 5
+print_level=0; %From 0 (no verbose) to 12 (very verbose), default is 5
 
 t0_n=0.0; 
 tf_n=1.0;
@@ -465,11 +465,19 @@ all_params= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV_deg_val
               {createStruct('c_final_yaw', c_final_yaw, 0.0)}];
 
 
-tmp1=[   -4.0000   -4.0000   -4.0000    0.7111    3.9997    3.9997    3.9997;
-         0         0         0   -1.8953   -0.0131   -0.0131   -0.0131;
-         0         0         0    0.6275    0.0052    0.0052    0.0052];
-     
-tmp2=[   -0.0000   -0.0000    0.2754    2.1131    2.6791    2.6791];
+% tmp1=[   -4.0000   -4.0000   -4.0000    0.7111    3.9997    3.9997    3.9997;
+%          0         0         0   -1.8953   -0.0131   -0.0131   -0.0131;
+%          0         0         0    0.6275    0.0052    0.0052    0.0052];
+%      
+% tmp2=[   -0.0000   -0.0000    0.2754    2.1131    2.6791    2.6791];
+
+
+tmp1=[ p0_value(1)*ones(1,sp.p-1)   linspace(p0_value(1),pf_value(1), sp.N+1-2*(sp.p-1))       pf_value(1)*ones(1,sp.p-1)
+       p0_value(2)*ones(1,sp.p-1)   linspace(p0_value(2),pf_value(2), sp.N+1-2*(sp.p-1))       pf_value(2)*ones(1,sp.p-1) 
+       p0_value(3)*ones(1,sp.p-1)   linspace(p0_value(3),pf_value(3), sp.N+1-2*(sp.p-1))       pf_value(3)*ones(1,sp.p-1) ];
+   
+tmp2=[ y0_value(1)*ones(1,sy.p-1)   linspace(y0_value(1),yf_value(1), sy.N+1-2*(sy.p-1))       yf_value(1)*ones(1,sy.p-1) ];
+
 
 all_params_and_init_guesses=[{createStruct('pCPs', pCPs, tmp1)},...
                              {createStruct('yCPs', yCPs, tmp2)},...

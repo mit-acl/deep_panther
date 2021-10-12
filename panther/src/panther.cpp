@@ -702,6 +702,8 @@ void Panther::doStuffTermGoal()
     mtx_plan_.lock();  // must be before changeDroneStatus
 
     changeDroneStatus(DroneStatus::YAWING);
+    // changeDroneStatus(DroneStatus::TRAVELING);  // Changed on Oct 12, 2021
+
     mt::state last_state = plan_.back();
 
     double desired_yaw = atan2(G_term_.pos[1] - last_state.pos[1], G_term_.pos[0] - last_state.pos[0]);
@@ -895,7 +897,8 @@ bool Panther::isReplanningNeeded()
   return true;
 }
 
-bool Panther::replan(mt::Edges& edges_obstacles_out, std::vector<mt::state>& X_safe_out,
+bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
+                     std::vector<si::solOrGuess>& best_solutions, std::vector<si::solOrGuess>& guesses,
                      std::vector<Hyperplane3D>& planes, int& num_of_LPs_run, int& num_of_QCQPs_run,
                      mt::PieceWisePol& pwp_out, mt::log& log)
 {
@@ -1155,8 +1158,10 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, std::vector<mt::state>& X_s
   std::cout << on_cyan << bold << "Solved so far" << solutions_found_ << "/" << total_replannings_ << reset
             << std::endl;
 
+  // std::vector<si::solOrGuess> solutions;
+
   log_ptr_->tim_initial_setup.toc();
-  bool result = solver_->optimize();
+  bool result = solver_->optimize(best_solutions, guesses);
 
   num_of_LPs_run = solver_->getNumOfLPsRun();
   num_of_QCQPs_run = solver_->getNumOfQCQPsRun();
