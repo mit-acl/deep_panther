@@ -37,7 +37,7 @@ optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
 optimize_d_planes=true;     %Optimize the scalar "d" of the planes
 optimize_time_alloc=true;
 
-num_samples_bostacle_per_segment=2;
+num_samples_obstacle_per_segment=2;
 half_side_bbox=0.5;
 
 jit=false;
@@ -203,9 +203,9 @@ for i=1:num_obs
         t_begin_segment= deltaT*(j-1);
 
         all_vertexes=[];
-        for k=1:num_samples_bostacle_per_segment
+        for k=1:num_samples_obstacle_per_segment
             %This takes a sample at the end, but not at the beginning
-            tmp=t_begin_segment + (k/num_samples_bostacle_per_segment)*deltaT; %This is the delta time that goes from 
+            tmp=t_begin_segment + (k/num_samples_obstacle_per_segment)*deltaT; %This is the delta time that goes from 
 
 %             t_i= max( (t_d_ros +  tmp -t_initTrajObs_ros)/(t_endTrajObs_ros-t_initTrajObs_ros),  1.0 );    
             
