@@ -7,18 +7,8 @@
 %  * -------------------------------------------------------------------------- */
 
 close all; clc;clear;
-
-set(0,'DefaultFigureWindowStyle','docked') %'normal' 'docked'
-set(0,'defaulttextInterpreter','latex');
-set(groot, 'defaultAxesTickLabelInterpreter','latex'); set(groot, 'defaultLegendInterpreter','latex');
-%Let us change now the usual grey background of the matlab figures to white
-set(0,'defaultfigurecolor',[1 1 1])
-
+doSetup();
 import casadi.*
-addpath(genpath('./../../submodules/minvo/src/utils'));
-addpath(genpath('./../../submodules/minvo/src/solutions'));
-addpath(genpath('./more_utils'));
-
 
 
 const_p={};
@@ -31,16 +21,29 @@ opti = casadi.Opti();
 
 pos_is_fixed=false; %you need to run this file twice to produce the necessary casadi files: both with pos_is_fixed=false and pos_is_fixed=true. 
 
+
+optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
+optimize_d_planes=true;     %Optimize the scalar "d" of the planes
+optimize_time_alloc=true;
+
+make_plots=true;
+
+half_side_bbox=0.5;
+
 deg_pos=3;
 deg_yaw=2;
 num_seg =6; %number of segments
-num_max_of_obst=10; %This is the maximum num of the obstacles 
-num_samples_simpson=14;  %This will also be the num_of_layers in the graph yaw search of C++
+num_obs=1; %This is the maximum num of the obstacles 
+
+num_samples_obstacle_per_segment = 2;
+num_samples=num_samples_obstacle_per_segment*num_seg;%This will also be the num_of_layers in the graph yaw search of C++
+
 num_of_yaw_per_layer=40; %This will be used in the graph yaw search of C++
                          %Note that the initial layer will have only one yaw (which is given) 
 basis="MINVO"; %MINVO OR B_SPLINE or BEZIER. This is the basis used for collision checking (in position, velocity, accel and jerk space), both in Matlab and in C++
 linear_solver_name='ma27'; %mumps [default, comes when installing casadi], ma27, ma57, ma77, ma86, ma97 
-print_level=0; %From 0 (no verbose) to 12 (very verbose), default is 5
+print_level=5; %From 0 (no verbose) to 12 (very verbose), default is 5
+jit=false;
 
 t0_n=0.0; 
 tf_n=1.0;
@@ -51,6 +54,7 @@ dim_yaw=1;
 offset_vel=0.1;
 
 assert(tf_n>t0_n);
+assert(t0_n==0.0);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% PARAMETERS! %%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -62,6 +66,7 @@ c_yaw_smooth= opti.parameter(1,1);
 c_fov=        opti.parameter(1,1);
 c_final_pos = opti.parameter(1,1);
 c_final_yaw = opti.parameter(1,1);
+c_total_time = opti.parameter(1,1);
 % c_costs.dist_im_cost=         opti.parameter(1,1);
 
 Ra=opti.parameter(1,1);
@@ -78,23 +83,64 @@ thetay_half_FOV_rad=thetay_half_FOV_deg*pi/180.0;
 %%%%% Transformation matrix camera/body b_T_c
 b_T_c=opti.parameter(4,4);
 
-%%%%% Initial and final conditions
+if(optimize_time_alloc)
+    alpha=opti.variable(1,1); 
+else
+    alpha=opti.parameter(1,1); 
+end
+total_time=alpha*(tf_n-t0_n); %Total time is (tf_n-t0_n)*alpha. 
+
+
+%%%%% Initial and final conditions, and max values
+%FOR POSITION
 p0=opti.parameter(3,1); v0=opti.parameter(3,1); a0=opti.parameter(3,1);
 pf=opti.parameter(3,1); vf=opti.parameter(3,1); af=opti.parameter(3,1);
+
+v_max=opti.parameter(3,1);
+a_max=opti.parameter(3,1);
+j_max=opti.parameter(3,1);
+
+%Normalized v0, a0, v_max,...
+v0_n=v0*alpha;
+a0_n=a0*(alpha^2);
+vf_n=vf*alpha;
+af_n=af*(alpha^2);
+v_max_n=v_max*alpha;
+a_max_n=a_max*(alpha^2); 
+j_max_n=j_max*(alpha^3);
+
+%FOR YAW
 y0=opti.parameter(1,1); ydot0=opti.parameter(1,1); 
 yf=opti.parameter(1,1); ydotf=opti.parameter(1,1);
+ydot_max=opti.parameter(1,1);
+
+ydot0_n=ydot0*alpha;
+ydotf_n=ydotf*alpha;
+ydot_max_n=ydot_max*alpha; %v_max for yaw
+
 
 %%%%% Planes
 n={}; d={};
-for i=1:(num_max_of_obst*num_seg)
-    n{i}=opti.parameter(3,1); 
-    d{i}=opti.parameter(1,1);
+for i=1:(num_obs*num_seg)
+    
+    if(optimize_n_planes)
+        n{i}=opti.variable(3,1); 
+    else
+        n{i}=opti.parameter(3,1); 
+    end
+  
+    if(optimize_d_planes)
+        d{i}=opti.variable(1,1);
+    else
+        d{i}=opti.parameter(1,1); 
+    end
+    
 end
 
 %%%% Positions of the feature in the times [t0,t0+XX, ...,tf-XX, tf] (i.e. uniformly distributed and including t0 and tf)
-for i=1:num_samples_simpson
+for i=1:num_samples
     w_fe{i}=opti.parameter(3,1); %Positions of the feature in world frame
-    w_velfewrtworld{i}=opti.parameter(3,1);%Velocity of the feature wrt the world frame, expressed in the world frame
+%     w_velfewrtworld{i}=opti.parameter(3,1);%Velocity of the feature wrt the world frame, expressed in the world frame
 end
 
 %%% Min/max x, y ,z
@@ -102,14 +148,6 @@ end
 x_lim=opti.parameter(2,1); %[min max]
 y_lim=opti.parameter(2,1); %[min max]
 z_lim=opti.parameter(2,1); %[min max]
-
-%%% Maximum velocity and acceleration
-v_max=opti.parameter(3,1);
-a_max=opti.parameter(3,1);
-j_max=opti.parameter(3,1);
-ydot_max=opti.parameter(1,1);
-
-total_time=opti.parameter(1,1); %This allows a different t0 and tf than the one above 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CREATION OF THE SPLINES! %%%%%%%%%%%
@@ -122,6 +160,84 @@ if(pos_is_fixed==true)
 else
     sp=MyClampedUniformSpline(t0_n,tf_n,deg_pos, dim_pos, num_seg, opti); %spline position.
 end
+
+
+
+%%%%%%%% Trajectory of the obstacle
+N=num_seg+deg_pos+1;
+deg_obstacle=deg_pos;
+dim_obstacle=dim_pos;
+ctrl_pts_obstacle=opti.parameter(dim_obstacle,size(sp.CPoints,2)); %This comes from C++
+
+p=deg_obstacle;
+t_obs=linspace(0,1,num_seg+1);
+knots_obstacle=[zeros(1,p+1)      t_obs(2:end-1)          ones(1,p+1)];
+
+
+bs_obstacle=MyCasadiClampedUniformSpline(0,1,deg_obstacle,dim_obstacle,num_seg,ctrl_pts_obstacle, false);
+
+
+%This part below uses the Casadi implementation of a BSpline. However, that
+%implementation does not allow SX variables (which means that it cannot be
+%expanded). See more at https://github.com/jtorde/useful_things/blob/master/casadi/bspline_example/bspline_example.m
+% t_eval_sym=MX.sym('t_eval_sym',1,1); 
+% %See https://github.com/jtorde/useful_things/blob/master/casadi/bspline_example/bspline_example.m
+% my_bs_parametric_tmp=casadi.bspline(t_eval_sym, ctrl_pts_obstacle(:), {knots_obstacle}, {[deg_obstacle]}, dim_obstacle); %Note that here we use casadi.bspline, NOT casadi.Function.bspline
+% my_bs_parametric = Function('my_bs_parametric',{t_eval_sym,ctrl_pts_obstacle},{my_bs_parametric_tmp});
+
+
+%TODO: See short_circuit parameter of if_else, https://groups.google.com/g/casadi-users/c/KobfQ47ZAG8
+%But note that SX does not support short-circuiting--> If I use short-circuiting, I cannot call expand()
+%But it's weird, because with short_circuit=true me funciona expand...
+
+beta1 =opti.parameter(1,1); %deltat_fromInitTrajObs_toPointD
+beta2 =opti.parameter(1,1); %deltat_fromInitTrajObs_toEndTrajObs
+
+beta3=beta2-beta1;
+
+all_vertexes=[];
+
+
+
+
+deltaT=total_time/num_seg; %Time allocated for each segment
+
+
+obst={}; %Obs{i}{j} Contains the vertexes (as columns) of the obstacle i in the interval j
+
+for i=1:num_obs
+
+     all_centers=[];
+    for j=1:num_seg
+
+        all_vertexes=[];
+       
+        
+        for k=1:num_samples_obstacle_per_segment
+            %This takes a sample at the end, but not at the beginning
+            t_obs = beta1 + deltaT*(j-1) + (k/num_samples_obstacle_per_segment)*deltaT; %This is the delta time that goes from   
+            
+            t_nobs= max( t_obs/beta2,  1.0 );  
+            
+            pos_center_obs=bs_obstacle.getPosT(t_nobs); %TODO: bs_obstacle should depend on i (the index of the obstacle)
+            
+            all_centers=[all_centers pos_center_obs];
+
+            all_vertexes=[all_vertexes vertexesOfBox(pos_center_obs, half_side_bbox) ];
+
+        end
+
+        obst{i}.vertexes{j}=all_vertexes;
+        
+
+    end  
+    
+    obst{i}.centers=all_centers;
+    
+end
+
+t_opt_n_samples=linspace(0,1,num_samples);
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CONSTRAINTS! %%%%%%%%%%%%%%%%%%%%%%%
@@ -167,18 +283,24 @@ for j=1:(sp.num_seg)
     Q=sp.getCPs_XX_Pos_ofInterval(basis, j);
 
     %Plane constraints
-    for obst_index=1:num_max_of_obst
+    for obst_index=1:num_obs
       ip = (obst_index-1) * sp.num_seg + j;  % index plane
        
-%       init_int=min(sp.timeSpanOfInterval(j)); 
-%       end_int=max(sp.timeSpanOfInterval(j)); 
-%       %impose that all the vertexes of the obstacle are on one side of the plane
-%       vertexes=getVertexesMovingObstacle(init_int,end_int); %This call should depend on the obstacle itself
-% 
-%       for r=1:size(vertexes,2) %vertex=vertexes
-%           vertex=vertexes(:,r);
-%           opti.subject_to( (-(n{tm(ip)}'*vertex + d{tm(ip)} - epsilon))<= 0);
-%       end
+      %The obstacle should be on one side
+      %I need this constraint if alpha is a dec. variable OR if n is a dec
+      %variable OR if d is a dec variable
+      
+      if(optimize_n_planes || optimize_d_planes || optimize_time_alloc)
+      
+          for i=1:num_obs
+            vertexes_ij=obst{i}.vertexes{j};
+            for kk=1:size(vertexes_ij,2)
+                const_p{end+1}= n{ip}'*vertexes_ij(:,kk) + d{ip} >= 1;   %TODO: make sure this follows the convention from C++
+            end
+          end
+      
+      end
+      
       
       %and the control points on the other side
       for kk=1:size(Q,2)
@@ -194,15 +316,15 @@ for j=1:(sp.num_seg)
     
     %Min max xyz constraints
     for kk=1:size(Q,2) 
-        tmp=Q{kk};
+        t_obs=Q{kk};
 %         const_p{end+1}= x_lim(1)<=tmp(1) ;
 %         const_p{end+1}= x_lim(2)>=tmp(1) ;
 %         
-        const_p{end+1}= y_lim(1)<=tmp(2) ;
-        const_p{end+1}= y_lim(2)>=tmp(2) ;
+        const_p{end+1}= y_lim(1)<=t_obs(2) ;
+        const_p{end+1}= y_lim(2)>=t_obs(2) ;
 
-        const_p{end+1}= z_lim(1)<=tmp(3) ; 
-        const_p{end+1}= z_lim(2)>=tmp(3) ;
+        const_p{end+1}= z_lim(1)<=t_obs(3) ; 
+        const_p{end+1}= z_lim(2)>=t_obs(3) ;
     end
 end
 
@@ -214,204 +336,127 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%% OBJECTIVE! %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-
-% g=9.81;
-%Compute perception cost
-dist_im_cost=0;
-vel_im_cost=0;
-fov_cost=0;
-
 clear i
-t_simpson_n=linspace(t0_n,tf_n,num_samples_simpson);
 
-delta_simpson_n=total_time_n/num_samples_simpson;
-delta_simpson =total_time/num_samples_simpson;
-
-
-u=MX.sym('u',1,1); %it must be defined outside the loop (so that then I can use substitute it regardless of the interval
-w_fevar=MX.sym('w_fevar',3,1); %it must be defined outside the loop (so that then I can use substitute it regardless of the interval
-w_velfewrtworldvar=MX.sym('w_velfewrtworld',3,1);
+% u=MX.sym('u',1,1); %it must be defined outside the loop (so that then I can use substitute it regardless of the interval
+% w_fevar=MX.sym('w_fevar',3,1); %it must be defined outside the loop (so that then I can use substitute it regardless of the interval
+% w_velfewrtworldvar=MX.sym('w_velfewrtworld',3,1);
 yaw= MX.sym('yaw',1,1);  
 simpson_index=1;
 simpson_coeffs=[];
 
 all_target_isInFOV=[];
+all_fov_costs=[];
 
-s_logged={};
+% s_logged={};
 
-for j=1:sp.num_seg
+all_simpson_constants=[];
+all_is_in_FOV=[];
+fov_cost=0;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+h=alpha*(t_opt_n_samples(2)-t_opt_n_samples(1));
+
+for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
     
-    w_t_b{j} = sp.getPosU(u,j);
-    accel_n = sp.getAccelU(u,j);
-    accel=accel_n/(alpha^2);
-%     yaw= sy.getPosU(u,j);%%%%%%%%%%%%
-
+    w_t_b = sp.getPosT(t_opt_n);
+    a=sp.getAccelT(t_opt_n)/(alpha^(2));
+    
     qpsi=[cos(yaw/2), 0, 0, sin(yaw/2)]; %Note that qpsi has norm=1
-
+    qabc=qabcFromAccel(a,9.81);
+    q=multquat(qabc,qpsi); %Note that q is guaranteed to have norm=1
+    w_R_b=toRotMat(q);
+  
+    w_T_b=[w_R_b w_t_b; zeros(1,3) 1];     w_T_c=w_T_b*b_T_c;     c_T_b=invPose(b_T_c);     b_T_w=invPose(w_T_b);
     
-      %%%%% Option A
-%     qabc=qabcFromAccel(accel,g);
-%     q=multquat(qabc,qpsi); %Note that q is guaranteed to have norm=1
-%     w_R_b=toRotMat(q);
-%     %%%%% 
-    
-    
-    %%%%% Option B (same as option 1, but this saves ~0.2 seconds of computation (ONLY IF expand=FALSE) (due to the fact that Casadi doesn't simplify, and simply keeps concatenating operations)     
-    %if expand=true, option A and B give very similar comp. time
-    t=[accel(1); accel(2); accel(3)+9.81];
-    norm_t=sqrt(t(1)^2+t(2)^2+t(3)^2);
-    
-    q_tmp= [qpsi(1)*(norm_t+t(3));
-            -qpsi(1)*t(2)+qpsi(4)*t(1);
-            qpsi(4)*t(2)+qpsi(1)*t(1);
-            qpsi(4)*(norm_t+t(3))];
-
-    w_R_b=(1/(2*norm_t*(norm_t+t(3))))*toRotMat(q_tmp);
-    %%%%%%    
-   
-    
-    w_T_b=[w_R_b w_t_b{j}; zeros(1,3) 1];
-   
-    
-    w_T_c=w_T_b*b_T_c;
-    c_T_b=invPose(b_T_c);
-    b_T_w=invPose(w_T_b);
+    w_fevar=obst{1}.centers(:,simpson_index); %TODO: For now, only choosing one obstacle
     
     c_P=c_T_b*b_T_w*[w_fevar;1]; %Position of the feature in the camera frame
     s=c_P(1:2)/(c_P(3));  %Note that here we are not using f (the focal length in meters) because it will simply add a constant factor in ||s|| and in ||s_dot||
     
     %FOV is a cone:  (See more possible versions of this constraint at the end of this file)
-    gamma=100;
-%     w_beta=w_fevar(1:3)-w_T_c(1:3,4);
-%     w_beta=w_beta/norm(w_beta);
-%     is_in_FOV1=-cos(thetax_half_FOV_deg*pi/180.0)+w_beta'*w_T_c(1:3,3); %This has to be >=0
-    is_in_FOV1=-cos(thetax_half_FOV_deg*pi/180.0) + (c_P(1:3)'/norm(c_P((1:3))))*[0;0;1];
-    isInFOV_smooth=  (   1/(1+exp(-gamma*is_in_FOV1))  );
-   
+    is_in_FOV_tmp=-cos(thetax_half_FOV_deg*pi/180.0) + (c_P(1:3)'/norm(c_P((1:3))))*[0;0;1]; % Constraint is is_in_FOV1>=0
     
-
-    target_isInFOV{j}=isInFOV_smooth; %This one will be used for the graph search in yaw
+    all_is_in_FOV=[all_is_in_FOV is_in_FOV_tmp];
     
-    %I need to substitute it here because s_dot should consider also the velocity caused by the fact that yaw=yaw(t)
-    s=substitute(s, yaw, sy.getPosU(u,j));
-    target_isInFOV_substituted_yawcps{j}=substitute(target_isInFOV{j}, yaw, sy.getPosU(u,j));
+    is_in_FOV=substitute(is_in_FOV_tmp,yaw,sy.getPosT(t_opt_n));
     
-    %Note that s=f(t, posfeature(t))
-    %See, e.g.,  Eq. 11.3 of https://www2.math.upenn.edu/~pemantle/110-public/notes11.pdf
-    %Hence, s_dot = partial_s_partial_t + partial_s_partial_posfeature*partial_posfeature_partial_t
+    f=-is_in_FOV; % Constraint is f<=0
     
-    partial_s_partial_t=jacobian(s,u)*(1/(alpha*sp.delta_t));% partial_s_partial_u * partial_u_partial_t  
+    fov_cost_j=max(0,f)^3; %Penalty associated with the constraint  
     
-    partial_s_partial_posfeature=jacobian(s,w_fevar);
-    partial_posfeature_partial_t=w_velfewrtworldvar*alpha;
-    s_dot=partial_s_partial_t  + partial_s_partial_posfeature*partial_posfeature_partial_t; 
+    simpson_constant=(h/3.0)*getSimpsonCoeff(simpson_index,num_samples);
+    
+    fov_cost=fov_cost + simpson_constant*fov_cost_j; %See https://en.wikipedia.org/wiki/Simpson%27s_rule#Composite_Simpson's_rule
+    
+    all_fov_costs=[all_fov_costs fov_cost_j];
     
     
-    s_dot2=s_dot'*s_dot;
-    s2=(s'*s);
     
-    %Costs (following the convention of "minimize" )
-    isInFOV=(target_isInFOV_substituted_yawcps{j});
-    fov_cost_j=-isInFOV /(offset_vel+4*s_dot2);
-%     fov_cost_j=-isInFOV + 1500000*(isInFOV)*s_dot2;
-%     fov_cost_j=100000*s_dot2/(isInFOV);
-%     fov_cost_j=-isInFOV+1e6*(1-isInFOV)*s_dot2;
+    simpson_index=simpson_index+1;
+    all_simpson_constants=[all_simpson_constants simpson_constant];
     
-      %%%%%%%%%%%%%%%%%%
-      
-    span_interval=sp.timeSpanOfInterval(j);
-    t_init_interval=min(span_interval);   
-    t_final_interval=max(span_interval);
-    delta_interval=t_final_interval-t_init_interval;
-    
-    tsf=t_simpson_n; %tsf is a filtered version of  t_simpson
-    tsf=tsf(tsf>=min(t_init_interval));
-    if(j==(sp.num_seg))
-        tsf=tsf(tsf<=max(t_final_interval));
-    else
-        tsf=tsf(tsf<max(t_final_interval));
-    end
-    u_simpson{j}=(tsf-t_init_interval)/delta_interval;
-
-    
-    for u_i=u_simpson{j}
-                
-        simpson_coeff=getSimpsonCoeff(simpson_index,num_samples_simpson);
-        
-       
-        fov_cost=fov_cost + (delta_simpson_n/3.0)*simpson_coeff*substitute( fov_cost_j,[u;w_fevar;w_velfewrtworldvar],[u_i;w_fe{simpson_index};w_velfewrtworld{simpson_index}]); 
-
-        all_target_isInFOV=[all_target_isInFOV  substitute(target_isInFOV{j},[u;w_fevar],[u_i;w_fe{simpson_index}])];
-        
-        simpson_coeffs=[simpson_coeffs simpson_coeff]; %Store simply for debugging. Should be [1 4 2 4 2 ... 4 2 1]
-        
-        
-        s_logged{simpson_index}=substitute( s,[u;w_fevar;w_velfewrtworldvar],[u_i;w_fe{simpson_index};w_velfewrtworld{simpson_index}]);
-        
-        simpson_index=simpson_index+1;
-        
-    end
 end
+
 
 %Cost
 pos_smooth_cost=sp.getControlCost()/(alpha^(sp.p-1));
-yaw_smooth_cost=sy.getControlCost()/(alpha^(sy.p-1));
-
 final_pos_cost=(sp.getPosT(tf_n)- pf)'*(sp.getPosT(tf_n)- pf);
+total_time_cost=alpha*(tf_n-t0_n);
+yaw_smooth_cost=sy.getControlCost()/(alpha^(sy.p-1));
 final_yaw_cost=(sy.getPosT(tf_n)- yf)^2;
 
 total_cost=c_pos_smooth*pos_smooth_cost+...
-           c_yaw_smooth*yaw_smooth_cost+... 
            c_fov*fov_cost+...
            c_final_pos*final_pos_cost+...
-           c_final_yaw*final_yaw_cost;
-
+           c_yaw_smooth*yaw_smooth_cost+...
+           c_final_yaw*final_yaw_cost+...
+           c_total_time*total_time_cost;
+    
+opti.minimize(simplify(total_cost));
+       
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% SOLVE! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% opti.callback(@(i) stairs(opti.debug.value(total_cost)));
 
 
-%%%%%%%%%%%%%%%% Example of how to create a casadi function from the solver and then call it
 all_nd=[];
-for i=1:(num_max_of_obst*num_seg)
+for i=1:(num_obs*num_seg)
     all_nd=[all_nd [n{i};d{i}]];
 end
 
 all_w_fe=[]; %all the positions of the feature, as a matrix. Each column is the position of the feature at each simpson sampling point
-all_w_velfewrtworld=[];
-for i=1:num_samples_simpson
+% all_w_velfewrtworld=[];
+for i=1:num_samples
     all_w_fe=[all_w_fe w_fe{i}];
-    all_w_velfewrtworld=[all_w_velfewrtworld w_velfewrtworld{i}];
+%     all_w_velfewrtworld=[all_w_velfewrtworld w_velfewrtworld{i}];
 end
 
 pCPs=sp.getCPsAsMatrix();
 yCPs=sy.getCPsAsMatrix();
 
-% my_function = opti.to_function('panther_casadi_function',...
-%     [ {pCPs},     {yCPs},     {thetax_FOV_deg}, {thetay_FOV_deg},{Ra},{p0},{v0},{a0},{pf},{vf},{af},{y0}, {ydot0}, {ydotf}, {v_max}, {a_max}, {j_max}, {ydot_max}, {total_time}, {all_nd}, {all_w_fe}, {all_w_velfewrtworld}, {c_pos_smooth}, {c_yaw_smooth}, {c_fov}, {c_final_pos}], {pCPs,yCPs},...
-%     {'guess_CPs_Pos','guess_CPs_Yaw', 'thetax_FOV_deg','thetay_FOV_deg','Ra','p0','v0','a0','pf','vf','af','y0', 'ydot0', 'ydotf', 'v_max', 'a_max', 'j_max', 'ydot_max', 'total_time', 'all_nd', 'all_w_fe', 'all_w_velfewrtworld', 'c_pos_smooth', 'c_yaw_smooth', 'c_fov', 'c_final_pos'}, {'pCPs','yCPs'}...
-%                                );
 
-for i=1:num_samples_simpson
-    x0_feature=[1;1;1];
-    v0_feature=0.2; %Set to 0 if you want constant poistion
-    syms t real;
-    x_feature=x0_feature+v0_feature*(t-t0_n)*ones(3,1);
-    v_feature=diff(x_feature,t);
-    all_w_fe_value{i}=double(subs(x_feature,t,t_simpson_n(i)));
-    all_w_velfewrtworld_value{i}=double(subs(v_feature,t,t_simpson_n(i)));
-end
-all_w_fe_value=cell2mat(all_w_fe_value);
-all_w_velfewrtworld_value=cell2mat(all_w_velfewrtworld_value);
+% for i=1:num_samples
+%     x0_feature=[1;1;1];
+%     v0_feature=0.2; %Set to 0 if you want constant poistion
+%     syms t real;
+%     x_feature=x0_feature+v0_feature*(t-t0_n)*ones(3,1);
+%     v_feature=diff(x_feature,t);
+%     all_w_fe_value{i}=double(subs(x_feature,t,t_opt_n_samples(i)));
+% %     all_w_velfewrtworld_value{i}=double(subs(v_feature,t,t_simpson_n(i)));
+% end
+% all_w_fe_value=cell2mat(all_w_fe_value);
+% all_w_velfewrtworld_value=cell2mat(all_w_velfewrtworld_value);
 
 v_max_value=1.6*ones(3,1);
 a_max_value=5*ones(3,1);
 j_max_value=50*ones(3,1);
+
+alpha_value=1.0;
+
 ydot_max_value=1.0; 
-total_time_value=10.5;
+% total_time_value=10.5;
 thetax_FOV_deg_value=80;
 thetay_FOV_deg_value=80;
 Ra_value=12.0;
@@ -429,47 +474,19 @@ pf_value=[4.0;0.0;0.0];
 vf_value=[0;0;0];
 af_value=[0;0;0];
 
-x_lim_value=[-100;100];
-y_lim_value=[-100;100];
-z_lim_value=[-100;100];
+dist_betw_planes=0.01; %See last figure of https://github.com/mit-acl/separator
+norm_n=2/dist_betw_planes;
 
-all_params= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV_deg_value)},...
-              {createStruct('thetay_FOV_deg', thetay_FOV_deg, thetay_FOV_deg_value)},...
-              {createStruct('b_T_c', b_T_c, b_T_c_value)},...
-              {createStruct('Ra', Ra, Ra_value)},...
-              {createStruct('p0', p0, p0_value)},...
-              {createStruct('v0', v0, v0_value)},...
-              {createStruct('a0', a0, a0_value)},...
-              {createStruct('pf', pf, pf_value)},...
-              {createStruct('vf', vf, vf_value)},...
-              {createStruct('af', af, af_value)},...
-              {createStruct('y0', y0, y0_value)},...
-              {createStruct('ydot0', ydot0, ydot0_value)},...
-              {createStruct('yf', yf, yf_value)},...
-              {createStruct('ydotf', ydotf, ydotf_value)},...
-              {createStruct('v_max', v_max, v_max_value)},...
-              {createStruct('a_max', a_max, a_max_value)},...
-              {createStruct('j_max', j_max, j_max_value)},...
-              {createStruct('ydot_max', ydot_max, ydot_max_value)},... 
-              {createStruct('x_lim', x_lim, x_lim_value)},...
-              {createStruct('y_lim', y_lim, y_lim_value)},...
-              {createStruct('z_lim', z_lim, z_lim_value)},...
-              {createStruct('total_time', total_time, total_time_value)},...
-              {createStruct('all_nd', all_nd, zeros(4,num_max_of_obst*num_seg))},...
-              {createStruct('all_w_fe', all_w_fe, all_w_fe_value)},...
-              {createStruct('all_w_velfewrtworld', all_w_velfewrtworld, all_w_velfewrtworld_value)},...
-              {createStruct('c_pos_smooth', c_pos_smooth, 0.001)},...
-              {createStruct('c_yaw_smooth', c_yaw_smooth, 0.0)},...
-              {createStruct('c_fov', c_fov, 1.0)},...
-              {createStruct('c_final_pos', c_final_pos, 100)},...
-              {createStruct('c_final_yaw', c_final_yaw, 0.0)}];
+all_nd_value=[];
+for j=1:floor(num_seg/2)
+    all_nd_value=[all_nd_value norm_n*(1/sqrt(2))*[1; 1; 0; 2] ];
+end
 
+for j=(floor(num_seg/2)+1):num_seg
+    all_nd_value=[all_nd_value norm_n*(1/sqrt(2))*[-1; 1; 0; 2] ];
+end
 
-% tmp1=[   -4.0000   -4.0000   -4.0000    0.7111    3.9997    3.9997    3.9997;
-%          0         0         0   -1.8953   -0.0131   -0.0131   -0.0131;
-%          0         0         0    0.6275    0.0052    0.0052    0.0052];
-%      
-% tmp2=[   -0.0000   -0.0000    0.2754    2.1131    2.6791    2.6791];
+x_lim_value=[-100;100];    y_lim_value=[-100;100];    z_lim_value=[-100;100];
 
 
 tmp1=[ p0_value(1)*ones(1,sp.p-1)   linspace(p0_value(1),pf_value(1), sp.N+1-2*(sp.p-1))       pf_value(1)*ones(1,sp.p-1)
@@ -479,21 +496,58 @@ tmp1=[ p0_value(1)*ones(1,sp.p-1)   linspace(p0_value(1),pf_value(1), sp.N+1-2*(
 tmp2=[ y0_value(1)*ones(1,sy.p-1)   linspace(y0_value(1),yf_value(1), sy.N+1-2*(sy.p-1))       yf_value(1)*ones(1,sy.p-1) ];
 
 
-all_params_and_init_guesses=[{createStruct('pCPs', pCPs, tmp1)},...
-                             {createStruct('yCPs', yCPs, tmp2)},...
-                             all_params];
+ctrl_pts_obstacle_value=zeros(size(tmp1));
 
-vars=[];
-names=[];
-for i=1:numel(all_params_and_init_guesses)
-    vars=[vars {all_params_and_init_guesses{i}.param}];
-    names=[names {all_params_and_init_guesses{i}.name}];
-end
+beta1_value=0.0;
+beta2_value=8.0;
 
+
+
+par_and_init_guess= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV_deg_value)},...
+              {createStruct('thetay_FOV_deg', thetay_FOV_deg, thetay_FOV_deg_value)},...
+              {createStruct('b_T_c', b_T_c, b_T_c_value)},...
+              {createStruct('Ra', Ra, Ra_value)},...
+              {createStruct('p0', p0, p0_value)},...
+              {createStruct('v0', v0, v0_value)},...
+              {createStruct('a0', a0, a0_value)},...
+              {createStruct('pf', pf, pf_value)},...
+              {createStruct('vf', vf, vf_value)},...
+              {createStruct('af', af, af_value)},...
+              {createStruct('v_max', v_max, v_max_value)},...
+              {createStruct('a_max', a_max, a_max_value)},...
+              {createStruct('j_max', j_max, j_max_value)},...
+              {createStruct('x_lim', x_lim, x_lim_value)},...
+              {createStruct('y_lim', y_lim, y_lim_value)},...
+              {createStruct('z_lim', z_lim, z_lim_value)},...
+              {createStruct('ctrl_pts_obstacle', ctrl_pts_obstacle, ctrl_pts_obstacle_value)},...
+              {createStruct('beta1', beta1, beta1_value)},...
+              {createStruct('beta2', beta2, beta2_value)},...
+              {createStruct('alpha', alpha, alpha_value)},...
+              {createStruct('all_nd', all_nd, all_nd_value)},...
+              {createStruct('c_pos_smooth', c_pos_smooth, 0.001)},...
+              {createStruct('c_fov', c_fov, 1.0)},...
+              {createStruct('c_final_pos', c_final_pos, 100)},...
+              {createStruct('c_total_time', c_total_time, 0.0)},...
+              {createStruct('c_final_yaw', c_final_yaw, 0.0)},...
+              {createStruct('c_yaw_smooth', c_yaw_smooth, 0.0)},...
+              {createStruct('pCPs', pCPs, tmp1)}...
+             {createStruct('y0', y0, y0_value)},...
+             {createStruct('ydot0', ydot0, ydot0_value)},...
+             {createStruct('yf', yf, yf_value)},...
+             {createStruct('ydotf', ydotf, ydotf_value)},...
+             {createStruct('ydot_max', ydot_max, ydot_max_value)},... 
+             {createStruct('yCPs', yCPs, tmp2)}];       
+
+par_and_init_guess_exprs=[]; %expressions
+par_and_init_guess_names=[]; %guesses
 names_value={};
-for i=1:numel(all_params_and_init_guesses)
-    names_value{end+1}=all_params_and_init_guesses{i}.name;
-    names_value{end+1}=double2DM(all_params_and_init_guesses{i}.value); 
+for i=1:numel(par_and_init_guess)
+    par_and_init_guess_exprs=[par_and_init_guess_exprs {par_and_init_guess{i}.expression}];
+    par_and_init_guess_names=[par_and_init_guess_names {par_and_init_guess{i}.name}];
+
+    names_value{end+1}=par_and_init_guess{i}.name;
+    names_value{end+1}=double2DM(par_and_init_guess{i}.value); 
+
 end
 
 
@@ -501,23 +555,17 @@ opts = struct;
 opts.expand=true; %When this option is true, it goes WAY faster!
 opts.print_time=true;
 opts.ipopt.print_level=print_level; 
-opts.ipopt.print_frequency_iter=1e10;%1e10 %Big if you don't want to print all the iteratons
+%opts.ipopt.print_frequency_iter=1e10;%1e10 %Big if you don't want to print all the iteratons
 opts.ipopt.linear_solver=linear_solver_name;
+opts.jit=jit;%If true, when I call solve(), Matlab will automatically generate a .c file, convert it to a .mex and then solve the problem using that compiled code
+opts.compiler='shell';
+opts.jit_options.flags='-Ofast';  %Takes ~15 seconds to generate if O0 (much more if O1,...,O3)
+opts.jit_options.verbose=true;  %See example in shallow_water.cpp
+% opts.ipopt.hessian_approximation='limited-memory';
+% opts.ipopt.line_search_method='cg-penalty';
+% opts.ipopt.accept_every_trial_step='yes';
+% opts.ipopt.alpha_for_y='max';
 opti.solver('ipopt',opts); %{"ipopt.hessian_approximation":"limited-memory"} 
-% if(strcmp(linear_solver_name,'ma57'))
-%    opts.ipopt.ma57_automatic_scaling='no';
-% end
-%opts.ipopt.hessian_approximation = 'limited-memory';
-% jit_compilation=false; %If true, when I call solve(), Matlab will automatically generate a .c file, convert it to a .mex and then solve the problem using that compiled code
-% opts.jit=jit_compilation;
-% opts.compiler='clang';
-% opts.jit_options.flags='-O0';  %Takes ~15 seconds to generate if O0 (much more if O1,...,O3)
-% opts.jit_options.verbose=true;  %See example in shallow_water.cpp
-% opts.enable_forward=false; %Seems this option doesn't have effect?
-% opts.enable_reverse=false;
-% opts.enable_jacobian=false;
-% opts.qpsol ='qrqp';  %Other solver
-% opti.solver('sqpmethod',opts);
 
 if(pos_is_fixed==true)
     opti.subject_to([const_y]); %The control points are fixed (i.e., parameters)
@@ -525,16 +573,17 @@ else
     opti.subject_to([const_p, const_y]);
 end
 
-opti.minimize(simplify(total_cost));
-results_vars={pCPs,yCPs, pos_smooth_cost, yaw_smooth_cost, fov_cost, final_pos_cost, final_yaw_cost};
-results_names={'pCPs','yCPs','pos_smooth_cost','yaw_smooth_cost','fov_cost','final_pos_cost','final_yaw_cost'};
 
-my_function = opti.to_function('my_function', vars, results_vars,...
-                                              names, results_names);
+results_expresion={pCPs,yCPs, all_nd, total_cost, yaw_smooth_cost, pos_smooth_cost, alpha, fov_cost, final_yaw_cost, final_pos_cost}; %Note that this containts both parameters, variables, and combination of both. If they are parameters, the corresponding value will be returned
+results_names={'pCPs','yCPs','all_nd','total_cost', 'yaw_smooth_cost', 'pos_smooth_cost','alpha','fov_cost','final_yaw_cost','final_pos_cost'};
+
+
+my_func = opti.to_function('my_func', par_and_init_guess_exprs, results_expresion, par_and_init_guess_names, results_names);
+
 if(pos_is_fixed==true)
-    my_function.save('./casadi_generated_files/op_fixed_pos.casadi') %Optimization Problam. The file generated is quite big
+    my_func.save('./casadi_generated_files/op_fixed_pos.casadi') %Optimization Problam. The file generated is quite big
 else
-    my_function.save('./casadi_generated_files/op.casadi') %Optimization Problam. The file generated is quite big
+    my_func.save('./casadi_generated_files/op.casadi') %Optimization Problam. The file generated is quite big
 end
 
 
@@ -546,13 +595,26 @@ end
                                                     
 % my_function=my_function.expand();
 tic();
-sol=my_function( names_value{:});
+sol=my_func( names_value{:});
 toc();
 if(pos_is_fixed==false)
-    statistics=get_stats(my_function); %See functions defined below
+    statistics=get_stats(my_func); %See functions defined below
 end
-full(sol.pCPs)
+
+
+results_solved=[];
+for i=1:numel(results_expresion)
+    results_solved=[results_solved,    {createStruct(results_names{i}, results_expresion{i}, full(sol.(results_names{i})))} ];
+end
+
+full(sol.pCPs) 
 full(sol.yCPs)
+
+cprintf('Green','Total time trajec=%.2f s (alpha=%.2f) \n', full(sol.alpha*(tf_n-t0_n)), full(sol.alpha)    )
+
+
+[t_proc_total, t_wall_total]= timeInfo(my_func);
+
 
 %Write param file with the characteristics of the casadi function generated
 my_file=fopen('./casadi_generated_files/params_casadi.yaml','w'); %Overwrite content. This will clear its content
@@ -561,58 +623,74 @@ fprintf(my_file,'#If you want to change a parameter, change it in main.m and run
 fprintf(my_file,'deg_pos: %d\n',deg_pos);
 fprintf(my_file,'deg_yaw: %d\n',deg_yaw);
 fprintf(my_file,'num_seg: %d\n',num_seg);
-fprintf(my_file,'num_max_of_obst: %d\n',num_max_of_obst);
-fprintf(my_file,'num_samples_simpson: %d\n',num_samples_simpson);
+fprintf(my_file,'num_max_of_obst: %d\n',num_obs);
+fprintf(my_file,'num_samples_simpson: %d\n',num_samples);
 fprintf(my_file,'num_of_yaw_per_layer: %d\n',num_of_yaw_per_layer); % except in the initial layer, that has only one value
 fprintf(my_file,'basis: "%s"\n',basis);
+fprintf(my_file,'total_time_n: "%s"\n',total_time_n);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% FUNCTION TO GENERATE VISIBILITY AT EACH POINT  %%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+% bs_obstacle=MyCasadiClampedUniformSpline(0,1,deg_obstacle,dim_obstacle,num_seg,ctrl_pts_obstacle, false);
+
 yaw_samples=MX.sym('yaw_samples',1,num_of_yaw_per_layer); 
 
-all_target_isInFOV_for_different_yaw=[];
+all_is_in_FOV_for_different_yaw=[];
 for yaw_sample_i=yaw_samples
-    all_target_isInFOV_for_different_yaw=  [all_target_isInFOV_for_different_yaw;
-                                        substitute(all_target_isInFOV, yaw, yaw_sample_i)];  
+    all_is_in_FOV_for_different_yaw=  [all_is_in_FOV_for_different_yaw;
+                                        substitute(all_is_in_FOV, yaw, yaw_sample_i)];  
 end
-all_target_isInFOV_for_different_yaw=all_target_isInFOV_for_different_yaw'; % Each row will be a layer. Each column will have yaw=constat
+all_is_in_FOV_for_different_yaw=all_is_in_FOV_for_different_yaw'; % Each row will be a layer. Each column will have yaw=constat
 
 pCPs=sp.getCPsAsMatrix();
-g = Function('g',{pCPs,  total_time,    all_w_fe,    thetax_FOV_deg,  thetay_FOV_deg,  b_T_c,  yaw_samples},{all_target_isInFOV_for_different_yaw},...
-                 {'pCPs', 'total_time', 'all_w_fe', 'thetax_FOV_deg', 'thetay_FOV_deg','b_T_c', 'yaw_samples'},{'result'});
+g = Function('g',{pCPs,  alpha,    ctrl_pts_obstacle, beta1, beta2,  thetax_FOV_deg,  thetay_FOV_deg,  b_T_c,  yaw_samples},{all_is_in_FOV_for_different_yaw},...
+                 {'pCPs', 'alpha', 'ctrl_pts_obstacle', 'beta1', 'beta2', 'thetax_FOV_deg', 'thetay_FOV_deg','b_T_c', 'yaw_samples'},{'result'});
 g=g.expand();
 
 g.save('./casadi_generated_files/visibility.casadi') %The file generated is quite big
 
 g_result=g('pCPs',full(sol.pCPs),...
-                         'all_w_fe', all_w_fe_value,...
-                         'thetax_FOV_deg',thetax_FOV_deg_value,...  
-                         'thetay_FOV_deg',thetay_FOV_deg_value,...
-                         'b_T_c',b_T_c_value,...
-                         'yaw_samples', linspace(0,2*pi,numel(yaw_samples)));
+           'alpha',alpha_value,...
+           'ctrl_pts_obstacle', ctrl_pts_obstacle_value,...
+           'beta1', beta1_value,...
+           'beta2', beta2_value,...
+           'thetax_FOV_deg',thetax_FOV_deg_value,...  
+           'thetay_FOV_deg',thetay_FOV_deg_value,...
+           'b_T_c',b_T_c_value,...
+           'yaw_samples', linspace(0,2*pi,numel(yaw_samples)));
 full(g_result.result);
 
 
-sp_cpoints_var=sp.getCPsAsMatrix();
-sy_cpoints_var=sy.getCPsAsMatrix();
+%%%%%%%%%%%%%%%%%%%%%%%%%%% Store solution! %%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+sp_cpoints_var=sp.getCPsAsMatrix();
 sp.updateCPsWithSolution(full(sol.pCPs))
+
+sy_cpoints_var=sy.getCPsAsMatrix();
 sy.updateCPsWithSolution(full(sol.yCPs))
+
 
 %% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% PLOTTING! %%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+if(make_plots)
+
 import casadi.*
-alpha_value=convertMX2Matlab(substitute(alpha,total_time, total_time_value));
+% alpha_value=convertMX2Matlab(substitute(alpha,alpha, total_time_value));
 
-v_max_n_value= v_max_value*alpha_value;
-a_max_n_value= a_max_value*(alpha_value^2);
-j_max_n_value= j_max_value*(alpha_value^3);
+alpha_sol=full(sol.alpha);
 
-ydot_max_n_value= ydot_max_value*alpha_value;
+v_max_n_value= v_max_value*alpha_sol;
+a_max_n_value= a_max_value*(alpha_sol^2);
+j_max_n_value= j_max_value*(alpha_sol^3);
+
+ydot_max_n_value= ydot_max_value*alpha_sol;
 
 sp.plotPosVelAccelJerk(v_max_n_value, a_max_n_value, j_max_n_value)
 % sp.plotPosVelAccelJerkFiniteDifferences();
@@ -628,15 +706,15 @@ disp("Plotting")
 
 
 
-for t_i=t_simpson_n %t0:0.3:tf  
+for t_nobs=t_opt_n_samples %t0:0.3:tf  
     
-    w_t_b = sp.getPosT(t_i);
+    w_t_b = sp.getPosT(t_nobs);
 %     accel = sp.getAccelT(t_i);% sol.value(A{n})*Tau_i;
     
-    accel_n = sp.getAccelT(t_i);
-    accel = accel_n/(alpha_value^2);
+    accel_n = sp.getAccelT(t_nobs);
+    accel = accel_n/(alpha_sol^2);
     
-    yaw = sy.getPosT(t_i);
+    yaw = sy.getPosT(t_nobs);
 %         psiT=sol.value(Psi{n})*Tau_i;
 
     qabc=qabcFromAccel(accel, 9.81);
@@ -657,46 +735,62 @@ for t_i=t_simpson_n %t0:0.3:tf
 
 end
 
-for i=1:num_samples_simpson
-    plotSphere(all_w_fe_value(:,i),0.2,'g');
-end
-
-grid on; xlabel('x'); ylabel('y'); zlabel('z'); 
-camlight
-lightangle(gca,45,0)
-
-
-%%
-
-figure; hold on; import casadi.*
-
-all_s_logged=[];
-for i=1:num_samples_simpson
-    tmp=s_logged{i};
-    
-    %Substitute all the params
-    for ii=1:numel(all_params)
-        tmp=substitute(tmp,all_params{ii}.param, all_params{ii}.value);
+for i=1:num_obs
+    tmp=substituteWithSolution(obst{1}.centers, results_solved, par_and_init_guess);
+    for ii=1:size(tmp,2)
+        plotSphere(tmp(:,ii),0.2,'g');
     end
-    
-%   sol.value(tmp)
-
-    %Substitute the solution
-    tmp=substitute(tmp, sp_cpoints_var, sp.getCPsAsMatrix());
-    tmp=substitute(tmp, sy_cpoints_var, sy.getCPsAsMatrix());
-    
-    all_s_logged=[all_s_logged convertMX2Matlab(tmp)];
 end
 
-% plot(t_simpson, all_s_logged,'o');legend('u','v');
-% plot(all_s_logged(1,:), all_s_logged(2,:),'o');
-x=all_s_logged(1,:); y=all_s_logged(2,:);
-scatter(x,y,60,1:numel(x),'Filled')
-title('Image projection of the feature');
-xlim([-max(abs(x)),max(abs(x))]); ylim([-max(abs(y)),max(abs(y))]); yline(0.0,'--');xline(0.0,'--')
-%  set(gca, 'XAxisLocation', 'origin', 'YAxisLocation', 'origin')
+
+grid on; xlabel('x'); ylabel('y'); zlabel('z'); camlight; lightangle(gca,45,0)
+
+syms x y z real
+all_nd_solved=full(sol.all_nd)/1e5;
+
+for i=1:size(all_nd_solved,2)
+    fimplicit3(all_nd_solved(:,i)'*[x;y;z;1],[-4 4 -4 4 -2 2], 'MeshDensity',2, 'FaceAlpha',0.6) 
+end
+
+view(-91,90)
 
 
+all_fov_costs_evaluated=substituteWithSolution(all_fov_costs, results_solved, par_and_init_guess);
+
+figure;
+plot(all_fov_costs_evaluated,'-o'); title('Fov cost. $>$0 means not in FOV')
+
+
+
+% figure; hold on; import casadi.*
+% 
+% all_s_logged=[];
+% for i=1:num_samples_simpson
+%     t_obs=s_logged{i};
+%     
+%     %Substitute all the params
+%     for ii=1:numel(par_and_init_guess)
+%         t_obs=substitute(t_obs,par_and_init_guess{ii}.param, par_and_init_guess{ii}.value);
+%     end
+%     
+% %   sol.value(tmp)
+% 
+%     %Substitute the solution
+%     t_obs=substitute(t_obs, sp_cpoints_var, sp.getCPsAsMatrix());
+%     t_obs=substitute(t_obs, sy_cpoints_var, sy.getCPsAsMatrix());
+%     
+%     all_s_logged=[all_s_logged convertMX2Matlab(t_obs)];
+% end
+% 
+% % plot(t_simpson, all_s_logged,'o');legend('u','v');
+% % plot(all_s_logged(1,:), all_s_logged(2,:),'o');
+% x=all_s_logged(1,:); y=all_s_logged(2,:);
+% scatter(x,y,60,1:numel(x),'Filled')
+% title('Image projection of the feature');
+% xlim([-max(abs(x)),max(abs(x))]); ylim([-max(abs(y)),max(abs(y))]); yline(0.0,'--');xline(0.0,'--')
+% %  set(gca, 'XAxisLocation', 'origin', 'YAxisLocation', 'origin')
+
+end
 %% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%    FUNCTION TO FIT A SPLINE TO SAMPLES     %%%%%%%%%%%%%
@@ -704,10 +798,10 @@ xlim([-max(abs(x)),max(abs(x))]); ylim([-max(abs(y)),max(abs(y))]); yline(0.0,'-
 
 sy_tmp=MyClampedUniformSpline(t0_n,tf_n,deg_yaw, dim_yaw, num_seg, opti);  %creating another object to not mess up with sy
 
-all_yaw=MX.sym('all_yaw',1,numel(t_simpson_n));
+all_yaw=MX.sym('all_yaw',1,numel(t_opt_n_samples));
 cost_function=0;
-for i=1:numel(t_simpson_n)
-    cost_function = cost_function + (sy_tmp.getPosT(t_simpson_n(i))-all_yaw(i))^2; 
+for i=1:numel(t_opt_n_samples)
+    cost_function = cost_function + (sy_tmp.getPosT(t_opt_n_samples(i))-all_yaw(i))^2; 
 end
 
 lambda1=MX.sym('lambda1',1,1);
@@ -731,18 +825,18 @@ A=jacobian(kkt_eqs, variables);
 
 solution=A\b;  %Solve the system of equations
 
-f= Function('f', {all_yaw, total_time, ydot0, ydotf }, {solution(1:end-3)}, ...
-                 {'all_yaw', 'total_time', 'ydot0', 'ydotf'}, {'result'} );
+f= Function('f', {all_yaw, alpha, ydot0, ydotf }, {solution(1:end-3)}, ...
+                 {'all_yaw', 'alpha', 'ydot0', 'ydotf'}, {'result'} );
 % f=f.expand();
-all_yaw_value=linspace(0,pi,numel(t_simpson_n));
+all_yaw_value=linspace(0,pi,numel(t_opt_n_samples));
 
 
-solution=f(all_yaw_value, total_time_value, ydot0_value, ydotf_value);
+solution=f(all_yaw_value, alpha_value, ydot0_value, ydotf_value);
 sy_tmp=MyClampedUniformSpline(t0_n,tf_n,deg_yaw, dim_yaw, num_seg, opti);  %creating another object to not mess up with sy
 sy_tmp.updateCPsWithSolution(full(solution)');
 sy_tmp.plotPosVelAccelJerk();
 subplot(4,1,1); hold on;
-plot(t_simpson_n, all_yaw_value, 'o')
+plot(t_opt_n_samples, all_yaw_value, 'o')
 
 
 f.save('./casadi_generated_files/fit_yaw.casadi') %The file generated is quite big
@@ -751,6 +845,61 @@ f.save('./casadi_generated_files/fit_yaw.casadi') %The file generated is quite b
 % sy.updateCPsWithSolution(solution(1:end-3)');
 
 %% Functions
+
+
+function result=substituteWithSolution(expression, all_var_solved, all_params_and_init_guesses)
+
+  import casadi.*
+    result=zeros(size(expression));
+    for i=1:size(expression,1)
+        for j=1:size(expression,2)
+            
+                tmp=expression(i,j);
+                
+                %Substitute FIRST the solution [note that this one needs to be first because in all_params_and_init_guesses we have also the initial guesses, which we don't want to use]
+                for ii=1:numel(all_var_solved)
+                    if(isPureParamOrVariable(all_var_solved{ii}.expression)==false) 
+                        continue;
+                    end
+                    tmp=substitute(tmp,all_var_solved{ii}.expression, all_var_solved{ii}.value);
+                end
+                
+                 %And THEN substitute the parameters
+                for ii=1:numel(all_params_and_init_guesses)
+                    tmp=substitute(tmp,all_params_and_init_guesses{ii}.expression, all_params_and_init_guesses{ii}.value);
+                end
+            
+            result(i,j)=convertMX2Matlab(tmp);
+        end
+    end
+
+
+end
+
+%This checks whether it is a pure variable/parameter in the optimization (returns true) or not (returns false). Note that with an expression that is a combination of several double/variables/parameters will return false
+function result=isPureParamOrVariable(expression)
+    result=expression.is_valid_input();
+end
+
+
+function [t_proc_total, t_wall_total]= timeInfo(my_func)
+    tmp=get_stats(my_func);
+    
+    %%See https://github.com/casadi/casadi/wiki/FAQ:-is-the-bottleneck-of-my-optimization-in-CasADi-function-evaluations-or-in-the-solver%3F
+    
+    %This is the time spent evaluating the functions
+    t_casadi=  (tmp.t_wall_nlp_f+tmp.t_wall_nlp_g+tmp.t_wall_nlp_grad+tmp.t_wall_nlp_grad_f+tmp.t_wall_nlp_hess_l+tmp.t_wall_nlp_jac_g);
+    
+    t_ipopt= tmp.t_wall_total-t_casadi;
+
+    cprintf('key','Total time=%.2f ms [Casadi=%.2f%%, IPOPT=%.2f%%]\n',tmp.t_wall_total*1000, 100*t_casadi/tmp.t_wall_total, 100*t_ipopt/tmp.t_wall_total    )
+    
+    
+    
+    t_wall_total=tmp.t_wall_total;
+    t_proc_total=tmp.t_proc_total;    
+    
+end
 
 
 function [const_p,const_y]=addDynLimConstraints(const_p,const_y, sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n)
@@ -787,9 +936,9 @@ function [stats] = get_stats(f)
   end
 end
 
-function a=createStruct(name,param,value)
+function a=createStruct(name,expression,value)
     a.name=name;
-    a.param=param;
+    a.expression=expression;
     a.value=value;
 end
 
