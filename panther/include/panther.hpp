@@ -46,6 +46,8 @@ private:
   mt::state M_;
   mt::committedTrajectory plan_;
 
+  std::vector<si::obstacleForOpt> getObstaclesForOpt(double t_start, double t_end);
+
   Eigen::Vector3d evalMeanDynTrajCompiled(const mt::dynTrajCompiled& traj, double t);
   Eigen::Vector3d evalVarDynTrajCompiled(const mt::dynTrajCompiled& traj, double t);
 
@@ -122,6 +124,8 @@ private:
 
   std::mutex mtx_G_term;
   std::mutex mtx_t_;
+
+  casadi::Function cf_fit3d_;
 
   mt::state stateA_;  // It's the initial condition for the solver
 

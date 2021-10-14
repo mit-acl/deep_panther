@@ -19,13 +19,17 @@ opti = casadi.Opti();
 
 pos_is_fixed=false; %you need to run this file twice to produce the necessary casadi files: both with pos_is_fixed=false and pos_is_fixed=true. 
 
-optimize_n_planes=false;     %Optimize the normal vector "n" of the planes
-optimize_d_planes=false;     %Optimize the scalar "d" of the planes
+optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
+optimize_d_planes=true;     %Optimize the scalar "d" of the planes
 optimize_time_alloc=false;
 
 make_plots=true;
 
-half_side_bbox=0.5;
+
+deg_pos=3;
+deg_yaw=2;
+num_seg =6; %number of segments
+num_max_of_obst=1; %This is the maximum num of the obstacles 
 
 %Constants for spline fitted to the obstacle trajectory
 fitter.deg_pos=5;
@@ -33,16 +37,16 @@ fitter.num_seg=5;
 fitter.dim_pos=3;
 fitter.num_samples=15;
 fitter_num_of_cps= fitter.num_seg + fitter.deg_pos;
-fitter.ctrl_pts=opti.parameter(fitter.dim_pos,fitter_num_of_cps); %This comes from C++
-fitter.bs_casadi=MyCasadiClampedUniformSpline(0,1,fitter.deg_pos,fitter.dim_pos,fitter.num_seg,fitter.ctrl_pts, false);
+for i=1:num_max_of_obst
+    fitter.ctrl_pts{i}=opti.parameter(fitter.dim_pos,fitter_num_of_cps); %This comes from C++
+    fitter.bbox{i}=opti.parameter(fitter.dim_pos,1); %This comes from C++
+    fitter.bs_casadi{i}=MyCasadiClampedUniformSpline(0,1,fitter.deg_pos,fitter.dim_pos,fitter.num_seg,fitter.ctrl_pts{i}, false);
+end
 fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti);
 fitter.total_time=8.0; %Time from (time at point d) to end of the fitted spline
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-deg_pos=3;
-deg_yaw=2;
-num_seg =6; %number of segments
-num_max_of_obst=1; %This is the maximum num of the obstacles 
+
 
 sampler.num_samples_obstacle_per_segment = 2;                    %This is used for both the feature sampling (simpson), and the obstacle avoidance sampling
 sampler.num_samples=sampler.num_samples_obstacle_per_segment*num_seg;    %This will also be the num_of_layers in the graph yaw search of C++
@@ -145,6 +149,11 @@ for i=1:(num_max_of_obst*num_seg)
     end    
 end
 
+% obstacle_bbox={};
+% for i=1:num_max_of_obst
+%     obstacle_bbox{i}=opti.parameter(3,1); %It has three elements: hx, hy, hz (bbox of size hx x hy x hz)
+% end
+
 
 
 %%% Min/max x, y ,z
@@ -207,11 +216,11 @@ for i=1:num_max_of_obst
             
             t_nobs= max( t_obs/fitter.total_time,  1.0 );  
             
-            pos_center_obs=fitter.bs_casadi.getPosT(t_nobs); %TODO: fitter.bs should depend on i (the index of the obstacle)
+            pos_center_obs=fitter.bs_casadi{i}.getPosT(t_nobs);
             
             all_centers=[all_centers pos_center_obs];
 
-            all_vertexes_segment_j=[all_vertexes_segment_j vertexesOfBox(pos_center_obs, half_side_bbox) ];
+            all_vertexes_segment_j=[all_vertexes_segment_j vertexesOfBox(pos_center_obs, fitter.bbox{i}) ];
 
         end
 
@@ -414,6 +423,14 @@ for i=1:(num_max_of_obst*num_seg)
     all_nd=[all_nd [n{i};d{i}]];
 end
 
+
+% all_obstacle_bbox=[];
+% for i=1:num_max_of_obst
+%     all_obstacle_bbox=[all_obstacle_bbox obstacle_bbox{i}]; %The i-th column contains the bbox of the obstacle i
+% end
+
+
+
 pCPs=sp.getCPsAsMatrix();
 yCPs=sy.getCPsAsMatrix();
 
@@ -477,7 +494,9 @@ tmp1=[ p0_value(1)*ones(1,sp.p-1)   linspace(p0_value(1),pf_value(1), sp.N+1-2*(
 tmp2=[ y0_value(1)*ones(1,sy.p-1)   linspace(y0_value(1),yf_value(1), sy.N+1-2*(sy.p-1))       yf_value(1)*ones(1,sy.p-1) ];
 
 
-fitter_ctrl_pts_value=zeros(size(fitter.bs_casadi.CPoints));
+
+
+% all_obstacle_bbox_value= ones(size(all_obstacle_bbox));
 
 par_and_init_guess= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV_deg_value)},...
               {createStruct('thetay_FOV_deg', thetay_FOV_deg, thetay_FOV_deg_value)},...
@@ -501,28 +520,20 @@ par_and_init_guess= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV
               {createStruct('y_lim', y_lim, y_lim_value)},...
               {createStruct('z_lim', z_lim, z_lim_value)},...
               {createStruct('alpha', alpha, alpha_value)},...
-              {createStruct('fitter_ctrl_pts', fitter.ctrl_pts, fitter_ctrl_pts_value)},...
               {createStruct('c_pos_smooth', c_pos_smooth, 0.0)},...
               {createStruct('c_yaw_smooth', c_yaw_smooth, 0.0)},...
               {createStruct('c_fov', c_fov, 1.0)},...
               {createStruct('c_final_pos', c_final_pos, 2000)},...
               {createStruct('c_final_yaw', c_final_yaw, 0.0)},...
-              {createStruct('c_total_time', c_total_time, 0.0)},...
+              {createStruct('c_total_time', c_total_time, 0.0)},...            
               {createStruct('all_nd', all_nd, all_nd_value)},...
-              {createStruct('pCPs', pCPs, tmp1)}...
-             {createStruct('yCPs', yCPs, tmp2)}];       
+              {createStruct('pCPs', pCPs, tmp1)},...
+             {createStruct('yCPs', yCPs, tmp2)},...
+             createCellArrayofStructsForObstacles(fitter)];   
+              
 
-par_and_init_guess_exprs=[]; %expressions
-par_and_init_guess_names=[]; %guesses
-names_value={};
-for i=1:numel(par_and_init_guess)
-    par_and_init_guess_exprs=[par_and_init_guess_exprs {par_and_init_guess{i}.expression}];
-    par_and_init_guess_names=[par_and_init_guess_names {par_and_init_guess{i}.name}];
 
-    names_value{end+1}=par_and_init_guess{i}.name;
-    names_value{end+1}=double2DM(par_and_init_guess{i}.value); 
-
-end
+[par_and_init_guess_exprs, par_and_init_guess_names, names_value]=toExprsNamesAndNamesValue(par_and_init_guess);
 
 
 opts = struct;
@@ -621,19 +632,31 @@ end
 all_is_in_FOV_for_different_yaw=all_is_in_FOV_for_different_yaw'; % Each row will be a layer. Each column will have yaw=constat
 
 pCPs=sp.getCPsAsMatrix();
-g = Function('g',{pCPs,  alpha,    fitter.ctrl_pts,  thetax_FOV_deg,  thetay_FOV_deg,  b_T_c,  yaw_samples},{all_is_in_FOV_for_different_yaw},...
-                 {'pCPs', 'alpha', 'fitter_ctrl_pts', 'thetax_FOV_deg', 'thetay_FOV_deg','b_T_c', 'yaw_samples'},{'result'});
+
+
+%%
+
+
+
+par_and_init_guess= [ {createStruct('pCPs', pCPs, full(sol.pCPs))},...
+                      {createStruct('alpha', alpha, alpha_value)},...
+                      {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV_deg_value)},...
+                      {createStruct('thetay_FOV_deg', thetay_FOV_deg, thetay_FOV_deg_value)},...
+                      {createStruct('b_T_c', b_T_c, b_T_c_value)},...
+                      {createStruct('yaw_samples', yaw_samples, linspace(0,2*pi,numel(yaw_samples)))},...
+                      createCellArrayofStructsForObstacles(fitter)];   
+
+[par_and_init_guess_exprs, par_and_init_guess_names, names_value]=toExprsNamesAndNamesValue(par_and_init_guess);
+                  
+
+g = Function('g', par_and_init_guess_exprs ,{all_is_in_FOV_for_different_yaw},...
+                  par_and_init_guess_names ,{'result'});
 g=g.expand();
 
 g.save('./casadi_generated_files/visibility.casadi') %The file generated is quite big
 
-g_result=g('pCPs',full(sol.pCPs),...
-           'alpha',alpha_value,...
-           'fitter_ctrl_pts', fitter_ctrl_pts_value,...
-           'thetax_FOV_deg',thetax_FOV_deg_value,...  
-           'thetay_FOV_deg',thetay_FOV_deg_value,...
-           'b_T_c',b_T_c_value,...
-           'yaw_samples', linspace(0,2*pi,numel(yaw_samples)));
+g_result=g(names_value{:});
+
 full(g_result.result);
 
 
@@ -879,6 +902,43 @@ f.save('./casadi_generated_files/fit3d.casadi')
 
 
 %% Functions
+
+         
+ function result=createCellArrayofStructsForObstacles(fitter)
+         
+     num_obs=size(fitter.bbox,2);
+
+     result=[];
+     
+     for i=1:num_obs
+        name_crtl_pts=['obs_', num2str(i-1), '_ctrl_pts'];  %Note that we use i-1 here because it will be called from C++
+        name_bbox=['obs_', num2str(i-1), '_bbox'];          %Note that we use i-1 here because it will be called from C++
+
+        crtl_pts_value=zeros(size(fitter.bs_casadi{i}.CPoints));
+
+        result=[result,...
+                {createStruct(name_crtl_pts,   fitter.ctrl_pts{i} , crtl_pts_value)},...
+                {createStruct(name_bbox, fitter.bbox{i} ,  [1;1;1]  )}];
+
+    end
+         
+ end
+
+function [par_and_init_guess_exprs, par_and_init_guess_names, names_value]=toExprsNamesAndNamesValue(par_and_init_guess)
+
+par_and_init_guess_exprs=[]; %expressions
+par_and_init_guess_names=[]; %guesses
+names_value={};
+for i=1:numel(par_and_init_guess)
+    par_and_init_guess_exprs=[par_and_init_guess_exprs {par_and_init_guess{i}.expression}];
+    par_and_init_guess_names=[par_and_init_guess_names {par_and_init_guess{i}.name}];
+
+    names_value{end+1}=par_and_init_guess{i}.name;
+    names_value{end+1}=double2DM(par_and_init_guess{i}.value); 
+
+end
+
+end
 
 
 function result=substituteWithSolution(expression, all_var_solved, all_params_and_init_guesses)

@@ -106,7 +106,10 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
 
   map_arg["pCPs"] = matrix_qp_guess;
   map_arg["alpha"] = (tf - t0);
-  map_arg["fitter_ctrl_pts"] = fitter_ctrl_pts_;
+  for (int i = 0; i < par_.num_max_of_obst; i++)
+  {
+    map_arg["obs_" + std::to_string(i) + "_ctrl_pts"] = obstacles_for_opt_[i].ctrl_pts;
+  }
   map_arg["thetax_FOV_deg"] = par_.fov_x_deg;
   map_arg["thetay_FOV_deg"] = par_.fov_y_deg;
   map_arg["b_T_c"] = b_Tmatrixcasadi_c_;

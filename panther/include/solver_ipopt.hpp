@@ -85,6 +85,12 @@ struct splineParam
   int num_seg;
 };
 
+struct obstacleForOpt
+{
+  casadi::DM bbox;
+  casadi::DM ctrl_pts;
+};
+
 }  // namespace si
 
 class SolverIpopt
@@ -101,12 +107,14 @@ public:
   bool setInitStateFinalStateInitTFinalT(mt::state initial_state, mt::state final_state, double t_init,
                                          double &t_final);
   void setHulls(ConvexHullsOfCurves_Std &hulls);
-  void setSamplesObs(const std::vector<Eigen::Vector3d> &samples);
+  // void setSamplesObs(const std::vector<Eigen::Vector3d> &samples);
   void setFocusOnObstacle(bool focus_on_obstacle)
   {
     focus_on_obstacle_ = focus_on_obstacle;
   }
   mt::trajectory traj_solution_;
+
+  void setObstaclesForOpt(const std::vector<si::obstacleForOpt> &obstacles_for_opt);
 
   // getters
   void getPlanes(std::vector<Hyperplane3D> &planes);
@@ -204,6 +212,8 @@ private:
   Eigen::RowVectorXd knots_p_guess_;
   Eigen::RowVectorXd knots_y_guess_;
 
+  std::vector<si::obstacleForOpt> obstacles_for_opt_;
+
   double t_init_;
   double t_final_guess_;
 
@@ -243,12 +253,13 @@ private:
   // casadi::Function cf_op_force_final_pos_;
   casadi::Function cf_fixed_pos_op_;
   casadi::Function cf_fit_yaw_;
-  casadi::Function cf_fit3d_;
   casadi::Function cf_visibility_;
 
   // casadi::DM all_w_fe_;
   // casadi::DM all_w_velfewrtworld_;
   casadi::DM b_Tmatrixcasadi_c_;
+
+  // casadi::DM all_obstacle_bbox_;
 
   // auxiliary types
   // struct location
@@ -297,7 +308,7 @@ private:
 
   std::vector<os::solution> p_guesses_;
 
-  casadi::DM fitter_ctrl_pts_;
+  // casadi::DM fitter_ctrl_pts_;
 
   // std::unique_ptr<mygraph_t> mygraph_ptr;
   //////////////////////////////////

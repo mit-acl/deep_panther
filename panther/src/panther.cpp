@@ -17,6 +17,8 @@
 #include "timer.hpp"
 #include "termcolor.hpp"
 
+#include <ros/package.h>
+
 using namespace termcolor;
 
 // Uncomment the type of timer you want:
@@ -73,6 +75,9 @@ Panther::Panther(mt::parameters par) : par_(par)
   solver_ = new SolverIpopt(par_, log_ptr_);
 
   separator_solver_ = new separator::Separator();
+
+  std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
+  cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
 }
 
 void Panther::dynTraj2dynTrajCompiled(const mt::dynTraj& traj, mt::dynTrajCompiled& traj_compiled)
@@ -573,38 +578,93 @@ ConvexHullsOfCurves Panther::convexHullsOfCurves(double t_start, double t_end)
   return result;
 }
 
-// argmax_prob_collision is the index of trajectory I should focus on
-// a negative value means that there are no trajectories to track
-void Panther::sampleFeaturePos(int argmax_prob_collision, double t_start, double t_end,
-                               std::vector<Eigen::Vector3d>& pos)
+std::vector<si::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, double t_end)
 {
-  pos.clear();
+  // std::cout << "In getObstaclesForOpt" << std::endl;
+
+  std::vector<si::obstacleForOpt> obstacles_for_opt;
+
+  if (trajs_.size() > par_.num_max_of_obst)
+  {
+    std::cout << red << bold << "Too many obstacles. Run Matlab again with a higher num_max_of_obst" << reset
+              << std::endl;
+    abort();
+  }
 
   double delta = (t_end - t_start) / par_.fitter_num_samples;
 
-  for (int i = 0; i < par_.fitter_num_samples; i++)
-  {
-    if (argmax_prob_collision >= 0)
-    {
-      double ti = t_start + i * delta;  // which is constant along the trajectory
-      Eigen::Vector3d pos_i = evalMeanDynTrajCompiled(trajs_[argmax_prob_collision], ti);
+  // std::cout << "delta= " << delta << std::endl;
 
-      pos.push_back(pos_i);
-    }
-    else
+  for (int i = 0; i < trajs_.size(); i++)
+  {
+    si::obstacleForOpt obstacle_for_opt;
+
+    // Take future samples of the trajectory
+    casadi::DM samples_casadi(3, par_.fitter_num_samples);
+
+    for (int k = 0; k < par_.fitter_num_samples; k++)
     {
-      pos.push_back(G_term_.pos);  // last_state_tracked_.pos
+      double tk = t_start + k * delta;
+      Eigen::Vector3d pos_k = evalMeanDynTrajCompiled(trajs_[i], tk);
+
+      // std::cout << "k= " << k << std::endl;
+
+      samples_casadi(0, k) = pos_k.x();
+      samples_casadi(1, k) = pos_k.y();
+      samples_casadi(2, k) = pos_k.z();
     }
+
+    // Fit a spline to those samples
+    std::map<std::string, casadi::DM> map_arg;
+    map_arg["samples"] = samples_casadi;
+    std::map<std::string, casadi::DM> result = cf_fit3d_(map_arg);
+    obstacle_for_opt.ctrl_pts = result["result"];
+
+    casadi::DM bbox(3, 1);
+    bbox(0, 0) = trajs_[i].bbox.x();
+    bbox(1, 0) = trajs_[i].bbox.y();
+    bbox(2, 0) = trajs_[i].bbox.z();
+
+    obstacle_for_opt.bbox = bbox;
+
+    obstacles_for_opt.push_back(obstacle_for_opt);
   }
 
-  if (argmax_prob_collision < 0)
-  {
-    std::cout << bold << "There is no dynamic obstacle to track" << reset << std::endl;
-  }
-
-  last_state_tracked_.pos = pos.front();  // pos.back();
-  // last_state_tracked_.vel = vel.front();  // vel.back();
+  return obstacles_for_opt;
 }
+
+// // argmax_prob_collision is the index of trajectory I should focus on
+// // a negative value means that there are no trajectories to track
+// void Panther::sampleFeaturePos(int argmax_prob_collision, double t_start, double t_end,
+//                                std::vector<Eigen::Vector3d>& pos)
+// {
+//   pos.clear();
+
+//   double delta = (t_end - t_start) / par_.fitter_num_samples;
+
+//   for (int i = 0; i < par_.fitter_num_samples; i++)
+//   {
+//     if (argmax_prob_collision >= 0)
+//     {
+//       double ti = t_start + i * delta;  // which is constant along the trajectory
+//       Eigen::Vector3d pos_i = evalMeanDynTrajCompiled(trajs_[argmax_prob_collision], ti);
+
+//       pos.push_back(pos_i);
+//     }
+//     else
+//     {
+//       pos.push_back(G_term_.pos);  // last_state_tracked_.pos
+//     }
+//   }
+
+//   if (argmax_prob_collision < 0)
+//   {
+//     std::cout << bold << "There is no dynamic obstacle to track" << reset << std::endl;
+//   }
+
+//   last_state_tracked_.pos = pos.front();  // pos.back();
+//   // last_state_tracked_.vel = vel.front();  // vel.back();
+// }
 
 void Panther::setTerminalGoal(mt::state& term_goal)
 {
@@ -1055,42 +1115,37 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
     angle = angleBetVectors(A2G, A2Obstacle);
   }
 
-  // bool focus_on_obstacle = true;
-
   double angle_deg = angle * 180 / 3.14;
 
   if (fabs(angle_deg) > par_.angle_deg_focus_front)
   {  //
     std::cout << bold << yellow << "[Selection] Focusing on front of me, angle=" << angle_deg << " deg" << reset
               << std::endl;
-    // focus_on_obstacle = false;
     solver_->par_.c_final_yaw = 0.0;
     solver_->par_.c_fov = 0.0;
     solver_->par_.c_yaw_smooth = 0.0;
     solver_->setFocusOnObstacle(false);
     G.yaw = atan2(G_term_.pos[1] - A.pos[1], G_term_.pos[0] - A.pos[0]);
-    // solver_->use_straight_yaw_guess_ = true;
   }
   else
   {
     std::cout << bold << yellow << "[Selection] Focusing on obstacle, angle=" << angle_deg << " deg" << reset
               << std::endl;
-    // focus_on_obstacle = true;
     solver_->setFocusOnObstacle(true);
     solver_->par_.c_fov = par_.c_fov;
     solver_->par_.c_final_yaw = par_.c_final_yaw;
     solver_->par_.c_yaw_smooth = par_.c_yaw_smooth;
-    // solver_->use_straight_yaw_guess_ = false;
   }
   ////
 
-  std::vector<Eigen::Vector3d> samples_obs;  // pos of the feature expressed in w
+  // std::vector<Eigen::Vector3d> samples_obs;  // pos of the feature expressed in w
+  // sampleFeaturePos(argmax_prob_collision, t_start, t_start + par_.fitter_total_time,
+  //                  samples_obs);  // need to do it here so that argmax_prob_collision does not become invalid
+  //                                 // with new updates
 
-  sampleFeaturePos(argmax_prob_collision, t_start, t_start + par_.fitter_total_time,
-                   samples_obs);  // need to do it here so that argmax_prob_collision does not become invalid
-                                  // with new updates
+  // log_ptr_->tracking_now_pos = samples_obs.front();
 
-  log_ptr_->tracking_now_pos = samples_obs.front();
+  std::vector<si::obstacleForOpt> obstacles_for_opt = getObstaclesForOpt(t_start, t_start + par_.fitter_total_time);
 
   mtx_trajs_.unlock();
 
@@ -1127,7 +1182,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
   solver_->setHulls(hulls_std);
 
-  solver_->setSamplesObs(samples_obs);
+  solver_->setObstaclesForOpt(obstacles_for_opt);
 
   //////////////////////
   std::cout << on_cyan << bold << "Solved so far" << solutions_found_ << "/" << total_replannings_ << reset

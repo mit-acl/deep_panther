@@ -3,7 +3,9 @@
 deg_pos: 3
 deg_yaw: 2
 num_seg: 6
-num_max_of_obst: 10
-num_samples_simpson: 14
+num_max_of_obst: 1
+sampler_num_samples: 12
+fitter_num_samples: 15
+fitter_total_time: 8
 num_of_yaw_per_layer: 40
 basis: "MINVO"

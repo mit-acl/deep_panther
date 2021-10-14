@@ -88,7 +88,7 @@ SolverIpopt::SolverIpopt(mt::parameters &par, std::shared_ptr<mt::log> log_ptr)
   // cf_op_force_final_pos_ = casadi::Function::load(folder + "op_force_final_pos.casadi");
   cf_fixed_pos_op_ = casadi::Function::load(folder + "op_fixed_pos.casadi");
   cf_fit_yaw_ = casadi::Function::load(folder + "fit_yaw.casadi");
-  cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
+  // cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
   cf_visibility_ = casadi::Function::load(folder + "visibility.casadi");
 
   Eigen::Matrix<double, 4, 4> b_Tmatrix_c = par_.b_T_c.matrix();
@@ -207,26 +207,9 @@ void SolverIpopt::setHulls(ConvexHullsOfCurves_Std &hulls)
 
 //////////////////////////////////////////////////////////
 
-void SolverIpopt::setSamplesObs(const std::vector<Eigen::Vector3d> &samples)
+void SolverIpopt::setObstaclesForOpt(const std::vector<si::obstacleForOpt> &obstacles_for_opt)
 {
-  casadi::DM samples_casadi(3, samples.size());
-
-  for (int i = 0; i < samples.size(); i++)
-  {
-    samples_casadi(0, i) = samples[i].x();
-    samples_casadi(1, i) = samples[i].y();
-    samples_casadi(2, i) = samples[i].z();
-  }
-
-  std::map<std::string, casadi::DM> map_arg;
-  map_arg["samples"] = samples_casadi;
-  std::map<std::string, casadi::DM> result = cf_fit3d_(map_arg);
-  fitter_ctrl_pts_ = result["result"];
-
-  std::cout << "Fitted!" << std::endl;
-  std::cout << fitter_ctrl_pts_ << std::endl;
-
-  //////////////////////
+  obstacles_for_opt_ = obstacles_for_opt;
 }
 
 casadi::DM SolverIpopt::eigen2casadi(const Eigen::Vector3d &a)
@@ -487,7 +470,12 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
   map_arguments["z_lim"] = std::vector<double>{ par_.z_min, par_.z_max };
   double alpha_guess = (t_final_guess_ - t_init_);
   map_arguments["alpha"] = alpha_guess;  // Initial guess for alpha
-  map_arguments["fitter_ctrl_pts"] = fitter_ctrl_pts_;
+
+  for (int i = 0; i < par_.num_max_of_obst; i++)
+  {
+    map_arguments["obs_" + std::to_string(i) + "_ctrl_pts"] = obstacles_for_opt_[i].ctrl_pts;
+    map_arguments["obs_" + std::to_string(i) + "_bbox"] = obstacles_for_opt_[i].bbox;
+  }
 
   map_arguments["c_pos_smooth"] = par_.c_pos_smooth;
   map_arguments["c_yaw_smooth"] = par_.c_yaw_smooth;
