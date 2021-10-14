@@ -26,7 +26,7 @@ bool SolverIpopt::generateAStarGuess()
   std::cout << "[NL] Running A* from" << q0_.transpose() << " to " << final_state_.pos.transpose()
             << ", allowing time = " << kappa_ * max_runtime_ * 1000 << " ms" << std::endl;
 
-  octopusSolver_ptr_->setUp(t_init_, t_final_, hulls_);
+  octopusSolver_ptr_->setUp(t_init_, t_final_guess_, hulls_);
 
   octopusSolver_ptr_->setq0q1q2(q0_, q1_, q2_);
   octopusSolver_ptr_->setGoal(final_state_.pos);

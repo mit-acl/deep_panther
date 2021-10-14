@@ -1,1 +1,13 @@
+Ahora mismo, la feature se queda en el extremo del FOV (probably because the cost aossociated with the FOV constraint is ____/ (zero if constraint satisfied))
 Checkout last version of MINVO (Creo que main.m da algunos errores por lack of double conversion de A)
+
+
+En esta linea de PANTHER:
+	 casadi::DM matrix_qy_guess(1, N_);  // TODO: do this just once?
+
+por que uso N_?? No deberia ser el N del yaw??
+
+Right now, octopusSolver is using the hulls sampled directly on the trajectory f(t). And the optimizer is using the hulls sampled in the spline
+
+
+el field pwp (y el publicar la own trajectory) lo he comentado por ahora. Lo puedo descomentar, pero entonces debo implementar CPs2TrajAndPwp sin asumir (deg_pos=3 and deg_yaw=2)  

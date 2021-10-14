@@ -19,17 +19,17 @@ opti = casadi.Opti();
 
 pos_is_fixed=false; %you need to run this file twice to produce the necessary casadi files: both with pos_is_fixed=false and pos_is_fixed=true. 
 
-optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
-optimize_d_planes=true;     %Optimize the scalar "d" of the planes
-optimize_time_alloc=true;
+optimize_n_planes=false;     %Optimize the normal vector "n" of the planes
+optimize_d_planes=false;     %Optimize the scalar "d" of the planes
+optimize_time_alloc=false;
 
 make_plots=true;
 
 half_side_bbox=0.5;
 
 %Constants for spline fitted to the obstacle trajectory
-fitter.deg_pos=3;
-fitter.num_seg=3;
+fitter.deg_pos=5;
+fitter.num_seg=5;
 fitter.dim_pos=3;
 fitter.num_samples=15;
 fitter_num_of_cps= fitter.num_seg + fitter.deg_pos;

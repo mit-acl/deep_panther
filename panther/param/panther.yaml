@@ -53,7 +53,7 @@ c_yaw_smooth: 0.0001
 c_fov: 10.0
 c_final_pos: 2000.0
 c_final_yaw: 0.0
-c_total_time: 0.0
+c_total_time: 100
 
 factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
 
@@ -95,7 +95,7 @@ gamma: 0.1 #[seconds] >0 Time step between discretization points
 
 # TODO: some params here are not used
 # kappa + mu <=1 
-upper_bound_runtime_snlopt: 1.0 #[seconds] 
-lower_bound_runtime_snlopt: 1.0 #[seconds] 
+upper_bound_runtime_snlopt: 0.350 #[seconds] 
+lower_bound_runtime_snlopt: 0.005 #[seconds] 
 kappa: 1.0 #% of time spent to find initial guess
 mu: 0.0    #% of time spent to solve the optimization. CURRENTLY NOT USED

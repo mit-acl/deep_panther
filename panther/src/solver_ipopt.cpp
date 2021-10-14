@@ -37,11 +37,13 @@ SolverIpopt::SolverIpopt(mt::parameters &par, std::shared_ptr<mt::log> log_ptr)
   log_ptr_ = log_ptr;
 
   // All these values are for the position spline
-  p_ = par_.deg_pos;
-  M_ = par_.num_seg + 2 * p_;
-  N_ = M_ - p_ - 1;
 
-  Ny_ = (par_.num_seg + par_.deg_yaw - 1);
+  si::splineParam sp_tmp(par_.deg_pos, par_.num_seg);
+  si::splineParam sy_tmp(par_.deg_yaw, par_.num_seg);
+
+  sp = sp_tmp;
+  sy = sy_tmp;
+
   ///////////////////////////////////////
 
   mt::basisConverter basis_converter;
@@ -236,7 +238,7 @@ casadi::DM SolverIpopt::eigen2casadi(const Eigen::Vector3d &a)
   return b;
 };
 
-// Note that t_final will be updated in case the saturation in deltaT_ has had effect
+// Note that t_final will be updated in case the saturation in deltaT has had effect
 bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt::state final_state, double t_init,
                                                     double &t_final)
 {
@@ -289,19 +291,19 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
 
   //////////////////////////////
 
-  deltaT_ = (t_final - t_init) / (1.0 * (M_ - 2 * p_ - 1 + 1));
+  double deltaT = (t_final - t_init) / (1.0 * (sp.M - 2 * sp.p - 1 + 1));
 
-  double old_deltaT = deltaT_;
+  double old_deltaT = deltaT;
 
   //////////////////////////////
-  // Now make sure deltaT in knots_ is such that -v_max<=v1<=v_max is satisfied:
+  // Now make sure deltaT in knots_p_guess_ is such that -v_max<=v1<=v_max is satisfied:
   for (int axis = 0; axis < 3; axis++)
   {
     double upper_bound, lower_bound;
     if (fabs(a0(axis)) > 1e-7)
     {
-      upper_bound = ((p_ - 1) * (sgn(a0(axis)) * par_.v_max(axis) - v0(axis)) / (a0(axis)));
-      lower_bound = ((p_ - 1) * (-sgn(a0(axis)) * par_.v_max(axis) - v0(axis)) / (a0(axis)));
+      upper_bound = ((sp.p - 1) * (sgn(a0(axis)) * par_.v_max(axis) - v0(axis)) / (a0(axis)));
+      lower_bound = ((sp.p - 1) * (-sgn(a0(axis)) * par_.v_max(axis) - v0(axis)) / (a0(axis)));
 
       ////////////////// Debugging
       // if (upper_bound < lower_bound)
@@ -317,7 +319,7 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
         return false;
       }
 
-      saturate(deltaT_, std::max(0.0, lower_bound), upper_bound);
+      saturate(deltaT, std::max(0.0, lower_bound), upper_bound);
     }
     else
     {
@@ -326,10 +328,10 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
     }
   }
 
-  if (old_deltaT != deltaT_)
+  if (old_deltaT != deltaT)
   {
     std::cout << red << bold << "old_deltaT= " << old_deltaT << reset << std::endl;
-    std::cout << red << bold << "deltaT_= " << deltaT_ << reset << std::endl;
+    std::cout << red << bold << "deltaT= " << deltaT << reset << std::endl;
   }
 
   // Eigen::Vector3d bound1 = ((p_ - 1) * (par_.v_max - v0).array() / (a0.array()));
@@ -339,9 +341,9 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
   // but
   // // valid  for the saturation below
 
-  // saturate(deltaT_, std::min(bound1.x(), bound2.x()), std::max(bound1.x(), bound2.x()));
-  // saturate(deltaT_, std::min(bound1.y(), bound2.y()), std::max(bound1.y(), bound2.y()));
-  // saturate(deltaT_, std::min(bound1.z(), bound2.z()), std::max(bound1.z(), bound2.z()));
+  // saturate(deltaT, std::min(bound1.x(), bound2.x()), std::max(bound1.x(), bound2.x()));
+  // saturate(deltaT, std::min(bound1.y(), bound2.y()), std::max(bound1.y(), bound2.y()));
+  // saturate(deltaT, std::min(bound1.z(), bound2.z()), std::max(bound1.z(), bound2.z()));
 
   // std::cout << "std::min(bound1.x(), bound2.x()= " << std::min(bound1.x(), bound2.x()) << std::endl;
   // std::cout << "std::max(bound1.x(), bound2.x()= " << std::max(bound1.x(), bound2.x()) << std::endl;
@@ -352,59 +354,74 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
   // std::cout << "std::min(bound1.z(), bound2.z()= " << std::min(bound1.z(), bound2.z()) << std::endl;
   // std::cout << "std::max(bound1.z(), bound2.z()= " << std::max(bound1.z(), bound2.z()) << std::endl;
 
-  // std::cout << bold << "deltaT_ after= " << deltaT_ << reset << std::endl;
+  // std::cout << bold << "deltaT after= " << deltaT << reset << std::endl;
 
-  t_final = t_init + (1.0 * (M_ - 2 * p_ - 1 + 1)) * deltaT_;
+  t_final = t_init + (1.0 * (sp.M - 2 * sp.p - 1 + 1)) * deltaT;
 
   t_init_ = t_init;
-  t_final_ = t_final;
+  t_final_guess_ = t_final;
+
+  // t_init_ = t_init;
+  // t_final_ = t_final;
 
   /////////////////////////
 
   /////////////////////////
 
-  Eigen::RowVectorXd knots(M_ + 1);
-  for (int i = 0; i <= p_; i++)
-  {
-    knots[i] = t_init_;
-  }
+  std::cout << "Going to obtain knots guess for pos" << std::endl;
 
-  for (int i = (p_ + 1); i <= M_ - p_ - 1; i++)
-  {
-    knots[i] = knots[i - 1] + deltaT_;  // Uniform b-spline (internal knots are equally spaced)
-  }
+  knots_p_guess_ = constructKnotsClampedUniformSpline(t_init, t_final_guess_, sp.p, sp.M);
+  std::cout << "Going to obtain knots guess for yaw" << std::endl;
 
-  for (int i = (M_ - p_); i <= M_; i++)
-  {
-    knots[i] = t_final_;
-  }
+  knots_y_guess_ = constructKnotsClampedUniformSpline(t_init, t_final_guess_, sy.p, sy.M);
 
-  knots_ = knots;
+  std::cout << "knots_p_guess_= " << knots_p_guess_ << std::endl;
+  std::cout << "knots_y_guess_= " << knots_y_guess_ << std::endl;
+
+  // Eigen::RowVectorXd knots(sp.M + 1);
+  // for (int i = 0; i <= sp.p; i++)
+  // {
+  //   knots[i] = t_init;
+  // }
+
+  // for (int i = (sp.p + 1); i <= sp.M - sp.p - 1; i++)
+  // {
+  //   knots[i] = knots[i - 1] + deltaT;  // Uniform b-spline (internal knots are equally spaced)
+  // }
+
+  // for (int i = (sp.M - sp.p); i <= sp.M; i++)
+  // {
+  //   knots[i] = t_final;
+  // }
+
+  // knots_p_guess_ = knots;
   //////////////////
 
   //////////////////
 
   // See https://pages.mtu.edu/~shene/COURSES/cs3621/NOTES/spline/B-spline/bspline-derv.html
 
-  double t1 = knots_(1);
-  double t2 = knots_(2);
-  double tpP1 = knots_(p_ + 1);
-  double t1PpP1 = knots_(1 + p_ + 1);
+  double t1 = knots_p_guess_(1);
+  double t2 = knots_p_guess_(2);
+  double tpP1 = knots_p_guess_(sp.p + 1);
+  double t1PpP1 = knots_p_guess_(1 + sp.p + 1);
 
-  double tN = knots_(N_);
-  double tNm1 = knots_(N_ - 1);
-  double tNPp = knots_(N_ + p_);
-  double tNm1Pp = knots_(N_ - 1 + p_);
+  double tN = knots_p_guess_(sp.N);
+  double tNm1 = knots_p_guess_(sp.N - 1);
+  double tNPp = knots_p_guess_(sp.N + sp.p);
+  double tNm1Pp = knots_p_guess_(sp.N - 1 + sp.p);
 
   // See Mathematica Notebook
   q0_ = p0;
-  q1_ = p0 + (-t1 + tpP1) * v0 / p_;
-  q2_ = (p_ * p_ * q1_ - (t1PpP1 - t2) * (a0 * (t2 - tpP1) + v0) - p_ * (q1_ + (-t1PpP1 + t2) * v0)) / ((-1 + p_) * p_);
+  q1_ = p0 + (-t1 + tpP1) * v0 / sp.p;
+  q2_ = (sp.p * sp.p * q1_ - (t1PpP1 - t2) * (a0 * (t2 - tpP1) + v0) - sp.p * (q1_ + (-t1PpP1 + t2) * v0)) /
+        ((-1 + sp.p) * sp.p);
 
   qN_ = pf;
-  qNm1_ = pf + ((tN - tNPp) * vf) / p_;
-  qNm2_ = (p_ * p_ * qNm1_ - (tNm1 - tNm1Pp) * (af * (-tN + tNm1Pp) + vf) - p_ * (qNm1_ + (-tNm1 + tNm1Pp) * vf)) /
-          ((-1 + p_) * p_);
+  qNm1_ = pf + ((tN - tNPp) * vf) / sp.p;
+  qNm2_ =
+      (sp.p * sp.p * qNm1_ - (tNm1 - tNm1Pp) * (af * (-tN + tNm1Pp) + vf) - sp.p * (qNm1_ + (-tNm1 + tNm1Pp) * vf)) /
+      ((-1 + sp.p) * sp.p);
 
   return true;
 }
@@ -468,7 +485,8 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
   map_arguments["x_lim"] = std::vector<double>{ par_.x_min, par_.x_max };
   map_arguments["y_lim"] = std::vector<double>{ par_.y_min, par_.y_max };
   map_arguments["z_lim"] = std::vector<double>{ par_.z_min, par_.z_max };
-  map_arguments["alpha"] = (t_final_ - t_init_);  // Initial guess for alpha
+  double alpha_guess = (t_final_guess_ - t_init_);
+  map_arguments["alpha"] = alpha_guess;  // Initial guess for alpha
   map_arguments["fitter_ctrl_pts"] = fitter_ctrl_pts_;
 
   map_arguments["c_pos_smooth"] = par_.c_pos_smooth;
@@ -501,7 +519,7 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
     map_arguments["all_nd"] = all_nd;
 
     ///////////////// GUESS FOR POSITION CONTROL POINTS
-    casadi::DM matrix_qp_guess(3, (N_ + 1));  // TODO: do this just once?
+    casadi::DM matrix_qp_guess(3, (sp.N + 1));  // TODO: do this just once?
     for (int i = 0; i < matrix_qp_guess.columns(); i++)
     {
       matrix_qp_guess(0, i) = p_guess.qp[i].x();
@@ -511,10 +529,10 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
     map_arguments["pCPs"] = matrix_qp_guess;
 
     ////////////////////////////////Generate Yaw Guess
-    casadi::DM matrix_qy_guess(1, N_);  // TODO: do this just once?
+    casadi::DM matrix_qy_guess(1, sy.N);  // TODO: do this just once?
 
     matrix_qy_guess = generateYawGuess(matrix_qp_guess, initial_state_.yaw, initial_state_.dyaw, final_state_.dyaw,
-                                       t_init_, t_final_);
+                                       t_init_, t_final_guess_);
 
     map_arguments["yCPs"] = matrix_qy_guess;
 
@@ -626,9 +644,19 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
         qp.push_back(Eigen::Vector3d(double(qp_casadi(0, i)), double(qp_casadi(1, i)), double(qp_casadi(2, i))));
       }
 
+      Eigen::RowVectorXd knots_p_solution = getKnotsSolution(knots_p_guess_, alpha_guess, double(result["alpha"]));
+      Eigen::RowVectorXd knots_y_solution = getKnotsSolution(knots_y_guess_, alpha_guess, double(result["alpha"]));
+
+      // deltaT is the same one
+      double deltaT = (knots_p_solution(knots_p_solution.cols() - 1) - knots_p_solution(0)) / num_of_segments_;
+
+      std::cout << "knots_p_guess_= " << knots_p_guess_ << std::endl;
+      std::cout << "knots_y_guess_= " << knots_y_guess_ << std::endl;
+      std::cout << "alpha= " << double(result["alpha"]) << std::endl;
+      std::cout << "knots_p_solution= " << knots_p_solution << std::endl;
+      std::cout << "knots_y_solution= " << knots_y_solution << std::endl;
+
       // std::cout<<"SOLUTION OPTIMIZATION: "<<result["yCps"]<<std::endl;
-      // std::cout<<"all_w_fe="<<map_arguments["all_w_fe"]<<std::endl;
-      // std::cout<<"all_w_velfewrtworld="<<map_arguments["all_w_velfewrtworld"]<<std::endl;
 
       ///////////////////////////////////
       if (par_.mode == "panther" || par_.mode == "py")
@@ -647,17 +675,17 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
 
           qy.clear();
           qy.push_back(y0);
-          qy.push_back(y0 + deltaT_ * ydot0 / (double(p)));  // y0 and ydot0 fix the second control point
+          qy.push_back(y0 + deltaT * ydot0 / (double(p)));  // y0 and ydot0 fix the second control point
 
           int num_cps_yaw = par_.num_seg + p;
 
           for (int i = 0; i < (num_cps_yaw - 3); i++)
           {
-            double v_needed = p * (yf - qy.back()) / (p * deltaT_);
+            double v_needed = p * (yf - qy.back()) / (p * deltaT);
 
             saturate(v_needed, -par_.ydot_max, par_.ydot_max);  // Make sure it's within the limits
 
-            double next_qy = qy.back() + (p * deltaT_) * v_needed / (double(p));
+            double next_qy = qy.back() + (p * deltaT) * v_needed / (double(p));
 
             qy.push_back(next_qy);
           }
@@ -684,6 +712,14 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
 
       solution.qp = qp;
       solution.qy = qy;
+
+      CPs2Traj(solution.qp, solution.qy, knots_p_solution, knots_y_solution, solution.traj, par_.deg_pos, par_.deg_yaw,
+               par_.dc);
+      // Force last vel and jerk =final_state_ (which it's not guaranteed because of the discretization with par_.dc)
+      solution.traj.back().vel = final_state_.vel;
+      solution.traj.back().accel = final_state_.accel;
+      solution.traj.back().jerk = Eigen::Vector3d::Zero();
+      solution.traj.back().ddyaw = final_state_.ddyaw;
     }
     else
     {
@@ -699,18 +735,8 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
 
     ////////////////////////////////////
     //////// Only needed for visualization:
-    CPs2TrajAndPwp(guess.qp, guess.qy, guess.traj, guess.pwp, par_.deg_pos, par_.deg_yaw, knots_, par_.dc);
 
-    if (solution.solver_succeeded == true)
-    {
-      CPs2TrajAndPwp(solution.qp, solution.qy, solution.traj, solution.pwp, par_.deg_pos, par_.deg_yaw, knots_,
-                     par_.dc);
-      // Force last vel and jerk =final_state_ (which it's not guaranteed because of the discretization with par_.dc)
-      solution.traj.back().vel = final_state_.vel;
-      solution.traj.back().accel = final_state_.accel;
-      solution.traj.back().jerk = Eigen::Vector3d::Zero();
-      solution.traj.back().ddyaw = final_state_.ddyaw;
-    }
+    CPs2Traj(guess.qp, guess.qy, knots_p_guess_, knots_y_guess_, guess.traj, par_.deg_pos, par_.deg_yaw, par_.dc);
 
     solutions.push_back(solution);
     guesses.push_back(guess);
@@ -750,7 +776,7 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
     traj_solution_.clear();
 
     traj_solution_ = solutions[0].traj;
-    pwp_solution_ = solutions[0].pwp;
+    // pwp_solution_ = solutions[0].pwp;
 
     // Uncomment the following line if you wanna visualize the planes
     // fillPlanesFromNDQ(n_, d_, qp);
@@ -762,10 +788,27 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
   }
 }
 
-void SolverIpopt::getSolution(mt::PieceWisePol &solution)
+Eigen::RowVectorXd SolverIpopt::getKnotsSolution(const Eigen::RowVectorXd &knots_guess, const double alpha_guess,
+                                                 const double alpha_solution)
 {
-  solution = pwp_solution_;
+  int num_knots = knots_guess.cols();
+
+  // std::cout << "knots_guess= " << knots_guess << std::endl;
+
+  Eigen::RowVectorXd shift = knots_guess(0) * Eigen::RowVectorXd::Ones(1, num_knots);
+
+  // std::cout << "shift= " << shift << std::endl;
+
+  Eigen::RowVectorXd knots_solution = (knots_guess - shift) * (alpha_solution / alpha_guess) + shift;
+
+  // std::cout << "knots_solution= " << knots_solution << std::endl;
+
+  return knots_solution;
 }
+// void SolverIpopt::getSolution(mt::PieceWisePol &solution)
+// {
+//   solution = pwp_solution_;
+// }
 
 void SolverIpopt::fillPlanesFromNDQ(const std::vector<Eigen::Vector3d> &n, const std::vector<double> &d,
                                     const std::vector<Eigen::Vector3d> &q)

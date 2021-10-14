@@ -434,11 +434,11 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
     std::vector<si::solOrGuess> guesses;
 
     std::vector<Hyperplane3D> planes;
-    mt::PieceWisePol pwp;
+    // mt::PieceWisePol pwp;
     mt::log log;
 
     bool replanned = panther_ptr_->replan(edges_obstacles, X_safe, best_solutions, guesses, planes, num_of_LPs_run_,
-                                          num_of_QCQPs_run_, pwp, log);
+                                          num_of_QCQPs_run_, log);
 
     if (log.drone_status != DroneStatus::GOAL_REACHED)  // log.replanning_was_needed
     {
@@ -461,25 +461,27 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
       pubVectorOfsolOrGuess(guesses, pub_guesses_colored_);
     }
 
-    if (replanned)
-    {
-      publishOwnTraj(pwp);
-      pwp_last_ = pwp;
-    }
-    else
-    {
-      int time_ms = int(ros::Time::now().toSec() * 1000);
+    // if (replanned)
+    // {
+    //   publishOwnTraj(pwp);
+    //   pwp_last_ = pwp;
+    // }
+    // else
+    // {
+    //   int time_ms = int(ros::Time::now().toSec() * 1000);
 
-      if (timer_stop_.elapsedSoFarMs() > 500.0)  // publish every half a second. TODO set as param
-      {
-        publishOwnTraj(pwp_last_);  // This is needed because is drone DRONE1 stops, it needs to keep publishing his
-                                    // last planned trajectory, so that other drones can avoid it (even if DRONE1 was
-                                    // very far from the other drones with it last successfully planned a trajectory).
-                                    // Note that these trajectories are time-indexed, and the last position is taken if
-                                    // t>times.back(). See eval() function in the pwp struct
-        timer_stop_.reset();
-      }
-    }
+    //   if (timer_stop_.elapsedSoFarMs() > 500.0)  // publish every half a second. TODO set as param
+    //   {
+    //     publishOwnTraj(pwp_last_);  // This is needed because is drone DRONE1 stops, it needs to keep publishing his
+    //                                 // last planned trajectory, so that other drones can avoid it (even if DRONE1 was
+    //                                 // very far from the other drones with it last successfully planned a
+    //                                 trajectory).
+    //                                 // Note that these trajectories are time-indexed, and the last position is taken
+    //                                 if
+    //                                 // t>times.back(). See eval() function in the pwp struct
+    //     timer_stop_.reset();
+    //   }
+    // }
 
     // std::cout << "[Callback] Leaving replanCB" << std::endl;
   }

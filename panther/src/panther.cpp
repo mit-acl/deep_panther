@@ -876,8 +876,7 @@ bool Panther::isReplanningNeeded()
 
 bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
                      std::vector<si::solOrGuess>& best_solutions, std::vector<si::solOrGuess>& guesses,
-                     std::vector<Hyperplane3D>& planes, int& num_of_LPs_run, int& num_of_QCQPs_run,
-                     mt::PieceWisePol& pwp_out, mt::log& log)
+                     std::vector<Hyperplane3D>& planes, int& num_of_LPs_run, int& num_of_QCQPs_run, mt::log& log)
 {
   (*log_ptr_) = {};  // Reset the struct with the default values
 
@@ -1153,20 +1152,20 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
   solutions_found_++;
 
-  mt::PieceWisePol pwp_now;
-  solver_->getSolution(pwp_now);
+  // mt::PieceWisePol pwp_now;
+  // solver_->getSolution(pwp_now);
 
-  MyTimer check_t(true);
+  // MyTimer check_t(true);
 
-  mtx_trajs_.lock();
-  bool is_safe_after_opt = safetyCheckAfterOpt(pwp_now);
-  mtx_trajs_.unlock();
+  // mtx_trajs_.lock();
+  // bool is_safe_after_opt = safetyCheckAfterOpt(pwp_now);
+  // mtx_trajs_.unlock();
 
-  if (is_safe_after_opt == false)
-  {
-    logAndTimeReplan("SafetyCheckAfterOpt not satisfied", false, log);
-    return false;
-  }
+  // if (is_safe_after_opt == false)
+  // {
+  //   logAndTimeReplan("SafetyCheckAfterOpt not satisfied", false, log);
+  //   return false;
+  // }
 
   M_ = G_term;
 
@@ -1199,17 +1198,17 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   ////////////////////
   ////////////////////
 
-  if (exists_previous_pwp_ == true)
-  {
-    pwp_out = composePieceWisePol(time_now, par_.dc, pwp_prev_, pwp_now);
-    pwp_prev_ = pwp_out;
-  }
-  else
-  {  //
-    pwp_out = pwp_now;
-    pwp_prev_ = pwp_now;
-    exists_previous_pwp_ = true;
-  }
+  // if (exists_previous_pwp_ == true)
+  // {
+  //   pwp_out = composePieceWisePol(time_now, par_.dc, pwp_prev_, pwp_now);
+  //   pwp_prev_ = pwp_out;
+  // }
+  // else
+  // {  //
+  //   pwp_out = pwp_now;
+  //   pwp_prev_ = pwp_now;
+  //   exists_previous_pwp_ = true;
+  // }
 
   X_safe_out = plan_.toStdVector();
 

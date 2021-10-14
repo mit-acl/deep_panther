@@ -12,6 +12,12 @@
 #include <unsupported/Eigen/Splines>
 #include "panther_types.hpp"
 
+Eigen::RowVectorXd constructKnotsClampedUniformSpline(double t_init, double t_end, int p, int M);
+
+void CPs2Traj(std::vector<Eigen::Vector3d> &qp, std::vector<double> &qy, Eigen::RowVectorXd &knots_p,
+              Eigen::RowVectorXd &knots_y, std::vector<mt::state> &traj, int deg_p, int deg_y, double dc);
+
+// These two ones below assume deg_p=3 and deg_y=2
 void CPs2TrajAndPwp(std::vector<Eigen::Vector3d> &qp, std::vector<double> &qy, std::vector<mt::state> &traj,
                     mt::PieceWisePol &pwp, int param_pp, int param_py, Eigen::RowVectorXd &knots_p, double dc);
 

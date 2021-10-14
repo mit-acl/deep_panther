@@ -37,7 +37,7 @@ struct solOrGuess
   std::vector<Eigen::Vector3d> qp;
   std::vector<double> qy;
   mt::trajectory traj;
-  mt::PieceWisePol pwp;
+  // mt::PieceWisePol pwp;
   bool solver_succeeded = false;
   bool is_guess;
 
@@ -63,6 +63,26 @@ struct solOrGuess
     }
     std::cout << reset << std::endl;
   }
+};
+
+struct splineParam
+{
+  splineParam()
+  {
+  }
+
+  splineParam(int degree, int num_segments)
+  {
+    p = degree;
+    M = num_segments + 2 * p;
+    N = M - p - 1;
+    num_seg = num_segments;
+  }
+
+  int p;
+  int M;
+  int N;
+  int num_seg;
 };
 
 }  // namespace si
@@ -115,6 +135,9 @@ private:
     return x - M_PI;
   }
 
+  Eigen::RowVectorXd getKnotsSolution(const Eigen::RowVectorXd &knots_guess, const double alpha_guess,
+                                      const double alpha_solution);
+
   bool getIntersectionWithPlane(const Eigen::Vector3d &P1, const Eigen::Vector3d &P2, const Eigen::Vector4d &coeff,
                                 Eigen::Vector3d &intersection);
 
@@ -156,15 +179,18 @@ private:
   std::vector<Eigen::Vector3d> n_;  // Each n_[i] has 3 elements (nx,ny,nz)
   std::vector<double> d_;           // d_[i] has 1 element
 
-  mt::PieceWisePol pwp_solution_;
+  // mt::PieceWisePol pwp_solution_;
 
   int basis_ = B_SPLINE;
 
-  int p_ = 5;
-  int M_;
-  int N_;
+  si::splineParam sp;
+  si::splineParam sy;
 
-  int Ny_;
+  // int p_ = 5;
+  // int M_;
+  // int N_;
+
+  // int Ny_;
 
   double index_instruction_;  // hack
 
@@ -175,10 +201,11 @@ private:
 
   std::vector<Hyperplane3D> planes_;
 
-  Eigen::RowVectorXd knots_;
+  Eigen::RowVectorXd knots_p_guess_;
+  Eigen::RowVectorXd knots_y_guess_;
+
   double t_init_;
-  double t_final_;
-  double deltaT_;
+  double t_final_guess_;
 
   mt::state initial_state_;
   mt::state final_state_;
