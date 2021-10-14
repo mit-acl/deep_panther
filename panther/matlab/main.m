@@ -23,7 +23,7 @@ optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
 optimize_d_planes=true;     %Optimize the scalar "d" of the planes
 optimize_time_alloc=true;
 
-make_plots=false;
+make_plots=true;
 
 half_side_bbox=0.5;
 
@@ -434,7 +434,7 @@ v_max_value=1.6*ones(3,1);
 a_max_value=5*ones(3,1);
 j_max_value=50*ones(3,1);
 
-alpha_value=1.0;
+alpha_value=10.0;
 
 ydot_max_value=1.0; 
 % total_time_value=10.5;
@@ -502,10 +502,10 @@ par_and_init_guess= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV
               {createStruct('z_lim', z_lim, z_lim_value)},...
               {createStruct('alpha', alpha, alpha_value)},...
               {createStruct('fitter_ctrl_pts', fitter.ctrl_pts, fitter_ctrl_pts_value)},...
-              {createStruct('c_pos_smooth', c_pos_smooth, 0.001)},...
+              {createStruct('c_pos_smooth', c_pos_smooth, 0.0)},...
               {createStruct('c_yaw_smooth', c_yaw_smooth, 0.0)},...
               {createStruct('c_fov', c_fov, 1.0)},...
-              {createStruct('c_final_pos', c_final_pos, 100)},...
+              {createStruct('c_final_pos', c_final_pos, 2000)},...
               {createStruct('c_final_yaw', c_final_yaw, 0.0)},...
               {createStruct('c_total_time', c_total_time, 0.0)},...
               {createStruct('all_nd', all_nd, all_nd_value)},...
@@ -647,7 +647,7 @@ sy_cpoints_var=sy.getCPsAsMatrix();
 sy.updateCPsWithSolution(full(sol.yCPs))
 
 
-%% 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% PLOTTING! %%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
