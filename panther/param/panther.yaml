@@ -3,7 +3,7 @@ visual: true #publish visualization stuff
 color_type: "vel" #"vel" or "plain"
 n_agents: 16 #only used for the color in the trajectory
 
-num_of_trajs_per_replan: 10
+num_of_trajs_per_replan: 1
 
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 goal_radius: 0.5    #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
@@ -53,6 +53,7 @@ c_yaw_smooth: 0.0001
 c_fov: 10.0
 c_final_pos: 2000.0
 c_final_yaw: 0.0
+c_total_time: 0.0
 
 factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
 

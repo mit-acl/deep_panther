@@ -86,13 +86,8 @@ SolverIpopt::SolverIpopt(mt::parameters &par, std::shared_ptr<mt::log> log_ptr)
   // cf_op_force_final_pos_ = casadi::Function::load(folder + "op_force_final_pos.casadi");
   cf_fixed_pos_op_ = casadi::Function::load(folder + "op_fixed_pos.casadi");
   cf_fit_yaw_ = casadi::Function::load(folder + "fit_yaw.casadi");
+  cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
   cf_visibility_ = casadi::Function::load(folder + "visibility.casadi");
-
-  // OTHER OPTION:    std::cout << bold << red << getPathName(__FILE__) << reset << std::endl;
-  // getPathName() is defined above in this file
-
-  all_w_fe_ = casadi::DM(3, par_.num_samples_simpson);
-  all_w_velfewrtworld_ = casadi::DM(3, par_.num_samples_simpson);
 
   Eigen::Matrix<double, 4, 4> b_Tmatrix_c = par_.b_T_c.matrix();
   b_Tmatrixcasadi_c_ = casadi::DM(4, 4);
@@ -111,7 +106,7 @@ SolverIpopt::SolverIpopt(mt::parameters &par, std::shared_ptr<mt::log> log_ptr)
   ////////////////////////////////////////////////////////////////////////////////
 
   num_of_yaw_per_layer_ = par_.num_of_yaw_per_layer;
-  num_of_layers_ = par_.num_samples_simpson;
+  num_of_layers_ = par_.sampler_num_samples;
 
   vector_yaw_samples_ = casadi::DM::zeros(1, num_of_yaw_per_layer_);
   for (int j = 0; j < num_of_yaw_per_layer_; j++)
@@ -210,21 +205,26 @@ void SolverIpopt::setHulls(ConvexHullsOfCurves_Std &hulls)
 
 //////////////////////////////////////////////////////////
 
-void SolverIpopt::setSimpsonFeatureSamples(const std::vector<Eigen::Vector3d> &samples,
-                                           const std::vector<Eigen::Vector3d> &w_velsampleswrtworld)
+void SolverIpopt::setSamplesObs(const std::vector<Eigen::Vector3d> &samples)
 {
-  assert(samples.size() == par_.num_samples_simpson);
-  assert(w_velsampleswrtworld.size() == par_.num_samples_simpson);
+  casadi::DM samples_casadi(3, samples.size());
+
   for (int i = 0; i < samples.size(); i++)
   {
-    all_w_fe_(0, i) = samples[i].x();
-    all_w_fe_(1, i) = samples[i].y();
-    all_w_fe_(2, i) = samples[i].z();
-
-    all_w_velfewrtworld_(0, i) = w_velsampleswrtworld[i].x();
-    all_w_velfewrtworld_(1, i) = w_velsampleswrtworld[i].y();
-    all_w_velfewrtworld_(2, i) = w_velsampleswrtworld[i].z();
+    samples_casadi(0, i) = samples[i].x();
+    samples_casadi(1, i) = samples[i].y();
+    samples_casadi(2, i) = samples[i].z();
   }
+
+  std::map<std::string, casadi::DM> map_arg;
+  map_arg["samples"] = samples_casadi;
+  std::map<std::string, casadi::DM> result = cf_fit3d_(map_arg);
+  fitter_ctrl_pts_ = result["result"];
+
+  std::cout << "Fitted!" << std::endl;
+  std::cout << fitter_ctrl_pts_ << std::endl;
+
+  //////////////////////
 }
 
 casadi::DM SolverIpopt::eigen2casadi(const Eigen::Vector3d &a)
@@ -468,17 +468,17 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
   map_arguments["x_lim"] = std::vector<double>{ par_.x_min, par_.x_max };
   map_arguments["y_lim"] = std::vector<double>{ par_.y_min, par_.y_max };
   map_arguments["z_lim"] = std::vector<double>{ par_.z_min, par_.z_max };
-  map_arguments["total_time"] = (t_final_ - t_init_);
-  // all_w_fe is a matrix whose columns are the positions of the feature (in world frame) in the times [t0,t0+XX,
-  // ...,tf-XX, tf] (i.e. uniformly distributed and including t0 and tf)
-  map_arguments["all_w_fe"] = all_w_fe_;
-  map_arguments["all_w_velfewrtworld"] = all_w_velfewrtworld_;
+  map_arguments["alpha"] = (t_final_ - t_init_);  // Initial guess for alpha
+  map_arguments["fitter_ctrl_pts"] = fitter_ctrl_pts_;
 
   map_arguments["c_pos_smooth"] = par_.c_pos_smooth;
-  map_arguments["c_final_pos"] = par_.c_final_pos;  // / pow((final_state_.pos - initial_state_.pos).norm(), 4);
+  map_arguments["c_yaw_smooth"] = par_.c_yaw_smooth;
+  map_arguments["c_fov"] = par_.c_fov;
+  map_arguments["c_final_pos"] = par_.c_final_pos;
   map_arguments["c_final_yaw"] = par_.c_final_yaw;
+  map_arguments["c_total_time"] = par_.c_total_time;
 
-  /////////////////////////////////////////// SOLVE AN OPIMIZATION FOR ECH OF THE GUESSES FOUND
+  /////////////////////////////////////////// SOLVE AN OPIMIZATION FOR EACH OF THE GUESSES FOUND
 
   solutions.clear();
   guesses.clear();
@@ -513,8 +513,8 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
     ////////////////////////////////Generate Yaw Guess
     casadi::DM matrix_qy_guess(1, N_);  // TODO: do this just once?
 
-    matrix_qy_guess = generateYawGuess(matrix_qp_guess, all_w_fe_, initial_state_.yaw, initial_state_.dyaw,
-                                       final_state_.dyaw, t_init_, t_final_);
+    matrix_qy_guess = generateYawGuess(matrix_qp_guess, initial_state_.yaw, initial_state_.dyaw, final_state_.dyaw,
+                                       t_init_, t_final_);
 
     map_arguments["yCPs"] = matrix_qy_guess;
 

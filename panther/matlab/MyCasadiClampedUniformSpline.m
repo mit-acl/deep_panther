@@ -32,7 +32,12 @@ classdef MyCasadiClampedUniformSpline < handle
     methods
         function obj = MyCasadiClampedUniformSpline(t0, tf, deg, dim, num_seg, CPoints, short_circuit) 
             
+            
             %For short_circuit, see https://groups.google.com/g/casadi-users/c/KobfQ47ZAG8
+            
+            %But note that SX does not support short-circuiting--> If I use short-circuiting, I cannot call expand()
+            %(But it's weird, because with short_circuit=true expand still works...)
+            
             obj.dim=dim;
             obj.t0 = t0;
             obj.tf = tf;

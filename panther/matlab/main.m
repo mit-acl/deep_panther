@@ -10,9 +10,7 @@ close all; clc;clear;
 doSetup();
 import casadi.*
 
-
-const_p={};
-const_y={};
+const_p={};    const_y={};
 opti = casadi.Opti();
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -21,22 +19,34 @@ opti = casadi.Opti();
 
 pos_is_fixed=false; %you need to run this file twice to produce the necessary casadi files: both with pos_is_fixed=false and pos_is_fixed=true. 
 
-
 optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
 optimize_d_planes=true;     %Optimize the scalar "d" of the planes
 optimize_time_alloc=true;
 
-make_plots=true;
+make_plots=false;
 
 half_side_bbox=0.5;
+
+%Constants for spline fitted to the obstacle trajectory
+fitter.deg_pos=3;
+fitter.num_seg=3;
+fitter.dim_pos=3;
+fitter.num_samples=15;
+fitter_num_of_cps= fitter.num_seg + fitter.deg_pos;
+fitter.ctrl_pts=opti.parameter(fitter.dim_pos,fitter_num_of_cps); %This comes from C++
+fitter.bs_casadi=MyCasadiClampedUniformSpline(0,1,fitter.deg_pos,fitter.dim_pos,fitter.num_seg,fitter.ctrl_pts, false);
+fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti);
+fitter.total_time=8.0; %Time from (time at point d) to end of the fitted spline
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 deg_pos=3;
 deg_yaw=2;
 num_seg =6; %number of segments
-num_obs=1; %This is the maximum num of the obstacles 
+num_max_of_obst=1; %This is the maximum num of the obstacles 
 
-num_samples_obstacle_per_segment = 2;
-num_samples=num_samples_obstacle_per_segment*num_seg;%This will also be the num_of_layers in the graph yaw search of C++
+sampler.num_samples_obstacle_per_segment = 2;                    %This is used for both the feature sampling (simpson), and the obstacle avoidance sampling
+sampler.num_samples=sampler.num_samples_obstacle_per_segment*num_seg;    %This will also be the num_of_layers in the graph yaw search of C++
+                                                             
 
 num_of_yaw_per_layer=40; %This will be used in the graph yaw search of C++
                          %Note that the initial layer will have only one yaw (which is given) 
@@ -121,8 +131,7 @@ ydot_max_n=ydot_max*alpha; %v_max for yaw
 
 %%%%% Planes
 n={}; d={};
-for i=1:(num_obs*num_seg)
-    
+for i=1:(num_max_of_obst*num_seg)
     if(optimize_n_planes)
         n{i}=opti.variable(3,1); 
     else
@@ -133,18 +142,12 @@ for i=1:(num_obs*num_seg)
         d{i}=opti.variable(1,1);
     else
         d{i}=opti.parameter(1,1); 
-    end
-    
+    end    
 end
 
-%%%% Positions of the feature in the times [t0,t0+XX, ...,tf-XX, tf] (i.e. uniformly distributed and including t0 and tf)
-for i=1:num_samples
-    w_fe{i}=opti.parameter(3,1); %Positions of the feature in world frame
-%     w_velfewrtworld{i}=opti.parameter(3,1);%Velocity of the feature wrt the world frame, expressed in the world frame
-end
+
 
 %%% Min/max x, y ,z
-
 x_lim=opti.parameter(2,1); %[min max]
 y_lim=opti.parameter(2,1); %[min max]
 z_lim=opti.parameter(2,1); %[min max]
@@ -164,17 +167,16 @@ end
 
 
 %%%%%%%% Trajectory of the obstacle
-N=num_seg+deg_pos+1;
-deg_obstacle=deg_pos;
-dim_obstacle=dim_pos;
-ctrl_pts_obstacle=opti.parameter(dim_obstacle,size(sp.CPoints,2)); %This comes from C++
+% N=num_seg+deg_pos+1;
+% deg_obstacle=deg_pos;
+% dim_obstacle=dim_pos;
 
-p=deg_obstacle;
-t_obs=linspace(0,1,num_seg+1);
-knots_obstacle=[zeros(1,p+1)      t_obs(2:end-1)          ones(1,p+1)];
+% p=deg_obstacle;
+% t_obs=linspace(0,1,num_seg+1);
+% knots_obstacle=[zeros(1,p+1)      t_obs(2:end-1)          ones(1,p+1)];
 
 
-bs_obstacle=MyCasadiClampedUniformSpline(0,1,deg_obstacle,dim_obstacle,num_seg,ctrl_pts_obstacle, false);
+
 
 
 %This part below uses the Casadi implementation of a BSpline. However, that
@@ -182,61 +184,46 @@ bs_obstacle=MyCasadiClampedUniformSpline(0,1,deg_obstacle,dim_obstacle,num_seg,c
 %expanded). See more at https://github.com/jtorde/useful_things/blob/master/casadi/bspline_example/bspline_example.m
 % t_eval_sym=MX.sym('t_eval_sym',1,1); 
 % %See https://github.com/jtorde/useful_things/blob/master/casadi/bspline_example/bspline_example.m
-% my_bs_parametric_tmp=casadi.bspline(t_eval_sym, ctrl_pts_obstacle(:), {knots_obstacle}, {[deg_obstacle]}, dim_obstacle); %Note that here we use casadi.bspline, NOT casadi.Function.bspline
-% my_bs_parametric = Function('my_bs_parametric',{t_eval_sym,ctrl_pts_obstacle},{my_bs_parametric_tmp});
+% my_bs_parametric_tmp=casadi.bspline(t_eval_sym, fitter.ctrl_pts(:), {knots_obstacle}, {[deg_obstacle]}, dim_obstacle); %Note that here we use casadi.bspline, NOT casadi.Function.bspline
+% my_bs_parametric = Function('my_bs_parametric',{t_eval_sym,fitter.ctrl_pts},{my_bs_parametric_tmp});
 
-
-%TODO: See short_circuit parameter of if_else, https://groups.google.com/g/casadi-users/c/KobfQ47ZAG8
-%But note that SX does not support short-circuiting--> If I use short-circuiting, I cannot call expand()
-%But it's weird, because with short_circuit=true me funciona expand...
-
-beta1 =opti.parameter(1,1); %deltat_fromInitTrajObs_toPointD
-beta2 =opti.parameter(1,1); %deltat_fromInitTrajObs_toEndTrajObs
-
-beta3=beta2-beta1;
-
-all_vertexes=[];
-
-
-
+% beta1 =opti.parameter(1,1); %deltat_fromInitTrajObs_toPointD
 
 deltaT=total_time/num_seg; %Time allocated for each segment
 
-
 obst={}; %Obs{i}{j} Contains the vertexes (as columns) of the obstacle i in the interval j
 
-for i=1:num_obs
+for i=1:num_max_of_obst
 
-     all_centers=[];
+    all_centers=[];
     for j=1:num_seg
 
-        all_vertexes=[];
-       
+        all_vertexes_segment_j=[];
         
-        for k=1:num_samples_obstacle_per_segment
+        for k=1:sampler.num_samples_obstacle_per_segment
             %This takes a sample at the end, but not at the beginning
-            t_obs = beta1 + deltaT*(j-1) + (k/num_samples_obstacle_per_segment)*deltaT; %This is the delta time that goes from   
+%             t_obs = beta1 + deltaT*(j-1) + (k/sampler.num_samples_obstacle_per_segment)*deltaT;
+            t_obs = deltaT*(j-1) + (k/sampler.num_samples_obstacle_per_segment)*deltaT;
             
-            t_nobs= max( t_obs/beta2,  1.0 );  
+            t_nobs= max( t_obs/fitter.total_time,  1.0 );  
             
-            pos_center_obs=bs_obstacle.getPosT(t_nobs); %TODO: bs_obstacle should depend on i (the index of the obstacle)
+            pos_center_obs=fitter.bs_casadi.getPosT(t_nobs); %TODO: fitter.bs should depend on i (the index of the obstacle)
             
             all_centers=[all_centers pos_center_obs];
 
-            all_vertexes=[all_vertexes vertexesOfBox(pos_center_obs, half_side_bbox) ];
+            all_vertexes_segment_j=[all_vertexes_segment_j vertexesOfBox(pos_center_obs, half_side_bbox) ];
 
         end
 
-        obst{i}.vertexes{j}=all_vertexes;
+        obst{i}.vertexes{j}=all_vertexes_segment_j;
         
-
     end  
     
     obst{i}.centers=all_centers;
     
 end
 
-t_opt_n_samples=linspace(0,1,num_samples);
+t_opt_n_samples=linspace(0,1,sampler.num_samples);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -283,7 +270,7 @@ for j=1:(sp.num_seg)
     Q=sp.getCPs_XX_Pos_ofInterval(basis, j);
 
     %Plane constraints
-    for obst_index=1:num_obs
+    for obst_index=1:num_max_of_obst
       ip = (obst_index-1) * sp.num_seg + j;  % index plane
        
       %The obstacle should be on one side
@@ -292,7 +279,7 @@ for j=1:(sp.num_seg)
       
       if(optimize_n_planes || optimize_d_planes || optimize_time_alloc)
       
-          for i=1:num_obs
+          for i=1:num_max_of_obst
             vertexes_ij=obst{i}.vertexes{j};
             for kk=1:size(vertexes_ij,2)
                 const_p{end+1}= n{ip}'*vertexes_ij(:,kk) + d{ip} >= 1;   %TODO: make sure this follows the convention from C++
@@ -345,13 +332,13 @@ yaw= MX.sym('yaw',1,1);
 simpson_index=1;
 simpson_coeffs=[];
 
-all_target_isInFOV=[];
+% all_target_isInFOV=[];
 all_fov_costs=[];
 
 % s_logged={};
 
 all_simpson_constants=[];
-all_is_in_FOV=[];
+all_is_in_FOV_smooth=[];
 fov_cost=0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -377,7 +364,8 @@ for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
     %FOV is a cone:  (See more possible versions of this constraint at the end of this file)
     is_in_FOV_tmp=-cos(thetax_half_FOV_deg*pi/180.0) + (c_P(1:3)'/norm(c_P((1:3))))*[0;0;1]; % Constraint is is_in_FOV1>=0
     
-    all_is_in_FOV=[all_is_in_FOV is_in_FOV_tmp];
+    gamma=100;
+    all_is_in_FOV_smooth=[all_is_in_FOV_smooth  (   1/(1+exp(-gamma*is_in_FOV_tmp))  ) ];
     
     is_in_FOV=substitute(is_in_FOV_tmp,yaw,sy.getPosT(t_opt_n));
     
@@ -385,7 +373,7 @@ for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
     
     fov_cost_j=max(0,f)^3; %Penalty associated with the constraint  
     
-    simpson_constant=(h/3.0)*getSimpsonCoeff(simpson_index,num_samples);
+    simpson_constant=(h/3.0)*getSimpsonCoeff(simpson_index,sampler.num_samples);
     
     fov_cost=fov_cost + simpson_constant*fov_cost_j; %See https://en.wikipedia.org/wiki/Simpson%27s_rule#Composite_Simpson's_rule
     
@@ -422,15 +410,8 @@ opti.minimize(simplify(total_cost));
 
 
 all_nd=[];
-for i=1:(num_obs*num_seg)
+for i=1:(num_max_of_obst*num_seg)
     all_nd=[all_nd [n{i};d{i}]];
-end
-
-all_w_fe=[]; %all the positions of the feature, as a matrix. Each column is the position of the feature at each simpson sampling point
-% all_w_velfewrtworld=[];
-for i=1:num_samples
-    all_w_fe=[all_w_fe w_fe{i}];
-%     all_w_velfewrtworld=[all_w_velfewrtworld w_velfewrtworld{i}];
 end
 
 pCPs=sp.getCPsAsMatrix();
@@ -496,12 +477,7 @@ tmp1=[ p0_value(1)*ones(1,sp.p-1)   linspace(p0_value(1),pf_value(1), sp.N+1-2*(
 tmp2=[ y0_value(1)*ones(1,sy.p-1)   linspace(y0_value(1),yf_value(1), sy.N+1-2*(sy.p-1))       yf_value(1)*ones(1,sy.p-1) ];
 
 
-ctrl_pts_obstacle_value=zeros(size(tmp1));
-
-beta1_value=0.0;
-beta2_value=8.0;
-
-
+fitter_ctrl_pts_value=zeros(size(fitter.bs_casadi.CPoints));
 
 par_and_init_guess= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV_deg_value)},...
               {createStruct('thetay_FOV_deg', thetay_FOV_deg, thetay_FOV_deg_value)},...
@@ -513,29 +489,27 @@ par_and_init_guess= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV
               {createStruct('pf', pf, pf_value)},...
               {createStruct('vf', vf, vf_value)},...
               {createStruct('af', af, af_value)},...
+              {createStruct('y0', y0, y0_value)},...
+              {createStruct('yf', yf, yf_value)},...
+              {createStruct('ydot0', ydot0, ydot0_value)},...
+              {createStruct('ydotf', ydotf, ydotf_value)},...
               {createStruct('v_max', v_max, v_max_value)},...
               {createStruct('a_max', a_max, a_max_value)},...
               {createStruct('j_max', j_max, j_max_value)},...
+              {createStruct('ydot_max', ydot_max, ydot_max_value)},... 
               {createStruct('x_lim', x_lim, x_lim_value)},...
               {createStruct('y_lim', y_lim, y_lim_value)},...
               {createStruct('z_lim', z_lim, z_lim_value)},...
-              {createStruct('ctrl_pts_obstacle', ctrl_pts_obstacle, ctrl_pts_obstacle_value)},...
-              {createStruct('beta1', beta1, beta1_value)},...
-              {createStruct('beta2', beta2, beta2_value)},...
               {createStruct('alpha', alpha, alpha_value)},...
-              {createStruct('all_nd', all_nd, all_nd_value)},...
+              {createStruct('fitter_ctrl_pts', fitter.ctrl_pts, fitter_ctrl_pts_value)},...
               {createStruct('c_pos_smooth', c_pos_smooth, 0.001)},...
+              {createStruct('c_yaw_smooth', c_yaw_smooth, 0.0)},...
               {createStruct('c_fov', c_fov, 1.0)},...
               {createStruct('c_final_pos', c_final_pos, 100)},...
-              {createStruct('c_total_time', c_total_time, 0.0)},...
               {createStruct('c_final_yaw', c_final_yaw, 0.0)},...
-              {createStruct('c_yaw_smooth', c_yaw_smooth, 0.0)},...
+              {createStruct('c_total_time', c_total_time, 0.0)},...
+              {createStruct('all_nd', all_nd, all_nd_value)},...
               {createStruct('pCPs', pCPs, tmp1)}...
-             {createStruct('y0', y0, y0_value)},...
-             {createStruct('ydot0', ydot0, ydot0_value)},...
-             {createStruct('yf', yf, yf_value)},...
-             {createStruct('ydotf', ydotf, ydotf_value)},...
-             {createStruct('ydot_max', ydot_max, ydot_max_value)},... 
              {createStruct('yCPs', yCPs, tmp2)}];       
 
 par_and_init_guess_exprs=[]; %expressions
@@ -623,40 +597,39 @@ fprintf(my_file,'#If you want to change a parameter, change it in main.m and run
 fprintf(my_file,'deg_pos: %d\n',deg_pos);
 fprintf(my_file,'deg_yaw: %d\n',deg_yaw);
 fprintf(my_file,'num_seg: %d\n',num_seg);
-fprintf(my_file,'num_max_of_obst: %d\n',num_obs);
-fprintf(my_file,'num_samples_simpson: %d\n',num_samples);
+fprintf(my_file,'num_max_of_obst: %d\n',num_max_of_obst);
+fprintf(my_file,'sampler_num_samples: %d\n',sampler.num_samples);
+fprintf(my_file,'fitter_num_samples: %d\n',fitter.num_samples);
+fprintf(my_file,'fitter_total_time: %d\n',fitter.total_time);
 fprintf(my_file,'num_of_yaw_per_layer: %d\n',num_of_yaw_per_layer); % except in the initial layer, that has only one value
 fprintf(my_file,'basis: "%s"\n',basis);
-fprintf(my_file,'total_time_n: "%s"\n',total_time_n);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% FUNCTION TO GENERATE VISIBILITY AT EACH POINT  %%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-% bs_obstacle=MyCasadiClampedUniformSpline(0,1,deg_obstacle,dim_obstacle,num_seg,ctrl_pts_obstacle, false);
+% fitter.bs=MyCasadiClampedUniformSpline(0,1,deg_obstacle,dim_obstacle,num_seg,fitter.ctrl_pts, false);
 
 yaw_samples=MX.sym('yaw_samples',1,num_of_yaw_per_layer); 
 
 all_is_in_FOV_for_different_yaw=[];
 for yaw_sample_i=yaw_samples
     all_is_in_FOV_for_different_yaw=  [all_is_in_FOV_for_different_yaw;
-                                        substitute(all_is_in_FOV, yaw, yaw_sample_i)];  
+                                        substitute(all_is_in_FOV_smooth, yaw, yaw_sample_i)];  
 end
 all_is_in_FOV_for_different_yaw=all_is_in_FOV_for_different_yaw'; % Each row will be a layer. Each column will have yaw=constat
 
 pCPs=sp.getCPsAsMatrix();
-g = Function('g',{pCPs,  alpha,    ctrl_pts_obstacle, beta1, beta2,  thetax_FOV_deg,  thetay_FOV_deg,  b_T_c,  yaw_samples},{all_is_in_FOV_for_different_yaw},...
-                 {'pCPs', 'alpha', 'ctrl_pts_obstacle', 'beta1', 'beta2', 'thetax_FOV_deg', 'thetay_FOV_deg','b_T_c', 'yaw_samples'},{'result'});
+g = Function('g',{pCPs,  alpha,    fitter.ctrl_pts,  thetax_FOV_deg,  thetay_FOV_deg,  b_T_c,  yaw_samples},{all_is_in_FOV_for_different_yaw},...
+                 {'pCPs', 'alpha', 'fitter_ctrl_pts', 'thetax_FOV_deg', 'thetay_FOV_deg','b_T_c', 'yaw_samples'},{'result'});
 g=g.expand();
 
 g.save('./casadi_generated_files/visibility.casadi') %The file generated is quite big
 
 g_result=g('pCPs',full(sol.pCPs),...
            'alpha',alpha_value,...
-           'ctrl_pts_obstacle', ctrl_pts_obstacle_value,...
-           'beta1', beta1_value,...
-           'beta2', beta2_value,...
+           'fitter_ctrl_pts', fitter_ctrl_pts_value,...
            'thetax_FOV_deg',thetax_FOV_deg_value,...  
            'thetay_FOV_deg',thetay_FOV_deg_value,...
            'b_T_c',b_T_c_value,...
@@ -735,7 +708,7 @@ for t_nobs=t_opt_n_samples %t0:0.3:tf
 
 end
 
-for i=1:num_obs
+for i=1:num_max_of_obst
     tmp=substituteWithSolution(obst{1}.centers, results_solved, par_and_init_guess);
     for ii=1:size(tmp,2)
         plotSphere(tmp(:,ii),0.2,'g');
@@ -793,7 +766,7 @@ plot(all_fov_costs_evaluated,'-o'); title('Fov cost. $>$0 means not in FOV')
 end
 %% 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%    FUNCTION TO FIT A SPLINE TO SAMPLES     %%%%%%%%%%%%%
+%%%%%%%    FUNCTION TO FIT A SPLINE TO YAW SAMPLES     %%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 sy_tmp=MyClampedUniformSpline(t0_n,tf_n,deg_yaw, dim_yaw, num_seg, opti);  %creating another object to not mess up with sy
@@ -839,10 +812,71 @@ subplot(4,1,1); hold on;
 plot(t_opt_n_samples, all_yaw_value, 'o')
 
 
-f.save('./casadi_generated_files/fit_yaw.casadi') %The file generated is quite big
+f.save('./casadi_generated_files/fit_yaw.casadi') 
 
-% solution=convertMX2Matlab(A)\convertMX2Matlab(b);  %Solve the system of equations
-% sy.updateCPsWithSolution(solution(1:end-3)');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%    FUNCTION TO FIT A SPLINE TO POSITION SAMPLES     %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%all_pos should be sampled uniformly, including first and last point
+%The total number of samples is num_samples
+
+%If you find the error "evaluation failed" --> increase num_samples or
+%reduce deg_pos or num_seg
+
+%%
+
+samples=MX.sym('samples',fitter.dim_pos,fitter.num_samples);
+cost_function=0;
+i=1;
+for ti=linspace(fitter.bs.knots(1), fitter.bs.knots(end), fitter.num_samples)
+    dist=(fitter.bs.getPosT(ti)-samples(:,i));      cost_function = cost_function + dist'*dist; 
+    i=i+1;
+end
+
+lagrangian = cost_function;
+
+variables=[fitter.bs.getCPsAsMatrix() ]; 
+
+kkt_eqs=jacobian(lagrangian, variables)'; %I want kkt=[0 0 ... 0]'
+
+%Obtain A and b
+b=-casadi.substitute(kkt_eqs, variables, zeros(size(variables))); %Note the - sign
+A=jacobian(kkt_eqs, variables);
+
+solution=A\b;  %Solve the system of equations
+
+f= Function('f', {samples }, {reshape(solution(1:end), fitter.dim_pos,-1)}, ...
+                 {'samples'}, {'result'} );
+% f=f.expand();
+
+t=linspace(0, 2, fitter.num_samples)
+
+samples_value=[sin(t)+2*sin(2*t);
+               cos(t)-2*cos(2*t);
+               -sin(3*t)];
+
+
+solution=f(samples_value);
+
+%%
+
+cost_function=substitute(cost_function, fitter.bs.getCPsAsMatrix, full(solution));
+cost_function=substitute(cost_function, samples, samples_value);
+convertMX2Matlab(cost_function)
+
+% sp_tmp=MyClampedUniformSpline(t0_n,tf_n,deg_pos, dim_pos, num_seg, opti);  %creating another object to not mess up with sy
+fitter.bs.updateCPsWithSolution(full(solution));
+
+
+% sp_tmp.plotPosVelAccelJerk();
+
+fitter.bs.plotPos3D();
+scatter3(samples_value(1,:), samples_value(2,:), samples_value(3,:))
+
+f.save('./casadi_generated_files/fit3d.casadi') 
+
 
 %% Functions
 

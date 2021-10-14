@@ -811,7 +811,7 @@ struct parameters
   int deg_pos;
   int deg_yaw;
   int num_max_of_obst;
-  int num_samples_simpson;
+  // int num_samples_simpson;
 
   double upper_bound_runtime_snlopt;
   double lower_bound_runtime_snlopt;
@@ -853,6 +853,7 @@ struct parameters
   double c_fov = 0.0;
   double c_final_pos = 100.0;
   double c_final_yaw = 0.0;
+  double c_total_time = 0.0;
 
   // bool force_final_pos = false;
   // double distance_to_force_final_pos = 1.0;
@@ -861,6 +862,10 @@ struct parameters
 
   Eigen::Affine3d b_T_c;
   Eigen::Affine3d c_T_b;
+
+  int fitter_num_samples;
+  double fitter_total_time;
+  int sampler_num_samples;
 };
 
 struct committedTrajectory

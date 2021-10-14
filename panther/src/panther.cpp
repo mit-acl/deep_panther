@@ -575,15 +575,14 @@ ConvexHullsOfCurves Panther::convexHullsOfCurves(double t_start, double t_end)
 
 // argmax_prob_collision is the index of trajectory I should focus on
 // a negative value means that there are no trajectories to track
-void Panther::sampleFeaturePosVel(int argmax_prob_collision, double t_start, double t_end,
-                                  std::vector<Eigen::Vector3d>& pos, std::vector<Eigen::Vector3d>& vel)
+void Panther::sampleFeaturePos(int argmax_prob_collision, double t_start, double t_end,
+                               std::vector<Eigen::Vector3d>& pos)
 {
   pos.clear();
-  vel.clear();
 
-  double delta = (t_end - t_start) / par_.num_samples_simpson;
+  double delta = (t_end - t_start) / par_.fitter_num_samples;
 
-  for (int i = 0; i < par_.num_samples_simpson; i++)
+  for (int i = 0; i < par_.fitter_num_samples; i++)
   {
     if (argmax_prob_collision >= 0)
     {
@@ -591,32 +590,10 @@ void Panther::sampleFeaturePosVel(int argmax_prob_collision, double t_start, dou
       Eigen::Vector3d pos_i = evalMeanDynTrajCompiled(trajs_[argmax_prob_collision], ti);
 
       pos.push_back(pos_i);
-
-      // MyTimer timer(true);
-      // This commented part always returns 0.0. TODO: find out why. For now, let's use finite differences
-      // See also
-      // https://github.com/ArashPartow/exprtk/blob/66bed77369557fe1872df4c999c9d9ccb3adc3f6/readme.txt#LC4010:~:text=This%20free%20function%20will%20attempt%20to%20perform%20a%20numerical%20differentiation
-      // Eigen::Vector3d vel_i = Eigen::Vector3d(exprtk::derivative(trajs_[wt].function[0], "t"),  ////////////
-      //                                         exprtk::derivative(trajs_[wt].function[1], "t"),  ////////////
-      //                                         exprtk::derivative(trajs_[wt].function[2], t_));
-      // std::cout << "time to take derivatives= " << timer << std::endl;
-      // std::cout << on_green << bold << "vel= " << vel_i.transpose() << reset << std::endl;
-      // std::cout << on_green << bold << "pos= " << pos[i].transpose() << reset << std::endl;
-
-      // Use finite differences to obtain the derivative
-      double epsilon = 1e-6;
-
-      Eigen::Vector3d pos_i_epsilon = evalMeanDynTrajCompiled(trajs_[argmax_prob_collision], ti + epsilon);
-
-      vel.push_back((pos_i_epsilon - pos_i) / epsilon);
-
-      // std::cout << bold << "Velocity= " << vel[i].transpose() << reset << std::endl;
-      //////////////////////////////
     }
     else
     {
-      pos.push_back(G_term_.pos);              // last_state_tracked_.pos
-      vel.push_back(Eigen::Vector3d::Zero());  // last_state_tracked_.vel
+      pos.push_back(G_term_.pos);  // last_state_tracked_.pos
     }
   }
 
@@ -626,7 +603,7 @@ void Panther::sampleFeaturePosVel(int argmax_prob_collision, double t_start, dou
   }
 
   last_state_tracked_.pos = pos.front();  // pos.back();
-  last_state_tracked_.vel = vel.front();  // vel.back();
+  // last_state_tracked_.vel = vel.front();  // vel.back();
 }
 
 void Panther::setTerminalGoal(mt::state& term_goal)
@@ -1108,14 +1085,13 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   }
   ////
 
-  std::vector<Eigen::Vector3d> w_posfeature;      // velocity of the feature expressed in w
-  std::vector<Eigen::Vector3d> w_velfeaturewrtw;  // velocity of the feature wrt w, expressed in w
-  sampleFeaturePosVel(argmax_prob_collision, t_start, t_final, w_posfeature,
-                      w_velfeaturewrtw);  // need to do it here so that argmax_prob_collision does not become invalid
-                                          // with new updates
+  std::vector<Eigen::Vector3d> samples_obs;  // pos of the feature expressed in w
 
-  log_ptr_->tracking_now_pos = w_posfeature.front();
-  log_ptr_->tracking_now_vel = w_velfeaturewrtw.front();
+  sampleFeaturePos(argmax_prob_collision, t_start, t_start + par_.fitter_total_time,
+                   samples_obs);  // need to do it here so that argmax_prob_collision does not become invalid
+                                  // with new updates
+
+  log_ptr_->tracking_now_pos = samples_obs.front();
 
   mtx_trajs_.unlock();
 
@@ -1152,7 +1128,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
   solver_->setHulls(hulls_std);
 
-  solver_->setSimpsonFeatureSamples(w_posfeature, w_velfeaturewrtw);
+  solver_->setSamplesObs(samples_obs);
 
   //////////////////////
   std::cout << on_cyan << bold << "Solved so far" << solutions_found_ << "/" << total_replannings_ << reset

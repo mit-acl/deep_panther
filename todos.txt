@@ -1,0 +1,1 @@
+Checkout last version of MINVO (Creo que main.m da algunos errores por lack of double conversion de A)

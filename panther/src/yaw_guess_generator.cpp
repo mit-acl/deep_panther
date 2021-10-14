@@ -97,19 +97,20 @@ private:
 ////////////////////////////////////////
 ////////////////////////////////////////
 
-casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, casadi::DM all_w_fe, double y0, double ydot0,
-                                         double ydotf, double t0, double tf)
+casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, double ydot0, double ydotf, double t0,
+                                         double tf)
 {
   WeightMap weightmap = get(boost::edge_weight, mygraph_);
 
   std::map<std::string, casadi::DM> map_arg;
+
+  map_arg["pCPs"] = matrix_qp_guess;
+  map_arg["alpha"] = (tf - t0);
+  map_arg["fitter_ctrl_pts"] = fitter_ctrl_pts_;
   map_arg["thetax_FOV_deg"] = par_.fov_x_deg;
   map_arg["thetay_FOV_deg"] = par_.fov_y_deg;
   map_arg["b_T_c"] = b_Tmatrixcasadi_c_;
-  map_arg["all_w_fe"] = all_w_fe;
-  map_arg["pCPs"] = matrix_qp_guess;
   map_arg["yaw_samples"] = vector_yaw_samples_;
-  map_arg["total_time"] = (tf - t0);
 
   std::map<std::string, casadi::DM> result = cf_visibility_(map_arg);
   casadi::DM vis_matrix_casadi = result["result"];  // Its values are in [0.1]
@@ -307,10 +308,11 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, casadi::DM 
 
     std::map<std::string, casadi::DM> map_arg2;
     map_arg2["all_yaw"] = vsp_corrected;
+    map_arg2["alpha"] = (tf - t0);
     // map_arg2["y0"] = y0; %Note that all_yaw[0] is used as the initial condition
     map_arg2["ydot0"] = ydot0;
     map_arg2["ydotf"] = ydotf;
-    map_arg2["total_time"] = (tf - t0);
+
     log_ptr_->tim_guess_yaw_fit_poly.tic();
     std::map<std::string, casadi::DM> result2 = cf_fit_yaw_(map_arg2);
     log_ptr_->tim_guess_yaw_fit_poly.toc();

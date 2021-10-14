@@ -65,37 +65,6 @@ struct solOrGuess
   }
 };
 
-// struct guess
-// {
-//   std::vector<Eigen::Vector3d> qp;
-//   std::vector<double> qy;
-//   mt::trajectory traj;
-//   mt::PieceWisePol pwp;
-
-//   void print()
-//   {
-//     using namespace termcolor;
-//     std::cout << "Pos Control points:" << std::endl;
-
-//     Eigen::Matrix<double, 3, -1> tmp(3, qp.size());
-
-//     for (int i = 0; i < qp.size(); i++)
-//     {
-//       tmp.col(i) = qp[i];
-//     }
-
-//     std::cout << red << tmp << reset << std::endl;
-
-//     std::cout << "Yaw Control points:" << std::endl;
-
-//     for (auto qy_i : qy)
-//     {
-//       std::cout << yellow << qy_i << " ";
-//     }
-//     std::cout << reset << std::endl;
-//   }
-// };
-
 }  // namespace si
 
 class SolverIpopt
@@ -112,8 +81,7 @@ public:
   bool setInitStateFinalStateInitTFinalT(mt::state initial_state, mt::state final_state, double t_init,
                                          double &t_final);
   void setHulls(ConvexHullsOfCurves_Std &hulls);
-  void setSimpsonFeatureSamples(const std::vector<Eigen::Vector3d> &samples,
-                                const std::vector<Eigen::Vector3d> &w_velsampleswrtworld);
+  void setSamplesObs(const std::vector<Eigen::Vector3d> &samples);
   void setFocusOnObstacle(bool focus_on_obstacle)
   {
     focus_on_obstacle_ = focus_on_obstacle;
@@ -183,8 +151,7 @@ private:
 
   void findCentroidHull(const Polyhedron_Std &hull, Eigen::Vector3d &centroid);
 
-  casadi::DM generateYawGuess(casadi::DM matrix_qp_guess, casadi::DM all_w_fe, double y0, double ydot0, double ydotf,
-                              double t0, double tf);
+  casadi::DM generateYawGuess(casadi::DM matrix_qp_guess, double y0, double ydot0, double ydotf, double t0, double tf);
 
   std::vector<Eigen::Vector3d> n_;  // Each n_[i] has 3 elements (nx,ny,nz)
   std::vector<double> d_;           // d_[i] has 1 element
@@ -249,10 +216,11 @@ private:
   // casadi::Function cf_op_force_final_pos_;
   casadi::Function cf_fixed_pos_op_;
   casadi::Function cf_fit_yaw_;
+  casadi::Function cf_fit3d_;
   casadi::Function cf_visibility_;
 
-  casadi::DM all_w_fe_;
-  casadi::DM all_w_velfewrtworld_;
+  // casadi::DM all_w_fe_;
+  // casadi::DM all_w_velfewrtworld_;
   casadi::DM b_Tmatrixcasadi_c_;
 
   // auxiliary types
@@ -301,6 +269,8 @@ private:
   bool focus_on_obstacle_;
 
   std::vector<os::solution> p_guesses_;
+
+  casadi::DM fitter_ctrl_pts_;
 
   // std::unique_ptr<mygraph_t> mygraph_ptr;
   //////////////////////////////////
