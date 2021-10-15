@@ -140,6 +140,15 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
                                                                           // Note that vis_matrix_casadi has in the rows
                                                                           // the circles, in the columns the layers.
 
+    if (isnan(visibility))
+    {
+      std::cout << red << bold
+                << "visibility is nan. This happens when Hopf fib sing has been found (i.e., bar{xi} =[0 0 -1]) "
+                << reset << std::endl;
+      std::cout << "Using visibility=0" << std::endl;
+      visibility = 0;
+    }
+
     // TODO: the distance cost is fixed (don't change in each iteration --> add it only once at the beginning?)
     double distance = abs(wrapFromMPitoPi(mygraph_[index_vertex1].yaw - mygraph_[index_vertex2].yaw));
     double distance_squared = pow(distance, 2.0);
@@ -147,6 +156,8 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
     weightmap[*ed_ptr] = par_.c_smooth_yaw_search * distance_squared +
                          par_.c_visibility_yaw_search * (1.0 - visibility) +
                          ((distance / deltaT) > par_.ydot_max) * 1e6;  // Note that edge cost is always >=0
+
+    // weightmap[*ed_ptr] = par_.c_visibility_yaw_search * (1.0 - visibility);  // Note that edge cost is always >=0
 
     // if it doesn't satisfy the  ydot_maxconstraint --> very expensive edge. Note that with this option (instead of the
     // option of NOT creating an edge) there will always be a solution in the graph
@@ -215,6 +226,10 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
     //////////////////////////////////////////////////////////////////////////////
     if (par_.print_graph_yaw_info)
     {
+      std::cout << green << "=====================================================" << reset << std::endl;
+      std::cout << "deltaT" << deltaT << std::endl;
+      std::cout << green << "VISIBILITY MATRIX. 0=NOT_IN_FOV, 1=IN_FOV " << reset << std::endl;
+
       for (int j = 0; j < vector_yaw_samples_.numel(); j++)
       {
         std::cout << right << std::fixed << std::setw(8) << std::setfill(' ') << "[" << j << "]" << reset;
@@ -249,6 +264,8 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
         }
         std::cout << std::endl;
       }
+
+      std::cout << green << "=====================================================" << reset << std::endl;
     }
     std::cout << "Shortest path: ";
     for (int i = 0; i < vector_shortest_path.numel(); i++)

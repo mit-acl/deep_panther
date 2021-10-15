@@ -156,6 +156,8 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "c_fov", par_.c_fov);
   safeGetParam(nh1_, "c_final_pos", par_.c_final_pos);
   safeGetParam(nh1_, "c_final_yaw", par_.c_final_yaw);
+  safeGetParam(nh1_, "c_total_time", par_.c_total_time);
+
   safeGetParam(nh1_, "print_graph_yaw_info", par_.print_graph_yaw_info);
 
   bool perfect_prediction;  // use_ground_truth_prediction

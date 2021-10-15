@@ -7,5 +7,5 @@ num_max_of_obst: 1
 sampler_num_samples: 12
 fitter_num_samples: 15
 fitter_total_time: 8
-num_of_yaw_per_layer: 40
+num_of_yaw_per_layer: 15
 basis: "MINVO"

@@ -484,6 +484,9 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
   map_arguments["c_final_yaw"] = par_.c_final_yaw;
   map_arguments["c_total_time"] = par_.c_total_time;
 
+  std::cout << "map_arguments[c_total_time]" << map_arguments["c_total_time"] << std::endl;
+  std::cout << "map_arguments[alpha]" << alpha_guess << std::endl;
+
   /////////////////////////////////////////// SOLVE AN OPIMIZATION FOR EACH OF THE GUESSES FOUND
 
   solutions.clear();
@@ -495,13 +498,12 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
     all_nd = casadi::DM::zeros(4, max_num_of_planes);
     for (int i = 0; i < p_guess.n.size(); i++)
     {
-      // Casadi needs the plane equation as n_casadi'x+d_casadi<=0
-      // The free space is on the side n'x+d <= -1 (and also on the side n'x+d <= 1)
-      // Hence, n_casadi=n, and d_casadi=d-1
+      // The optimized curve is on the side n'x+d <= -1
+      // The obstacle is on the side n'x+d >= 1
       all_nd(0, i) = p_guess.n[i].x();
       all_nd(1, i) = p_guess.n[i].y();
       all_nd(2, i) = p_guess.n[i].z();
-      all_nd(3, i) = p_guess.d[i] - 1;
+      all_nd(3, i) = p_guess.d[i];
     }
 
     map_arguments["all_nd"] = all_nd;
@@ -515,6 +517,9 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
       matrix_qp_guess(2, i) = p_guess.qp[i].z();
     }
     map_arguments["pCPs"] = matrix_qp_guess;
+
+    std::cout << "knots_p_guess_= " << knots_p_guess_ << std::endl;
+    std::cout << "knots_y_guess_= " << knots_y_guess_ << std::endl;
 
     ////////////////////////////////Generate Yaw Guess
     casadi::DM matrix_qy_guess(1, sy.N);  // TODO: do this just once?
@@ -545,6 +550,9 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
       map_arguments["c_yaw_smooth"] = par_.c_yaw_smooth;
       map_arguments["c_fov"] = par_.c_fov;
       std::cout << bold << green << "Optimizing for YAW and POSITION!" << reset << std::endl;
+
+      printMap(map_arguments);
+
       result = cf_op_(map_arguments);
     }
     else if (par_.mode == "py" && focus_on_obstacle_ == true)

@@ -143,6 +143,14 @@ private:
     return x - M_PI;
   }
 
+  void printMap(const std::map<std::string, casadi::DM> &m)
+  {
+    for (auto it = m.cbegin(); it != m.cend(); ++it)
+    {
+      std::cout << it->first << " " << it->second << "\n";
+    }
+  }
+
   Eigen::RowVectorXd getKnotsSolution(const Eigen::RowVectorXd &knots_guess, const double alpha_guess,
                                       const double alpha_solution);
 

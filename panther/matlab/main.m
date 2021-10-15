@@ -21,7 +21,7 @@ pos_is_fixed=false; %you need to run this file twice to produce the necessary ca
 
 optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
 optimize_d_planes=true;     %Optimize the scalar "d" of the planes
-optimize_time_alloc=false;
+optimize_time_alloc=true;
 
 make_plots=true;
 
@@ -52,7 +52,7 @@ sampler.num_samples_obstacle_per_segment = 2;                    %This is used f
 sampler.num_samples=sampler.num_samples_obstacle_per_segment*num_seg;    %This will also be the num_of_layers in the graph yaw search of C++
                                                              
 
-num_of_yaw_per_layer=40; %This will be used in the graph yaw search of C++
+num_of_yaw_per_layer=15; %This will be used in the graph yaw search of C++
                          %Note that the initial layer will have only one yaw (which is given) 
 basis="MINVO"; %MINVO OR B_SPLINE or BEZIER. This is the basis used for collision checking (in position, velocity, accel and jerk space), both in Matlab and in C++
 linear_solver_name='ma27'; %mumps [default, comes when installing casadi], ma27, ma57, ma77, ma86, ma97 
@@ -214,7 +214,7 @@ for i=1:num_max_of_obst
 %             t_obs = beta1 + deltaT*(j-1) + (k/sampler.num_samples_obstacle_per_segment)*deltaT;
             t_obs = deltaT*(j-1) + (k/sampler.num_samples_obstacle_per_segment)*deltaT;
             
-            t_nobs= max( t_obs/fitter.total_time,  1.0 );  
+            t_nobs= max( t_obs/fitter.total_time,  1.0 );  %Note that fitter.bs_casadi{i}.knots=[0...1]
             
             pos_center_obs=fitter.bs_casadi{i}.getPosT(t_nobs);
             
@@ -291,7 +291,7 @@ for j=1:(sp.num_seg)
           for i=1:num_max_of_obst
             vertexes_ij=obst{i}.vertexes{j};
             for kk=1:size(vertexes_ij,2)
-                const_p{end+1}= n{ip}'*vertexes_ij(:,kk) + d{ip} >= 1;   %TODO: make sure this follows the convention from C++
+                const_p{end+1}= n{ip}'*vertexes_ij(:,kk) + d{ip} >= 1; 
             end
           end
       
@@ -300,7 +300,7 @@ for j=1:(sp.num_seg)
       
       %and the control points on the other side
       for kk=1:size(Q,2)
-        const_p{end+1}= n{ip}'*Q{kk} + d{ip} <= 0;
+        const_p{end+1}= n{ip}'*Q{kk} + d{ip} <= -1;
       end
     end  
  
@@ -373,6 +373,8 @@ for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
     %FOV is a cone:  (See more possible versions of this constraint at the end of this file)
     is_in_FOV_tmp=-cos(thetax_half_FOV_deg*pi/180.0) + (c_P(1:3)'/norm(c_P((1:3))))*[0;0;1]; % Constraint is is_in_FOV1>=0
     
+    
+    
     gamma=100;
     all_is_in_FOV_smooth=[all_is_in_FOV_smooth  (   1/(1+exp(-gamma*is_in_FOV_tmp))  ) ];
     
@@ -380,7 +382,10 @@ for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
     
     f=-is_in_FOV; % Constraint is f<=0
     
-    fov_cost_j=max(0,f)^3; %Penalty associated with the constraint  
+    %Penalty associated with the constraint
+    %Note that that is_in_FOV_tmp \in [-2,2]
+%     fov_cost_j=max(0,f)^3;  %This will try to put the obstacle in the FOV 
+    fov_cost_j=f^3;           %This will try to put the obstacle in the center of the FOV
     
     simpson_constant=(h/3.0)*getSimpsonCoeff(simpson_index,sampler.num_samples);
     
@@ -525,7 +530,7 @@ par_and_init_guess= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV
               {createStruct('c_fov', c_fov, 1.0)},...
               {createStruct('c_final_pos', c_final_pos, 2000)},...
               {createStruct('c_final_yaw', c_final_yaw, 0.0)},...
-              {createStruct('c_total_time', c_total_time, 0.0)},...            
+              {createStruct('c_total_time', c_total_time, 1000.0)},...            
               {createStruct('all_nd', all_nd, all_nd_value)},...
               {createStruct('pCPs', pCPs, tmp1)},...
              {createStruct('yCPs', yCPs, tmp2)},...
@@ -874,7 +879,7 @@ f= Function('f', {samples }, {reshape(solution(1:end), fitter.dim_pos,-1)}, ...
                  {'samples'}, {'result'} );
 % f=f.expand();
 
-t=linspace(0, 2, fitter.num_samples)
+t=linspace(0, 2, fitter.num_samples);
 
 samples_value=[sin(t)+2*sin(2*t);
                cos(t)-2*cos(2*t);
