@@ -474,7 +474,7 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
   for (int i = 0; i < par_.num_max_of_obst; i++)
   {
     map_arguments["obs_" + std::to_string(i) + "_ctrl_pts"] = obstacles_for_opt_[i].ctrl_pts;
-    map_arguments["obs_" + std::to_string(i) + "_bbox"] = obstacles_for_opt_[i].bbox;
+    map_arguments["obs_" + std::to_string(i) + "_bbox_inflated"] = obstacles_for_opt_[i].bbox_inflated;
   }
 
   map_arguments["c_pos_smooth"] = par_.c_pos_smooth;

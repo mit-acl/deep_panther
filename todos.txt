@@ -11,3 +11,6 @@ Right now, octopusSolver is using the hulls sampled directly on the trajectory f
 
 
 el field pwp (y el publicar la own trajectory) lo he comentado por ahora. Lo puedo descomentar, pero entonces debo implementar CPs2TrajAndPwp sin asumir (deg_pos=3 and deg_yaw=2)  
+
+
+Make sure that MATLAB and C++ follow the same convention of the planes (n'x+d>=0 or >=1)

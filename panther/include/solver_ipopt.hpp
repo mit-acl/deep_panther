@@ -87,7 +87,7 @@ struct splineParam
 
 struct obstacleForOpt
 {
-  casadi::DM bbox;
+  casadi::DM bbox_inflated;
   casadi::DM ctrl_pts;
 };
 

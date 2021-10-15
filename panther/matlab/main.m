@@ -39,7 +39,7 @@ fitter.num_samples=15;
 fitter_num_of_cps= fitter.num_seg + fitter.deg_pos;
 for i=1:num_max_of_obst
     fitter.ctrl_pts{i}=opti.parameter(fitter.dim_pos,fitter_num_of_cps); %This comes from C++
-    fitter.bbox{i}=opti.parameter(fitter.dim_pos,1); %This comes from C++
+    fitter.bbox_inflated{i}=opti.parameter(fitter.dim_pos,1); %This comes from C++
     fitter.bs_casadi{i}=MyCasadiClampedUniformSpline(0,1,fitter.deg_pos,fitter.dim_pos,fitter.num_seg,fitter.ctrl_pts{i}, false);
 end
 fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti);
@@ -149,9 +149,9 @@ for i=1:(num_max_of_obst*num_seg)
     end    
 end
 
-% obstacle_bbox={};
+% obstacle_bbox_inflated={};
 % for i=1:num_max_of_obst
-%     obstacle_bbox{i}=opti.parameter(3,1); %It has three elements: hx, hy, hz (bbox of size hx x hy x hz)
+%     obstacle_bbox_inflated{i}=opti.parameter(3,1); %It has three elements: hx, hy, hz (bbox_inflated of size hx x hy x hz)
 % end
 
 
@@ -220,7 +220,7 @@ for i=1:num_max_of_obst
             
             all_centers=[all_centers pos_center_obs];
 
-            all_vertexes_segment_j=[all_vertexes_segment_j vertexesOfBox(pos_center_obs, fitter.bbox{i}) ];
+            all_vertexes_segment_j=[all_vertexes_segment_j vertexesOfBox(pos_center_obs, fitter.bbox_inflated{i}) ];
 
         end
 
@@ -424,9 +424,9 @@ for i=1:(num_max_of_obst*num_seg)
 end
 
 
-% all_obstacle_bbox=[];
+% all_obstacle_bbox_inflated=[];
 % for i=1:num_max_of_obst
-%     all_obstacle_bbox=[all_obstacle_bbox obstacle_bbox{i}]; %The i-th column contains the bbox of the obstacle i
+%     all_obstacle_bbox_inflated=[all_obstacle_bbox_inflated obstacle_bbox_inflated{i}]; %The i-th column contains the bbox_inflated of the obstacle i
 % end
 
 
@@ -496,7 +496,7 @@ tmp2=[ y0_value(1)*ones(1,sy.p-1)   linspace(y0_value(1),yf_value(1), sy.N+1-2*(
 
 
 
-% all_obstacle_bbox_value= ones(size(all_obstacle_bbox));
+% all_obstacle_bbox_inflated_value= ones(size(all_obstacle_bbox_inflated));
 
 par_and_init_guess= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV_deg_value)},...
               {createStruct('thetay_FOV_deg', thetay_FOV_deg, thetay_FOV_deg_value)},...
@@ -906,19 +906,19 @@ f.save('./casadi_generated_files/fit3d.casadi')
          
  function result=createCellArrayofStructsForObstacles(fitter)
          
-     num_obs=size(fitter.bbox,2);
+     num_obs=size(fitter.bbox_inflated,2);
 
      result=[];
      
      for i=1:num_obs
         name_crtl_pts=['obs_', num2str(i-1), '_ctrl_pts'];  %Note that we use i-1 here because it will be called from C++
-        name_bbox=['obs_', num2str(i-1), '_bbox'];          %Note that we use i-1 here because it will be called from C++
+        name_bbox_inflated=['obs_', num2str(i-1), '_bbox_inflated'];          %Note that we use i-1 here because it will be called from C++
 
         crtl_pts_value=zeros(size(fitter.bs_casadi{i}.CPoints));
 
         result=[result,...
                 {createStruct(name_crtl_pts,   fitter.ctrl_pts{i} , crtl_pts_value)},...
-                {createStruct(name_bbox, fitter.bbox{i} ,  [1;1;1]  )}];
+                {createStruct(name_bbox_inflated, fitter.bbox_inflated{i} ,  [1;1;1]  )}];
 
     end
          

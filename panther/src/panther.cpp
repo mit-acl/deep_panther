@@ -620,12 +620,12 @@ std::vector<si::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
     std::map<std::string, casadi::DM> result = cf_fit3d_(map_arg);
     obstacle_for_opt.ctrl_pts = result["result"];
 
-    casadi::DM bbox(3, 1);
-    bbox(0, 0) = trajs_[i].bbox.x();
-    bbox(1, 0) = trajs_[i].bbox.y();
-    bbox(2, 0) = trajs_[i].bbox.z();
+    casadi::DM bbox_inflated(3, 1);
+    bbox_inflated(0, 0) = trajs_[i].bbox.x() + 2 * par_.drone_radius;
+    bbox_inflated(1, 0) = trajs_[i].bbox.y() + 2 * par_.drone_radius;
+    bbox_inflated(2, 0) = trajs_[i].bbox.z() + 2 * par_.drone_radius;
 
-    obstacle_for_opt.bbox = bbox;
+    obstacle_for_opt.bbox_inflated = bbox_inflated;
 
     obstacles_for_opt.push_back(obstacle_for_opt);
   }
