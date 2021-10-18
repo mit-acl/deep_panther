@@ -13,9 +13,11 @@
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////
 
-Eigen::RowVectorXd constructKnotsClampedUniformSpline(double t_init, double t_end, int p, int M)
+Eigen::RowVectorXd constructKnotsClampedUniformSpline(double t_init, double t_end, int deg, int num_seg)
 {
-  int num_seg = M - 2 * p;
+  int p = deg;
+  int M = num_seg + 2 * p;
+  // int num_seg = M - 2 * p;
   double deltaT = (t_end - t_init) / num_seg;
 
   // std::cout << "num_seg= " << num_seg << std::endl;

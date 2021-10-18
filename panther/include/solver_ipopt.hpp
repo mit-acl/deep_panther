@@ -30,6 +30,10 @@
 
 typedef PANTHER_timers::Timer MyTimer;
 
+std::vector<Eigen::Vector3d> casadiMatrix2StdVectorEigen3d(const casadi::DM &qp_casadi);
+std::vector<double> casadiMatrix2StdVectorDouble(const casadi::DM &qy_casadi);
+casadi::DM stdVectorEigen3d2CasadiMatrix(const std::vector<Eigen::Vector3d> &qp);
+
 namespace si  // Solver Ipopt
 {
 struct solOrGuess
@@ -63,6 +67,11 @@ struct solOrGuess
     }
     std::cout << reset << std::endl;
   }
+
+  // casadi::DM getQpAsCasadiMatrix()
+  // {
+  //   StdVectorEigen3d2CasadiMatrix
+  // }
 };
 
 struct splineParam
@@ -103,7 +112,7 @@ public:
   bool optimize(std::vector<si::solOrGuess> &solutions, std::vector<si::solOrGuess> &guesses);
 
   // setters
-  void setMaxRuntimeKappaAndMu(double runtime, double kappa, double mu);
+  // void setMaxRuntimeKappaAndMu(double runtime, double kappa, double mu);
   bool setInitStateFinalStateInitTFinalT(mt::state initial_state, mt::state final_state, double t_init,
                                          double &t_final);
   void setHulls(ConvexHullsOfCurves_Std &hulls);
@@ -122,13 +131,13 @@ public:
   int getNumOfQCQPsRun();
   void getSolution(mt::PieceWisePol &solution);
 
-  double getTimeNeeded();
+  // double getTimeNeeded();
 
   int B_SPLINE = 1;  // B-Spline Basis
   int MINVO = 2;     // Minimum volume basis
   int BEZIER = 3;    // Bezier basis
 
-  bool checkGradientsUsingFiniteDiff();
+  // bool checkGradientsUsingFiniteDiff();
 
   mt::parameters par_;
 
@@ -242,8 +251,8 @@ private:
   // std::vector<Eigen::Vector3d> qp_guess_;  // Guesses for the position control points
   // std::vector<double> qy_guess_;           // Guesses for the yaw control points
 
-  double kappa_ = 0.2;  // kappa_*max_runtime_ is spent on the initial guess
-  double mu_ = 0.5;     // mu_*max_runtime_ is spent on the optimization
+  // double kappa_ = 0.2;  // kappa_*max_runtime_ is spent on the initial guess
+  // double mu_ = 0.5;     // mu_*max_runtime_ is spent on the optimization
 
   int num_of_QCQPs_run_ = 0;
 

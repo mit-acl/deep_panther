@@ -31,6 +31,33 @@ int sgn(T val)
   return (T(0) < val) - (val < T(0));
 }
 
+std::vector<Eigen::Vector3d> casadiMatrix2StdVectorEigen3d(const casadi::DM &qp_casadi)
+{
+  std::vector<Eigen::Vector3d> qp;
+  for (int i = 0; i < qp_casadi.columns(); i++)
+  {
+    qp.push_back(Eigen::Vector3d(double(qp_casadi(0, i)), double(qp_casadi(1, i)), double(qp_casadi(2, i))));
+  }
+  return qp;
+}
+
+std::vector<double> casadiMatrix2StdVectorDouble(const casadi::DM &qy_casadi)
+{
+  return static_cast<std::vector<double>>(qy_casadi);
+}
+
+casadi::DM stdVectorEigen3d2CasadiMatrix(const std::vector<Eigen::Vector3d> &qp)
+{
+  casadi::DM casadi_matrix(3, qp.size());  // TODO: do this just once?
+  for (int i = 0; i < casadi_matrix.columns(); i++)
+  {
+    casadi_matrix(0, i) = qp[i].x();
+    casadi_matrix(1, i) = qp[i].y();
+    casadi_matrix(2, i) = qp[i].z();
+  }
+  return casadi_matrix;
+}
+
 SolverIpopt::SolverIpopt(mt::parameters &par, std::shared_ptr<mt::log> log_ptr)
 {
   par_ = par;
@@ -190,12 +217,12 @@ int SolverIpopt::getNumOfQCQPsRun()
   return num_of_QCQPs_run_;
 }
 
-void SolverIpopt::setMaxRuntimeKappaAndMu(double max_runtime, double kappa, double mu)
-{
-  kappa_ = kappa;
-  mu_ = mu;
-  max_runtime_ = max_runtime;
-}
+// void SolverIpopt::setMaxRuntimeKappaAndMu(double max_runtime, double kappa, double mu)
+// {
+//   kappa_ = kappa;
+//   mu_ = mu;
+//   max_runtime_ = max_runtime;
+// }
 
 void SolverIpopt::setHulls(ConvexHullsOfCurves_Std &hulls)
 {
@@ -351,15 +378,8 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
 
   /////////////////////////
 
-  std::cout << "Going to obtain knots guess for pos" << std::endl;
-
-  knots_p_guess_ = constructKnotsClampedUniformSpline(t_init, t_final_guess_, sp.p, sp.M);
-  std::cout << "Going to obtain knots guess for yaw" << std::endl;
-
-  knots_y_guess_ = constructKnotsClampedUniformSpline(t_init, t_final_guess_, sy.p, sy.M);
-
-  std::cout << "knots_p_guess_= " << knots_p_guess_ << std::endl;
-  std::cout << "knots_y_guess_= " << knots_y_guess_ << std::endl;
+  knots_p_guess_ = constructKnotsClampedUniformSpline(t_init, t_final_guess_, sp.p, sp.num_seg);
+  knots_y_guess_ = constructKnotsClampedUniformSpline(t_init, t_final_guess_, sy.p, sy.num_seg);
 
   // Eigen::RowVectorXd knots(sp.M + 1);
   // for (int i = 0; i <= sp.p; i++)
@@ -484,9 +504,6 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
   map_arguments["c_final_yaw"] = par_.c_final_yaw;
   map_arguments["c_total_time"] = par_.c_total_time;
 
-  std::cout << "map_arguments[c_total_time]" << map_arguments["c_total_time"] << std::endl;
-  std::cout << "map_arguments[alpha]" << alpha_guess << std::endl;
-
   /////////////////////////////////////////// SOLVE AN OPIMIZATION FOR EACH OF THE GUESSES FOUND
 
   solutions.clear();
@@ -509,17 +526,13 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
     map_arguments["all_nd"] = all_nd;
 
     ///////////////// GUESS FOR POSITION CONTROL POINTS
-    casadi::DM matrix_qp_guess(3, (sp.N + 1));  // TODO: do this just once?
-    for (int i = 0; i < matrix_qp_guess.columns(); i++)
-    {
-      matrix_qp_guess(0, i) = p_guess.qp[i].x();
-      matrix_qp_guess(1, i) = p_guess.qp[i].y();
-      matrix_qp_guess(2, i) = p_guess.qp[i].z();
-    }
+
+    casadi::DM matrix_qp_guess = stdVectorEigen3d2CasadiMatrix(p_guess.qp);
+
     map_arguments["pCPs"] = matrix_qp_guess;
 
-    std::cout << "knots_p_guess_= " << knots_p_guess_ << std::endl;
-    std::cout << "knots_y_guess_= " << knots_y_guess_ << std::endl;
+    // std::cout << "knots_p_guess_= " << knots_p_guess_ << std::endl;
+    // std::cout << "knots_y_guess_= " << knots_y_guess_ << std::endl;
 
     ////////////////////////////////Generate Yaw Guess
     casadi::DM matrix_qy_guess(1, sy.N);  // TODO: do this just once?
@@ -551,7 +564,7 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
       map_arguments["c_fov"] = par_.c_fov;
       std::cout << bold << green << "Optimizing for YAW and POSITION!" << reset << std::endl;
 
-      printMap(map_arguments);
+      // printMap(map_arguments);
 
       result = cf_op_(map_arguments);
     }
@@ -634,11 +647,13 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
       std::cout << green << "IPOPT found a solution" << reset << std::endl;
       log_ptr_->success_opt = true;
       // copy the solution
-      auto qp_casadi = result["pCPs"];
-      for (int i = 0; i < qp_casadi.columns(); i++)
-      {
-        qp.push_back(Eigen::Vector3d(double(qp_casadi(0, i)), double(qp_casadi(1, i)), double(qp_casadi(2, i))));
-      }
+      // auto qp_casadi = result["pCPs"];
+      // for (int i = 0; i < qp_casadi.columns(); i++)
+      // {
+      //   qp.push_back(Eigen::Vector3d(double(qp_casadi(0, i)), double(qp_casadi(1, i)), double(qp_casadi(2, i))));
+      // }
+
+      qp = casadiMatrix2StdVectorEigen3d(result["pCPs"]);
 
       Eigen::RowVectorXd knots_p_solution = getKnotsSolution(knots_p_guess_, alpha_guess, double(result["alpha"]));
       Eigen::RowVectorXd knots_y_solution = getKnotsSolution(knots_y_guess_, alpha_guess, double(result["alpha"]));
@@ -659,7 +674,7 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
       {
         if (focus_on_obstacle_ == true)
         {
-          qy = static_cast<std::vector<double>>(result["yCPs"]);
+          qy = casadiMatrix2StdVectorDouble(result["yCPs"]);  // static_cast<std::vector<double>>();
         }
         else
         {  // find the yaw spline that goes to final_state_.yaw as fast as possible
@@ -744,18 +759,10 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
 
   for (int i = 0; i < solutions.size(); i++)
   {
-    // if (solution.solver_succeeded)
-    // {
-    //   std::cout << "Solver succeeded here!" << std::endl;
-
     std::cout << bold << "Guess:" << reset << std::endl;
-
     guesses[i].print();
-
     std::cout << bold << "Solution:" << reset << std::endl;
-
     solutions[i].print();
-    // }
   }
   ///////////////// PRINT SOLUTION
   // std::cout << "Position control Points obtained= " << std::endl;

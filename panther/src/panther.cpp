@@ -630,6 +630,15 @@ std::vector<si::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
     obstacles_for_opt.push_back(obstacle_for_opt);
   }
 
+  ///////////////////////// FOR VISUALIZATION
+
+  // Eigen::RowVectorXd knots_pos = constructKnotsClampedUniformSpline(t_start, t_end, par_.deg_pos, par_.num_seg);
+  // Eigen::RowVectorXd knots_yaw = constructKnotsClampedUniformSpline(t_start, t_end, par_.deg_yaw, par_.num_seg);
+
+  // CPs2Traj(guess.qp, guess.qy, knots_p_guess_, knots_y_guess_, guess.traj, par_.deg_pos, par_.deg_yaw, par_.dc);
+
+  // ///////////////////////////
+
   return obstacles_for_opt;
 }
 
@@ -975,7 +984,9 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
   mtx_plan_.lock();
 
-  saturate(deltaT_, par_.lower_bound_runtime_snlopt / par_.dc, par_.upper_bound_runtime_snlopt / par_.dc);
+  // saturate(deltaT_, par_.lower_bound_runtime_snlopt / par_.dc, par_.upper_bound_runtime_snlopt / par_.dc);
+
+  deltaT_ = par_.replanning_lookahead_time / par_.dc;  // Added October 18, 2021
 
   k_index_end = std::max((int)(plan_.size() - deltaT_), 0);
 
@@ -993,17 +1004,17 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   // std::cout << blue << "k_index_end:" << k_index_end << reset << std::endl;
   // std::cout << blue << "plan_.size():" << plan_.size() << reset << std::endl;
 
-  double runtime_snlopt;
+  // double runtime_snlopt;
 
-  if (k_index_end != 0)
-  {
-    runtime_snlopt = k_index * par_.dc;  // std::min(, par_.upper_bound_runtime_snlopt);
-  }
-  else
-  {
-    runtime_snlopt = par_.upper_bound_runtime_snlopt;  // I'm stopped at the end of the trajectory
-  }
-  saturate(runtime_snlopt, par_.lower_bound_runtime_snlopt, par_.upper_bound_runtime_snlopt);
+  // if (k_index_end != 0)
+  // {
+  //   runtime_snlopt = k_index * par_.dc;  // std::min(, par_.upper_bound_runtime_snlopt);
+  // }
+  // else
+  // {
+  //   runtime_snlopt = par_.upper_bound_runtime_snlopt;  // I'm stopped at the end of the trajectory
+  // }
+  // saturate(runtime_snlopt, par_.lower_bound_runtime_snlopt, par_.upper_bound_runtime_snlopt);
 
   // std::cout << green << "Runtime snlopt= " << runtime_snlopt << reset << std::endl;
 
@@ -1019,7 +1030,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   ///////////////////////// Set Times in optimization //////////////////////
   //////////////////////////////////////////////////////////////////////////
 
-  solver_->setMaxRuntimeKappaAndMu(runtime_snlopt, par_.kappa, par_.mu);
+  // solver_->setMaxRuntimeOctopusSearch(par_.max_runtime_octopus_search);  //, par_.kappa, par_.mu);
 
   //////////////////////
   double time_now = ros::Time::now().toSec();

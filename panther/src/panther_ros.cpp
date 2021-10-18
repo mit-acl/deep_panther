@@ -66,9 +66,13 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "color_type", par_.color_type);
   safeGetParam(nh1_, "num_of_trajs_per_replan", par_.num_of_trajs_per_replan);
 
+  safeGetParam(nh1_, "stop_time_when_replanning", par_.stop_time_when_replanning);
+
   safeGetParam(nh1_, "n_agents", par_.n_agents);
 
   safeGetParam(nh1_, "dc", par_.dc);
+  safeGetParam(nh1_, "replanning_trigger_time", par_.replanning_trigger_time);
+  safeGetParam(nh1_, "replanning_lookahead_time", par_.replanning_lookahead_time);
   safeGetParam(nh1_, "goal_radius", par_.goal_radius);
   safeGetParam(nh1_, "drone_radius", par_.drone_radius);
   double drone_radius_extra_safety;
@@ -114,10 +118,10 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "fitter_total_time", par_.fitter_total_time);
   safeGetParam(nh1_, "sampler_num_samples", par_.sampler_num_samples);
 
-  safeGetParam(nh1_, "upper_bound_runtime_snlopt", par_.upper_bound_runtime_snlopt);
-  safeGetParam(nh1_, "lower_bound_runtime_snlopt", par_.lower_bound_runtime_snlopt);
-  safeGetParam(nh1_, "kappa", par_.kappa);
-  safeGetParam(nh1_, "mu", par_.mu);
+  // safeGetParam(nh1_, "upper_bound_runtime_snlopt", par_.upper_bound_runtime_snlopt);
+  // safeGetParam(nh1_, "lower_bound_runtime_snlopt", par_.lower_bound_runtime_snlopt);
+  // safeGetParam(nh1_, "kappa", par_.kappa);
+  safeGetParam(nh1_, "max_runtime_octopus_search", par_.max_runtime_octopus_search);
 
   safeGetParam(nh1_, "max_seconds_keeping_traj", par_.max_seconds_keeping_traj);
 
@@ -195,8 +199,8 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   // verify((par_.beta < 0 || par_.alpha < 0), " ");
   // verify((par_.a_max.z() <= 9.81), "par_.a_max.z() >= 9.81, the drone will flip");
   verify((par_.factor_alloc >= 1.0), "Needed: factor_alloc>=1");
-  verify((par_.kappa >= 0 && par_.mu >= 0), "Needed: kappa and mu >= 0");
-  verify(((par_.kappa + par_.mu) <= 1), "Needed: (par_.kappa + par_.mu) <= 1");
+  // verify((par_.kappa >= 0), "Needed: kappa and mu >= 0");
+  // verify((par_.kappa <= 1), "Needed: par_.kappa <= 1");
   verify((par_.a_star_fraction_voxel_size >= 0.0 && par_.a_star_fraction_voxel_size <= 1.0), "a_star_fraction_voxel_"
                                                                                              "size is not in [0,1] ");
   verify((par_.deg_pos == 3), "PANTHER needs deg_pos==3");
@@ -242,7 +246,10 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   sub_whoplans_ = nh1_.subscribe("who_plans", 1, &PantherRos::whoPlansCB, this);
   sub_state_ = nh1_.subscribe("state", 1, &PantherRos::stateCB, this);
 
-  ///
+  ////Services
+  pauseGazebo_ = nh1_.serviceClient<std_srvs::Empty>("/gazebo/pause_physics");
+  unpauseGazebo_ = nh1_.serviceClient<std_srvs::Empty>("/gazebo/unpause_physics");
+
   if (perfect_prediction == false)
   {
     ROS_INFO("NOT using ground truth trajectories (subscribed to trajs_predicted)");
@@ -266,7 +273,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
 
   // Timers
   pubCBTimer_ = nh2_.createTimer(ros::Duration(par_.dc), &PantherRos::pubCB, this);
-  replanCBTimer_ = nh3_.createTimer(ros::Duration(par_.dc), &PantherRos::replanCB, this);
+  replanCBTimer_ = nh3_.createTimer(ros::Duration(par_.replanning_trigger_time), &PantherRos::replanCB, this);
 
   // For now stop all these subscribers/timers until we receive GO
   sub_state_.shutdown();
@@ -425,8 +432,31 @@ void PantherRos::publishOwnTraj(const mt::PieceWisePol& pwp)
   pub_traj_.publish(msg);
 }
 
+bool PantherRos::pauseTime()
+{
+  bool gazebo_paused = pauseGazebo_.call(emptySrv_);
+  if (gazebo_paused == false)
+  {
+    ROS_ERROR("Failed to call pauseGazebo_");
+    abort();  // Debugging
+  }
+}
+
+bool PantherRos::unpauseTime()
+{
+  bool gazebo_unpaused = unpauseGazebo_.call(emptySrv_);
+
+  if (gazebo_unpaused == false)
+  {
+    ROS_ERROR("Failed to call unpauseGazebo_");
+    abort();  // Debugging
+  }
+}
+
 void PantherRos::replanCB(const ros::TimerEvent& e)
 {
+  // std::cout << bold << blue << "pauseGazebo_.exists()= " << pauseGazebo_.exists() << reset << std::endl;
+
   if (ros::ok() && published_initial_position_ == true)
   {
     mt::Edges edges_obstacles;
@@ -439,8 +469,23 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
     // mt::PieceWisePol pwp;
     mt::log log;
 
+    // std::cout << "WAITING FOR SERVICE" << std::endl;
+    // ros::service::waitForService("/gazebo/pause_physics");
+    // std::cout << "SERVICE found" << std::endl;
+    // std::cout << "pauseGazebo_.exists()= " << pauseGazebo_.exists() << std::endl;
+
+    if (par_.stop_time_when_replanning)
+    {
+      pauseTime();
+    }
+
     bool replanned = panther_ptr_->replan(edges_obstacles, X_safe, best_solutions, guesses, planes, num_of_LPs_run_,
                                           num_of_QCQPs_run_, log);
+
+    if (par_.stop_time_when_replanning)
+    {
+      unpauseTime();
+    }
 
     if (log.drone_status != DroneStatus::GOAL_REACHED)  // log.replanning_was_needed
     {

@@ -24,7 +24,7 @@ using namespace termcolor;
 bool SolverIpopt::generateAStarGuess()
 {
   std::cout << "[NL] Running A* from" << q0_.transpose() << " to " << final_state_.pos.transpose()
-            << ", allowing time = " << kappa_ * max_runtime_ * 1000 << " ms" << std::endl;
+            << ", allowing time = " << par_.max_runtime_octopus_search * 1000 << " ms" << std::endl;
 
   octopusSolver_ptr_->setUp(t_init_, t_final_guess_, hulls_);
 
@@ -39,7 +39,7 @@ bool SolverIpopt::generateAStarGuess()
   octopusSolver_ptr_->setMaxValuesAndSamples(par_.v_max, par_.a_max, par_.a_star_samp_x, par_.a_star_samp_y,
                                              par_.a_star_samp_z, par_.a_star_fraction_voxel_size);
 
-  octopusSolver_ptr_->setRunTime(kappa_ * max_runtime_);  // hack, should be kappa_ * max_runtime_
+  octopusSolver_ptr_->setRunTime(par_.max_runtime_octopus_search);  // hack, should be kappa_ * max_runtime_
   octopusSolver_ptr_->setGoalSize(goal_size);
   octopusSolver_ptr_->setBias(par_.a_star_bias);
   octopusSolver_ptr_->setVisual(false);

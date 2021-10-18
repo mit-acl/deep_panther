@@ -18,6 +18,7 @@
 #include <rviz_visual_tools/rviz_visual_tools.h>
 #include <snapstack_msgs/State.h>
 #include <snapstack_msgs/Goal.h>
+#include <std_srvs/Empty.h>
 
 #include <panther_msgs/WhoPlans.h>
 #include <panther_msgs/DynTraj.h>
@@ -60,6 +61,9 @@ private:
   void pubCB(const ros::TimerEvent& e);
   void replanCB(const ros::TimerEvent& e);
   void trajCB(const panther_msgs::DynTraj& msg);
+
+  bool pauseTime();
+  bool unpauseTime();
 
   // void clearMarkerSetOfArrows();
   void clearMarkerActualTraj();
@@ -125,6 +129,10 @@ private:
 
   ros::Timer pubCBTimer_;
   ros::Timer replanCBTimer_;
+
+  ros::ServiceClient pauseGazebo_;
+  ros::ServiceClient unpauseGazebo_;
+  std_srvs::Empty emptySrv_;
 
   mt::parameters par_;  // where all the parameters are
 

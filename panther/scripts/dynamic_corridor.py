@@ -421,9 +421,9 @@ class DynCorridor:
         y_string=str(scale_y/5.0)+'*(cos('+tt +str(offset)+') - 2 * cos(2 * '+tt +str(offset)+'))' +'+' + str(y); #'2*cos(t)' 
         z_string=str(scale_z/2.0)+'*(-sin(3 * '+tt +str(offset)+'))' + '+' + str(z);                               #'1.0'        
 
-        x_string='3';
-        y_string='0';
-        z_string='1';
+        # x_string='3';
+        # y_string='0';
+        # z_string='1';
 
         return [x_string, y_string, z_string]
 

@@ -790,6 +790,11 @@ struct parameters
 
   double angle_deg_focus_front = 90;
 
+  bool stop_time_when_replanning;
+
+  double replanning_trigger_time;
+  double replanning_lookahead_time;
+
   // double R_local_map;
 
   double x_min;
@@ -813,10 +818,11 @@ struct parameters
   int num_max_of_obst;
   // int num_samples_simpson;
 
-  double upper_bound_runtime_snlopt;
-  double lower_bound_runtime_snlopt;
-  double kappa;
-  double mu;
+  // double upper_bound_runtime_snlopt;
+  // double lower_bound_runtime_snlopt;
+  // double kappa;
+
+  double max_runtime_octopus_search;
 
   double max_seconds_keeping_traj = 1e6;
 
