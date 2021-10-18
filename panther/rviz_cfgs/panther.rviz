@@ -244,13 +244,13 @@ Visualization Manager:
       Queue Size: 100
       Value: false
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /SQ01s/panther/obstacles
       Name: CvxPolyObstacles
       Namespaces:
-        markertacles: true
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /SQ01s/panther/traj_safe_colored
@@ -312,7 +312,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/best_trajs
       Name: BestTrajs
       Namespaces:
-        SQ01s_sol0: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -320,17 +320,17 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/guesses
       Name: Guesses
       Namespaces:
-        SQ01s_guess0: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /SQ01s/panther/splines_fitted
       Name: SplinesFitted
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 46; 52; 54
@@ -359,25 +359,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 21.939403533935547
+      Distance: 20.65129852294922
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 4.583409309387207
-        Y: -3.724024772644043
+        X: 1.2331523895263672
+        Y: -1.3687481880187988
         Z: -1.1625602382991929e-5
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2147966623306274
+      Pitch: 0.6947969794273376
       Target Frame: <Fixed Frame>
       Value: ThirdPersonFollower (rviz)
-      Yaw: 3.4799880981445312
+      Yaw: 3.479980230331421
     Saved: ~
 Window Geometry:
   DepthImage:

@@ -19,8 +19,8 @@ opti = casadi.Opti();
 
 pos_is_fixed=false; %you need to run this file twice to produce the necessary casadi files: both with pos_is_fixed=false and pos_is_fixed=true. 
 
-optimize_n_planes=false;     %Optimize the normal vector "n" of the planes
-optimize_d_planes=false;     %Optimize the scalar "d" of the planes
+optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
+optimize_d_planes=true;     %Optimize the scalar "d" of the planes
 optimize_time_alloc=false;
 
 make_plots=true;
@@ -33,9 +33,9 @@ num_max_of_obst=1; %This is the maximum num of the obstacles
 
 %Constants for spline fitted to the obstacle trajectory
 fitter.deg_pos=3;
-fitter.num_seg=5;
+fitter.num_seg=7;
 fitter.dim_pos=3;
-fitter.num_samples=50;
+fitter.num_samples=100;
 fitter_num_of_cps= fitter.num_seg + fitter.deg_pos;
 for i=1:num_max_of_obst
     fitter.ctrl_pts{i}=opti.parameter(fitter.dim_pos,fitter_num_of_cps); %This comes from C++
@@ -43,16 +43,16 @@ for i=1:num_max_of_obst
     fitter.bs_casadi{i}=MyCasadiClampedUniformSpline(0,1,fitter.deg_pos,fitter.dim_pos,fitter.num_seg,fitter.ctrl_pts{i}, false);
 end
 fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti);
-fitter.total_time=4.0; %Time from (time at point d) to end of the fitted spline
+fitter.total_time=10.0; %Time from (time at point d) to end of the fitted spline
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
-sampler.num_samples_obstacle_per_segment = 2;                    %This is used for both the feature sampling (simpson), and the obstacle avoidance sampling
+sampler.num_samples_obstacle_per_segment = 4;                    %This is used for both the feature sampling (simpson), and the obstacle avoidance sampling
 sampler.num_samples=sampler.num_samples_obstacle_per_segment*num_seg;    %This will also be the num_of_layers in the graph yaw search of C++
                                                              
 
-num_of_yaw_per_layer=15; %This will be used in the graph yaw search of C++
+num_of_yaw_per_layer=40; %This will be used in the graph yaw search of C++
                          %Note that the initial layer will have only one yaw (which is given) 
 basis="MINVO"; %MINVO OR B_SPLINE or BEZIER. This is the basis used for collision checking (in position, velocity, accel and jerk space), both in Matlab and in C++
 linear_solver_name='ma27'; %mumps [default, comes when installing casadi], ma27, ma57, ma77, ma86, ma97 
@@ -68,7 +68,9 @@ dim_yaw=1;
 offset_vel=0.1;
 
 assert(tf_n>t0_n);
-assert(t0_n==0.0);
+
+assert(t0_n==0.0); %This must be 0 (assummed in the C++ and MATLAB code)
+assert(tf_n==1.0); %This must be 1 (assummed in the C++ and MATLAB code)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% PARAMETERS! %%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

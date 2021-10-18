@@ -153,9 +153,9 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
     double distance = abs(wrapFromMPitoPi(mygraph_[index_vertex1].yaw - mygraph_[index_vertex2].yaw));
     double distance_squared = pow(distance, 2.0);
 
-    weightmap[*ed_ptr] = par_.c_smooth_yaw_search * distance_squared +
-                         par_.c_visibility_yaw_search * (1.0 - visibility) +
-                         ((distance / deltaT) > par_.ydot_max) * 1e6;  // Note that edge cost is always >=0
+    weightmap[*ed_ptr] =
+        par_.c_smooth_yaw_search * distance_squared + par_.c_visibility_yaw_search * (1.0 - visibility) +
+        par_.c_maxydot_yaw_search * ((distance / deltaT) > par_.ydot_max);  // Note that edge cost is always >=0
 
     // weightmap[*ed_ptr] = par_.c_visibility_yaw_search * (1.0 - visibility);  // Note that edge cost is always >=0
 

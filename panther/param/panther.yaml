@@ -3,12 +3,14 @@ visual: true #publish visualization stuff
 color_type: "vel" #"vel" or "plain"
 n_agents: 16 #only used for the color in the trajectory
 
-num_of_trajs_per_replan: 1
+num_of_trajs_per_replan: 10
 
 stop_time_when_replanning: true
 replanning_trigger_time: 0.5 #[seconds] 
 replanning_lookahead_time: 0.01 #[seconds] 
-max_runtime_octopus_search: 3.0 #[seconds] 
+max_runtime_octopus_search: 1.5 #[seconds] 
+
+fitter_total_time: 5.0 #[seconds] 
 
 
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
@@ -37,12 +39,12 @@ impose_FOV_in_trajCB: false
 #============================================
 #============================================
 #============================================
-Ra: 4.5           # [m] Radius of my planning sphere (planning horizon)
+Ra: 7.0           # [m] Radius of my planning sphere (planning horizon)
 
 #max limits
-v_max: [4.6, 4.6, 4.6]   #[m/s]  7.0
-a_max: [30.5, 30.5, 30.5]   #[m/s2] Note that if a_max.z() > 9.81, the drone may flip
-j_max: [100.0, 100.0, 100.0]   #[m/s3] 
+v_max: [2.5, 2.5, 2.5]   #[m/s]  7.0
+a_max: [5.5, 5.5, 5.5]   #[m/s2] Note that if a_max.z() > 9.81, the drone may flip
+j_max: [30.0, 30.0, 30.0]   #[m/s3] 
 ydot_max: 3.1415926           # [rd/s] Maximum angular velocity. 0.4 for Hardware
 
 fov_x_deg: 70 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Horizontal FOV
@@ -54,18 +56,19 @@ fov_depth: 5.0 #[m]
 #============================================
 
 #parameters for Casadi
-c_pos_smooth: 0.05
-c_yaw_smooth: 0.005
-c_fov: 1000.0
+c_pos_smooth: 0.001
+c_yaw_smooth: 0.00
+c_fov: 3000.0
 c_final_pos: 1000.0
 c_final_yaw: 0.0
-c_total_time: 200.0
+c_total_time: 0.0
 
 factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
 
 #PARAMETERS FOR THE YAW SEARCH
 c_smooth_yaw_search: 0.0
 c_visibility_yaw_search: 1.0 
+c_maxydot_yaw_search: 0.0
 # num_of_layers --> this one comes from Matlab, it's = num_samples_simpson 
 # num_of_yaw_per_layer --> this one comes from Matlab
 

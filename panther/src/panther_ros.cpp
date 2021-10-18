@@ -154,6 +154,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
 
   safeGetParam(nh1_, "c_smooth_yaw_search", par_.c_smooth_yaw_search);
   safeGetParam(nh1_, "c_visibility_yaw_search", par_.c_visibility_yaw_search);
+  safeGetParam(nh1_, "c_maxydot_yaw_search", par_.c_maxydot_yaw_search);
   // safeGetParam(nh1_, "num_of_layers", par_.num_of_layers); //This one is the same as num_samples_simpson
   safeGetParam(nh1_, "num_of_yaw_per_layer", par_.num_of_yaw_per_layer);
 
@@ -507,6 +508,8 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
       publishPlanes(planes);
 
       // pubBestTrajs(best_solutions);
+
+      std::cout << "best_solutions.size= " << best_solutions.size() << std::endl;
 
       pubVectorOfsolOrGuess(best_solutions, pub_best_trajs_colored_, name_drone_ + "_sol");
       pubVectorOfsolOrGuess(guesses, pub_guesses_colored_, name_drone_ + "_guess");

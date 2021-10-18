@@ -595,8 +595,21 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
       solution.knots_p = getKnotsSolution(guess.knots_p, alpha_guess, double(result["alpha"]));
       solution.knots_y = getKnotsSolution(guess.knots_y, alpha_guess, double(result["alpha"]));
 
+      double total_time_solution = (solution.knots_p(solution.knots_p.cols() - 1) - solution.knots_p(0));
+
+      if (total_time_solution > par_.fitter_total_time)
+      {
+        std::cout << yellow << bold
+                  << "WARNING: total_time_solution>par_.fitter_total_time (visibility/obstacle samples are not taken "
+                     "in t>par_.fitter_total_time)"
+                  << reset << std::endl;
+        std::cout << yellow << bold << "Increase fitter.total_time (or decrease Ra)" << reset << std::endl;
+
+        abort();  // Debugging
+      }
+
       // deltaT is the same one
-      double deltaT = (solution.knots_p(solution.knots_p.cols() - 1) - solution.knots_p(0)) / num_of_segments_;
+      double deltaT = total_time_solution / num_of_segments_;
 
       ///////////////////////////////////
       if (par_.mode == "panther" || par_.mode == "py")
@@ -666,8 +679,8 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
   {
     std::cout << bold << "=======Guess:" << reset << std::endl;
     guesses[i].print();
-    std::cout << bold << "=======Solution:" << reset << std::endl;
-    solutions[i].print();
+    // std::cout << bold << "=======Solution:" << reset << std::endl;
+    // solutions[i].print();
   }
 
   std::cout << "solutions.size()==" << solutions.size() << std::endl;
