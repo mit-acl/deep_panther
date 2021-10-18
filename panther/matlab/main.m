@@ -21,7 +21,7 @@ pos_is_fixed=false; %you need to run this file twice to produce the necessary ca
 
 optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
 optimize_d_planes=true;     %Optimize the scalar "d" of the planes
-optimize_time_alloc=false;
+optimize_time_alloc=true;
 
 make_plots=true;
 

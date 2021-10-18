@@ -509,7 +509,7 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 
       // pubBestTrajs(best_solutions);
 
-      std::cout << "best_solutions.size= " << best_solutions.size() << std::endl;
+      // std::cout << "best_solutions.size= " << best_solutions.size() << std::endl;
 
       pubVectorOfsolOrGuess(best_solutions, pub_best_trajs_colored_, name_drone_ + "_sol");
       pubVectorOfsolOrGuess(guesses, pub_guesses_colored_, name_drone_ + "_guess");

@@ -572,6 +572,7 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
 
     si::solOrGuess solution;
     solution.is_guess = false;
+    solution.cost = double(result["total_cost"]);
 
     ///////////////// DECIDE ACCORDING TO STATUS OF THE SOLVER
 
@@ -682,10 +683,11 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
 
   for (int i = 0; i < solutions.size(); i++)
   {
+    std::cout << bold << "\n===================================" << std::endl;
     std::cout << bold << "=======Guess:" << reset << std::endl;
     guesses[i].print();
-    // std::cout << bold << "=======Solution:" << reset << std::endl;
-    // solutions[i].print();
+    std::cout << bold << "=======Solution:" << reset << std::endl;
+    solutions[i].print();
   }
 
   std::cout << "solutions.size()==" << solutions.size() << std::endl;

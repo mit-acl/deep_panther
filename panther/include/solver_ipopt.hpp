@@ -48,7 +48,8 @@ struct solOrGuess
   Eigen::RowVectorXd knots_y;
 
   bool solver_succeeded = false;
-  bool is_guess;
+  double cost = std::numeric_limits<double>::max();
+  bool is_guess = true;
 
   int deg_p;
   int deg_y;
@@ -78,6 +79,11 @@ struct solOrGuess
     std::cout << reset << std::endl;
 
     std::cout << "knots_y= " << knots_y << std::endl;
+
+    if (is_guess == false && solver_succeeded == true)
+    {
+      std::cout << blue << std::setprecision(5) << "Cost= " << cost << reset << std::endl;
+    }
   }
 
   void fillTraj(double dc)

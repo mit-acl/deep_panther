@@ -8,7 +8,7 @@ num_of_trajs_per_replan: 30
 stop_time_when_replanning: true
 replanning_trigger_time: 0.5 #[seconds] 
 replanning_lookahead_time: 0.01 #[seconds] 
-max_runtime_octopus_search: 3.5 #[seconds] 
+max_runtime_octopus_search: 1.5 #[seconds] 
 
 fitter_total_time: 5.0 #[seconds] 
 
@@ -61,7 +61,7 @@ c_yaw_smooth: 0.00
 c_fov: 3000.0
 c_final_pos: 1000.0
 c_final_yaw: 0.0
-c_total_time: 0.0
+c_total_time: 1000
 
 factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
 
