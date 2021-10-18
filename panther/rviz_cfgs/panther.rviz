@@ -26,7 +26,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: DepthImage
+    SyncSource: ""
   - Class: rviz/Displays
     Help Height: 0
     Name: Displays
@@ -166,7 +166,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/fov
       Name: FOV
       Namespaces:
-        {}
+        marker_fov: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -248,7 +248,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/obstacles
       Name: CvxPolyObstacles
       Namespaces:
-        {}
+        markertacles: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -312,13 +312,21 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/best_trajs
       Name: BestTrajs
       Namespaces:
-        {}
+        SQ01s_sol0: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /SQ01s/panther/guesses
       Name: Guesses
+      Namespaces:
+        SQ01s_guess0: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /SQ01s/panther/splines_fitted
+      Name: SplinesFitted
       Namespaces:
         {}
       Queue Size: 100
@@ -366,10 +374,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8847968578338623
+      Pitch: 1.2147966623306274
       Target Frame: <Fixed Frame>
       Value: ThirdPersonFollower (rviz)
-      Yaw: 3.429987907409668
+      Yaw: 3.4799880981445312
     Saved: ~
 Window Geometry:
   DepthImage:

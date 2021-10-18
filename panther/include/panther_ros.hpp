@@ -52,7 +52,8 @@ private:
   void pubTraj(const std::vector<mt::state>& data);
   // void pubBestTrajs(const std::vector<si::solOrGuess>& best_solutions);
 
-  void pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& best_solutions, ros::Publisher& publisher);
+  void pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_or_guesses, ros::Publisher& publisher,
+                             std::string ns);
 
   void terminalGoalCB(const geometry_msgs::PoseStamped& msg);
   void pubState(const mt::state& msg, const ros::Publisher pub);
@@ -112,6 +113,7 @@ private:
   ros::Publisher pub_traj_safe_colored_;
   ros::Publisher pub_best_trajs_colored_;
   ros::Publisher pub_guesses_colored_;
+  ros::Publisher pub_splines_fitted_colored_;
 
   ros::Publisher pub_text_;
   ros::Publisher pub_traj_;

@@ -116,6 +116,8 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
 
   safeGetParam(nh1_, "fitter_num_samples", par_.fitter_num_samples);
   safeGetParam(nh1_, "fitter_total_time", par_.fitter_total_time);
+  safeGetParam(nh1_, "fitter_num_seg", par_.fitter_num_seg);
+  safeGetParam(nh1_, "fitter_deg_pos", par_.fitter_deg_pos);
   safeGetParam(nh1_, "sampler_num_samples", par_.sampler_num_samples);
 
   // safeGetParam(nh1_, "upper_bound_runtime_snlopt", par_.upper_bound_runtime_snlopt);
@@ -235,6 +237,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
 
   pub_best_trajs_colored_ = nh1_.advertise<visualization_msgs::MarkerArray>("best_trajs", 1);
   pub_guesses_colored_ = nh1_.advertise<visualization_msgs::MarkerArray>("guesses", 1);
+  pub_splines_fitted_colored_ = nh1_.advertise<visualization_msgs::MarkerArray>("splines_fitted", 1);
 
   pub_traj_ = nh1_.advertise<panther_msgs::DynTraj>("/trajs", 1, true);  // The last boolean is latched or not
   pub_fov_ = nh1_.advertise<visualization_msgs::Marker>("fov", 1);
@@ -464,6 +467,7 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 
     std::vector<si::solOrGuess> best_solutions;
     std::vector<si::solOrGuess> guesses;
+    std::vector<si::solOrGuess> splines_fitted;
 
     std::vector<Hyperplane3D> planes;
     // mt::PieceWisePol pwp;
@@ -479,8 +483,8 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
       pauseTime();
     }
 
-    bool replanned = panther_ptr_->replan(edges_obstacles, X_safe, best_solutions, guesses, planes, num_of_LPs_run_,
-                                          num_of_QCQPs_run_, log);
+    bool replanned = panther_ptr_->replan(edges_obstacles, X_safe, best_solutions, guesses, splines_fitted, planes,
+                                          num_of_LPs_run_, num_of_QCQPs_run_, log);
 
     if (par_.stop_time_when_replanning)
     {
@@ -504,8 +508,9 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 
       // pubBestTrajs(best_solutions);
 
-      pubVectorOfsolOrGuess(best_solutions, pub_best_trajs_colored_);
-      pubVectorOfsolOrGuess(guesses, pub_guesses_colored_);
+      pubVectorOfsolOrGuess(best_solutions, pub_best_trajs_colored_, name_drone_ + "_sol");
+      pubVectorOfsolOrGuess(guesses, pub_guesses_colored_, name_drone_ + "_guess");
+      pubVectorOfsolOrGuess(splines_fitted, pub_splines_fitted_colored_, name_drone_ + "_spline_fitted");
     }
 
     // if (replanned)
@@ -685,7 +690,8 @@ void PantherRos::clearMarkerArray(visualization_msgs::MarkerArray* tmp, ros::Pub
   (*tmp).markers.clear();
 }
 
-void PantherRos::pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_or_guesses, ros::Publisher& publisher)
+void PantherRos::pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_or_guesses, ros::Publisher& publisher,
+                                       std::string ns)
 {
   visualization_msgs::MarkerArray best_trajs;
 
@@ -693,7 +699,6 @@ void PantherRos::pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_o
 
   for (auto sol_or_guess : sols_or_guesses)
   {
-    std::string ns = (sol_or_guess.is_guess) ? name_drone_ + "_guess" : name_drone_ + "_sol";
     double scale = (sol_or_guess.is_guess) ? 0.05 : 0.15;
 
     if (sol_or_guess.solver_succeeded || sol_or_guess.is_guess)

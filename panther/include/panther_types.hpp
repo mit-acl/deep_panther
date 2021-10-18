@@ -871,6 +871,8 @@ struct parameters
 
   int fitter_num_samples;
   double fitter_total_time;
+  double fitter_num_seg;
+  double fitter_deg_pos;
   int sampler_num_samples;
 };
 

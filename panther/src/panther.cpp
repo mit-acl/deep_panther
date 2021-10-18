@@ -16,6 +16,7 @@
 #include "panther.hpp"
 #include "timer.hpp"
 #include "termcolor.hpp"
+#include "bspline_utils.hpp"
 
 #include <ros/package.h>
 
@@ -578,7 +579,8 @@ ConvexHullsOfCurves Panther::convexHullsOfCurves(double t_start, double t_end)
   return result;
 }
 
-std::vector<si::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, double t_end)
+std::vector<si::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, double t_end,
+                                                            std::vector<si::solOrGuess>& splines_fitted)
 {
   // std::cout << "In getObstaclesForOpt" << std::endl;
 
@@ -628,16 +630,40 @@ std::vector<si::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
     obstacle_for_opt.bbox_inflated = bbox_inflated;
 
     obstacles_for_opt.push_back(obstacle_for_opt);
+
+    ///////////////////////// FOR VISUALIZATION
+
+    si::solOrGuess spline_fitted;
+    spline_fitted.qp = casadiMatrix2StdVectorEigen3d(obstacle_for_opt.ctrl_pts);
+    std::vector<double> qy(par_.num_seg + par_.deg_yaw, 0.0);
+    spline_fitted.qy = qy;
+    spline_fitted.knots_p =
+        constructKnotsClampedUniformSpline(t_start, t_end, par_.fitter_deg_pos, par_.fitter_num_seg);
+    spline_fitted.deg_p = par_.fitter_deg_pos;
+
+    // Dummy for yaw
+    spline_fitted.knots_y = spline_fitted.knots_p;
+    spline_fitted.deg_y = spline_fitted.deg_p;
+
+    // std::cout << "SPLINE HAS BEEN FITTED" << std::endl;
+    // spline_fitted.print();
+    // std::cout << "Samples are " << std::endl;
+    // std::cout << samples_casadi << std::endl;
+    // std::cout << "_____________________" << std::endl;
+
+    spline_fitted.fillTraj(par_.dc);
+
+    // abort();
+
+    // for (auto traj_i : spline_fitted.traj)
+    // {
+    //   traj_i.printHorizontal();
+    // }
+
+    splines_fitted.push_back(spline_fitted);
+
+    // ///////////////////////////
   }
-
-  ///////////////////////// FOR VISUALIZATION
-
-  // Eigen::RowVectorXd knots_pos = constructKnotsClampedUniformSpline(t_start, t_end, par_.deg_pos, par_.num_seg);
-  // Eigen::RowVectorXd knots_yaw = constructKnotsClampedUniformSpline(t_start, t_end, par_.deg_yaw, par_.num_seg);
-
-  // CPs2Traj(guess.qp, guess.qy, knots_p_guess_, knots_y_guess_, guess.traj, par_.deg_pos, par_.deg_yaw, par_.dc);
-
-  // ///////////////////////////
 
   return obstacles_for_opt;
 }
@@ -945,7 +971,8 @@ bool Panther::isReplanningNeeded()
 
 bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
                      std::vector<si::solOrGuess>& best_solutions, std::vector<si::solOrGuess>& guesses,
-                     std::vector<Hyperplane3D>& planes, int& num_of_LPs_run, int& num_of_QCQPs_run, mt::log& log)
+                     std::vector<si::solOrGuess>& splines_fitted, std::vector<Hyperplane3D>& planes,
+                     int& num_of_LPs_run, int& num_of_QCQPs_run, mt::log& log)
 {
   (*log_ptr_) = {};  // Reset the struct with the default values
 
@@ -1156,7 +1183,8 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
   // log_ptr_->tracking_now_pos = samples_obs.front();
 
-  std::vector<si::obstacleForOpt> obstacles_for_opt = getObstaclesForOpt(t_start, t_start + par_.fitter_total_time);
+  std::vector<si::obstacleForOpt> obstacles_for_opt =
+      getObstaclesForOpt(t_start, t_start + par_.fitter_total_time, splines_fitted);
 
   mtx_trajs_.unlock();
 

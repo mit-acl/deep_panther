@@ -21,14 +21,55 @@
 
 using namespace termcolor;
 
-bool SolverIpopt::generateAStarGuess()
+bool SolverIpopt::generateAStarGuess(std::vector<os::solution>& p_guesses)
 {
-  std::cout << "[NL] Running A* from" << q0_.transpose() << " to " << final_state_.pos.transpose()
-            << ", allowing time = " << par_.max_runtime_octopus_search * 1000 << " ms" << std::endl;
-
   octopusSolver_ptr_->setUp(t_init_, t_final_guess_, hulls_);
 
-  octopusSolver_ptr_->setq0q1q2(q0_, q1_, q2_);
+  ///////////////////////////////
+
+  Eigen::RowVectorXd knots_p = constructKnotsClampedUniformSpline(t_init_, t_final_guess_, par_.deg_pos, par_.num_seg);
+
+  double t1 = knots_p(1);
+  double t2 = knots_p(2);
+  double tpP1 = knots_p(sp_.p + 1);
+  double t1PpP1 = knots_p(1 + sp_.p + 1);
+
+  double tN = knots_p(sp_.N);
+  double tNm1 = knots_p(sp_.N - 1);
+  double tNPp = knots_p(sp_.N + sp_.p);
+  double tNm1Pp = knots_p(sp_.N - 1 + sp_.p);
+
+  Eigen::Vector3d q0, q1, q2;
+
+  /////////////////////
+  // See Mathematica Notebook
+
+  Eigen::Vector3d p0 = initial_state_.pos;
+  Eigen::Vector3d v0 = initial_state_.vel;
+  Eigen::Vector3d a0 = initial_state_.accel;
+
+  Eigen::Vector3d pf = final_state_.pos;
+  Eigen::Vector3d vf = final_state_.vel;
+  Eigen::Vector3d af = final_state_.accel;
+
+  q0 = p0;
+  q1 = p0 + (-t1 + tpP1) * v0 / sp_.p;
+  q2 = (sp_.p * sp_.p * q1 - (t1PpP1 - t2) * (a0 * (t2 - tpP1) + v0) - sp_.p * (q1 + (-t1PpP1 + t2) * v0)) /
+       ((-1 + sp_.p) * sp_.p);
+
+  // qN_ = pf;
+  // qNm1_ = pf + ((tN - tNPp) * vf) / sp_.p;
+  // qNm2_ =
+  //     (sp_.p * sp_.p * qNm1_ - (tNm1 - tNm1Pp) * (af * (-tN + tNm1Pp) + vf) - sp_.p * (qNm1_ + (-tNm1 + tNm1Pp) *
+  //     vf)) /
+  //     ((-1 + sp_.p) * sp_.p);
+
+  std::cout << "[NL] Running A* from" << q0.transpose() << " to " << final_state_.pos.transpose()
+            << ", allowing time = " << par_.max_runtime_octopus_search * 1000 << " ms" << std::endl;
+
+  ///////////////////////////////
+
+  octopusSolver_ptr_->setq0q1q2(q0, q1, q2);
   octopusSolver_ptr_->setGoal(final_state_.pos);
 
   double goal_size = 0.05;  //[meters]
@@ -44,10 +85,8 @@ bool SolverIpopt::generateAStarGuess()
   octopusSolver_ptr_->setBias(par_.a_star_bias);
   octopusSolver_ptr_->setVisual(false);
 
-  p_guesses_.clear();
-
   log_ptr_->tim_guess_pos.tic();
-  bool success = octopusSolver_ptr_->run(p_guesses_, par_.num_of_trajs_per_replan);
+  bool success = octopusSolver_ptr_->run(p_guesses, par_.num_of_trajs_per_replan);
   log_ptr_->tim_guess_pos.toc();
 
   return success;

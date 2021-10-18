@@ -72,20 +72,26 @@ void CPs2Traj(std::vector<Eigen::Vector3d> &qp, std::vector<double> &qy, Eigen::
 
   // std::cout << std::setprecision(15) << "knots_y= " << knots_y << std::endl;
 
+  std::cout << "============================================" << std::endl;
+  std::cout << "knots_p=" << knots_p << std::endl;
+  std::cout << "qp_matrix=" << qp_matrix << std::endl;
+  std::cout << "============================================" << std::endl;
+
   // Construct now the B-Spline, see https://github.com/libigl/eigen/blob/master/unsupported/test/splines.cpp#L37
   Eigen::Spline<double, 3, Eigen::Dynamic> spline_p(knots_p, qp_matrix);
   Eigen::Spline<double, 1, Eigen::Dynamic> spline_y(knots_y, qy_matrix);
 
   // Note that t_min and t_max are the same for both yaw and position
   double t_min = knots_p.minCoeff();
-  double t_max = knots_y.maxCoeff();
+  double t_max = knots_p.maxCoeff();
 
   // Clear and fill the trajectory
   traj.clear();
 
   for (double t = t_min; t <= t_max; t = t + dc)
   {
-    // std::cout << "t= " << t << std::endl;
+    // std::cout << std::setprecision(20) << "t= " << t << std::endl;
+    // std::cout << std::setprecision(20) << "knots_p(0)= " << knots_p(0) << std::endl;
     Eigen::MatrixXd derivatives_p = spline_p.derivatives(t, 4);  // compute the derivatives up to that order
     Eigen::MatrixXd derivatives_y = spline_y.derivatives(t, 3);
 
@@ -95,6 +101,13 @@ void CPs2Traj(std::vector<Eigen::Vector3d> &qp, std::vector<double> &qy, Eigen::
     state_i.setVel(derivatives_p.col(1));
     state_i.setAccel(derivatives_p.col(2));
     state_i.setJerk(derivatives_p.col(3));
+
+    // state_i.printHorizontal();
+
+    // if (isnan(state_i.pos.x()))
+    // {
+    //   abort();
+    // }
 
     // std::cout << "derivatives_y= " << derivatives_y << std::endl;
 

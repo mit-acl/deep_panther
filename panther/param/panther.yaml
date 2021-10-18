@@ -80,7 +80,7 @@ allow_infeasible_guess: true  #whether allow infeasible guesses to be used for t
 
 a_star_bias: 1.0 #Bias (cost=g+bias*h) in the A* search 
 
-res_plot_traj: 20.0  #Higher --> More resolution when plotting the trajectory 
+res_plot_traj: 60.0  #Higher --> More resolution when plotting the trajectory 
 factor_alloc: 1.6 #>=1. Used to find the total duration of a given trajectory.
 # factor_alloc_when_forcing_final_pos: 2.0 #>=1. Used to find the total duration of a given trajectory.
 alpha_shrink: 0.9 #\in [0,1] Only used for MINVO/Bezier

@@ -354,7 +354,7 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
   abort();
   ///////////////////
 
-  casadi::DM constant_yaw_matrix_casadi = y0 * casadi::DM::ones(1, sy.N + 1);
+  casadi::DM constant_yaw_matrix_casadi = y0 * casadi::DM::ones(1, sy_.N + 1);
 
   return constant_yaw_matrix_casadi;
 }

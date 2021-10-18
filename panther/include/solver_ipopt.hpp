@@ -21,6 +21,7 @@
 #include "timer.hpp"
 #include "separator.hpp"
 #include "octopus_search.hpp"
+#include "bspline_utils.hpp"
 
 // For the yaw search:
 #include <boost/graph/astar_search.hpp>
@@ -41,9 +42,16 @@ struct solOrGuess
   std::vector<Eigen::Vector3d> qp;
   std::vector<double> qy;
   mt::trajectory traj;
+
   // mt::PieceWisePol pwp;
+  Eigen::RowVectorXd knots_p;
+  Eigen::RowVectorXd knots_y;
+
   bool solver_succeeded = false;
   bool is_guess;
+
+  int deg_p;
+  int deg_y;
 
   void print()
   {
@@ -59,6 +67,8 @@ struct solOrGuess
 
     std::cout << red << tmp << reset << std::endl;
 
+    std::cout << "knots_p= " << knots_p << std::endl;
+
     std::cout << "Yaw Control points:" << std::endl;
 
     for (auto qy_i : qy)
@@ -66,6 +76,13 @@ struct solOrGuess
       std::cout << yellow << qy_i << " ";
     }
     std::cout << reset << std::endl;
+
+    std::cout << "knots_y= " << knots_y << std::endl;
+  }
+
+  void fillTraj(double dc)
+  {
+    CPs2Traj(qp, qy, knots_p, knots_y, traj, deg_p, deg_y, dc);
   }
 
   // casadi::DM getQpAsCasadiMatrix()
@@ -152,6 +169,8 @@ private:
     return x - M_PI;
   }
 
+  std::vector<double> yawCPsToGoToFinalYaw(double deltaT);
+
   void printMap(const std::map<std::string, casadi::DM> &m)
   {
     for (auto it = m.cbegin(); it != m.cend(); ++it)
@@ -178,7 +197,7 @@ private:
                                       int interval);
 
   void generateRandomGuess();
-  bool generateAStarGuess();
+  bool generateAStarGuess(std::vector<os::solution> &p_guesses);
   void generateStraightLineGuess();
 
   void printStd(const std::vector<Eigen::Vector3d> &v);
@@ -208,16 +227,10 @@ private:
 
   int basis_ = B_SPLINE;
 
-  si::splineParam sp;
-  si::splineParam sy;
+  si::splineParam sp_;
+  si::splineParam sy_;
 
-  // int p_ = 5;
-  // int M_;
-  // int N_;
-
-  // int Ny_;
-
-  double index_instruction_;  // hack
+  double index_instruction_;
 
   int num_of_normals_;
 
@@ -225,9 +238,6 @@ private:
   int num_of_segments_;
 
   std::vector<Hyperplane3D> planes_;
-
-  Eigen::RowVectorXd knots_p_guess_;
-  Eigen::RowVectorXd knots_y_guess_;
 
   std::vector<si::obstacleForOpt> obstacles_for_opt_;
 
@@ -237,22 +247,11 @@ private:
   mt::state initial_state_;
   mt::state final_state_;
 
-  Eigen::Vector3d q0_, q1_, q2_, qNm2_, qNm1_, qN_;
-
   ConvexHullsOfCurves_Std hulls_;
 
   MyTimer opt_timer_;
 
   double max_runtime_ = 2;  //[seconds]
-
-  // Guesses
-  // std::vector<Eigen::Vector3d> n_guess_;   // Guesses for the normals
-  // std::vector<double> d_guess_;            // Guesses for the d of the planes
-  // std::vector<Eigen::Vector3d> qp_guess_;  // Guesses for the position control points
-  // std::vector<double> qy_guess_;           // Guesses for the yaw control points
-
-  // double kappa_ = 0.2;  // kappa_*max_runtime_ is spent on the initial guess
-  // double mu_ = 0.5;     // mu_*max_runtime_ is spent on the optimization
 
   int num_of_QCQPs_run_ = 0;
 
@@ -260,8 +259,6 @@ private:
   std::vector<Eigen::Matrix<double, 4, 4>> M_pos_bs2basis_;
   std::vector<Eigen::Matrix<double, 3, 3>> M_vel_bs2basis_;
   std::vector<Eigen::Matrix<double, 4, 4>> A_pos_bs_;
-
-  // double a_star_bias_ = 1.0;
 
   std::unique_ptr<separator::Separator> separator_solver_ptr_;
   std::unique_ptr<OctopusSearch> octopusSolver_ptr_;
@@ -272,18 +269,7 @@ private:
   casadi::Function cf_fit_yaw_;
   casadi::Function cf_visibility_;
 
-  // casadi::DM all_w_fe_;
-  // casadi::DM all_w_velfewrtworld_;
   casadi::DM b_Tmatrixcasadi_c_;
-
-  // casadi::DM all_obstacle_bbox_;
-
-  // auxiliary types
-  // struct location
-  // {
-  //   float y, x;  // lat, long
-  // };
-
   struct data
   {
     float yaw;
@@ -323,7 +309,7 @@ private:
 
   bool focus_on_obstacle_;
 
-  std::vector<os::solution> p_guesses_;
+  // std::vector<os::solution> p_guesses_;
 
   // casadi::DM fitter_ctrl_pts_;
 

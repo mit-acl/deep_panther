@@ -19,8 +19,8 @@ opti = casadi.Opti();
 
 pos_is_fixed=false; %you need to run this file twice to produce the necessary casadi files: both with pos_is_fixed=false and pos_is_fixed=true. 
 
-optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
-optimize_d_planes=true;     %Optimize the scalar "d" of the planes
+optimize_n_planes=false;     %Optimize the normal vector "n" of the planes
+optimize_d_planes=false;     %Optimize the scalar "d" of the planes
 optimize_time_alloc=false;
 
 make_plots=true;
@@ -32,10 +32,10 @@ num_seg =6; %number of segments
 num_max_of_obst=1; %This is the maximum num of the obstacles 
 
 %Constants for spline fitted to the obstacle trajectory
-fitter.deg_pos=5;
+fitter.deg_pos=3;
 fitter.num_seg=5;
 fitter.dim_pos=3;
-fitter.num_samples=15;
+fitter.num_samples=50;
 fitter_num_of_cps= fitter.num_seg + fitter.deg_pos;
 for i=1:num_max_of_obst
     fitter.ctrl_pts{i}=opti.parameter(fitter.dim_pos,fitter_num_of_cps); %This comes from C++
@@ -43,7 +43,7 @@ for i=1:num_max_of_obst
     fitter.bs_casadi{i}=MyCasadiClampedUniformSpline(0,1,fitter.deg_pos,fitter.dim_pos,fitter.num_seg,fitter.ctrl_pts{i}, false);
 end
 fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti);
-fitter.total_time=8.0; %Time from (time at point d) to end of the fitted spline
+fitter.total_time=4.0; %Time from (time at point d) to end of the fitted spline
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -617,6 +617,8 @@ fprintf(my_file,'num_max_of_obst: %d\n',num_max_of_obst);
 fprintf(my_file,'sampler_num_samples: %d\n',sampler.num_samples);
 fprintf(my_file,'fitter_num_samples: %d\n',fitter.num_samples);
 fprintf(my_file,'fitter_total_time: %d\n',fitter.total_time);
+fprintf(my_file,'fitter_num_seg: %d\n',fitter.num_seg);
+fprintf(my_file,'fitter_deg_pos: %d\n',fitter.deg_pos);
 fprintf(my_file,'num_of_yaw_per_layer: %d\n',num_of_yaw_per_layer); % except in the initial layer, that has only one value
 fprintf(my_file,'basis: "%s"\n',basis);
 
