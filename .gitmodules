@@ -17,6 +17,6 @@
 [submodule "submodules/minvo"]
 	path = submodules/minvo
 	url = https://github.com/mit-acl/minvo.git
-[submodule "panther_extra"]
-	path = submodules/panther_extra
-	url = https://github.com/mit-acl/panther_extra.git
+[submodule "panther_extra_plus_plus"]
+	path = submodules/panther_extra_plus_plus
+	url = git@github.com:mit-acl/panther_extra_plus_plus.git
