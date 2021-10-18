@@ -71,6 +71,7 @@ assert(tf_n>t0_n);
 
 assert(t0_n==0.0); %This must be 0 (assummed in the C++ and MATLAB code)
 assert(tf_n==1.0); %This must be 1 (assummed in the C++ and MATLAB code)
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% PARAMETERS! %%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -150,6 +151,8 @@ for i=1:(num_max_of_obst*num_seg)
         d{i}=opti.parameter(1,1); 
     end    
 end
+
+
 
 % obstacle_bbox_inflated={};
 % for i=1:num_max_of_obst
@@ -273,6 +276,12 @@ const_p{end+1}= sp.getVelT(tf_n)== vf_n ;
 const_p{end+1}= sp.getAccelT(tf_n)== af_n ;
 const_y{end+1}= sy.getVelT(tf_n)==ydotf_n ; % Needed: if not (and if you are minimizing ddyaw), dyaw=cte --> yaw will explode
 
+
+
+%
+if(optimize_time_alloc)
+    const_p{end+1}= total_time<=fitter.total_time; %Samples for visibility/obs_avoidance are only taken for t<fitter.total_time
+end
 
 % epsilon=1;
 for j=1:(sp.num_seg)

@@ -445,6 +445,7 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
   solutions.clear();
   guesses.clear();
 
+  // #pragma omp parallel for
   for (auto p_guess : p_guesses)
   {
     static casadi::DM all_nd(4, max_num_of_planes);
@@ -597,12 +598,16 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
 
       double total_time_solution = (solution.knots_p(solution.knots_p.cols() - 1) - solution.knots_p(0));
 
-      if (total_time_solution > par_.fitter_total_time)
+      if (total_time_solution > (par_.fitter_total_time + 1e-4))
       {
         std::cout << yellow << bold
                   << "WARNING: total_time_solution>par_.fitter_total_time (visibility/obstacle samples are not taken "
                      "in t>par_.fitter_total_time)"
                   << reset << std::endl;
+
+        std::cout << "total_time_solution= " << total_time_solution << std::endl;
+        std::cout << " par_.fitter_total_time= " << par_.fitter_total_time << std::endl;
+
         std::cout << yellow << bold << "Increase fitter.total_time (or decrease Ra)" << reset << std::endl;
 
         abort();  // Debugging
