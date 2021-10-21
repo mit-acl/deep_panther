@@ -1027,24 +1027,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
   mtx_plan_.unlock();
 
-  // std::cout << blue << "k_index:" << k_index << reset << std::endl;
-  // std::cout << blue << "k_index_end:" << k_index_end << reset << std::endl;
-  // std::cout << blue << "plan_.size():" << plan_.size() << reset << std::endl;
-
-  // double runtime_snlopt;
-
-  // if (k_index_end != 0)
-  // {
-  //   runtime_snlopt = k_index * par_.dc;  // std::min(, par_.upper_bound_runtime_snlopt);
-  // }
-  // else
-  // {
-  //   runtime_snlopt = par_.upper_bound_runtime_snlopt;  // I'm stopped at the end of the trajectory
-  // }
-  // saturate(runtime_snlopt, par_.lower_bound_runtime_snlopt, par_.upper_bound_runtime_snlopt);
-
-  // std::cout << green << "Runtime snlopt= " << runtime_snlopt << reset << std::endl;
-
   //////////////////////////////////////////////////////////////////////////
   ///////////////////////// Get point G ////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////
@@ -1063,28 +1045,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   double time_now = ros::Time::now().toSec();
 
   double t_start = k_index * par_.dc + time_now;
-
-  // double factor_alloc_tmp = par_.factor_alloc;
-
-  // std::cout << "distA2TermGoal= " << distA2TermGoal << std::endl;
-
-  //// when it's near the terminal goal --> force the final condition (if not it may oscillate)
-  // if (distA2TermGoal < par_.distance_to_force_final_pos)
-  // {
-  //   std::cout << "distA2TermGoal= " << distA2TermGoal << std::endl;
-  //   std::cout << bold << blue << "Forcing final Pos" << reset << std::endl;
-
-  //   factor_alloc_tmp = par_.factor_alloc_when_forcing_final_pos;
-  //   solver_->par_.c_final_pos = 0.0;  // Is a constraint --> don't care about this cost
-  //   solver_->par_.c_fov = 5.0;
-  //   solver_->par_.force_final_pos = true;
-  // }
-  // else
-  // {
-  // solver_->par_.c_final_pos = par_.c_final_pos;
-  // solver_->par_.c_fov = par_.c_fov;
-  // solver_->par_.force_final_pos = false;  // par_.force_final_pos;
-  // }
 
   double time_allocated = getMinTimeDoubleIntegrator3D(A.pos, A.vel, G.pos, G.vel, par_.v_max, par_.a_max);
 
@@ -1176,13 +1136,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   }
   ////
 
-  // std::vector<Eigen::Vector3d> samples_obs;  // pos of the feature expressed in w
-  // sampleFeaturePos(argmax_prob_collision, t_start, t_start + par_.fitter_total_time,
-  //                  samples_obs);  // need to do it here so that argmax_prob_collision does not become invalid
-  //                                 // with new updates
-
-  // log_ptr_->tracking_now_pos = samples_obs.front();
-
   std::vector<si::obstacleForOpt> obstacles_for_opt =
       getObstaclesForOpt(t_start, t_start + par_.fitter_total_time, splines_fitted);
 
@@ -1216,7 +1169,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   mtx_trajs_.unlock();
 
   ConvexHullsOfCurves_Std hulls_std = vectorGCALPol2vectorStdEigen(hulls);
-  // poly_safe_out = vectorGCALPol2vectorJPSPol(hulls);
   edges_obstacles_out = vectorGCALPol2edges(hulls);
 
   solver_->setHulls(hulls_std);
@@ -1246,21 +1198,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
   solutions_found_++;
 
-  // mt::PieceWisePol pwp_now;
-  // solver_->getSolution(pwp_now);
-
-  // MyTimer check_t(true);
-
-  // mtx_trajs_.lock();
-  // bool is_safe_after_opt = safetyCheckAfterOpt(pwp_now);
-  // mtx_trajs_.unlock();
-
-  // if (is_safe_after_opt == false)
-  // {
-  //   logAndTimeReplan("SafetyCheckAfterOpt not satisfied", false, log);
-  //   return false;
-  // }
-
   M_ = G_term;
 
   //////////////////////////////////////////////////////////////////////////
@@ -1289,21 +1226,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
   mtx_plan_.unlock();
 
-  ////////////////////
-  ////////////////////
-
-  // if (exists_previous_pwp_ == true)
-  // {
-  //   pwp_out = composePieceWisePol(time_now, par_.dc, pwp_prev_, pwp_now);
-  //   pwp_prev_ = pwp_out;
-  // }
-  // else
-  // {  //
-  //   pwp_out = pwp_now;
-  //   pwp_prev_ = pwp_now;
-  //   exists_previous_pwp_ = true;
-  // }
-
   X_safe_out = plan_.toStdVector();
 
   ///////////////////////////////////////////////////////////
@@ -1311,7 +1233,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   //////////////////////////////////////////////////////////
 
   // Check if we have planned until G_term
-  // mt::state F = plan_.back();  // Final point of the safe path (\equiv final point of the comitted path)
   double dist = (G_term_.pos - plan_.back().pos).norm();
 
   if (dist < par_.goal_radius)
