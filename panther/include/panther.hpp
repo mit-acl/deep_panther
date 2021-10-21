@@ -11,13 +11,11 @@
 #define PANTHER_HPP
 
 #include <vector>
-#include "cgal_utils.hpp"
 
 #include <mutex>
 
 #include "panther_types.hpp"
-// #include "solver_nlopt.hpp"
-// #include "solver_gurobi.hpp"
+
 #include "solver_ipopt.hpp"
 
 // status_ : YAWING-->TRAVELING-->GOAL_SEEN-->GOAL_REACHED-->YAWING-->TRAVELING-->...
@@ -60,22 +58,12 @@ private:
 
   bool initializedStateAndTermGoal();
 
-  bool safetyCheckAfterOpt(mt::PieceWisePol pwp_optimized);
+  // bool safetyCheckAfterOpt(mt::PieceWisePol pwp_optimized);
 
-  bool trajsAndPwpAreInCollision(mt::dynTrajCompiled traj, mt::PieceWisePol pwp_optimized, double t_start,
-                                 double t_end);
+  // bool trajsAndPwpAreInCollision(mt::dynTrajCompiled traj, mt::PieceWisePol pwp_optimized, double t_start,
+  //                                double t_end);
 
-  void removeTrajsThatWillNotAffectMe(const mt::state& A, double t_start, double t_end);
-
-  /*  vec_E<Polyhedron<3>> vectorGCALPol2vectorJPSPol(ConvexHullsOfCurves& convex_hulls_of_curves);
-    ConvexHullsOfCurves_Std vectorGCALPol2vectorStdEigen(ConvexHullsOfCurves& convexHulls);*/
-  ConvexHullsOfCurves convexHullsOfCurves(double t_start, double t_end);
-  ConvexHullsOfCurve convexHullsOfCurve(mt::dynTrajCompiled& traj, double t_start, double t_end);
-  CGAL_Polyhedron_3 convexHullOfInterval(mt::dynTrajCompiled& traj, double t_start, double t_end);
-
-  std::vector<Eigen::Vector3d> vertexesOfInterval(mt::PieceWisePol& pwp, double t_start, double t_end,
-                                                  const Eigen::Vector3d& delta_inflation);
-  std::vector<Eigen::Vector3d> vertexesOfInterval(mt::dynTrajCompiled& traj, double t_start, double t_end);
+  // void removeTrajsThatWillNotAffectMe(const mt::state& A, double t_start, double t_end);
 
   void updateInitialCond(int i);
 

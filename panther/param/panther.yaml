@@ -99,7 +99,7 @@ norminv_prob: 1.0 #For x% bands, set this to norminv(x). #70.0% band <--> 0.524
 print_graph_yaw_info: false
 
 gamma: 0.1 #[seconds] >0 Time step between discretization points
-
+disc_pts_per_interval_oct_search: 4
 
 
 # TODO: some params here are not used

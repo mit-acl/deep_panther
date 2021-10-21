@@ -146,6 +146,8 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "norminv_prob", par_.norminv_prob);
   safeGetParam(nh1_, "gamma", par_.gamma);
 
+  safeGetParam(nh1_, "disc_pts_per_interval_oct_search", par_.disc_pts_per_interval_oct_search);
+
   safeGetParam(nh1_, "alpha_shrink", par_.alpha_shrink);
 
   safeGetParam(nh1_, "fov_x_deg", par_.fov_x_deg);

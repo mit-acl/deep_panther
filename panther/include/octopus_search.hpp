@@ -15,7 +15,7 @@
 #include "panther_types.hpp"
 
 #include "separator.hpp"
-#include "cgal_utils.hpp"
+// #include "cgal_utils.hpp"
 
 #include <unordered_map>
 #include <queue>

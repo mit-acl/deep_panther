@@ -45,6 +45,35 @@ Eigen::RowVectorXd constructKnotsClampedUniformSpline(double t_init, double t_en
   return knots;
 }
 
+//
+mt::state getStatePosSplineT(std::vector<Eigen::Vector3d> &qp, Eigen::RowVectorXd &knots_p, int deg_p, double t)
+{
+  assert(((knots_p.size() - 1) == (qp.size() - 1) + deg_p + 1) && "M=N+p+1 not satisfied");
+
+  int num_seg = (knots_p.size() - 1) - 2 * deg_p;  // M-2*p
+
+  // Stack the control points in matrices
+  Eigen::Matrix<double, 3, -1> qp_matrix(3, qp.size());
+  for (int i = 0; i < qp.size(); i++)
+  {
+    qp_matrix.col(i) = qp[i];
+  }
+
+  // Construct now the B-Spline, see https://github.com/libigl/eigen/blob/master/unsupported/test/splines.cpp#L37
+  Eigen::Spline<double, 3, Eigen::Dynamic> spline_p(knots_p, qp_matrix);
+
+  Eigen::MatrixXd derivatives_p = spline_p.derivatives(t, 4);  // compute the derivatives up to that order
+
+  mt::state state_i;
+
+  state_i.setPos(derivatives_p.col(0));  // First column
+  state_i.setVel(derivatives_p.col(1));
+  state_i.setAccel(derivatives_p.col(2));
+  state_i.setJerk(derivatives_p.col(3));
+
+  return state_i;
+}
+
 // Given the control points, this function returns the associated traj and mt::PieceWisePol
 void CPs2Traj(std::vector<Eigen::Vector3d> &qp, std::vector<double> &qy, Eigen::RowVectorXd &knots_p,
               Eigen::RowVectorXd &knots_y, std::vector<mt::state> &traj, int deg_p, int deg_y, double dc)

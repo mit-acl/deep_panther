@@ -224,19 +224,76 @@ int SolverIpopt::getNumOfQCQPsRun()
 //   max_runtime_ = max_runtime;
 // }
 
-void SolverIpopt::setHulls(ConvexHullsOfCurves_Std &hulls)
-{
-  hulls_.clear();
-  hulls_ = hulls;
-  num_of_obst_ = hulls_.size();
-  num_of_normals_ = par_.num_seg * num_of_obst_;
-}
+// void SolverIpopt::setHulls(ConvexHullsOfCurves_Std &hulls)
+// {
+//   hulls_.clear();
+//   hulls_ = hulls;
+//   num_of_obst_ = hulls_.size();
+//   num_of_normals_ = par_.num_seg * num_of_obst_;
+// }
 
 //////////////////////////////////////////////////////////
-
 void SolverIpopt::setObstaclesForOpt(const std::vector<si::obstacleForOpt> &obstacles_for_opt)
 {
   obstacles_for_opt_ = obstacles_for_opt;
+
+  ////// Set the hulls for use in Octopus Search
+  hulls_.clear();
+
+  Eigen::RowVectorXd knots_p =
+      constructKnotsClampedUniformSpline(t_init_, t_final_guess_, par_.fitter_deg_pos, par_.fitter_num_seg);
+
+  double deltaT = (t_final_guess_ - t_init_) / (1.0 * par_.num_seg);  // num_seg is the number of intervals
+
+  for (const auto &obstacle_i : obstacles_for_opt_)
+  {
+    VertexesObstacle vertexes_obstacle_i;
+
+    std::vector<Eigen::Vector3d> ctrl_pts_obs_i = casadiMatrix2StdVectorEigen3d(obstacle_i.ctrl_pts);
+
+    for (int j = 0; j < par_.num_seg; j++)
+    {
+      std::vector<double> times =
+          linspace(t_init_ + j * deltaT, t_init_ + (j + 1) * deltaT, par_.disc_pts_per_interval_oct_search);
+
+      // std::cout << "times.size()= " << times.size() << std::endl;
+
+      VertexesInterval vertexes_interval_j(3, 8 * times.size());  // For each sample, there are 8 vertexes
+
+      for (int k = 0; k < times.size(); k++)
+      {
+        // std::cout << "times[k]= " << times[k] << std::endl;
+
+        mt::state state = getStatePosSplineT(ctrl_pts_obs_i, knots_p, sp_.p, times[k]);
+
+        Eigen::Vector3d delta =
+            Eigen::Vector3d(double(obstacle_i.bbox_inflated(0, 0)), double(obstacle_i.bbox_inflated(1, 0)),
+                            double(obstacle_i.bbox_inflated(2, 0)));
+
+        // clang-format off
+         vertexes_interval_j.col(8*k)=     (Eigen::Vector3d(state.pos.x() + delta.x(), state.pos.y() + delta.y(), state.pos.z() + delta.z()));
+         vertexes_interval_j.col(8*k+1)=   (Eigen::Vector3d(state.pos.x() + delta.x(), state.pos.y() - delta.y(), state.pos.z() - delta.z()));
+         vertexes_interval_j.col(8*k+2)=   (Eigen::Vector3d(state.pos.x() + delta.x(), state.pos.y() + delta.y(), state.pos.z() - delta.z()));
+         vertexes_interval_j.col(8*k+3)=   (Eigen::Vector3d(state.pos.x() + delta.x(), state.pos.y() - delta.y(), state.pos.z() + delta.z()));
+         vertexes_interval_j.col(8*k+4)=   (Eigen::Vector3d(state.pos.x() - delta.x(), state.pos.y() - delta.y(), state.pos.z() - delta.z()));
+         vertexes_interval_j.col(8*k+5)=   (Eigen::Vector3d(state.pos.x() - delta.x(), state.pos.y() + delta.y(), state.pos.z() + delta.z()));
+         vertexes_interval_j.col(8*k+6)=   (Eigen::Vector3d(state.pos.x() - delta.x(), state.pos.y() + delta.y(), state.pos.z() - delta.z()));
+         vertexes_interval_j.col(8*k+7)=   (Eigen::Vector3d(state.pos.x() - delta.x(), state.pos.y() - delta.y(), state.pos.z() + delta.z()));
+        // clang-format on
+
+        // std::cout << "vertexes_interval_j= \n" << vertexes_interval_j << std::endl;
+      }
+
+      vertexes_obstacle_i.push_back(vertexes_interval_j);
+    }
+
+    hulls_.push_back(vertexes_obstacle_i);
+  }
+
+  num_of_obst_ = hulls_.size();
+  num_of_normals_ = par_.num_seg * num_of_obst_;
+
+  //////
 }
 
 casadi::DM SolverIpopt::eigen2casadi(const Eigen::Vector3d &a)

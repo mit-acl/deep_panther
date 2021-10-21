@@ -20,6 +20,11 @@ typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Polyhedron_Std;
 typedef std::vector<Polyhedron_Std> ConvexHullsOfCurve_Std;
 typedef std::vector<ConvexHullsOfCurve_Std> ConvexHullsOfCurves_Std;
 
+// Same as above, but with different names
+typedef Eigen::Matrix<double, 3, Eigen::Dynamic> VertexesInterval;
+typedef std::vector<Polyhedron_Std> VertexesObstacle;
+typedef std::vector<ConvexHullsOfCurve_Std> VertexesObstacles;
+
 enum DroneStatus
 {
   YAWING = 0,
@@ -847,6 +852,7 @@ struct parameters
   // double beta = 0.0;
   double norminv_prob = 1.96;
   double gamma = 0.5;
+  int disc_pts_per_interval_oct_search;
 
   // weights
   double c_smooth_yaw_search = 0.0;

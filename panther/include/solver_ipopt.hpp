@@ -23,6 +23,9 @@
 #include "octopus_search.hpp"
 #include "bspline_utils.hpp"
 
+#include <decomp_geometry/polyhedron.h>
+#include <decomp_geometry/polyhedron.h>
+
 // For the yaw search:
 #include <boost/graph/astar_search.hpp>
 #include <boost/graph/adjacency_list.hpp>
@@ -138,8 +141,6 @@ public:
   // void setMaxRuntimeKappaAndMu(double runtime, double kappa, double mu);
   bool setInitStateFinalStateInitTFinalT(mt::state initial_state, mt::state final_state, double t_init,
                                          double &t_final);
-  void setHulls(ConvexHullsOfCurves_Std &hulls);
-  // void setSamplesObs(const std::vector<Eigen::Vector3d> &samples);
   void setFocusOnObstacle(bool focus_on_obstacle)
   {
     focus_on_obstacle_ = focus_on_obstacle;

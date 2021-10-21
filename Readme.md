@@ -39,15 +39,6 @@ Matlab is only needed if you want to introduce modifications to the optimization
 ### <ins>Dependencies<ins>
 
 
-#### CGAL
-These commands will install [CGAL v4.12.4](https://www.cgal.org/):
-```bash
-sudo apt-get install libgmp3-dev libmpfr-dev -y
-mkdir -p ~/installations/cgal && cd ~/installations/cgal
-wget https://github.com/CGAL/cgal/releases/download/releases%2FCGAL-4.14.2/CGAL-4.14.2.tar.xz
-tar -xf CGAL-4.14.2.tar.xz && cd CGAL-4.14.2/ && cmake . -DCMAKE_BUILD_TYPE=Release && sudo make install
-```
-
 #### CasADi and IPOPT
 
 Install CasADi from source (see [this](https://github.com/casadi/casadi/wiki/InstallationLinux) for more details) and the solver IPOPT:
