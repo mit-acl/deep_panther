@@ -151,17 +151,10 @@ public:
 
   // getters
   void getPlanes(std::vector<Hyperplane3D> &planes);
-  int getNumOfLPsRun();
-  int getNumOfQCQPsRun();
-  void getSolution(mt::PieceWisePol &solution);
-
-  // double getTimeNeeded();
 
   int B_SPLINE = 1;  // B-Spline Basis
   int MINVO = 2;     // Minimum volume basis
   int BEZIER = 3;    // Bezier basis
-
-  // bool checkGradientsUsingFiniteDiff();
 
   mt::parameters par_;
 
@@ -259,8 +252,6 @@ private:
   MyTimer opt_timer_;
 
   double max_runtime_ = 2;  //[seconds]
-
-  int num_of_QCQPs_run_ = 0;
 
   // transformation between the B-spline control points and other basis
   std::vector<Eigen::Matrix<double, 4, 4>> M_pos_bs2basis_;

@@ -556,8 +556,7 @@ bool Panther::isReplanningNeeded()
 
 bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
                      std::vector<si::solOrGuess>& best_solutions, std::vector<si::solOrGuess>& guesses,
-                     std::vector<si::solOrGuess>& splines_fitted, std::vector<Hyperplane3D>& planes,
-                     int& num_of_LPs_run, int& num_of_QCQPs_run, mt::log& log)
+                     std::vector<si::solOrGuess>& splines_fitted, std::vector<Hyperplane3D>& planes, mt::log& log)
 {
   (*log_ptr_) = {};  // Reset the struct with the default values
 
@@ -751,13 +750,11 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   std::cout << on_cyan << bold << "Solved so far" << solutions_found_ << "/" << total_replannings_ << reset
             << std::endl;
 
-  // std::vector<si::solOrGuess> solutions;
-
   log_ptr_->tim_initial_setup.toc();
   bool result = solver_->optimize(best_solutions, guesses);
 
-  num_of_LPs_run = solver_->getNumOfLPsRun();
-  num_of_QCQPs_run = solver_->getNumOfQCQPsRun();
+  // num_of_LPs_run = solver_->getNumOfLPsRun();
+  // num_of_QCQPs_run = solver_->getNumOfQCQPsRun();
 
   total_replannings_++;
   if (result == false)

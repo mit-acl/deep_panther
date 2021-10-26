@@ -28,7 +28,7 @@ public:
   Panther(mt::parameters par);
   bool replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out, std::vector<si::solOrGuess>& best_solutions,
               std::vector<si::solOrGuess>& guesses, std::vector<si::solOrGuess>& splines_fitted,
-              std::vector<Hyperplane3D>& planes, int& num_of_LPs_run, int& num_of_QCQPs_run, mt::log& log);
+              std::vector<Hyperplane3D>& planes, mt::log& log);
   void updateState(mt::state data);
 
   bool getNextGoal(mt::state& next_goal);

@@ -486,8 +486,8 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
       pauseTime();
     }
 
-    bool replanned = panther_ptr_->replan(edges_obstacles, X_safe, best_solutions, guesses, splines_fitted, planes,
-                                          num_of_LPs_run_, num_of_QCQPs_run_, log);
+    bool replanned =
+        panther_ptr_->replan(edges_obstacles, X_safe, best_solutions, guesses, splines_fitted, planes, log);
 
     if (par_.stop_time_when_replanning)
     {

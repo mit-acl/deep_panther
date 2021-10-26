@@ -207,16 +207,6 @@ void SolverIpopt::getPlanes(std::vector<Hyperplane3D> &planes)
   planes = planes_;
 }
 
-int SolverIpopt::getNumOfLPsRun()
-{
-  return octopusSolver_ptr_->getNumOfLPsRun();
-}
-
-int SolverIpopt::getNumOfQCQPsRun()
-{
-  return num_of_QCQPs_run_;
-}
-
 // void SolverIpopt::setMaxRuntimeKappaAndMu(double max_runtime, double kappa, double mu)
 // {
 //   kappa_ = kappa;
