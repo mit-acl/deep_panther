@@ -20,6 +20,3 @@
 [submodule "panther_extra_plus_plus"]
 	path = submodules/panther_extra_plus_plus
 	url = git@github.com:mit-acl/panther_extra_plus_plus.git
-[submodule "pybind11"]
-	path = submodules/pybind11
-	url = https://github.com/pybind/pybind11
