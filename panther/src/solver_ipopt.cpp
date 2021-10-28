@@ -58,10 +58,21 @@ casadi::DM stdVectorEigen3d2CasadiMatrix(const std::vector<Eigen::Vector3d> &qp)
   return casadi_matrix;
 }
 
-SolverIpopt::SolverIpopt(mt::parameters &par, std::shared_ptr<mt::log> log_ptr)
+casadi::DM eigen3d2CasadiMatrix(const Eigen::Vector3d &data)
+{
+  casadi::DM casadi_matrix(3, 1);
+
+  casadi_matrix(0, 0) = data.x();
+  casadi_matrix(1, 0) = data.y();
+  casadi_matrix(2, 0) = data.z();
+
+  return casadi_matrix;
+}
+
+SolverIpopt::SolverIpopt(const mt::parameters &par)
 {
   par_ = par;
-  log_ptr_ = log_ptr;
+  // log_ptr_ = log_ptr;
 
   // All these values are for the position spline
 
@@ -118,16 +129,15 @@ SolverIpopt::SolverIpopt(mt::parameters &par, std::shared_ptr<mt::log> log_ptr)
   // cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
   cf_visibility_ = casadi::Function::load(folder + "visibility.casadi");
 
-  Eigen::Matrix<double, 4, 4> b_Tmatrix_c = par_.b_T_c.matrix();
   b_Tmatrixcasadi_c_ = casadi::DM(4, 4);
 
-  // std::cout << "par_.b_T_c.matrix()= " << par_.b_T_c.matrix() << std::endl;
+  // std::cout << "par_.b_T_c= " << par_.b_T_c << std::endl;
 
-  for (int i = 0; i < b_Tmatrix_c.rows(); i++)
+  for (int i = 0; i < par_.b_T_c.rows(); i++)
   {
-    for (int j = 0; j < b_Tmatrix_c.cols(); j++)
+    for (int j = 0; j < par_.b_T_c.cols(); j++)
     {
-      b_Tmatrixcasadi_c_(i, j) = b_Tmatrix_c(i, j);
+      b_Tmatrixcasadi_c_(i, j) = par_.b_T_c(i, j);
     }
   }
 
@@ -239,7 +249,7 @@ void SolverIpopt::setObstaclesForOpt(const std::vector<si::obstacleForOpt> &obst
   {
     VertexesObstacle vertexes_obstacle_i;
 
-    std::vector<Eigen::Vector3d> ctrl_pts_obs_i = casadiMatrix2StdVectorEigen3d(obstacle_i.ctrl_pts);
+    // std::vector<Eigen::Vector3d> ctrl_pts_obs_i = casadiMatrix2StdVectorEigen3d(obstacle_i.ctrl_pts);
 
     for (int j = 0; j < par_.num_seg; j++)
     {
@@ -254,11 +264,9 @@ void SolverIpopt::setObstaclesForOpt(const std::vector<si::obstacleForOpt> &obst
       {
         // std::cout << "times[k]= " << times[k] << std::endl;
 
-        mt::state state = getStatePosSplineT(ctrl_pts_obs_i, knots_p, sp_.p, times[k]);
+        mt::state state = getStatePosSplineT(obstacle_i.ctrl_pts, knots_p, sp_.p, times[k]);
 
-        Eigen::Vector3d delta =
-            Eigen::Vector3d(double(obstacle_i.bbox_inflated(0, 0)), double(obstacle_i.bbox_inflated(1, 0)),
-                            double(obstacle_i.bbox_inflated(2, 0)));
+        Eigen::Vector3d delta = obstacle_i.bbox_inflated;
 
         // clang-format off
          vertexes_interval_j.col(8*k)=     (Eigen::Vector3d(state.pos.x() + delta.x(), state.pos.y() + delta.y(), state.pos.z() + delta.z()));
@@ -410,7 +418,16 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
   return true;
 }
 
-bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<si::solOrGuess> &guesses)
+std::vector<si::solOrGuess> SolverIpopt::getSolutions()
+{
+  return solutions_;
+}
+std::vector<si::solOrGuess> SolverIpopt::getGuesses()
+{
+  return guesses_;
+}
+
+bool SolverIpopt::optimize()
 {
   std::cout << "in SolverIpopt::optimize" << std::endl;
 
@@ -475,9 +492,10 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
   map_arguments["alpha"] = alpha_guess;  // Initial guess for alpha
 
   for (int i = 0; i < par_.num_max_of_obst; i++)
-  {
-    map_arguments["obs_" + std::to_string(i) + "_ctrl_pts"] = obstacles_for_opt_[i].ctrl_pts;
-    map_arguments["obs_" + std::to_string(i) + "_bbox_inflated"] = obstacles_for_opt_[i].bbox_inflated;
+  {  // clang-format off
+    map_arguments["obs_" + std::to_string(i) + "_ctrl_pts"] = stdVectorEigen3d2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
+    map_arguments["obs_" + std::to_string(i) + "_bbox_inflated"] = eigen3d2CasadiMatrix(obstacles_for_opt_[i].bbox_inflated);
+     // clang-format on
   }
 
   map_arguments["c_pos_smooth"] = par_.c_pos_smooth;
@@ -489,8 +507,8 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
 
   /////////////////////////////////////////// SOLVE AN OPIMIZATION FOR EACH OF THE GUESSES FOUND
 
-  solutions.clear();
-  guesses.clear();
+  std::vector<si::solOrGuess> solutions;
+  std::vector<si::solOrGuess> guesses;
 
   // #pragma omp parallel for
   for (auto p_guess : p_guesses)
@@ -539,7 +557,7 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
     // }
     ////////////////////////// CALL THE SOLVER
     std::map<std::string, casadi::DM> result;
-    log_ptr_->tim_opt.tic();
+    // log_ptr_->tim_opt.tic();
 
     /////////////////////////////////
 
@@ -600,7 +618,7 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
 
     ////////////////////////////
 
-    log_ptr_->tim_opt.toc();
+    // log_ptr_->tim_opt.toc();
 
     ///////////////// GET STATUS FROM THE SOLVER
     // See discussion at https://groups.google.com/g/casadi-users/c/1061E0eVAXM/m/dFHpw1CQBgAJ
@@ -609,11 +627,11 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
         std::string(cf_op_.instruction_MX(index_instruction_).which_function().stats(1)["return_status"]);
 
     //////////////// LOG COSTS OBTAINED
-    log_ptr_->pos_smooth_cost = double(result["pos_smooth_cost"]);
-    log_ptr_->yaw_smooth_cost = double(result["yaw_smooth_cost"]);
-    log_ptr_->fov_cost = double(result["fov_cost"]);
-    log_ptr_->final_pos_cost = double(result["final_pos_cost"]);
-    log_ptr_->final_yaw_cost = double(result["final_yaw_cost"]);
+    // log_ptr_->pos_smooth_cost = double(result["pos_smooth_cost"]);
+    // log_ptr_->yaw_smooth_cost = double(result["yaw_smooth_cost"]);
+    // log_ptr_->fov_cost = double(result["fov_cost"]);
+    // log_ptr_->final_pos_cost = double(result["final_pos_cost"]);
+    // log_ptr_->final_yaw_cost = double(result["final_yaw_cost"]);
 
     ///////////////////
 
@@ -626,12 +644,16 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
     // std::vector<Eigen::Vector3d> qp;  // Solution found (Control points for position)
     // std::vector<double> qy;           // Solution found (Control points for yaw)
     std::cout << "optimstatus= " << optimstatus << std::endl;
+
+    bool success_opt;
+
     // See names here:
     // https://github.com/casadi/casadi/blob/fadc86444f3c7ab824dc3f2d91d4c0cfe7f9dad5/casadi/interfaces/ipopt/ipopt_interface.cpp
     if (optimstatus == "Solve_Succeeded" || optimstatus == "Solved_To_Acceptable_Level")
     {
       std::cout << green << "IPOPT found a solution" << reset << std::endl;
-      log_ptr_->success_opt = true;
+      // log_ptr_->success_opt = true;
+      success_opt = true;
       // copy the solution
       // auto qp_casadi = result["pCPs"];
       // for (int i = 0; i < qp_casadi.columns(); i++)
@@ -706,14 +728,15 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
     else
     {
       std::cout << red << "IPOPT failed to find a solution" << reset << std::endl;
-      log_ptr_->success_opt = false;
+      // log_ptr_->success_opt = false;
+      success_opt = false;
       // qp = p_guesses.qp;
       // qy = qy_guess_;
       // TODO: If I want to commit to the guesses, they need to be feasible (right now they aren't
       // because of j_max and yaw_dot_max) For now, let's not commit to them and return false
     }
 
-    solution.solver_succeeded = log_ptr_->success_opt;
+    solution.solver_succeeded = success_opt;
 
     ////////////////////////////////////
     //////// Only needed for visualization:
@@ -732,12 +755,15 @@ bool SolverIpopt::optimize(std::vector<si::solOrGuess> &solutions, std::vector<s
   {
     std::cout << bold << "\n===================================" << std::endl;
     std::cout << bold << "=======Guess:" << reset << std::endl;
-    guesses[i].print();
+    guesses[i].printInfo();
     std::cout << bold << "=======Solution:" << reset << std::endl;
-    solutions[i].print();
+    solutions[i].printInfo();
   }
 
   std::cout << "solutions.size()==" << solutions.size() << std::endl;
+
+  solutions_ = solutions;
+  guesses_ = guesses;
 
   if (solutions[0].solver_succeeded == true)
   {

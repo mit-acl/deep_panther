@@ -2,109 +2,51 @@ use_ff: true # use feedforward #Needs to be true if you are using perfect_tracke
 visual: true #publish visualization stuff
 color_type: "vel" #"vel" or "plain"
 n_agents: 16 #only used for the color in the trajectory
-
 num_of_trajs_per_replan: 30
-
+dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
+goal_radius: 0.5    #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
+drone_radius: 0.1  #(m) Used for collision checking
+Ra: 7.0           # [m] Radius of my planning sphere (planning horizon)
+impose_FOV_in_trajCB: false
 stop_time_when_replanning: true
 replanning_trigger_time: 0.5 #[seconds] 
 replanning_lookahead_time: 0.01 #[seconds] 
 max_runtime_octopus_search: 1.5 #[seconds] 
-
-fitter_total_time: 5.0 #[seconds] 
-
-
-dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
-goal_radius: 0.5    #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
-drone_radius: 0.1  #(m) Used for collision checking
-drone_radius_extra_safety: 0.1  #(m) Used for collision checking
-
-#Be careful with setting these to extremely high values (they are used in the constraints, and may introduce numerical issues)
-#Right now only z_min is used (see main.m)
-x_min: -100.0  # [m] don't forget the .0
-x_max: 100.0  # [m] don't forget the .0
-
-y_min: -100.0  # [m] don't forget the .0
-y_max: 100.0   # [m] don't forget the .0
-
-z_min: -4.0        #[m] points below this are considered ground
-z_max: 4.0         #[m] 
-
-# [IN THE LAUNCH FILE] mode: "py" #no_perception_aware (noPA), first_pos_then_yaw (py), panther (panther)
-
-#Angle to decide whether to focus on an obstacle or to focus on front of me
-angle_deg_focus_front: 9000 #Set to very big if you wanna focus always on obstacle
-
-
-impose_FOV_in_trajCB: false
-#============================================
-#============================================
-#============================================
-Ra: 7.0           # [m] Radius of my planning sphere (planning horizon)
-
-#max limits
-v_max: [2.5, 2.5, 2.5]   #[m/s]  7.0
-a_max: [5.5, 5.5, 5.5]   #[m/s2] Note that if a_max.z() > 9.81, the drone may flip
-j_max: [30.0, 30.0, 30.0]   #[m/s3] 
-ydot_max: 3.1415926           # [rd/s] Maximum angular velocity. 0.4 for Hardware
-
 fov_x_deg: 70 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Horizontal FOV
 fov_y_deg: 70 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Vertical FOV
 fov_depth: 5.0 #[m] 
-
-#============================================
-#============================================
-#============================================
-
-#parameters for Casadi
-c_pos_smooth: 0.001
-c_yaw_smooth: 0.00
-c_fov: 3000.0
-c_final_pos: 1000.0
-c_final_yaw: 0.0
-c_total_time: 1000
-
+angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
+x_min: -100.0  # [m] don't forget the .0  , be careful with setting these to extremely high values (they are used in the constraints, and may introduce numerical issues)
+x_max: 100.0  # [m] don't forget the .0
+y_min: -100.0  # [m] don't forget the .0
+y_max: 100.0   # [m] don't forget the .0
+z_min: -4.0        #[m] points below this are considered ground
+z_max: 4.0         #[m] 
+ydot_max: 3.1415926           # [rd/s] Maximum angular velocity. 0.4 for Hardware
+v_max: [2.5, 2.5, 2.5]   #[m/s]  7.0
+a_max: [5.5, 5.5, 5.5]   #[m/s2] Note that if a_max.z() > 9.81, the drone may flip
+j_max: [30.0, 30.0, 30.0]   #[m/s3] 
 factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
-
-#PARAMETERS FOR THE YAW SEARCH
-c_smooth_yaw_search: 0.0
-c_visibility_yaw_search: 1.0 
-c_maxydot_yaw_search: 0.0
-# num_of_layers --> this one comes from Matlab, it's = num_samples_simpson 
-# num_of_yaw_per_layer --> this one comes from Matlab
-
 max_seconds_keeping_traj: 0.3     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
-
-# OCTOPUS SEARCH
 a_star_samp_x: 7
 a_star_samp_y: 7 
 a_star_samp_z: 7 
 a_star_fraction_voxel_size: 0.05 #\in [0,1] The higher, the bigger the voxel size in A* is(i.e. more prunning)
-allow_infeasible_guess: true  #whether allow infeasible guesses to be used for the optimization. If false, straight line guess will be used in the case of an infeasible guess
-
 a_star_bias: 1.0 #Bias (cost=g+bias*h) in the A* search 
-
 res_plot_traj: 60.0  #Higher --> More resolution when plotting the trajectory 
 factor_alloc: 1.6 #>=1. Used to find the total duration of a given trajectory.
-# factor_alloc_when_forcing_final_pos: 2.0 #>=1. Used to find the total duration of a given trajectory.
 alpha_shrink: 0.9 #\in [0,1] Only used for MINVO/Bezier
-
-# alpha: 0.0 #[m] Error in position
-# beta: 0.0 #[m] Deviation between the trajectory and the segment between two discretization points
-norminv_prob: 1.0 #For x% bands, set this to norminv(x). #70.0% band <--> 0.524
-                                                          #80.0% band <--> 0.841
-                                                          #90.0% band <--> 1.282
-                                                          #97.5% band <--> 1.96 (i.e. total area is 95%)
-
-# distance_to_force_final_pos: 2.0
-print_graph_yaw_info: false
-
-gamma: 0.1 #[seconds] >0 Time step between discretization points
+norminv_prob: 1.0 #For x% bands, set this to norminv(x). #70.0% band <--> 0.524, 80.0% band <--> 0.841, 90.0% band <--> 1.282, 97.5% band <--> 1.96 (i.e. total area is 95%)
 disc_pts_per_interval_oct_search: 4
-
-
-# TODO: some params here are not used
-# kappa + mu <=1 
-# upper_bound_runtime_snlopt: 0.350 #[seconds] 
-# lower_bound_runtime_snlopt: 0.005 #[seconds] 
-# kappa: 1.0 #% of time spent to find initial guess
-# mu: 0.0    #% of time spent to solve the optimization. CURRENTLY NOT USED
+c_smooth_yaw_search: 0.0      #weight for the yaw search
+c_visibility_yaw_search: 1.0  #weight for the yaw search
+c_maxydot_yaw_search: 0.0     #weight for the yaw search
+c_pos_smooth: 0.001           #weight for the optimization
+c_yaw_smooth: 0.00            #weight for the optimization
+c_fov: 3000.0                 #weight for the optimization
+c_final_pos: 1000.0           #weight for the optimization
+c_final_yaw: 0.0              #weight for the optimization
+c_total_time: 1000            #weight for the optimization
+print_graph_yaw_info: false
+fitter_total_time: 5.0 #[seconds] 
+mode: panther #  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther), ysweep (noPA but with sweep in yaw) 

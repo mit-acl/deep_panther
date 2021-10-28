@@ -42,7 +42,7 @@ Panther::Panther(mt::parameters par) : par_(par)
 
   log_ptr_ = std::shared_ptr<mt::log>(new mt::log);
 
-  solver_ = new SolverIpopt(par_, log_ptr_);
+  solver_ = new SolverIpopt(par_);  //, log_ptr_
 
   separator_solver_ = new separator::Separator();
 
@@ -306,12 +306,9 @@ std::vector<si::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
     std::map<std::string, casadi::DM> map_arg;
     map_arg["samples"] = samples_casadi;
     std::map<std::string, casadi::DM> result = cf_fit3d_(map_arg);
-    obstacle_for_opt.ctrl_pts = result["result"];
+    obstacle_for_opt.ctrl_pts = casadiMatrix2StdVectorEigen3d(result["result"]);
 
-    casadi::DM bbox_inflated(3, 1);
-    bbox_inflated(0, 0) = trajs_[i].bbox.x() + 2 * par_.drone_radius;
-    bbox_inflated(1, 0) = trajs_[i].bbox.y() + 2 * par_.drone_radius;
-    bbox_inflated(2, 0) = trajs_[i].bbox.z() + 2 * par_.drone_radius;
+    Eigen::Vector3d bbox_inflated = trajs_[i].bbox + 2 * par_.drone_radius * Eigen::Vector3d::Ones();
 
     obstacle_for_opt.bbox_inflated = bbox_inflated;
 
@@ -320,7 +317,7 @@ std::vector<si::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
     ///////////////////////// FOR VISUALIZATION
 
     si::solOrGuess spline_fitted;
-    spline_fitted.qp = casadiMatrix2StdVectorEigen3d(obstacle_for_opt.ctrl_pts);
+    spline_fitted.qp = obstacle_for_opt.ctrl_pts;
     std::vector<double> qy(par_.num_seg + par_.deg_yaw, 0.0);
     spline_fitted.qy = qy;
     spline_fitted.knots_p =
@@ -728,9 +725,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   //////////////////////////////////////////////////////////////////////////
   ///////////////////////// Set init and final states //////////////////////
   //////////////////////////////////////////////////////////////////////////
-  bool correctInitialCond =
-      solver_->setInitStateFinalStateInitTFinalT(A, G, t_start,
-                                                 t_final);  // note that here t_final may have been updated
+  bool correctInitialCond = solver_->setInitStateFinalStateInitTFinalT(A, G, t_start, t_final);
 
   if (correctInitialCond == false)
   {
@@ -751,7 +746,10 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
             << std::endl;
 
   log_ptr_->tim_initial_setup.toc();
-  bool result = solver_->optimize(best_solutions, guesses);
+  bool result = solver_->optimize();
+
+  best_solutions = solver_->getSolutions();
+  guesses = solver_->getGuesses();
 
   // num_of_LPs_run = solver_->getNumOfLPsRun();
   // num_of_QCQPs_run = solver_->getNumOfQCQPsRun();

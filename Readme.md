@@ -17,6 +17,9 @@ When using PANTHER, please cite [PANTHER: Perception-Aware Trajectory Planner in
 }
 ```
 
+To install the pybind11 dependency:
+`sudo apt-get install ros-melodic-pybind11-catkin`
+
 ---
 
 **If you are looking for a Planner** 

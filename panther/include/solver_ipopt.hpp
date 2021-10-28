@@ -37,6 +37,7 @@ typedef PANTHER_timers::Timer MyTimer;
 std::vector<Eigen::Vector3d> casadiMatrix2StdVectorEigen3d(const casadi::DM &qp_casadi);
 std::vector<double> casadiMatrix2StdVectorDouble(const casadi::DM &qy_casadi);
 casadi::DM stdVectorEigen3d2CasadiMatrix(const std::vector<Eigen::Vector3d> &qp);
+casadi::DM eigen3d2CasadiMatrix(const Eigen::Vector3d &data);
 
 namespace si  // Solver Ipopt
 {
@@ -57,7 +58,7 @@ struct solOrGuess
   int deg_p;
   int deg_y;
 
-  void print()
+  void printInfo()  // avoid  naming it print() [for compatibility with pybind11]
   {
     using namespace termcolor;
     std::cout << "Pos Control points:" << std::endl;
@@ -122,44 +123,64 @@ struct splineParam
 
 struct obstacleForOpt
 {
-  casadi::DM bbox_inflated;
-  casadi::DM ctrl_pts;
+  // casadi::DM bbox_inflated;
+  // casadi::DM ctrl_pts;
+  std::vector<Eigen::Vector3d> ctrl_pts;
+  Eigen::Vector3d bbox_inflated;
 };
+
+struct novale
+{
+  std::vector<double> value_vector;
+  double value;
+  novale(double value_tmp)
+  {
+    value = value;
+    std::cout << "Hi, there!" << std::endl;
+  }
+  void printVector()
+  {
+    for (auto value_i : value_vector)
+    {
+      std::cout << value_i << ", " << std::endl;
+    }
+  }
+};  // namespace si
 
 }  // namespace si
 
 class SolverIpopt
 {
 public:
-  SolverIpopt(mt::parameters &par, std::shared_ptr<mt::log> log_ptr);
+  SolverIpopt(const mt::parameters &par);
 
   ~SolverIpopt();
 
-  bool optimize(std::vector<si::solOrGuess> &solutions, std::vector<si::solOrGuess> &guesses);
-
-  // setters
-  // void setMaxRuntimeKappaAndMu(double runtime, double kappa, double mu);
+  bool optimize();
   bool setInitStateFinalStateInitTFinalT(mt::state initial_state, mt::state final_state, double t_init,
                                          double &t_final);
   void setFocusOnObstacle(bool focus_on_obstacle)
   {
     focus_on_obstacle_ = focus_on_obstacle;
   }
+  void setObstaclesForOpt(const std::vector<si::obstacleForOpt> &obstacles_for_opt);
+  mt::parameters par_;
   mt::trajectory traj_solution_;
 
-  void setObstaclesForOpt(const std::vector<si::obstacleForOpt> &obstacles_for_opt);
+  std::vector<si::solOrGuess> getSolutions();
+  std::vector<si::solOrGuess> getGuesses();
 
-  // getters
   void getPlanes(std::vector<Hyperplane3D> &planes);
+
+protected:
+private:
+  std::vector<si::solOrGuess> solutions_;
+  std::vector<si::solOrGuess> guesses_;
 
   int B_SPLINE = 1;  // B-Spline Basis
   int MINVO = 2;     // Minimum volume basis
   int BEZIER = 3;    // Bezier basis
 
-  mt::parameters par_;
-
-protected:
-private:
   // https://stackoverflow.com/a/11498248/6057617
   double wrapFromMPitoPi(double x)
   {
@@ -301,7 +322,7 @@ private:
   std::vector<std::vector<vd>> all_vertexes_;
   casadi::DM vector_yaw_samples_;
 
-  std::shared_ptr<mt::log> log_ptr_;
+  // std::shared_ptr<mt::log> log_ptr_;
 
   casadi::DM eigen2casadi(const Eigen::Vector3d &a);
 

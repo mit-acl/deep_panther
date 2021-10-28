@@ -48,8 +48,11 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
       transform_stamped = tf_buffer.lookupTransform(name_drone_, name_camera_depth_optical_frame_tf_, ros::Time(0),
                                                     ros::Duration(0.5));  // Note that ros::Time(0) will just get us the
                                                                           // latest available transform.
-      par_.b_T_c = tf2::transformToEigen(transform_stamped);              // Body to camera_depth_optical_frame
-      par_.c_T_b = (par_.b_T_c).inverse();
+      Eigen::Affine3d b_T_c_transf = tf2::transformToEigen(transform_stamped);  // Body to camera_depth_optical_frame
+      par_.b_T_c = b_T_c_transf.matrix();
+
+      c_T_b_ = (b_T_c_transf).inverse();
+
       break;
     }
     catch (tf2::TransformException& ex)
@@ -64,34 +67,28 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "use_ff", par_.use_ff);
   safeGetParam(nh1_, "visual", par_.visual);
   safeGetParam(nh1_, "color_type", par_.color_type);
-  safeGetParam(nh1_, "num_of_trajs_per_replan", par_.num_of_trajs_per_replan);
-
-  safeGetParam(nh1_, "stop_time_when_replanning", par_.stop_time_when_replanning);
-
   safeGetParam(nh1_, "n_agents", par_.n_agents);
-
+  safeGetParam(nh1_, "num_of_trajs_per_replan", par_.num_of_trajs_per_replan);
   safeGetParam(nh1_, "dc", par_.dc);
-  safeGetParam(nh1_, "replanning_trigger_time", par_.replanning_trigger_time);
-  safeGetParam(nh1_, "replanning_lookahead_time", par_.replanning_lookahead_time);
   safeGetParam(nh1_, "goal_radius", par_.goal_radius);
   safeGetParam(nh1_, "drone_radius", par_.drone_radius);
-  double drone_radius_extra_safety;
-  safeGetParam(nh1_, "drone_radius_extra_safety", drone_radius_extra_safety);
-  par_.drone_radius = par_.drone_radius + drone_radius_extra_safety;
-
   safeGetParam(nh1_, "Ra", par_.Ra);
   safeGetParam(nh1_, "impose_FOV_in_trajCB", par_.impose_FOV_in_trajCB);
-
-  safeGetParam(nh1_, "ydot_max", par_.ydot_max);
-
+  safeGetParam(nh1_, "stop_time_when_replanning", par_.stop_time_when_replanning);
+  safeGetParam(nh1_, "replanning_trigger_time", par_.replanning_trigger_time);
+  safeGetParam(nh1_, "replanning_lookahead_time", par_.replanning_lookahead_time);
+  safeGetParam(nh1_, "max_runtime_octopus_search", par_.max_runtime_octopus_search);
+  safeGetParam(nh1_, "fov_x_deg", par_.fov_x_deg);
+  safeGetParam(nh1_, "fov_y_deg", par_.fov_y_deg);
+  safeGetParam(nh1_, "fov_depth", par_.fov_depth);
+  safeGetParam(nh1_, "angle_deg_focus_front", par_.angle_deg_focus_front);
   safeGetParam(nh1_, "x_min", par_.x_min);
   safeGetParam(nh1_, "x_max", par_.x_max);
-
   safeGetParam(nh1_, "y_min", par_.y_min);
   safeGetParam(nh1_, "y_max", par_.y_max);
-
   safeGetParam(nh1_, "z_min", par_.z_min);
   safeGetParam(nh1_, "z_max", par_.z_max);
+  safeGetParam(nh1_, "ydot_max", par_.ydot_max);
 
   std::vector<double> v_max_tmp;
   std::vector<double> a_max_tmp;
@@ -105,69 +102,41 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   par_.a_max << a_max_tmp[0], a_max_tmp[1], a_max_tmp[2];
   par_.j_max << j_max_tmp[0], j_max_tmp[1], j_max_tmp[2];
 
-  safeGetParam(nh1_, "factor_alloc", par_.factor_alloc);
-
   safeGetParam(nh1_, "factor_alpha", par_.factor_alpha);
-
-  safeGetParam(nh1_, "num_seg", par_.num_seg);
-  safeGetParam(nh1_, "deg_pos", par_.deg_pos);
-  safeGetParam(nh1_, "deg_yaw", par_.deg_yaw);
-  safeGetParam(nh1_, "num_max_of_obst", par_.num_max_of_obst);
-
-  safeGetParam(nh1_, "fitter_num_samples", par_.fitter_num_samples);
-  safeGetParam(nh1_, "fitter_total_time", par_.fitter_total_time);
-  safeGetParam(nh1_, "fitter_num_seg", par_.fitter_num_seg);
-  safeGetParam(nh1_, "fitter_deg_pos", par_.fitter_deg_pos);
-  safeGetParam(nh1_, "sampler_num_samples", par_.sampler_num_samples);
-
-  // safeGetParam(nh1_, "upper_bound_runtime_snlopt", par_.upper_bound_runtime_snlopt);
-  // safeGetParam(nh1_, "lower_bound_runtime_snlopt", par_.lower_bound_runtime_snlopt);
-  // safeGetParam(nh1_, "kappa", par_.kappa);
-  safeGetParam(nh1_, "max_runtime_octopus_search", par_.max_runtime_octopus_search);
-
   safeGetParam(nh1_, "max_seconds_keeping_traj", par_.max_seconds_keeping_traj);
-
   safeGetParam(nh1_, "a_star_samp_x", par_.a_star_samp_x);
   safeGetParam(nh1_, "a_star_samp_y", par_.a_star_samp_y);
   safeGetParam(nh1_, "a_star_samp_z", par_.a_star_samp_z);
   safeGetParam(nh1_, "a_star_fraction_voxel_size", par_.a_star_fraction_voxel_size);
-  safeGetParam(nh1_, "allow_infeasible_guess", par_.allow_infeasible_guess);
-
   safeGetParam(nh1_, "a_star_bias", par_.a_star_bias);
-
-  safeGetParam(nh1_, "basis", par_.basis);
-
-  safeGetParam(nh1_, "mode", par_.mode);
-
-  safeGetParam(nh1_, "angle_deg_focus_front", par_.angle_deg_focus_front);
-
   safeGetParam(nh1_, "res_plot_traj", par_.res_plot_traj);
-
-  safeGetParam(nh1_, "norminv_prob", par_.norminv_prob);
-  safeGetParam(nh1_, "gamma", par_.gamma);
-
-  safeGetParam(nh1_, "disc_pts_per_interval_oct_search", par_.disc_pts_per_interval_oct_search);
-
+  safeGetParam(nh1_, "factor_alloc", par_.factor_alloc);
   safeGetParam(nh1_, "alpha_shrink", par_.alpha_shrink);
-
-  safeGetParam(nh1_, "fov_x_deg", par_.fov_x_deg);
-  safeGetParam(nh1_, "fov_y_deg", par_.fov_y_deg);
-  safeGetParam(nh1_, "fov_depth", par_.fov_depth);
-
+  safeGetParam(nh1_, "norminv_prob", par_.norminv_prob);
+  safeGetParam(nh1_, "disc_pts_per_interval_oct_search", par_.disc_pts_per_interval_oct_search);
   safeGetParam(nh1_, "c_smooth_yaw_search", par_.c_smooth_yaw_search);
   safeGetParam(nh1_, "c_visibility_yaw_search", par_.c_visibility_yaw_search);
   safeGetParam(nh1_, "c_maxydot_yaw_search", par_.c_maxydot_yaw_search);
-  // safeGetParam(nh1_, "num_of_layers", par_.num_of_layers); //This one is the same as num_samples_simpson
-  safeGetParam(nh1_, "num_of_yaw_per_layer", par_.num_of_yaw_per_layer);
-
   safeGetParam(nh1_, "c_pos_smooth", par_.c_pos_smooth);
   safeGetParam(nh1_, "c_yaw_smooth", par_.c_yaw_smooth);
   safeGetParam(nh1_, "c_fov", par_.c_fov);
   safeGetParam(nh1_, "c_final_pos", par_.c_final_pos);
   safeGetParam(nh1_, "c_final_yaw", par_.c_final_yaw);
   safeGetParam(nh1_, "c_total_time", par_.c_total_time);
-
   safeGetParam(nh1_, "print_graph_yaw_info", par_.print_graph_yaw_info);
+  safeGetParam(nh1_, "fitter_total_time", par_.fitter_total_time);
+  safeGetParam(nh1_, "mode", par_.mode);
+  // b_T_c (see above)
+  safeGetParam(nh1_, "basis", par_.basis);
+  safeGetParam(nh1_, "num_max_of_obst", par_.num_max_of_obst);
+  safeGetParam(nh1_, "num_seg", par_.num_seg);
+  safeGetParam(nh1_, "deg_pos", par_.deg_pos);
+  safeGetParam(nh1_, "deg_yaw", par_.deg_yaw);
+  safeGetParam(nh1_, "num_of_yaw_per_layer", par_.num_of_yaw_per_layer);
+  safeGetParam(nh1_, "fitter_num_samples", par_.fitter_num_samples);
+  safeGetParam(nh1_, "fitter_num_seg", par_.fitter_num_seg);
+  safeGetParam(nh1_, "fitter_deg_pos", par_.fitter_deg_pos);
+  safeGetParam(nh1_, "sampler_num_samples", par_.sampler_num_samples);
 
   bool perfect_prediction;  // use_ground_truth_prediction
   safeGetParam(nh1_, "perfect_prediction", perfect_prediction);
@@ -200,12 +169,9 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   verify((par_.c_final_yaw >= 0), "par_.c_final_yaw>=0 must hold");
 
   verify((par_.ydot_max >= 0), "ydot_max>=0 must hold");
-  verify((par_.gamma >= 0), "par_.gamma >= 0 must hold");
   // verify((par_.beta < 0 || par_.alpha < 0), " ");
   // verify((par_.a_max.z() <= 9.81), "par_.a_max.z() >= 9.81, the drone will flip");
   verify((par_.factor_alloc >= 1.0), "Needed: factor_alloc>=1");
-  // verify((par_.kappa >= 0), "Needed: kappa and mu >= 0");
-  // verify((par_.kappa <= 1), "Needed: par_.kappa <= 1");
   verify((par_.a_star_fraction_voxel_size >= 0.0 && par_.a_star_fraction_voxel_size <= 1.0), "a_star_fraction_voxel_"
                                                                                              "size is not in [0,1] ");
   verify((par_.deg_pos == 3), "PANTHER needs deg_pos==3");
@@ -355,10 +321,10 @@ void PantherRos::trajCB(const panther_msgs::DynTraj& msg)
 
   if (par_.impose_FOV_in_trajCB)
   {
-    Eigen::Vector3d c_pos = (par_.c_T_b) * (w_T_b_.inverse()) * w_pos;  // position of the obstacle in the camera frame
-                                                                        // (i.e., depth optical frame)
-    bool inFOV =                                                        // check if it's inside the field of view.
-        c_pos.z() < par_.fov_depth &&                                   //////////////////////
+    Eigen::Vector3d c_pos = c_T_b_ * (w_T_b_.inverse()) * w_pos;  // position of the obstacle in the camera frame
+                                                                  // (i.e., depth optical frame)
+    bool inFOV =                                                  // check if it's inside the field of view.
+        c_pos.z() < par_.fov_depth &&                             //////////////////////
         fabs(atan2(c_pos.x(), c_pos.z())) <
             ((par_.fov_x_deg * M_PI / 180.0) / 2.0) &&  ///// Note that fov_x_deg means x camera_depth_optical_frame
         fabs(atan2(c_pos.y(), c_pos.z())) <

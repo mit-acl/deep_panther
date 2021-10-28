@@ -46,7 +46,8 @@ Eigen::RowVectorXd constructKnotsClampedUniformSpline(double t_init, double t_en
 }
 
 //
-mt::state getStatePosSplineT(std::vector<Eigen::Vector3d> &qp, Eigen::RowVectorXd &knots_p, int deg_p, double t)
+mt::state getStatePosSplineT(const std::vector<Eigen::Vector3d> &qp, const Eigen::RowVectorXd &knots_p, int deg_p,
+                             double t)
 {
   assert(((knots_p.size() - 1) == (qp.size() - 1) + deg_p + 1) && "M=N+p+1 not satisfied");
 

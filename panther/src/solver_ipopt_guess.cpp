@@ -25,6 +25,10 @@ bool SolverIpopt::generateAStarGuess(std::vector<os::solution>& p_guesses)
 {
   octopusSolver_ptr_->setUp(t_init_, t_final_guess_, hulls_);
 
+  std::cout << "t_init_= " << t_init_ << std::endl;
+  std::cout << "t_final_guess_= " << t_final_guess_ << std::endl;
+  std::cout << "par_.vmax= " << par_.v_max << std::endl;
+
   ///////////////////////////////
 
   Eigen::RowVectorXd knots_p = constructKnotsClampedUniformSpline(t_init_, t_final_guess_, par_.deg_pos, par_.num_seg);
@@ -85,9 +89,9 @@ bool SolverIpopt::generateAStarGuess(std::vector<os::solution>& p_guesses)
   octopusSolver_ptr_->setBias(par_.a_star_bias);
   octopusSolver_ptr_->setVisual(false);
 
-  log_ptr_->tim_guess_pos.tic();
+  // log_ptr_->tim_guess_pos.tic();
   bool success = octopusSolver_ptr_->run(p_guesses, par_.num_of_trajs_per_replan);
-  log_ptr_->tim_guess_pos.toc();
+  // log_ptr_->tim_guess_pos.toc();
 
   return success;
 }

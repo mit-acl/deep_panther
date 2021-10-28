@@ -15,6 +15,8 @@
 #include "termcolor.hpp"
 #include <Eigen/Dense>
 #include "timer.hpp"
+// #include <any>
+// #include <utility>
 
 typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Polyhedron_Std;
 typedef std::vector<Polyhedron_Std> ConvexHullsOfCurve_Std;
@@ -767,120 +769,79 @@ struct dynTrajCompiled
 //   bool is_static;
 // };
 
+// Could be improved using C++17:
+// https://raymii.org/s/articles/Store_multiple_types_in_a_single_stdmap_in_cpp_just_like_a_python_dict.html
+// (But the problem is that pybind11 doesn't have good compatibility with std::any() yet)
+// Or doing the second part of this: https://stackoverflow.com/a/50871576/6057617
+
 struct parameters
 {
-  bool use_ff;
-  bool visual;
-
-  std::string color_type;
-  int n_agents;
-
-  int num_of_trajs_per_replan;
-
-  double dc;
-  double goal_radius;
-  double drone_radius;
-
-  double Ra;
-
-  bool impose_FOV_in_trajCB = false;
-
-  double ydot_max;
-
-  // bool impose_fov = false;
-
-  double fov_x_deg = 60;  //[deg] angle between two faces of the tetrahedron
-  double fov_y_deg = 60;  //[deg] angle between two faces of the tetrahedron
-  double fov_depth = 3.0;
-
-  double angle_deg_focus_front = 90;
-
-  bool stop_time_when_replanning;
-
-  double replanning_trigger_time;
-  double replanning_lookahead_time;
-
-  // double R_local_map;
-
-  double x_min;
-  double x_max;
-
-  double y_min;
-  double y_max;
-
-  double z_min;
-  double z_max;
-
-  Eigen::Vector3d v_max;
+  //
+  // clang-format off
+  bool            use_ff;                             //void setVar_use_ff(const std::string& value) { use_ff = string2bool(value); };
+  bool            visual;                             //void setVar_visual(const std::string& value) { visual = string2bool(value); };
+  std::string     color_type;                         //void setVar_color_type(const std::string& value) { color_type = value; };
+  int             n_agents;                           //void setVar_n_agents(const std::string& value) { n_agents = std::stoi(value); };
+  int             num_of_trajs_per_replan;            //void setVar_num_of_trajs_per_replan(const std::string& value) { num_of_trajs_per_replan = std::stoi(value); };
+  double          dc;                                 //void setVar_dc(const std::string& value) { dc = std::stod(value); };
+  double          goal_radius;                        //void setVar_goal_radius(const std::string& value) { goal_radius = std::stod(value); };
+  double          drone_radius;                       //void setVar_drone_radius(const std::string& value) { drone_radius = std::stod(value); };//
+  double          Ra;                                 //void setVar_Ra(const std::string& value) { Ra = std::stod(value); };
+  bool            impose_FOV_in_trajCB;               //void setVar_impose_FOV_in_trajCB(const std::string& value) { impose_FOV_in_trajCB = string2bool(value); };
+  bool            stop_time_when_replanning;          //void setVar_stop_time_when_replanning(const std::string& value) { stop_time_when_replanning = string2bool(value); };
+  double          replanning_trigger_time;            //void setVar_replanning_trigger_time(const std::string& value) { replanning_trigger_time = std::stod(value); };
+  double          replanning_lookahead_time;          //void setVar_replanning_lookahead_time(const std::string& value) { replanning_lookahead_time = std::stod(value); };
+  double          max_runtime_octopus_search;         //void setVar_max_runtime_octopus_search(const std::string& value) { max_runtime_octopus_search = std::stod(value); };
+  double          fov_x_deg;                          //void setVar_fov_x_deg(const std::string& value) { fov_x_deg = std::stod(value); };
+  double          fov_y_deg;                          //void setVar_fov_y_deg(const std::string& value) { fov_y_deg = std::stod(value); };
+  double          fov_depth;                          //void setVar_fov_depth(const std::string& value) { fov_depth = std::stod(value); };
+  double          angle_deg_focus_front;              //void setVar_angle_deg_focus_front(const std::string& value) { angle_deg_focus_front = std::stod(value); };
+  double          x_min;                              //void setVar_x_min(const std::string& value) { x_min = std::stod(value); };
+  double          x_max;                              //void setVar_x_max(const std::string& value) { x_max = std::stod(value); };
+  double          y_min;                              //void setVar_y_min(const std::string& value) { y_min = std::stod(value); };
+  double          y_max;                              //void setVar_y_max(const std::string& value) { y_max = std::stod(value); };
+  double          z_min;                              //void setVar_z_min(const std::string& value) { z_min = std::stod(value); };
+  double          z_max;                              //void setVar_z_max(const std::string& value) { z_max = std::stod(value); };
+  double          ydot_max;                           //void setVar_ydot_max(const std::string& value) { ydot_max = std::stod(value); };
+  Eigen::Vector3d v_max;                              
   Eigen::Vector3d a_max;
   Eigen::Vector3d j_max;
-
-  double factor_alpha;
-
-  int num_seg;
-  int deg_pos;
-  int deg_yaw;
-  int num_max_of_obst;
-  // int num_samples_simpson;
-
-  // double upper_bound_runtime_snlopt;
-  // double lower_bound_runtime_snlopt;
-  // double kappa;
-
-  double max_runtime_octopus_search;
-
-  double max_seconds_keeping_traj = 1e6;
-
-  int a_star_samp_x = 7;
-  int a_star_samp_y = 7;
-  int a_star_samp_z = 7;
-  double a_star_fraction_voxel_size = 0.5;
-  bool allow_infeasible_guess = false;
-
-  double a_star_bias = 1.0;
-
-  std::string basis;
-  std::string mode;
-
-  double res_plot_traj;
-
-  double factor_alloc = 0.6;
-
-  double alpha_shrink = 1.0;
-
-  // double alpha = 0.0;
-  // double beta = 0.0;
-  double norminv_prob = 1.96;
-  double gamma = 0.5;
-  int disc_pts_per_interval_oct_search;
-
-  // weights
-  double c_smooth_yaw_search = 0.0;
-  double c_visibility_yaw_search = 1.0;
-  double c_maxydot_yaw_search = 1.0;
-  int num_of_yaw_per_layer = 10;
-
-  // weights
-  double c_pos_smooth = 1.0;
-  double c_yaw_smooth = 0.0;
-  double c_fov = 0.0;
-  double c_final_pos = 100.0;
-  double c_final_yaw = 0.0;
-  double c_total_time = 0.0;
-
-  // bool force_final_pos = false;
-  // double distance_to_force_final_pos = 1.0;
-  // double factor_alloc_when_forcing_final_pos = 1.0;
-  bool print_graph_yaw_info = false;
-
-  Eigen::Affine3d b_T_c;
-  Eigen::Affine3d c_T_b;
-
-  int fitter_num_samples;
-  double fitter_total_time;
-  double fitter_num_seg;
-  double fitter_deg_pos;
-  int sampler_num_samples;
+  double          factor_alpha;                       //void setVar_factor_alpha(const std::string& value) { factor_alpha = std::stod(value); };
+  double          max_seconds_keeping_traj;           //void setVar_ydot_max(const std::string& value) { ydot_max = std::stod(value); };
+  int             a_star_samp_x;                      //void setVar_a_star_samp_x(const std::string& value) { a_star_samp_x = std::stoi(value); };
+  int             a_star_samp_y;                      //void setVar_a_star_samp_y(const std::string& value) { a_star_samp_y = std::stoi(value); };
+  int             a_star_samp_z;                      //void setVar_a_star_samp_z(const std::string& value) { a_star_samp_z = std::stoi(value); };
+  double          a_star_fraction_voxel_size;         //void setVar_a_star_fraction_voxel_size(const std::string& value) { a_star_fraction_voxel_size = std::stod(value); };
+  double          a_star_bias;                        //void setVar_a_star_bias(const std::string& value) { a_star_bias = std::stod(value); };
+  double          res_plot_traj;                      //void setVar_res_plot_traj(const std::string& value) { res_plot_traj = std::stod(value); };
+  double          factor_alloc;                       //void setVar_factor_alloc(const std::string& value) { factor_alloc = std::stod(value); };
+  double          alpha_shrink;                       //void setVar_alpha_shrink(const std::string& value) { alpha_shrink = std::stod(value); };
+  double          norminv_prob;                       //void setVar_norminv_prob(const std::string& value) { norminv_prob = std::stod(value); };
+  int             disc_pts_per_interval_oct_search;   //void setVar_disc_pts_per_interval_oct_search(const std::string& value) { disc_pts_per_interval_oct_search = std::stoi(value); };
+  double          c_smooth_yaw_search;                //void setVar_c_smooth_yaw_search(const std::string& value) { c_smooth_yaw_search = std::stod(value); };
+  double          c_visibility_yaw_search;            //void setVar_c_visibility_yaw_search(const std::string& value) { c_visibility_yaw_search = std::stod(value); };
+  double          c_maxydot_yaw_search;               //void setVar_c_maxydot_yaw_search(const std::string& value) { c_maxydot_yaw_search = std::stod(value); }; 
+  double          c_pos_smooth;                       //void setVar_c_pos_smooth(const std::string& value) { c_pos_smooth = std::stod(value); };
+  double          c_yaw_smooth;                       //void setVar_c_yaw_smooth(const std::string& value) { c_yaw_smooth = std::stod(value); };
+  double          c_fov;                              //void setVar_c_fov(const std::string& value) { c_fov = std::stod(value); };
+  double          c_final_pos;                        //void setVar_c_final_pos(const std::string& value) { c_final_pos = std::stod(value); };
+  double          c_final_yaw;                        //void setVar_c_final_yaw(const std::string& value) { c_final_yaw = std::stod(value); };
+  double          c_total_time;                       //void setVar_c_total_time(const std::string& value) { c_total_time = std::stod(value); };
+  bool            print_graph_yaw_info;               //void setVar_print_graph_yaw_info(const std::string& value) { print_graph_yaw_info = string2bool(value); };
+  double          fitter_total_time;                  //void setVar_fitter_total_time(const std::string& value) { fitter_total_time = std::stod(value); };
+  std::string     mode;                               //void setVar_mode(const std::string& value) { mode = value; };
+  Eigen::Matrix4d b_T_c;                              //Computed inside C++
+  std::string     basis;                              //From Casadi                //void setVar_basis(const std::string& value) { basis = value; };
+  int             num_max_of_obst;                    //From Casadi                //void setVar_num_max_of_obst(const std::string& value) { num_max_of_obst = std::stoi(value); };
+  int             num_seg;                            //From Casadi                    //void setVar_num_seg(const std::string& value) { num_seg = std::stoi(value); };
+  int             deg_pos;                            //From Casadi                    //void setVar_deg_pos(const std::string& value) { deg_pos = std::stoi(value); };
+  int             deg_yaw;                            //From Casadi                   //void setVar_deg_yaw(const std::string& value) { deg_yaw = std::stoi(value); };
+  int             num_of_yaw_per_layer;               //From Casadi               //void setVar_num_of_yaw_per_layer(const std::string& value) { num_of_yaw_per_layer = std::stoi(value); };
+  int             fitter_num_samples;                 //From Casadi               //void setVar_fitter_num_samples(const std::string& value) { fitter_num_samples = std::stoi(value); }; 
+  double          fitter_num_seg;                     //From Casadi               //void setVar_fitter_num_seg(const std::string& value) { fitter_num_seg = std::stod(value); };  
+  double          fitter_deg_pos;                     //From Casadi               //void setVar_fitter_deg_pos(const std::string& value) { fitter_deg_pos = std::stod(value); };   
+  int             sampler_num_samples;                //From Casadi              //void setVar_sampler_num_samples(const std::string& value) { sampler_num_samples = std::stoi(value); };
+  // clang-format on
 };
 
 struct committedTrajectory

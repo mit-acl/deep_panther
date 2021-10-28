@@ -17,7 +17,8 @@ Eigen::RowVectorXd constructKnotsClampedUniformSpline(double t_init, double t_en
 void CPs2Traj(std::vector<Eigen::Vector3d> &qp, std::vector<double> &qy, Eigen::RowVectorXd &knots_p,
               Eigen::RowVectorXd &knots_y, std::vector<mt::state> &traj, int deg_p, int deg_y, double dc);
 
-mt::state getStatePosSplineT(std::vector<Eigen::Vector3d> &qp, Eigen::RowVectorXd &knots_p, int deg_p, double t);
+mt::state getStatePosSplineT(const std::vector<Eigen::Vector3d> &qp, const Eigen::RowVectorXd &knots_p, int deg_p,
+                             double t);
 
 // These two ones below assume deg_p=3 and deg_y=2
 void CPs2TrajAndPwp(std::vector<Eigen::Vector3d> &qp, std::vector<double> &qy, std::vector<mt::state> &traj,

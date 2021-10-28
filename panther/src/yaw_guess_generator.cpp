@@ -108,7 +108,7 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
   map_arg["alpha"] = (tf - t0);
   for (int i = 0; i < par_.num_max_of_obst; i++)
   {
-    map_arg["obs_" + std::to_string(i) + "_ctrl_pts"] = obstacles_for_opt_[i].ctrl_pts;
+    map_arg["obs_" + std::to_string(i) + "_ctrl_pts"] = stdVectorEigen3d2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
   }
   map_arg["thetax_FOV_deg"] = par_.fov_x_deg;
   map_arg["thetay_FOV_deg"] = par_.fov_y_deg;
@@ -175,7 +175,7 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
   std::vector<vd> p(num_vertices(mygraph_));
   std::vector<cost_graph> d(num_vertices(mygraph_));
 
-  log_ptr_->tim_guess_yaw_search_graph.tic();
+  // log_ptr_->tim_guess_yaw_search_graph.tic();
   try
   {
     // call astar named parameter interface
@@ -187,7 +187,7 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
 
   catch (found_goal<vd> fg)
   {
-    log_ptr_->tim_guess_yaw_search_graph.toc();
+    // log_ptr_->tim_guess_yaw_search_graph.toc();
 
     // found a path to the goal
     std::list<vd> shortest_path_vd;
@@ -333,19 +333,19 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
     map_arg2["ydot0"] = ydot0;
     map_arg2["ydotf"] = ydotf;
 
-    log_ptr_->tim_guess_yaw_fit_poly.tic();
+    // log_ptr_->tim_guess_yaw_fit_poly.tic();
     std::map<std::string, casadi::DM> result2 = cf_fit_yaw_(map_arg2);
-    log_ptr_->tim_guess_yaw_fit_poly.toc();
+    // log_ptr_->tim_guess_yaw_fit_poly.toc();
     casadi::DM yaw_qps_matrix_casadi = result2["result"];
 
     //////////////////////////////////////
     //////////////////////////////////////
-    log_ptr_->success_guess_yaw = true;
+    // log_ptr_->success_guess_yaw = true;
 
     return yaw_qps_matrix_casadi;
   }
-  log_ptr_->tim_guess_yaw_search_graph.toc();
-  log_ptr_->success_guess_yaw = false;
+  // log_ptr_->tim_guess_yaw_search_graph.toc();
+  // log_ptr_->success_guess_yaw = false;
 
   std::cout << red << bold << "Boost A* Didn't find a path!! " << std::endl;
   // This should never happen

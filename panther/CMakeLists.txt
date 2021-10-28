@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(panther)
 
-add_definitions(-std=c++14)
-#add_definitions(-std=c++11)
+# add_definitions(-std=c++17)
+# set(CMAKE_CXX_STANDARD 17)
+add_definitions(-std=c++11)
 #add_definitions(-std=c99)
 
 find_package( Eigen3 REQUIRED )
@@ -34,6 +35,7 @@ find_package(catkin REQUIRED COMPONENTS
 	separator
     pcl_ros
     hungarian
+    pybind11_catkin
 )
 
 # find_package(OpenMP)
@@ -53,6 +55,8 @@ include_directories(${DECOMP_UTIL_INCLUDE_DIRS})
 
 # find_package(hungarian REQUIRED)
 # include_directories(${HUNGARIAN_INCLUDE_DIRS}) //TODO
+
+catkin_python_setup() #Needed for pybind11_catkin, this uses the setup.py
 
 catkin_package()
 
@@ -88,6 +92,18 @@ add_library(disable_physics src/disable_physics.cpp)
 
 target_link_libraries(disable_physics ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
 target_link_libraries(move_model ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
+
+pybind_add_module(py_panther MODULE src/py_panther.cpp src/solver_ipopt.cpp src/solver_ipopt_utils.cpp src/utils.cpp src/solver_ipopt_guess.cpp src/yaw_guess_generator.cpp src/octopus_search.cpp src/bspline_utils.cpp)
+target_link_libraries(py_panther PRIVATE ${catkin_LIBRARIES} ${CASADI_LIBRARIES})
+
+pybind_add_module(py_panther2 MODULE src/py_panther2.cpp)
+
+
+# add_subdirectory(pybind11)
+# pybind11_add_module(py_panther src/py_panther.cpp)
+# install(TARGETS test_bind
+#   LIBRARY DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
 
 #############################################################################
 
