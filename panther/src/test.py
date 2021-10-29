@@ -119,7 +119,8 @@ if __name__ == '__main__':
 	final_state.accel=np.array([[0], [0], [0]]);
 
 
-	my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, 15.0);
+	my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, 2.0);
+	my_SolverIpopt.setFocusOnObstacle(True);
 
 	obstacle=py_panther.obstacleForOpt()
 	obstacle.bbox_inflated=np.array([[0.5],[0.5],[0.5]])

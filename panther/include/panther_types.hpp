@@ -90,6 +90,11 @@ struct state
   double dyaw = 0;
   double ddyaw = 0;
 
+  state()
+  {
+    setZero();
+  }
+
   void setPos(const double x, const double y, const double z)
   {
     pos << x, y, z;
@@ -155,6 +160,7 @@ struct state
     jerk = Eigen::Vector3d::Zero();
     yaw = 0;
     dyaw = 0;
+    ddyaw = 0;
   }
 
   const void printPos()
