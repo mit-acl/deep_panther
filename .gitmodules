@@ -20,3 +20,6 @@
 [submodule "panther_extra_plus_plus"]
 	path = submodules/panther_extra_plus_plus
 	url = git@github.com:mit-acl/panther_extra_plus_plus.git
+[submodule "imitation"]
+	path = submodules/imitation
+	url = git@github.com:jtorde/imitation.git

@@ -1,0 +1,3 @@
+import os
+# DO NOT MOVE THIS FILE!
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
