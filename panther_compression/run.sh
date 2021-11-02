@@ -1,3 +1,4 @@
+	reset
     python3 policy_compression_train.py \
     --log_dir "evals/log_dagger" \
     --policy_dir "evals/tmp_dagger" \
