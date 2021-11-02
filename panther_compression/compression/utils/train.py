@@ -15,7 +15,7 @@ def make_dagger_trainer(tmpdir, env, linear_beta):
         beta_schedule,
         optimizer_kwargs=dict(lr=1e-3),
         policy_class = StudentPolicy,
-        policy_kwargs = {"features_dim" : env.observation_space.shape[0]},
+        policy_kwargs = {"features_dim" : env.observation_space.shape[1]},
     )
 
 def make_bc_trainer(tmpdir, env):
@@ -28,7 +28,7 @@ def make_bc_trainer(tmpdir, env):
         beta_schedule,
         optimizer_kwargs=dict(lr=1e-3),
         policy_class = StudentPolicy,
-        policy_kwargs = {"features_dim" : env.observation_space.shape[0]},
+        policy_kwargs = {"features_dim" : env.observation_space.shape[1]},
     )
 
 def train(trainer, expert, seed, n_traj_per_iter, n_epochs, log_path, save_full_policy_path, use_only_last_coll_ds):

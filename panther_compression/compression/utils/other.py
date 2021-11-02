@@ -130,10 +130,10 @@ class ObservationManager():
 		self.observation_size= 3 +  3 +   1    + 3   + om.getSizeAllObstacles();
 
 	def getObservationShape(self):
-		return (self.observation_size, )
+		return (1,self.observation_size)
 
 	def getRandomObservation(self):
-		return np.random.rand(self.observation_size, )
+		return np.random.rand(1,self.observation_size)
 
 	def construct_f_obsFrom_w_state_and_w_obs(self,w_state, w_obs, w_goal):
 
@@ -152,6 +152,10 @@ class ObservationManager():
 		for w_ob in w_obs:
 			observation=np.concatenate((observation, (w_state.f_T_w*w_ob.ctrl_pts).flatten(), (w_ob.bbox_inflated).flatten()))
 
+
+		observation=observation.reshape(self.getObservationShape())
+
+		# print("observation= ", observation)
 
 		assert observation.shape == self.getObservationShape()
 
@@ -176,9 +180,15 @@ class State():
 		return 0.0;
 
 def generateKnotsForClampedUniformBspline(t0, tf, deg, num_seg):
-	return 	np.concatenate((t0*np.ones(deg), \
+	
+	# print("t0*np.ones(deg)= ",t0*np.ones(deg))
+	# print("tf*np.ones(deg)= ",tf*np.ones(deg))
+	# print("t0*np.ones(deg)= ",t0*np.ones(deg))
+	result= np.concatenate((t0*np.ones(deg), \
 							np.linspace(t0, tf, num=num_seg+1),\
 							tf*np.ones(deg)))
+
+	return 	result
 
 class MyClampedUniformBSpline():
 	def __init__(self,t0, tf, deg, dim, num_seg, ctrl_pts):
@@ -252,10 +262,10 @@ class ActionManager():
 		self.Npos = self.num_seg + self.deg_pos-1;
 
 	def getActionShape(self):
-		return (self.action_size, )
+		return (1,self.action_size)
 
 	def getRandomAction(self):
-		return np.random.rand(self.action_size, )
+		return np.random.rand(1,self.action_size)
 
 	def getDegPos(self):
 		return self.deg_pos;
@@ -265,13 +275,15 @@ class ActionManager():
 
 	def action2wBS(self, f_action, w_state):
 
-		total_time=f_action[-1]
+		# print("f_action= ",f_action)
+		# print("f_action.shape= ",f_action.shape)
+		total_time=f_action[0,-1]
 
 		knots_pos=generateKnotsForClampedUniformBspline(0.0, total_time, self.deg_pos, self.num_seg)
 		knots_yaw=generateKnotsForClampedUniformBspline(0.0, total_time, self.deg_yaw, self.num_seg)
 
-		f_pos_ctrl_pts = f_action[0:self.action_size_pos_ctrl_pts].reshape((3,-1))
-		f_yaw_ctrl_pts=f_action[self.action_size_pos_ctrl_pts:-1].reshape((1,-1));
+		f_pos_ctrl_pts = f_action[0,0:self.action_size_pos_ctrl_pts].reshape((3,-1))
+		f_yaw_ctrl_pts=f_action[0,self.action_size_pos_ctrl_pts:-1].reshape((1,-1));
 
 		# print("\n f_pos_ctrl_pts= \n", f_pos_ctrl_pts)
 
@@ -313,6 +325,7 @@ class ActionManager():
 		w_pos_ctrl_pts=np.concatenate((q0_pos, q1_pos, q2_pos, w_pos_ctrl_pts, pf, pf), axis=1) #Assumming final vel and accel=0
 
 		###########FOR YAW
+		# print("w_yaw_ctrl_pts=", w_yaw_ctrl_pts)
 		yf=w_yaw_ctrl_pts[0,-1].reshape((1,1)); #Assumming final vel =0
 
 		p=self.deg_yaw;

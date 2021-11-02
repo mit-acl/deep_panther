@@ -15,6 +15,7 @@ from stable_baselines3.common.torch_layers import (
     get_actor_critic_arch,
 )
 
+from colorama import init, Fore, Back, Style
 # CAP the standard deviation of the actor
 LOG_STD_MAX = 2
 LOG_STD_MIN = -20
@@ -96,6 +97,8 @@ class StudentPolicy(BasePolicy):
         self.full_std = full_std
         self.clip_mean = clip_mean
 
+        self.name=Style.BRIGHT+Fore.RED+"[Stu]"+Style.RESET_ALL
+
         print("features_dim= ", features_dim)
 
         action_dim = get_action_dim(self.action_space)
@@ -153,6 +156,9 @@ class StudentPolicy(BasePolicy):
             )
         )
         return data
+
+    def printwithName(self,data):
+        print(self.name+data)
 
     def get_std(self) -> th.Tensor:
         """
@@ -212,9 +218,11 @@ class StudentPolicy(BasePolicy):
         return self.action_dist.log_prob_from_params(mean_actions, log_std, **kwargs)
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
-        print(f"[Student] obs={observation}")
+        # self.printwithName(f"Received obs={observation}")
+        self.printwithName(f"Received obs shape={observation.shape}")
         action = self.forward(observation, deterministic)
-        print(f"[Student] action={action}")
+        # self.printwithName(f"action={action}")
+        self.printwithName(f"Returning action shape={action.shape}")
         return action
         
     #def predict(self, observation: th.Tensor, deterministic: bool = False):

@@ -4,7 +4,7 @@ import numpy as np
 import copy
 from gym import spaces
 from compression.utils.other import ActionManager, ObservationManager, State, ObstaclesManager
-
+from colorama import init, Fore, Back, Style
  
 
 class MyEnvironment(gym.Env):
@@ -43,6 +43,7 @@ class MyEnvironment(gym.Env):
     self.dt=0.2; #Timestep in seconds
     self.time=0.0;
     
+    self.name=Style.BRIGHT+Fore.GREEN+"[Env]"+Style.RESET_ALL
     # print (self.params)
 
     # print("self.am.getActionShape()= ", self.am.getActionShape())
@@ -53,6 +54,9 @@ class MyEnvironment(gym.Env):
   def __del__(self):
     # self.eng.quit()
     pass
+
+  def printwithName(self,data):
+    print(self.name+data)
 
   def seed(self, seed=None):
     """Set seed function in this environment and calls
@@ -66,14 +70,17 @@ class MyEnvironment(gym.Env):
   def set_len_ep(self, len_ep):
     assert len_ep > 0, "Episode len > 0!"
     self.len_episode = len_ep
-    print(f"[GymEnv]: Ep. len updated to {self.len_episode } [steps].")
+    self.printwithName(f"Ep. len updated to {self.len_episode } [steps].")
     self.reset()
 
   def step(self, action):
+    action=action.reshape(self.action_shape) 
     assert not np.isnan(np.sum(action)), "Received invalid command! u contains nan"
     # print ("action.shape= ", action.shape)
     # print ("self.action_shape= ",self.action_shape)
-    print ("[Env] Received action= ", action)
+    # self.printwithName(f"Received action={action}")
+    self.printwithName(f"Received action size={action.shape}")
+
     assert action.shape==self.action_shape, f"[Env] ERROR: action.shape={action.shape} but self.action_shape={self.action_shape}"
 
     # u = np.array(u*self.max_act).reshape(self.mpc_act_size,) # make sure is always dim 1
@@ -116,8 +123,8 @@ class MyEnvironment(gym.Env):
     observation = self.om.getRandomObservation()#np.random.rand(1,self.mpc_state_size)
   
     # normalized_obs = observation.reshape(-1,)/self.max_obs
-    # assert normalized_obs.shape == (self.mpc_state_size, )
-    print(f"[Env], returning obs={observation}")
+    # self.printwithName(f"returning obs={observation}")
+    self.printwithName(f"returning obs size={observation.shape}")
     return observation, reward, done, info
 
   def reset(self):
@@ -134,7 +141,7 @@ class MyEnvironment(gym.Env):
     observation = self.om.getRandomObservation()
     
     assert observation.shape == self.observation_shape
-    print(f"[Env], returning obs={observation}")
+    # self.printwithName(f"returning obs={observation}")
     return observation
 
   # def get_random_init_state(self):

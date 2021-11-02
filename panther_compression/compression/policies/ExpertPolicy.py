@@ -3,6 +3,7 @@ import numpy as np
 import copy
 from random import random
 from compression.utils.other import ActionManager, ObservationManager
+from colorama import init, Fore, Back, Style
 
 class ExpertPolicy(object):
 
@@ -16,8 +17,13 @@ class ExpertPolicy(object):
         self.action_shape=self.am.getActionShape();
         self.observation_shape=self.om.getObservationShape();
 
+        self.name=Style.BRIGHT+Fore.BLUE+"[Exp]"+Style.RESET_ALL
+
         self.reset()
-        print("[ExpertPolicy] Initialized.")
+        print(self.name+f" Initialized.")
+
+    def printwithName(self,data):
+        print(self.name+data)
 
     def reset(self):
         pass
@@ -26,12 +32,14 @@ class ExpertPolicy(object):
 
     def predict(self, obs, deterministic=True):
         obs=obs.reshape(self.observation_shape) #Not sure why this is needed
-        assert obs.shape==self.observation_shape, f"[Expert] ERROR: obs.shape={obs.shape} but self.observation_shape={self.observation_shape}"
+        assert obs.shape==self.observation_shape, self.name+f"ERROR: obs.shape={obs.shape} but self.observation_shape={self.observation_shape}"
+        
         #From https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/policies.py#L41
         # In the case of policies, the prediction is an action.
         # In the case of critics, it is the estimated value of the observation.
 
-        print(f"[Expert] Got obs={obs}")
+        # self.printwithName(f"Got obs={obs}")
+        self.printwithName(f"Got obs shape={obs.shape}")
 
         # action=np.random.rand(1, self.mpc_act_size)
 
@@ -42,7 +50,8 @@ class ExpertPolicy(object):
         Q=random(); #This is the reward I think
 
         action = self.am.getRandomAction()
-        print(f"[Expert] Returned action={action}")
+        # self.printwithName(f" Returned action={action}")
+        self.printwithName(f"Returned action shape={action.shape}")
 
         assert action.shape==self.action_shape
 
