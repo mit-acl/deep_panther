@@ -116,13 +116,13 @@ if __name__ == "__main__":
     printInBoldBlue("---------------- Making Learner Policy: -------------------")
     # Create learner policy
     if args.on_policy_trainer: 
-        trainer = make_dagger_trainer(tmpdir=DATA_POLICY_PATH, env=train_env, linear_beta=args.dagger_beta)
+        trainer = make_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_env, linear_beta=args.dagger_beta)
     else: 
-        trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, env=train_env)
+        trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_env)
 
     printInBoldBlue("---------------- Making Expert Policy: --------------------")
     # Create expert policy 
-    expert_policy = ExpertPolicy()
+    expert_policy = ExpertPolicy(observation_space=train_env.observation_space, action_space=train_env.action_space)
 
     # Init logging
     tempdir = tempfile.TemporaryDirectory(prefix="quickstart")
@@ -140,7 +140,8 @@ if __name__ == "__main__":
     #In other words, episodes in |evaluate_policy() is the number of trajectories
     #                            |the environment is the number of time steps
 
-    pre_train_stats = evaluate_policy(trainer.get_policy(), test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/pre_train_no_dist")
+
+    pre_train_stats = evaluate_policy(trainer.policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/pre_train_no_dist")
     print("[Evaluation]Pre-training reward: {}, len: {}.".format(pre_train_stats["return_mean"], pre_train_stats["len_mean"]))
 
     # print("Exiting for now")

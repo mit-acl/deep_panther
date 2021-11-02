@@ -22,4 +22,4 @@
 	url = git@github.com:mit-acl/panther_extra_plus_plus.git
 [submodule "imitation"]
 	path = panther_compression/imitation
-	url = git@github.com:jtorde/imitation.git
+	url = http://github.com/HumanCompatibleAI/imitation

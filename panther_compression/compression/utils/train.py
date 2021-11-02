@@ -7,28 +7,43 @@ from imitation.data.rollout import generate_trajectories, rollout_stats
 from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
 
-def make_dagger_trainer(tmpdir, env, linear_beta):
+def make_dagger_trainer(tmpdir, venv, linear_beta):
     beta_schedule=dagger.LinearBetaSchedule(linear_beta)
-    return dagger.DAggerTrainer(
-        env,
-        tmpdir,
-        beta_schedule,
-        optimizer_kwargs=dict(lr=1e-3),
-        policy_class = StudentPolicy,
-        policy_kwargs = {"features_dim" : env.observation_space.shape[0]},
+    bc_trainer = bc.BC(
+        observation_space=venv.observation_space,
+        action_space=venv.action_space,
+        optimizer_kwargs=dict(lr=1e-3)
     )
 
-def make_bc_trainer(tmpdir, env):
+    return dagger.DAggerTrainer(
+        venv=venv,
+        scratch_dir=tmpdir,
+        beta_schedule=beta_schedule,
+        bc_trainer=bc_trainer#,
+        # optimizer_kwargs=dict(lr=1e-3),
+        # policy_class = StudentPolicy,
+        # policy_kwargs = {"features_dim" : env.observation_space.shape[0]},
+    )
+
+def make_bc_trainer(tmpdir, venv):
     """Will make DAgger, but with a constant beta, set to 1 
     (always 100% prob of using expert)"""
     beta_schedule=dagger.AlwaysExpertBetaSchedule()
+
+    bc_trainer = bc.BC(
+        observation_space=venv.observation_space,
+        action_space=venv.action_space,
+        optimizer_kwargs=dict(lr=1e-3)
+    )
+
     return dagger.DAggerTrainer(
-        env,
-        tmpdir,
-        beta_schedule,
-        optimizer_kwargs=dict(lr=1e-3),
-        policy_class = StudentPolicy,
-        policy_kwargs = {"features_dim" : env.observation_space.shape[0]},
+        venv=venv,
+        scratch_dir=tmpdir,
+        beta_schedule=beta_schedule,
+        bc_trainer=bc_trainer#,
+        # optimizer_kwargs=dict(lr=1e-3),
+        # policy_class = StudentPolicy,
+        # policy_kwargs = {"features_dim" : env.observation_space.shape[0]},
     )
 
 def train(trainer, expert, seed, n_traj_per_iter, n_epochs, log_path, save_full_policy_path, use_only_last_coll_ds):

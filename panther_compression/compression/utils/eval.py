@@ -25,19 +25,24 @@ def compute_success(trajectories, venv):
 
 def evaluate_policy(policy, venv, log_path, eval_episodes = 30):
     # venv.env_method(env_dist_f_call, (disturbance))
+    print("In evaluate_policy")
     trajectories = generate_trajectories(
         policy,
         venv,
-        sample_until=rollout.min_episodes(eval_episodes), 
+        sample_until=rollout.make_min_episodes(eval_episodes), 
         deterministic_policy=True,
     )
-    stats, descriptors = rollout_stats(trajectories)
-    descriptors["success"] = compute_success(trajectories, venv)
-    stats["success_rate"] = float(sum(descriptors["success"]))/float(eval_episodes)
+    #FROM ANDREA
+    # stats, descriptors = rollout_stats(trajectories)
+    # descriptors["success"] = compute_success(trajectories, venv)
+    # stats["success_rate"] = float(sum(descriptors["success"]))/float(eval_episodes)
     
-    logs = pd.DataFrame(descriptors)
-    # logs = logs.assign(disturbance = disturbance)
-    # save logs 
-    if log_path is not None:
-        logs.to_pickle(log_path+".pkl")
+    # logs = pd.DataFrame(descriptors)
+    # # logs = logs.assign(disturbance = disturbance)
+    # # save logs 
+    # if log_path is not None:
+    #     logs.to_pickle(log_path+".pkl")
+    #End of From Andrea
+
+    stats = rollout_stats(trajectories)
     return stats

@@ -34,7 +34,7 @@ class MyEnvironment(gym.Env):
     self.action_shape=self.am.getActionShape();
     self.observation_shape=self.om.getObservationShape();
 
-    self.action_space = spaces.Box(low = -1.0, high = 1.0, shape=self.action_shape)
+    self.action_space = spaces.Box(low = 1.0, high = 2.0, shape=self.action_shape)
     self.observation_space = spaces.Box(low = -1.0, high = 1.0, shape=self.observation_shape)
     self.w_goal=np.array([[10], [0.0], [0.0]])
     # self.max_act = 12.0 # Todo: make sure this is the same value as used in the MPC
@@ -81,7 +81,7 @@ class MyEnvironment(gym.Env):
     # print(f"[Env] Timestep={self.timestep}")
 
     ####################################
-
+    print("self.time= ", self.time)
     w_posBS, w_yawBS= self.am.action2wBS(action, self.w_state)
 
 
@@ -93,6 +93,7 @@ class MyEnvironment(gym.Env):
     self.time = self.time + self.dt;
 
     #Construct observation
+
     w_obs=self.obsm.getFutureWPosObstacles(self.time)
     f_obs=self.om.construct_f_obsFrom_w_state_and_w_obs(self.w_state, w_obs, self.w_goal)
 
