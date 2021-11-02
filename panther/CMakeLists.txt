@@ -96,7 +96,7 @@ target_link_libraries(move_model ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
 pybind_add_module(py_panther MODULE src/py_panther.cpp src/solver_ipopt.cpp src/solver_ipopt_utils.cpp src/utils.cpp src/solver_ipopt_guess.cpp src/yaw_guess_generator.cpp src/octopus_search.cpp src/bspline_utils.cpp)
 target_link_libraries(py_panther PRIVATE ${catkin_LIBRARIES} ${CASADI_LIBRARIES})
 
-pybind_add_module(py_panther2 MODULE src/py_panther2.cpp)
+# pybind_add_module(py_panther2 MODULE src/py_panther2.cpp)
 
 
 # add_subdirectory(pybind11)

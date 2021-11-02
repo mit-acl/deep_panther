@@ -57,11 +57,11 @@ class StudentPolicy(BasePolicy):
         features_extractor_kwargs: Optional[Dict[str, Any]] = None,
         features_dim: int = 2, # Size of input features
         activation_fn: Type[nn.Module] = nn.ReLU,
-        use_sde: bool = False,
+        # use_sde: bool = False,
         log_std_init: float = -3,
         full_std: bool = True,
-        sde_net_arch: Optional[List[int]] = None,
-        use_expln: bool = False,
+        # sde_net_arch: Optional[List[int]] = None,
+        # use_expln: bool = False,
         clip_mean: float = -1.0,
         optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
         optimizer_kwargs: Optional[Dict[str, Any]] = None,
@@ -85,52 +85,55 @@ class StudentPolicy(BasePolicy):
         )
 
         # Save arguments to re-create object at loading
-        self.use_sde = use_sde
+        # self.use_sde = use_sde
         self.sde_features_extractor = None
         self.net_arch = net_arch
         self.features_dim = features_dim
         self.activation_fn = activation_fn
         self.log_std_init = log_std_init
-        self.sde_net_arch = sde_net_arch
-        self.use_expln = use_expln
+        # self.sde_net_arch = sde_net_arch
+        # self.use_expln = use_expln
         self.full_std = full_std
         self.clip_mean = clip_mean
+
+        print("features_dim= ", features_dim)
 
         action_dim = get_action_dim(self.action_space)
         latent_pi_net = create_mlp(features_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
         self.latent_pi = nn.Sequential(*latent_pi_net)
         last_layer_dim = net_arch[-1] if len(net_arch) > 0 else features_dim
 
-        print(f"self.use_sde={self.use_sde}")
-        print(f"self.sde_net_arch={self.sde_net_arch}")
-        print(f"self.net_arch={self.net_arch}") #This is a list containing the number of neuros in each layer (excluding input and output)
+        # print(f"self.use_sde={self.use_sde}")
+        # print(f"self.sde_net_arch={self.sde_net_arch}")
+        print(f"self.net_arch={self.net_arch}") #This is a list containing the number of neurons in each layer (excluding input and output)
         #features_dim is the number of inputs (i.e., the number of input layers)
         print(f"last_layer_dim={last_layer_dim}") 
+        print(f"action_dim={action_dim}") 
         # exit();
 
 
-        if self.use_sde:
-            latent_sde_dim = last_layer_dim
-            # Separate features extractor for gSDE
-            if sde_net_arch is not None:
-                self.sde_features_extractor, latent_sde_dim = create_sde_features_extractor(
-                    features_dim, sde_net_arch, activation_fn
-                )
+        # if self.use_sde:
+        #     latent_sde_dim = last_layer_dim
+        #     # Separate features extractor for gSDE
+        #     if sde_net_arch is not None:
+        #         self.sde_features_extractor, latent_sde_dim = create_sde_features_extractor(
+        #             features_dim, sde_net_arch, activation_fn
+        #         )
 
-            self.action_dist = StateDependentNoiseDistribution(
-                action_dim, full_std=full_std, use_expln=use_expln, learn_features=True, squash_output=True
-            )
-            self.mu, self.log_std = self.action_dist.proba_distribution_net(
-                latent_dim=last_layer_dim, latent_sde_dim=latent_sde_dim, log_std_init=log_std_init
-            )
-            # Avoid numerical issues by limiting the mean of the Gaussian
-            # to be in [-clip_mean, clip_mean]
-            if clip_mean > 0.0:
-                self.mu = nn.Sequential(self.mu, nn.Hardtanh(min_val=-clip_mean, max_val=clip_mean))
-        else:
-            self.action_dist = SquashedDiagGaussianDistribution(action_dim)
-            self.mu = nn.Linear(last_layer_dim, action_dim)
-            self.log_std = nn.Linear(last_layer_dim, action_dim)
+        #     self.action_dist = StateDependentNoiseDistribution(
+        #         action_dim, full_std=full_std, use_expln=use_expln, learn_features=True, squash_output=True
+        #     )
+        #     self.mu, self.log_std = self.action_dist.proba_distribution_net(
+        #         latent_dim=last_layer_dim, latent_sde_dim=latent_sde_dim, log_std_init=log_std_init
+        #     )
+        #     # Avoid numerical issues by limiting the mean of the Gaussian
+        #     # to be in [-clip_mean, clip_mean]
+        #     if clip_mean > 0.0:
+        #         self.mu = nn.Sequential(self.mu, nn.Hardtanh(min_val=-clip_mean, max_val=clip_mean))
+        # else:
+        self.action_dist = SquashedDiagGaussianDistribution(action_dim)
+        self.mu = nn.Linear(last_layer_dim, action_dim)
+        self.log_std = nn.Linear(last_layer_dim, action_dim)
 
     def _get_data(self) -> Dict[str, Any]:
         data = super()._get_data()
@@ -140,11 +143,11 @@ class StudentPolicy(BasePolicy):
                 net_arch=self.net_arch,
                 features_dim=self.features_dim,
                 activation_fn=self.activation_fn,
-                use_sde=self.use_sde,
+                # use_sde=self.use_sde,
                 log_std_init=self.log_std_init,
                 full_std=self.full_std,
-                sde_net_arch=self.sde_net_arch,
-                use_expln=self.use_expln,
+                # sde_net_arch=self.sde_net_arch,
+                # use_expln=self.use_expln,
                 features_extractor=self.features_extractor,
                 clip_mean=self.clip_mean,
             )
@@ -165,15 +168,15 @@ class StudentPolicy(BasePolicy):
         assert isinstance(self.action_dist, StateDependentNoiseDistribution), msg
         return self.action_dist.get_std(self.log_std)
 
-    def reset_noise(self, batch_size: int = 1) -> None:
-        """
-        Sample new weights for the exploration matrix, when using gSDE.
+    # def reset_noise(self, batch_size: int = 1) -> None:
+    #     """
+    #     Sample new weights for the exploration matrix, when using gSDE.
 
-        :param batch_size:
-        """
-        msg = "reset_noise() is only available when using gSDE"
-        assert isinstance(self.action_dist, StateDependentNoiseDistribution), msg
-        self.action_dist.sample_weights(self.log_std, batch_size=batch_size)
+    #     :param batch_size:
+    #     """
+    #     msg = "reset_noise() is only available when using gSDE"
+    #     assert isinstance(self.action_dist, StateDependentNoiseDistribution), msg
+    #     self.action_dist.sample_weights(self.log_std, batch_size=batch_size)
 
     def get_action_dist_params(self, obs: th.Tensor) -> Tuple[th.Tensor, th.Tensor, Dict[str, th.Tensor]]:
         """
@@ -187,11 +190,11 @@ class StudentPolicy(BasePolicy):
         latent_pi = self.latent_pi(features)
         mean_actions = self.mu(latent_pi)
 
-        if self.use_sde:
-            latent_sde = latent_pi
-            if self.sde_features_extractor is not None:
-                latent_sde = self.sde_features_extractor(features)
-            return mean_actions, self.log_std, dict(latent_sde=latent_sde)
+        # if self.use_sde:
+        #     latent_sde = latent_pi
+        #     if self.sde_features_extractor is not None:
+        #         latent_sde = self.sde_features_extractor(features)
+        #     return mean_actions, self.log_std, dict(latent_sde=latent_sde)
         # Unstructured exploration (Original implementation)
         log_std = self.log_std(latent_pi)
         # Original Implementation to cap the standard deviation
@@ -210,7 +213,9 @@ class StudentPolicy(BasePolicy):
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
         print(f"[Student] obs={observation}")
-        return self.forward(observation, deterministic)
+        action = self.forward(observation, deterministic)
+        print(f"[Student] action={action}")
+        return action
         
     #def predict(self, observation: th.Tensor, deterministic: bool = False):
     #    action, _ = super(StudentPolicy, self).predict(observation, deterministic)
