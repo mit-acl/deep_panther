@@ -48,8 +48,22 @@ Now you can test the imitation repo by doing `python examples/quickstart.py`
 
 You can test this repo by doing `bash run.sh` 
 
+HOW TO USE A jupyter notebook in a python virtual environemnt: Follow [this](https://anbasile.github.io/posts/2017-06-25-jupyter-venv/) (note that the name he gives to the kernel is the same one as the name of the virtual envioronment. Maybe it's not needed, but just in case). And make sure that, when launching `jupyter notebook`, you select the kernel that has the same name as your virtual environment 
+
 
 TODOS: see modifications (from Andrea) in imitation repo
+
+
+The loss computation is done in `bc.py`, inside the function `_calculate_loss`
+
+## To add/delete a parameter:
+You should change:
+	panther.yaml
+	py_panther.cpp
+	panther_types.hpp
+	panther_ros.cpp
+
+and recompile
 
 ---
 

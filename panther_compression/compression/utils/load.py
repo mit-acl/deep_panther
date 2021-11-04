@@ -36,7 +36,7 @@ def load_teacher_logs(seeds, log_prefix, n_iterations, agent_name="teacher"):
     teacher = []
     for seed in seeds: 
         teacher.append(pd.read_pickle(os.path.join(log_prefix, str(seed), "teacher_no_dist.pkl")).assign(training = False))
-        teacher.append(pd.read_pickle(os.path.join(log_prefix, str(seed), "teacher_with_dist.pkl")).assign(training = False))
+        # teacher.append(pd.read_pickle(os.path.join(log_prefix, str(seed), "teacher_with_dist.pkl")).assign(training = False))
     teacher_logs = pd.concat(teacher, axis=0, ignore_index=True)    
     # Repeat these numbers for every iteration (is there a better way?)
     all_teacher_logs = []

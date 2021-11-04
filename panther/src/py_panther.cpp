@@ -115,6 +115,10 @@ PYBIND11_MODULE(py_panther, m)
 .def_readwrite("fitter_num_seg", &mt::parameters::fitter_num_seg)                  
 .def_readwrite("fitter_deg_pos", &mt::parameters::fitter_deg_pos)                  
 .def_readwrite("sampler_num_samples", &mt::parameters::sampler_num_samples)
+.def_readwrite("max_dist2goal", &mt::parameters::max_dist2goal)
+.def_readwrite("max_dist2obs", &mt::parameters::max_dist2obs)
+.def_readwrite("max_side_bbox_obs", &mt::parameters::max_side_bbox_obs)
+.def_readwrite("max_dist2BSPoscPoint", &mt::parameters::max_dist2BSPoscPoint)
       // clang-format on
       .def("__repr__", [](const mt::parameters &a) { return "<py_panther.obstacleForOpt>"; });
 

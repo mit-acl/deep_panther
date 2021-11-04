@@ -847,6 +847,10 @@ struct parameters
   double          fitter_num_seg;                     //From Casadi               //void setVar_fitter_num_seg(const std::string& value) { fitter_num_seg = std::stod(value); };  
   double          fitter_deg_pos;                     //From Casadi               //void setVar_fitter_deg_pos(const std::string& value) { fitter_deg_pos = std::stod(value); };   
   int             sampler_num_samples;                //From Casadi              //void setVar_sampler_num_samples(const std::string& value) { sampler_num_samples = std::stoi(value); };
+  double max_dist2goal;
+  double max_dist2obs;
+  double max_side_bbox_obs;
+  double max_dist2BSPoscPoint;
   // clang-format on
 };
 

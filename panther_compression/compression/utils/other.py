@@ -105,9 +105,15 @@ class ObstaclesManager():
 		self.fitter_num_seg=params["fitter_num_seg"];
 		self.fitter_deg_pos=params["fitter_deg_pos"];
 
+	def getNumObs(self):
+		return self.num_obs
+
+	def getCPsPerObstace(self):
+		return self.fitter_num_seg + self.fitter_deg_pos
+
 	def getSizeAllObstacles(self):
 		#Size of the ctrl_pts + bbox
-		return self.num_obs*(3*(self.fitter_num_seg + self.fitter_deg_pos) + 3) 
+		return self.num_obs*(3*self.getCPsPerObstace() + 3) 
 
 	def getFutureWPosObstacles(self,t):
 		w_obs=[];
@@ -122,44 +128,6 @@ class ObstaclesManager():
 		return w_obs;
 
 
-
-class ObservationManager():
-	def __init__(self):
-		om=ObstaclesManager();
-		#Observation =       [f_v, f_a, yaw_dot, f_g,  f_o1, bbox_o1, f_o2, bbox_o2 ,...]
-		self.observation_size= 3 +  3 +   1    + 3   + om.getSizeAllObstacles();
-
-	def getObservationShape(self):
-		return (1,self.observation_size)
-
-	def getRandomObservation(self):
-		return np.random.rand(1,self.observation_size)
-
-	def construct_f_obsFrom_w_state_and_w_obs(self,w_state, w_obs, w_goal):
-
-		# f_v=f_v.reshape(1,);
-		# f_a=f_a.reshape(1,);
-		# # yaw=yaw.reshape(1,); #TODO: Wrap angle here
-		# yaw_dot=yaw_dot.reshape(1,);
-
-		f_goal=w_state.f_T_w * w_goal
-		# print("w_state.f_vel().flatten()= ", w_state.f_vel().flatten())
-		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
-		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
-		observation=np.concatenate((w_state.f_vel().flatten(), w_state.f_accel().flatten(), w_state.yaw_dot.flatten(), f_goal.flatten()));
-
-		#Convert obs to f frame and append ethem to observation
-		for w_ob in w_obs:
-			observation=np.concatenate((observation, (w_state.f_T_w*w_ob.ctrl_pts).flatten(), (w_ob.bbox_inflated).flatten()))
-
-
-		observation=observation.reshape(self.getObservationShape())
-
-		# print("observation= ", observation)
-
-		assert observation.shape == self.getObservationShape()
-
-		return observation;
 
 class State():
 	def __init__(self, w_pos, w_vel, w_accel, w_yaw, yaw_dot):
@@ -241,6 +209,76 @@ class MyClampedUniformBSpline():
 			result[i,0]=self.jerk_bs[i](t)
 		return result
 
+class ObservationManager():
+	def __init__(self):
+		self.om=ObstaclesManager();
+		#Observation =       [f_v, f_a, yaw_dot, f_g,  f_o1, bbox_o1, f_o2, bbox_o2 ,...]
+		self.observation_size= 3 +  3 +   1    + 3   + self.om.getSizeAllObstacles();
+
+		params=readPANTHERparams();
+		self.v_max=params["v_max"];
+		self.a_max=params["a_max"];
+		self.j_max=params["j_max"];
+		self.ydot_max=params["ydot_max"];
+		self.max_dist2goal=params["max_dist2goal"];
+		self.max_dist2obs=params["max_dist2obs"];
+		self.max_side_bbox_obs=params["max_side_bbox_obs"];
+		ones13=np.ones((1,3));
+		self.normalization_constant=np.concatenate((self.v_max*ones13, self.a_max*ones13, self.ydot_max*np.ones((1,1)), self.max_dist2goal*ones13), axis=1)
+		for i in range(self.om.getNumObs()):
+			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.om.getCPsPerObstace())), self.max_side_bbox_obs*ones13), axis=1)
+
+		# assert print("Shape observation=", observation.shape==)
+
+	#Normalize in [-1,1]
+	def normalizeObservation(self, observation):
+		print("Shape observation=", observation.shape)
+		print("Shape normalization_constant=", self.normalization_constant.shape)
+		print("om.getSizeAllObstacles()=", self.om.getSizeAllObstacles())
+
+		observation_normalized=observation/self.normalization_constant;
+		assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
+		return observation_normalized;
+
+	def denormalizeObservation(self,observation_normalized):
+		assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all(), f"observation_normalized= {observation_normalized}" 
+		observation=observation_normalized*self.normalization_constant;
+		return observation;
+
+	# def denormalize(self, )
+
+	def getObservationShape(self):
+		return (1,self.observation_size)
+
+	def getRandomObservation(self):
+		random_observation=self.denormalizeObservation(self.getRandomNormalizedObservation())
+		return random_observation
+
+	def getRandomNormalizedObservation(self):
+		random_normalized_observation=np.random.uniform(-1,1, size=self.getObservationShape())
+		return random_normalized_observation
+
+	def construct_f_obsFrom_w_state_and_w_obs(self,w_state, w_obs, w_goal):
+
+		f_goal=w_state.f_T_w * w_goal
+		# print("w_state.f_vel().flatten()= ", w_state.f_vel().flatten())
+		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
+		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
+		observation=np.concatenate((w_state.f_vel().flatten(), w_state.f_accel().flatten(), w_state.yaw_dot.flatten(), f_goal.flatten()));
+
+		#Convert obs to f frame and append ethem to observation
+		for w_ob in w_obs:
+			observation=np.concatenate((observation, (w_state.f_T_w*w_ob.ctrl_pts).flatten(), (w_ob.bbox_inflated).flatten()))
+
+
+		observation=observation.reshape(self.getObservationShape())
+
+		# print("observation= ", observation)
+
+		assert observation.shape == self.getObservationShape()
+
+		return observation;
+
 class ActionManager():
 	def __init__(self):
 		params=readPANTHERparams();
@@ -261,11 +299,41 @@ class ActionManager():
 		self.action_size = self.action_size_pos_ctrl_pts + self.action_size_yaw_ctrl_pts +1;
 		self.Npos = self.num_seg + self.deg_pos-1;
 
+		self.max_dist2BSPoscPoint=params["max_dist2BSPoscPoint"];
+		self.max_yawcPoint=2*math.pi;
+		self.fitter_total_time=params["fitter_total_time"];
+
+		print("self.max_dist2BSPoscPoint= ", self.max_dist2BSPoscPoint)
+		print("self.max_yawcPoint= ", self.max_yawcPoint)
+		self.normalization_constant=np.concatenate((self.max_dist2BSPoscPoint*np.ones((1, self.action_size_pos_ctrl_pts)), \
+													self.max_yawcPoint*np.ones((1, self.action_size_yaw_ctrl_pts))), axis=1)
+
+
+	def normalizeAction(self, action):
+		action_normalized=np.empty(action.shape)
+		action_normalized[0,0:-1]=action[0,0:-1]/self.normalization_constant #Elementwise division
+		action_normalized[0,-1]=(2.0/self.fitter_total_time)*action[0,-1]-1 #Note that action[0,-1] is in [0, fitter_total_time]
+		assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}"
+		return action_normalized;
+
+
+	def denormalizeAction(self, action_normalized):
+		assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}"
+		action=np.empty(action_normalized.shape)
+		action[0,0:-1]=action_normalized[0,0:-1]*self.normalization_constant #Elementwise multiplication
+		action[0,-1]=(self.fitter_total_time/2.0)*(action_normalized[0,-1]+1) #Note that action[0,-1] is in [0, fitter_total_time]
+		return action
+
 	def getActionShape(self):
 		return (1,self.action_size)
 
 	def getRandomAction(self):
-		return np.random.rand(1,self.action_size)
+		random_action=self.denormalizeAction(self.getRandomNormalizedAction())
+		return random_action
+
+	def getRandomNormalizedAction(self):
+		random_normalized_action=np.random.uniform(-1,1, size=self.getActionShape())
+		return random_normalized_action
 
 	def getDegPos(self):
 		return self.deg_pos;

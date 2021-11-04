@@ -70,20 +70,24 @@ class MyEnvironment(gym.Env):
   def set_len_ep(self, len_ep):
     assert len_ep > 0, "Episode len > 0!"
     self.len_episode = len_ep
-    self.printwithName(f"Ep. len updated to {self.len_episode } [steps].")
+    # self.printwithName(f"Ep. len updated to {self.len_episode } [steps].")
     self.reset()
 
   def step(self, action):
     action=action.reshape(self.action_shape) 
     assert not np.isnan(np.sum(action)), "Received invalid command! u contains nan"
+
+    self.printwithName(f"Received actionN={action}")
+
+    action= self.am.denormalizeAction(action);
+
     # print ("action.shape= ", action.shape)
     # print ("self.action_shape= ",self.action_shape)
-    # self.printwithName(f"Received action={action}")
-    self.printwithName(f"Received action size={action.shape}")
+
+    # self.printwithName(f"Received action size={action.shape}")
 
     assert action.shape==self.action_shape, f"[Env] ERROR: action.shape={action.shape} but self.action_shape={self.action_shape}"
 
-    # u = np.array(u*self.max_act).reshape(self.mpc_act_size,) # make sure is always dim 1
       
     # print(f"[Env] Timestep={self.timestep}")
 
@@ -120,25 +124,18 @@ class MyEnvironment(gym.Env):
     else:
       done = False
     
-    observation = self.om.getRandomObservation()#np.random.rand(1,self.mpc_state_size)
-  
+    observation = self.om.getRandomNormalizedObservation()#np.random.rand(1,self.mpc_state_size)
+
     # normalized_obs = observation.reshape(-1,)/self.max_obs
-    # self.printwithName(f"returning obs={observation}")
-    self.printwithName(f"returning obs size={observation.shape}")
+    self.printwithName(f"returning obsN={observation}")
+    # self.printwithName(f"returning obs size={observation.shape}")
     return observation, reward, done, info
 
   def reset(self):
     self.time=0.0
     self.timestep = 0
     self.w_state=State(np.zeros((3,1)), np.zeros((3,1)), np.zeros((3,1)), np.zeros((1,1)), np.zeros((1,1)))
-    # self.x = self.get_random_init_state()
-    # # ref_traj = self.planner.reset()
-    # mpc_state= self.get_random_init_state();
-    #assert np.allclose(mpc_state, self.x), f"Unable to set desired random initial state. Desired: {self.x}, mav_sim: {mpc_state}."
-    # observation = mpc_state; #np.concatenate((mpc_state), axis=0)
-    # normalized_obs = observation.reshape(-1,)/self.max_obs  # reward, done, info can't be included
-
-    observation = self.om.getRandomObservation()
+    observation = self.om.getRandomNormalizedObservation()
     
     assert observation.shape == self.observation_shape
     # self.printwithName(f"returning obs={observation}")

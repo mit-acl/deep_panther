@@ -8,7 +8,7 @@ import seaborn as sns
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 plt.rcParams.update({
     "font.size": 11,
-    "text.usetex": True,
+    "text.usetex": False, #jtorde changed it to False
     "font.family": "serif",
     "axes.formatter.limits": [0,3],
     "font.sans-serif": ["Helvetica"]})
@@ -16,6 +16,7 @@ plt.rcParams.update({
 ci=95
 
 # https://seaborn.pydata.org/tutorial/relational.html#relational-tutorial
+# df stands for "data frame"
 def plot_logs(input_df, show_training = False):
 
     # df: student logs
@@ -26,30 +27,24 @@ def plot_logs(input_df, show_training = False):
 
     eval_df = input_df.loc[input_df["training"]==False]
     training_df = input_df.loc[input_df["training"]==True]
-    axs[0, 0].set_title("Source Env. (Without Disturbance)")
-    sns.lineplot(ax = axs[0, 0], x="iteration", y="return", hue="agent", estimator='mean', ci=ci, data =eval_df.loc[eval_df["disturbance"] == False])
+    
+    pd.set_option("display.max_rows", None)#Use this to print the whole dataframe 
+    print(eval_df)
+    # print(eval_df.loc)
+    axs[0, 0].set_title("Iteration vs Return")
+    sns.lineplot(ax = axs[0, 0], x="iteration", y="return", hue="agent", estimator='mean', ci=ci, data =eval_df)
     axs[0, 0].set(xlabel='Num. demonstrations used for training', ylabel='Return')
 
-    axs[0, 1].set_title("Target Env. (With Disturbance)")
-    sns.lineplot(ax = axs[0, 1], x="iteration", y="return", hue="agent", estimator='mean', ci=ci, data =eval_df.loc[eval_df["disturbance"] == True])
-    axs[0, 1].set(xlabel='Num. demonstrations used for training', ylabel='Return')
-
-    axs[1, 0].set_title("Source Env. (Without Disturbance)")
-    sns.lineplot(ax = axs[1, 0], x="iteration", y="len", hue="agent", estimator='mean', ci=ci, data =eval_df.loc[eval_df["disturbance"] == False])
+    axs[1, 0].set_title("Iteration vs len")
+    sns.lineplot(ax = axs[1, 0], x="iteration", y="len", hue="agent", estimator='mean', ci=ci, data =eval_df)
     axs[1, 0].set(xlabel='Num. demonstrations used for training', ylabel='Episode Length')
 
-    axs[1, 1].set_title("Target Env. (With Disturbance)")
-    sns.lineplot(ax = axs[1, 1], x="iteration", y="len", hue="agent", estimator='mean', ci=ci, data =eval_df.loc[eval_df["disturbance"] == True])
-    axs[1, 1].set(xlabel='Num. demonstrations used for training', ylabel='Episode Length')
-
-    axs[2, 0].set_title("Source Env. (Without Disturbance)")
-    sns.lineplot(ax = axs[2, 0], x="iteration", y="success", hue="agent", estimator='mean', ci=ci, data =eval_df.loc[eval_df["disturbance"] == False])
+    axs[2, 0].set_title("Iteration vs success")
+    sns.lineplot(ax = axs[2, 0], x="iteration", y="success", hue="agent", estimator='mean', ci=ci, data =eval_df)
     axs[2, 0].set(xlabel='Num. demonstrations used for training', ylabel="Success Rate")
 
-    axs[2, 1].set_title("Target Env. (With Disturbance)")
-    sns.lineplot(ax = axs[2, 1], x="iteration", y="success", hue="agent", estimator='mean', ci=ci, data =eval_df.loc[eval_df["disturbance"] == True])
-    axs[2, 1].set(xlabel='Num. demonstrations used for training', ylabel='Success Rate')
 
+    plt.show()
 
     if show_training: 
         axs[0, 2].set_title("Training Env.")

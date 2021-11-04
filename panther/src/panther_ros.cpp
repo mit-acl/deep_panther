@@ -137,6 +137,10 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "fitter_num_seg", par_.fitter_num_seg);
   safeGetParam(nh1_, "fitter_deg_pos", par_.fitter_deg_pos);
   safeGetParam(nh1_, "sampler_num_samples", par_.sampler_num_samples);
+  safeGetParam(nh1_, "max_dist2goal", par_.max_dist2goal);
+  safeGetParam(nh1_, "max_dist2obs", par_.max_dist2obs);
+  safeGetParam(nh1_, "max_side_bbox_obs", par_.max_side_bbox_obs);
+  safeGetParam(nh1_, "max_dist2BSPoscPoint", par_.max_dist2BSPoscPoint);
 
   bool perfect_prediction;  // use_ground_truth_prediction
   safeGetParam(nh1_, "perfect_prediction", perfect_prediction);
