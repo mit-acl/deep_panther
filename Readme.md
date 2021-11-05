@@ -32,7 +32,7 @@ python3 -m venv ./my_venv
 printf '\nalias activate_my_venv="source ~/installations/venvs_python/my_venv/bin/activate"' >> ~/.bashrc 
 ```
 
-In UBUNTU 18.04: First, install Python 3.7 (needed if you are in Ubuntu 18.04) following [this](https://stackoverflow.com/questions/51279791/how-to-upgrade-python-version-to-3-7/51280444#51280444)
+In UBUNTU 18.04: First, install Python 3.7 (needed if you are in Ubuntu 18.04) following [this](https://stackoverflow.com/questions/51279791/how-to-upgrade-python-version-to-3-7/51280444#51280444), and then run these commands:
 ```bash
 sudo apt-get install python3.7-venv
 cd ~/installations/venvs_python/
