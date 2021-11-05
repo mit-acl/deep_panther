@@ -26,7 +26,8 @@ if __name__ == '__main__':
 	        params_yaml_2=yaml.safe_load(stream)
 	    except yaml.YAMLError as exc:
 	        print(exc)
-	params_yaml = dict(params_yaml_1.items() + params_yaml_2.items())
+	# params_yaml = dict(params_yaml_1.items() + params_yaml_2.items()) #Doesn't work in Python 3
+	params_yaml = {**params_yaml_1, **params_yaml_2}                        # NOTE: Python 3.5+ ONLY
 
 
 	# print a
@@ -66,7 +67,7 @@ if __name__ == '__main__':
 
 	ctrl_pts=[]; #np.array([[],[],[]])
 	for i in range(int(par_.fitter_num_seg + par_.fitter_deg_pos)):
-		print i
+		print ("i=",i)
 		ctrl_pts.append(np.array([[0],[0],[0]]))
 
 	obstacle.ctrl_pts = ctrl_pts

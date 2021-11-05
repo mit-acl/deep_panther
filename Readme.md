@@ -92,14 +92,49 @@ Matlab is only needed if you want to introduce modifications to the optimization
 Install CasADi from source (see [this](https://github.com/casadi/casadi/wiki/InstallationLinux) for more details) and the solver IPOPT:
 ```bash
 sudo apt-get install gcc g++ gfortran git cmake liblapack-dev pkg-config --install-recommends
-sudo apt-get install swig
 sudo apt-get install coinor-libipopt-dev
+sudo apt-get remove swig
+sudo apt-get remove swig3.0  #If you don't do this, the compilation of casadi may fail with the error "swig error : Unrecognized option -matlab"
+sudo apt-get remove swig4.0  #If you don't do this, the compilation of casadi may fail with the error "swig error : Unrecognized option -matlab"
+cd ~/installations
+git clone https://github.com/jaeandersson/swig
+cd swig
+git checkout -b matlab-customdoc origin/matlab-customdoc        
+sh autogen.sh
+sudo apt install gcc-7 g++-7 #Only needed if you are in Ubuntu 20.04
+./configure CXX=g++-7 CC=gcc-7  
+sudo apt-get install bison -y
+sudo apt-get install byacc -y
+make
+sudo make install
 cd ~/installations #Or any other folder of your choice
 git clone https://github.com/casadi/casadi.git -b master casadi
-cd casadi && mkdir build && cd build
-cmake . -DCMAKE_BUILD_TYPE=Release -DWITH_PYTHON=ON -DWITH_IPOPT=ON .. 
+cd casadi
+#The following line is only needed in case you wanna use GUROBI from Casadi:
+#Add gurobi91 to the file cmake/FindGUROBI.cmake   #Or in general to the gurobi version you have (type gurobi.sh to find this)
+mkdir build && cd build
+make clean 
+#The following line is only needed in case you wanna use GUROBI from Casadi:
+#cmake . -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=ON -DWITH_MATLAB=ON -DWITH_PYTHON=ON -DWITH_DEEPBIND=ON -DWITH_GUROBI=ON ..
+#If you don't wanna use GUROBI from Casadi:
+cmake . -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=ON -DWITH_MATLAB=ON -DWITH_PYTHON=ON -DWITH_DEEPBIND=ON ..
+#For some reason, I needed to run the command above twice until `Ipopt` was detected (although `IPOPT` was being detected already)
+make -j20
 sudo make install
+#Now, open MATLAB, and type this:
+edit(fullfile(userpath,'startup.m'))
+#And in that file, add this line line 
+addpath(genpath('/usr/local/matlab/'))
 ``` 
+
+Now, you can restart Matlab (or run the file `startup.m`), and make sure this works: 
+
+```bash
+import casadi.*
+x = MX.sym('x')
+disp(jacobian(sin(x),x))
+
+```
 
 #### Linear Solvers
 
@@ -143,35 +178,11 @@ And then
 
 Additionally, if you have Ubuntu 20.04, you'll need `sudo apt-get install python-is-python3 -y`
 
-<details>
-  <summary> <b>Optional (only if you want to modify the optimization problem, or use a different solver than MA27. MATLAB needed)</b></summary>
 
-The easiest way to do this is to install casadi from binaries by simply following these commands:
-
-````bash
-cd ~/installations
-mkdir casadi
-wget https://github.com/casadi/casadi/releases/download/3.5.5/casadi-linux-matlabR2014b-v3.5.5.tar.gz
-tar xvzf casadi-linux-matlabR2014b-v3.5.5.tar.gz -C ./casadi
-````
-
-Open Matlab, execute the command `edit(fullfile(userpath,'startup.m'))`, and add the line `addpath(genpath('/home/YOUR_USERNAME/installations/casadi'))` in that file (changing `YOUR_USERNAME` with your username). This file `startup.m` is executed every time Matlab starts.
-
-Then you can restart Matlab (or run the file `startup.m`), and make sure this works: 
-
-```bash
-import casadi.*
-x = MX.sym('x')
-disp(jacobian(sin(x),x))
-
-```
-
+OTHER STUFF FROM THE OLD README:
 Then, to use a specific linear solver, you simply need to change the name of `linear_solver_name` in the file `main.m`. You can also introduce more changes in the optimization problem in that file. After these changes, you need to run `main.m` twice: first with `pos_is_fixed=false` and then with `pos_is_fixed=true`. This will generate all the necessary files in the `panther/matlab/casadi_generated_files` folder. These files will be read by C++.
 
 > Note: When using a linear solver different from `mumps`, you need to start Matlab from the terminal (typing `matlab`).More info [in this issue](https://github.com/casadi/casadi/issues/2032).
-
-> Note: Instead of the binary installation explained in this section, another (but not so straightforward) way would be to use the installation `from source` done above, but it requires some patches to swig, see [this](https://github.com/casadi/casadi/wiki/matlab).
-</details>
 
 
 ### <ins>Compilation<ins>
@@ -202,15 +213,16 @@ You can also change the following arguments when executing `roslaunch`
 | ----------- | ----------- |
 | `quad`      | Name of the drone        |
 | `perfect_controller`      | If true, the drone will track perfectly the trajectories, and the controller and physics engine of the drone will not be launched. If false, you will need to clone and compile [snap_sim](https://gitlab.com/mit-acl/fsw/snap-stack/snap_sim), [snap](https://gitlab.com/mit-acl/fsw/snap-stack/snap) and [outer_loop](https://gitlab.com/mit-acl/fsw/snap-stack/outer_loop)       |
-| `perfect_prediction`      | If true, the drone will have access to the ground truth of the trajectories of the obstacles. If false, the drone will estimate their trajectories (it needs `gazebo=true` in this case).       |
+| `perfect_prediction`      | If true, the drone will have access to the ground truth of the trajectories of the obstacles. If false, the drone will estimate their trajectories (it needs `gazebo:=true` in this case).       |
 | `gui_mission`      | If true, a gui will be launched to start the experiment       |
 | `rviz`      | If true, Rviz will be launched for visualization       |
 | `gazebo`      | If true, Gazebo will be launched  |
-| `gzclient`      | If true, the gui of Gazebo will be launched. If false, (and if `gazebo=true`) only gzserver will be launched. Note: right now there is some delay in the visualization of the drone the gui of Gazebo. But this doesn't affect the point clouds generated. |
+| `gzclient`      | If true, the gui of Gazebo will be launched. If false, (and if `gazebo:=true`) only gzserver will be launched. Note: right now there is some delay in the visualization of the drone the gui of Gazebo. But this doesn't affect the point clouds generated. |
 
 You can see the default values of these arguments in `simulation.launch`.
 
-> **_NOTE:_**  (TODO) Right now the radius of the drone plotted in Gazebo (which comes from the `scale` field of `quadrotor_base_urdf.xacro`) does not correspond with the radius specified in `mader.yaml`. 
+> **_NOTE:_**  (TODO) Right now the radius of the drone plotted in Gazebo (which comes from the `scale` field of `quadrotor_base_urdf.xacro`) does not correspond with the radius specified in `panther.yaml`. 
+
 
 > **_NOTE:_**  (TODO)  The case `gazebo=true` has not been fully tested in Ubuntu 20.04.
 

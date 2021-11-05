@@ -446,10 +446,10 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
     // mt::PieceWisePol pwp;
     mt::log log;
 
-    // std::cout << "WAITING FOR SERVICE" << std::endl;
-    // ros::service::waitForService("/gazebo/pause_physics");
-    // std::cout << "SERVICE found" << std::endl;
-    // std::cout << "pauseGazebo_.exists()= " << pauseGazebo_.exists() << std::endl;
+    std::cout << "WAITING FOR SERVICE" << std::endl;
+    ros::service::waitForService("/gazebo/pause_physics");
+    std::cout << "SERVICE found" << std::endl;
+    std::cout << "pauseGazebo_.exists()= " << pauseGazebo_.exists() << std::endl;
 
     if (par_.stop_time_when_replanning)
     {
