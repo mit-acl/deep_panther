@@ -47,7 +47,8 @@ activate_my37
 git clone THISREPO
 git submodule init && git submodule update
 cd imitation
-pip install numpy Cython wheel seals
+pip install wheel
+pip install numpy Cython seals
 pip install -e .
 ```
 
