@@ -59,11 +59,11 @@ class StudentPolicy(BasePolicy):
         features_dim: int = 2, # Size of input features
         activation_fn: Type[nn.Module] = nn.ReLU,
         # use_sde: bool = False,
-        log_std_init: float = -3,
-        full_std: bool = True,
+        # log_std_init: float = -3,
+        # full_std: bool = True,
         # sde_net_arch: Optional[List[int]] = None,
         # use_expln: bool = False,
-        clip_mean: float = -1.0,
+        # clip_mean: float = -1.0,
         optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
         optimizer_kwargs: Optional[Dict[str, Any]] = None,
         
@@ -91,11 +91,11 @@ class StudentPolicy(BasePolicy):
         self.net_arch = net_arch
         self.features_dim = features_dim
         self.activation_fn = activation_fn
-        self.log_std_init = log_std_init
+        # self.log_std_init = log_std_init
         # self.sde_net_arch = sde_net_arch
         # self.use_expln = use_expln
-        self.full_std = full_std
-        self.clip_mean = clip_mean
+        # self.full_std = full_std
+        # self.clip_mean = clip_mean
 
         self.name=Style.BRIGHT+Fore.RED+"[Stu]"+Style.RESET_ALL
 
@@ -147,12 +147,12 @@ class StudentPolicy(BasePolicy):
                 features_dim=self.features_dim,
                 activation_fn=self.activation_fn,
                 # use_sde=self.use_sde,
-                log_std_init=self.log_std_init,
-                full_std=self.full_std,
+                # log_std_init=self.log_std_init,
+                # full_std=self.full_std,
                 # sde_net_arch=self.sde_net_arch,
                 # use_expln=self.use_expln,
                 features_extractor=self.features_extractor,
-                clip_mean=self.clip_mean,
+                # clip_mean=self.clip_mean,
             )
         )
         return data
@@ -218,10 +218,10 @@ class StudentPolicy(BasePolicy):
         return self.action_dist.log_prob_from_params(mean_actions, log_std, **kwargs)
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
-        self.printwithName(f"Received obs={observation}")
+        # self.printwithName(f"Received obs={observation}")
         # self.printwithName(f"Received obs shape={observation.shape}")
         action = self.forward(observation, deterministic)
-        self.printwithName(f"action={action}")
+        # self.printwithName(f"action={action}")
         # self.printwithName(f"Returning action shape={action.shape}")
         return action
         

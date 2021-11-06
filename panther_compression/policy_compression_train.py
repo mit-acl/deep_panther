@@ -29,6 +29,10 @@ from stable_baselines3.common.env_checker import check_env
 
 def printInBoldBlue(data_string):
     print(Style.BRIGHT+Fore.BLUE+data_string+Style.RESET_ALL)
+def printInBoldRed(data_string):
+    print(Style.BRIGHT+Fore.RED+data_string+Style.RESET_ALL)
+def printInBoldGreen(data_string):
+    print(Style.BRIGHT+Fore.GREEN+data_string+Style.RESET_ALL)
 
 
 if __name__ == "__main__":
@@ -141,7 +145,7 @@ if __name__ == "__main__":
     #                            |the environment is the number of time steps
 
     pre_train_stats = evaluate_policy(trainer.get_policy(), test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/pre_train_no_dist")
-    print("[Evaluation]Pre-training reward: {}, len: {}.".format(pre_train_stats["return_mean"], pre_train_stats["len_mean"]))
+    print("[Evaluation] Student reward: {}, len: {}.".format(pre_train_stats["return_mean"], pre_train_stats["len_mean"]))
 
     # Evaluate the reward of the expert
     expert_stats = evaluate_policy( expert_policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/teacher_no_dist")
@@ -193,7 +197,13 @@ if __name__ == "__main__":
 
         # no disturbance
         post_train_stats = evaluate_policy(trainer.get_policy(), test_venv,eval_episodes=args.n_evals, log_path=LOG_PATH + "/post_train_no_dist" )
+        student_improvement=(post_train_stats["return_mean"]-pre_train_stats["return_mean"])/abs(pre_train_stats["return_mean"]);
         print("[Complete] Reward: Pre: {}, Post: {}.".format( pre_train_stats["return_mean"], post_train_stats["return_mean"]))
+        if(student_improvement>0):
+            printInBoldGreen(f"Student improvement: {student_improvement*100}%")
+        else:
+            printInBoldRed(f"Student improvement: {student_improvement*100}%")
+        
         print("[Complete] Episode length: Pre: {}, Post: {}.".format( pre_train_stats["len_mean"], post_train_stats["len_mean"]))
 
         del pre_train_stats, post_train_stats

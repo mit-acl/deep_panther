@@ -73,13 +73,12 @@ class MyEnvironment(gym.Env):
     # self.printwithName(f"Ep. len updated to {self.len_episode } [steps].")
     self.reset()
 
-  def step(self, action):
-    action=action.reshape(self.action_shape) 
-    assert not np.isnan(np.sum(action)), "Received invalid command! u contains nan"
+  def step(self, action_normalized):
+    action_normalized=action_normalized.reshape(self.action_shape) 
+    assert not np.isnan(np.sum(action_normalized)), "Received invalid command! u contains nan"
 
-    self.printwithName(f"Received actionN={action}")
-
-    action= self.am.denormalizeAction(action);
+    # self.printwithName(f"Received actionN={action}")
+    action= self.am.denormalizeAction(action_normalized);
 
     # print ("action.shape= ", action.shape)
     # print ("self.action_shape= ",self.action_shape)
@@ -110,7 +109,7 @@ class MyEnvironment(gym.Env):
 
     ####################################
 
-    reward=0.0
+    # reward=0.0
 
     info = {}
     self.timestep = self.timestep + 1
@@ -124,10 +123,13 @@ class MyEnvironment(gym.Env):
     else:
       done = False
     
-    observation = self.om.getRandomNormalizedObservation()#np.random.rand(1,self.mpc_state_size)
+    observation = self.om.getRandomNormalizedObservation()
 
-    # normalized_obs = observation.reshape(-1,)/self.max_obs
-    self.printwithName(f"returning obsN={observation}")
+    reward=-np.linalg.norm(action_normalized-self.am.getDummyOptimalNormalizedAction())
+
+
+    # self.printwithName(f"returning reward={reward}")
+    # self.printwithName(f"returning obsN={observation}")
     # self.printwithName(f"returning obs size={observation.shape}")
     return observation, reward, done, info
 
@@ -141,16 +143,7 @@ class MyEnvironment(gym.Env):
     # self.printwithName(f"returning obs={observation}")
     return observation
 
-  # def get_random_init_state(self):
-  #   # TODO: pass initial set and randomly sample from there.
-  #   # TODO: load initial state from params. 
-  #   pos = np.zeros(3)
-  #   pos[0:2] = np.random.uniform(0.1, -0.1, 2)
-  #   pos[2] = np.random.uniform(-0.1, 0.1) #np.random.uniform(0.9, 1.1)
-  #   vel = np.random.uniform(-0.1, 0.1, 3)
-  #   rp = np.random.uniform(-0.1, 0.1, 2)
-  #   return np.concatenate((pos, vel, rp), axis=None).reshape(self.mpc_state_size,)
-  
+ 
   def render(self, mode='human'):
     raise NotImplementedError()
     return

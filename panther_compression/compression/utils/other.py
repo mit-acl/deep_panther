@@ -4,6 +4,7 @@ import numpy as np
 from pyquaternion import Quaternion
 import math
 from scipy.interpolate import BSpline
+# import py_panther
 
 class TfMatrix():
 	def __init__(self, T):
@@ -71,6 +72,23 @@ def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
 	# print(w_T_b)
 
 	return TfMatrix(w_T_b)
+
+# def getPANTHERparamsAsCppStruct():
+
+#     params_yaml=readPANTHERparams();
+
+#     params_yaml["b_T_c"]=np.array([[0, 0, 1, 0],
+#                                   [-1, 0, 0, 0],
+#                                   [0, -1, 0, 0],
+#                                   [0, 0, 0, 1]])
+
+#     par=py_panther.parameters();
+
+#     for key in params_yaml:
+#         exec('%s = %s' % ('par.'+key, 'params_yaml["'+key+'"]')) #See https://stackoverflow.com/a/60487422/6057617 and https://www.pythonpool.com/python-string-to-variable-name/
+
+#     return par
+
 
 def readPANTHERparams():
 
@@ -308,6 +326,12 @@ class ActionManager():
 		self.normalization_constant=np.concatenate((self.max_dist2BSPoscPoint*np.ones((1, self.action_size_pos_ctrl_pts)), \
 													self.max_yawcPoint*np.ones((1, self.action_size_yaw_ctrl_pts))), axis=1)
 
+	def getDummyOptimalNormalizedAction(self):
+		action=self.getDummyOptimalAction();
+		return self.normalizeAction(action)
+
+	def getDummyOptimalAction(self):
+		return 0.6*np.ones(self.getActionShape())
 
 	def normalizeAction(self, action):
 		action_normalized=np.empty(action.shape)
