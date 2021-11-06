@@ -4,7 +4,7 @@ import numpy as np
 from pyquaternion import Quaternion
 import math
 from scipy.interpolate import BSpline
-# import py_panther
+import py_panther
 
 class TfMatrix():
 	def __init__(self, T):
@@ -73,21 +73,21 @@ def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
 
 	return TfMatrix(w_T_b)
 
-# def getPANTHERparamsAsCppStruct():
+def getPANTHERparamsAsCppStruct():
 
-#     params_yaml=readPANTHERparams();
+    params_yaml=readPANTHERparams();
 
-#     params_yaml["b_T_c"]=np.array([[0, 0, 1, 0],
-#                                   [-1, 0, 0, 0],
-#                                   [0, -1, 0, 0],
-#                                   [0, 0, 0, 1]])
+    params_yaml["b_T_c"]=np.array([[0, 0, 1, 0],
+                                  [-1, 0, 0, 0],
+                                  [0, -1, 0, 0],
+                                  [0, 0, 0, 1]])
 
-#     par=py_panther.parameters();
+    par=py_panther.parameters();
 
-#     for key in params_yaml:
-#         exec('%s = %s' % ('par.'+key, 'params_yaml["'+key+'"]')) #See https://stackoverflow.com/a/60487422/6057617 and https://www.pythonpool.com/python-string-to-variable-name/
+    for key in params_yaml:
+        exec('%s = %s' % ('par.'+key, 'params_yaml["'+key+'"]')) #See https://stackoverflow.com/a/60487422/6057617 and https://www.pythonpool.com/python-string-to-variable-name/
 
-#     return par
+    return par
 
 
 def readPANTHERparams():

@@ -2,9 +2,9 @@ import sys
 import numpy as np
 import copy
 from random import random
-from compression.utils.other import ActionManager, ObservationManager #, getPANTHERparamsAsCppStruct
+from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct
 from colorama import init, Fore, Back, Style
-# import py_panther
+import py_panther
 
 class ExpertPolicy(object):
 
@@ -15,9 +15,9 @@ class ExpertPolicy(object):
         self.action_shape=self.am.getActionShape();
         self.observation_shape=self.om.getObservationShape();
 
-        # self.par=getPANTHERparamsAsCppStruct();
+        self.par=getPANTHERparamsAsCppStruct();
 
-        # self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
+        self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
 
 
         self.reset()
@@ -50,35 +50,35 @@ class ExpertPolicy(object):
 
 
         ## Call the optimization
-        # init_state=py_panther.state();
-        # init_state.pos=np.array([[-10], [0], [0]]);
-        # init_state.vel=np.array([[0], [0], [0]]);
-        # init_state.accel=np.array([[0], [0], [0]]);
+        init_state=py_panther.state();
+        init_state.pos=np.array([[-10], [0], [0]]);
+        init_state.vel=np.array([[0], [0], [0]]);
+        init_state.accel=np.array([[0], [0], [0]]);
 
-        # final_state=py_panther.state();
-        # final_state.pos=np.array([[10], [0], [0]]);
-        # final_state.vel=np.array([[0], [0], [0]]);
-        # final_state.accel=np.array([[0], [0], [0]]);
+        final_state=py_panther.state();
+        final_state.pos=np.array([[10], [0], [0]]);
+        final_state.vel=np.array([[0], [0], [0]]);
+        final_state.accel=np.array([[0], [0], [0]]);
 
 
-        # self.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, 2.0);
-        # self.my_SolverIpopt.setFocusOnObstacle(True);
+        self.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, 2.0);
+        self.my_SolverIpopt.setFocusOnObstacle(True);
 
-        # obstacle=py_panther.obstacleForOpt()
-        # obstacle.bbox_inflated=np.array([[0.5],[0.5],[0.5]])
+        obstacle=py_panther.obstacleForOpt()
+        obstacle.bbox_inflated=np.array([[0.5],[0.5],[0.5]])
 
-        # ctrl_pts=[]; #np.array([[],[],[]])
-        # for i in range(int(self.par.fitter_num_seg + self.par.fitter_deg_pos)):
-        #     print ("i=",i)
-        #     ctrl_pts.append(np.array([[0],[0],[0]]))
+        ctrl_pts=[]; #np.array([[],[],[]])
+        for i in range(int(self.par.fitter_num_seg + self.par.fitter_deg_pos)):
+            print ("i=",i)
+            ctrl_pts.append(np.array([[0],[0],[0]]))
 
-        # obstacle.ctrl_pts = ctrl_pts
+        obstacle.ctrl_pts = ctrl_pts
 
-        # obstacles=[obstacle];
+        obstacles=[obstacle];
 
-        # self.my_SolverIpopt.setObstaclesForOpt(obstacles);
+        self.my_SolverIpopt.setObstaclesForOpt(obstacles);
 
-        # self.my_SolverIpopt.optimize();
+        self.my_SolverIpopt.optimize();
         #### End of call the optimization
 
 
