@@ -107,6 +107,9 @@ double getMinTimeDoubleIntegrator3D(const Eigen::Vector3d& p0, const Eigen::Vect
                                     const Eigen::Vector3d& vf, const Eigen::Vector3d& v_max,
                                     const Eigen::Vector3d& a_max);
 
+double getMinTimeDoubleIntegrator3DFromState(mt::state initial_state, mt::state final_state,
+                                             const Eigen::Vector3d& v_max, const Eigen::Vector3d& a_max);
+
 panther_msgs::Log log2LogMsg(mt::log log);
 visualization_msgs::MarkerArray pwp2ColoredMarkerArray(mt::PieceWisePol& pwp, double t_init, double t_final,
                                                        int samples, std::string ns, Eigen::Vector3d& color);

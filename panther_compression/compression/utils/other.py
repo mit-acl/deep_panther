@@ -5,6 +5,7 @@ from pyquaternion import Quaternion
 import math
 from scipy.interpolate import BSpline
 import py_panther
+from colorama import init, Fore, Back, Style
 
 class TfMatrix():
 	def __init__(self, T):
@@ -75,19 +76,19 @@ def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
 
 def getPANTHERparamsAsCppStruct():
 
-    params_yaml=readPANTHERparams();
+	params_yaml=readPANTHERparams();
 
-    params_yaml["b_T_c"]=np.array([[0, 0, 1, 0],
-                                  [-1, 0, 0, 0],
-                                  [0, -1, 0, 0],
-                                  [0, 0, 0, 1]])
+	params_yaml["b_T_c"]=np.array([[0, 0, 1, 0],
+								  [-1, 0, 0, 0],
+								  [0, -1, 0, 0],
+								  [0, 0, 0, 1]])
 
-    par=py_panther.parameters();
+	par=py_panther.parameters();
 
-    for key in params_yaml:
-        exec('%s = %s' % ('par.'+key, 'params_yaml["'+key+'"]')) #See https://stackoverflow.com/a/60487422/6057617 and https://www.pythonpool.com/python-string-to-variable-name/
+	for key in params_yaml:
+		exec('%s = %s' % ('par.'+key, 'params_yaml["'+key+'"]')) #See https://stackoverflow.com/a/60487422/6057617 and https://www.pythonpool.com/python-string-to-variable-name/
 
-    return par
+	return par
 
 
 def readPANTHERparams():
@@ -126,12 +127,12 @@ class ObstaclesManager():
 	def getNumObs(self):
 		return self.num_obs
 
-	def getCPsPerObstace(self):
+	def getCPsPerObstacle(self):
 		return self.fitter_num_seg + self.fitter_deg_pos
 
 	def getSizeAllObstacles(self):
 		#Size of the ctrl_pts + bbox
-		return self.num_obs*(3*self.getCPsPerObstace() + 3) 
+		return self.num_obs*(3*self.getCPsPerObstacle() + 3) 
 
 	def getFutureWPosObstacles(self,t):
 		w_obs=[];
@@ -227,32 +228,113 @@ class MyClampedUniformBSpline():
 			result[i,0]=self.jerk_bs[i](t)
 		return result
 
+def normalize(v):
+	norm = np.linalg.norm(v)
+	if norm == 0: 
+		print("The norm is zero, aborting")
+		raise RuntimeError
+	return v / norm
+
+
 class ObservationManager():
 	def __init__(self):
-		self.om=ObstaclesManager();
+		self.obsm=ObstaclesManager();
 		#Observation =       [f_v, f_a, yaw_dot, f_g,  f_o1, bbox_o1, f_o2, bbox_o2 ,...]
-		self.observation_size= 3 +  3 +   1    + 3   + self.om.getSizeAllObstacles();
+		self.observation_size= 3 +  3 +   1    + 3   + self.obsm.getSizeAllObstacles();
 
 		params=readPANTHERparams();
 		self.v_max=params["v_max"];
 		self.a_max=params["a_max"];
 		self.j_max=params["j_max"];
 		self.ydot_max=params["ydot_max"];
-		self.max_dist2goal=params["max_dist2goal"];
+		# self.max_dist2goal=params["max_dist2goal"];
 		self.max_dist2obs=params["max_dist2obs"];
 		self.max_side_bbox_obs=params["max_side_bbox_obs"];
+		self.Ra=params["Ra"]
 		ones13=np.ones((1,3));
-		self.normalization_constant=np.concatenate((self.v_max*ones13, self.a_max*ones13, self.ydot_max*np.ones((1,1)), self.max_dist2goal*ones13), axis=1)
-		for i in range(self.om.getNumObs()):
-			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.om.getCPsPerObstace())), self.max_side_bbox_obs*ones13), axis=1)
+		self.normalization_constant=np.concatenate((self.v_max*ones13, self.a_max*ones13, self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
+		for i in range(self.obsm.getNumObs()):
+			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)
 
 		# assert print("Shape observation=", observation.shape==)
+
+	def printObs(self, obs):
+		print("----The observation is:")
+		print(Fore.BLUE +f"f_v.T={self.getf_v(obs).T}"+Style.RESET_ALL)
+		print(Fore.GREEN +f"f_a.T={self.getf_a(obs).T}"+Style.RESET_ALL)
+		print(Fore.MAGENTA +f"yaw_dot={self.getyaw_dot(obs)}"+Style.RESET_ALL)
+		print(Fore.CYAN +f"f_g.T={self.getf_g(obs).T}"+Style.RESET_ALL)
+
+		for i in range(self.obsm.getNumObs()):
+			print(f"Obstacle {i}:")
+			ctrl_pts=self.getCtrlPtsObstacleI(obs,i) 
+			bbox_inflated=self.getBboxInflatedObstacleI(obs,i)
+
+			print(Fore.YELLOW +f"ctrl_pts={ctrl_pts}"+Style.RESET_ALL)
+			print(Fore.BLUE +f"bbox_inflated.T={bbox_inflated.T}"+Style.RESET_ALL)
+
+		print("----------------------")
+
+
+
+	def getIndexStartObstacleI(self,i):
+		return 10+(self.obsm.getCPsPerObstacle()+3)*i
+
+	def getCtrlPtsObstacleI(self,obs,i):
+		index_start_obstacle_i=self.getIndexStartObstacleI(i)
+		ctrl_pts=[]; 
+		num_cps_per_obstacle=self.obsm.getCPsPerObstacle();
+		for j in range(num_cps_per_obstacle):
+			index_start_cpoint=index_start_obstacle_i+3*j
+			cpoint_j=obs[0,index_start_cpoint:index_start_cpoint+3].reshape(3,1)
+			ctrl_pts.append(cpoint_j)
+
+		return ctrl_pts
+
+	def getBboxInflatedObstacleI(self,obs,i):
+		index_start_obstacle_i=self.getIndexStartObstacleI(i)
+
+		tmp=index_start_obstacle_i+3*self.obsm.getCPsPerObstacle()
+
+		bbox_inflated=obs[0,tmp:tmp+4].reshape(3,1)
+
+		return bbox_inflated
+
+	def getf_v(self, obs):
+		return obs[0,0:3].reshape((3,1)) #Column vector
+
+	def getf_a(self, obs):
+		return obs[0,3:6].reshape((3,1)) #Column vector
+
+	def getyaw_dot(self, obs):
+		return obs[0,6].reshape((1,1)) 
+
+	def getf_g(self, obs):
+		return obs[0,7:10].reshape((3,1)) #Column vector
+
+	def getObstacles(self, obs):
+		# print("obs is= ", obs)
+
+		obstacles=[]
+		for i in range(self.obsm.getNumObs()):
+
+			ctrl_pts=self.getCtrlPtsObstacleI(obs,i) 
+			bbox_inflated=self.getBboxInflatedObstacleI(obs,i)
+
+			obstacle=py_panther.obstacleForOpt()
+
+			obstacle.ctrl_pts=ctrl_pts
+			obstacle.bbox_inflated=bbox_inflated
+
+			obstacles.append(obstacle)
+
+		return obstacles
 
 	#Normalize in [-1,1]
 	def normalizeObservation(self, observation):
 		print("Shape observation=", observation.shape)
 		print("Shape normalization_constant=", self.normalization_constant.shape)
-		print("om.getSizeAllObstacles()=", self.om.getSizeAllObstacles())
+		print("obsm.getSizeAllObstacles()=", self.obsm.getSizeAllObstacles())
 
 		observation_normalized=observation/self.normalization_constant;
 		assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
@@ -276,13 +358,15 @@ class ObservationManager():
 		random_normalized_observation=np.random.uniform(-1,1, size=self.getObservationShape())
 		return random_normalized_observation
 
-	def construct_f_obsFrom_w_state_and_w_obs(self,w_state, w_obs, w_goal):
+	def construct_f_obsFrom_w_state_and_w_obs(self,w_state, w_obs, w_gterm):
 
-		f_goal=w_state.f_T_w * w_goal
+		f_gterm=w_state.f_T_w * w_gterm
+		dist2gterm=np.linalg.norm(f_gterm);
+		f_g= min(dist2gterm-1e-4, self.Ra)*normalize(f_gterm)
 		# print("w_state.f_vel().flatten()= ", w_state.f_vel().flatten())
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
-		observation=np.concatenate((w_state.f_vel().flatten(), w_state.f_accel().flatten(), w_state.yaw_dot.flatten(), f_goal.flatten()));
+		observation=np.concatenate((w_state.f_vel().flatten(), w_state.f_accel().flatten(), w_state.yaw_dot.flatten(), f_g.flatten()));
 
 		#Convert obs to f frame and append ethem to observation
 		for w_ob in w_obs:

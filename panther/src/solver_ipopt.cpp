@@ -415,6 +415,8 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
   t_init_ = t_init;
   t_final_guess_ = t_final;
 
+  std::cout << "total_time_guess= " << t_final_guess_ - t_init_ << std::endl;
+
   return true;
 }
 

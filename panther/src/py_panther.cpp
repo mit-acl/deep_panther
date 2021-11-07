@@ -15,6 +15,8 @@ PYBIND11_MODULE(py_panther, m)
 {
   m.doc() = "pybind11 py_panther plugin";
 
+  m.def("getMinTimeDoubleIntegrator3DFromState", &getMinTimeDoubleIntegrator3DFromState);
+
   py::class_<mt::state>(m, "state")
       .def(py::init<>())  /////////////////////////
       .def_readwrite("pos", &mt::state::pos)

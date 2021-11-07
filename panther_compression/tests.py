@@ -1,4 +1,4 @@
-from compression.utils.other import ActionManager, posAccelYaw2TfMatrix, State
+from compression.utils.other import ActionManager, posAccelYaw2TfMatrix, State, ObservationManager
 import numpy as np
 
 np.set_printoptions(linewidth=np.nan)
@@ -48,3 +48,15 @@ w_posBS, w_yawBS= am.action2wBS(action, my_state)
 print("================================")
 
 # posAccelYaw2TransfMatrix(p0, a0, y0)
+
+
+om=ObservationManager();
+
+obs=om.getRandomObservation();
+print("Random Observation")
+print(obs)
+print("f_v =", om.getf_v(obs))
+print("f_a =", om.getf_a(obs))
+print("getyaw_dot =", om.getyaw_dot(obs))
+print("getf_g =", om.getf_g(obs))
+print("getObstacles =", om.getObstacles(obs))

@@ -146,6 +146,13 @@ double getMinTimeDoubleIntegrator3D(const Eigen::Vector3d& p0, const Eigen::Vect
   return min_time;
 }
 
+double getMinTimeDoubleIntegrator3DFromState(mt::state initial_state, mt::state final_state,
+                                             const Eigen::Vector3d& v_max, const Eigen::Vector3d& a_max)
+{
+  return getMinTimeDoubleIntegrator3D(initial_state.pos, initial_state.vel, final_state.pos, final_state.vel, v_max,
+                                      a_max);
+}
+
 // note that b>=a is a requirement
 double probUnivariateNormalDistAB(double a, double b, double mu, double std_deviation)
 {

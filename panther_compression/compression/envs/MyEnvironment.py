@@ -36,7 +36,7 @@ class MyEnvironment(gym.Env):
 
     self.action_space = spaces.Box(low = -1.0, high = 1.0, shape=self.action_shape)
     self.observation_space = spaces.Box(low = -1.0, high = 1.0, shape=self.observation_shape)
-    self.w_goal=np.array([[10], [0.0], [0.0]])
+    self.w_gterm=np.array([[10], [0.0], [0.0]])
     # self.max_act = 12.0 # Todo: make sure this is the same value as used in the MPC
     # self.max_obs = 10.0 # Todo: make sure this is the same as in the MPC
 
@@ -104,7 +104,7 @@ class MyEnvironment(gym.Env):
 
     #Construct observation
     w_obs=self.obsm.getFutureWPosObstacles(self.time)
-    f_obs=self.om.construct_f_obsFrom_w_state_and_w_obs(self.w_state, w_obs, self.w_goal)
+    f_obs=self.om.construct_f_obsFrom_w_state_and_w_obs(self.w_state, w_obs, self.w_gterm)
 
 
     ####################################
