@@ -47,20 +47,20 @@ if __name__ == "__main__":
 
     parser.add_argument("--n_iters", default=20, type=int)
     parser.add_argument("--n_evals", default=5, type=int)
-    parser.add_argument("--eval-ep-len", default=70, type=int)
-    parser.add_argument("--train-ep-len", default=200, type=int)
-    parser.add_argument("--use-only-last-collected-dataset", dest='use_only_last_coll_ds', action='store_true')
+    parser.add_argument("--eval_ep_len", default=70, type=int)
+    parser.add_argument("--train_ep_len", default=200, type=int)
+    parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
-    parser.add_argument("--n-traj-per-iter", default=1, type=int)
+    parser.add_argument("--n_traj_per_iter", default=1, type=int)
     # Method changes
-    parser.add_argument("--no-train", dest='train', action='store_false')
+    parser.add_argument("--no_train", dest='train', action='store_false')
     parser.set_defaults(train=True)
-    parser.add_argument("--no-eval", dest='eval', action='store_false')
+    parser.add_argument("--no_eval", dest='eval', action='store_false')
     parser.set_defaults(eval=True)
-    parser.add_argument("--no-final-eval", dest='final_eval', action='store_false')
+    parser.add_argument("--no_final_eval", dest='final_eval', action='store_false')
     parser.set_defaults(final_eval=True)
     # Dagger properties
-    parser.add_argument("--dagger-beta", default=10, type=int)
+    parser.add_argument("--dagger_beta", default=10, type=int)
        
     
     args = parser.parse_args()
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     # directly learn the policy params (with or without sampling extra states?)
     N_VEC = 1
     N_TRAJECTORIES = 1
-    N_EPOCHS = 2           #WAS 50!! Num epochs for training.
+    N_EPOCHS = 50           #WAS 50!! Num epochs for training.
     ENV_NAME = "my-environment-v1"
     assert N_VEC == 1, "Online N_VEC = 1 supported (environments cannot run in parallel)."
 
@@ -160,11 +160,13 @@ if __name__ == "__main__":
         assert trainer.round_num == 0
     for i in trange(args.n_iters, desc="Iteration"):
 
+        #Create names for policies
         n_training_traj = int(i*args.n_traj_per_iter) # Note: we start to count from 0. e.g. policy_0 means that we used 1 
         policy_path = os.path.join(DATA_POLICY_PATH, "intermediate_policy_"+str(n_training_traj)+".pt") # Where to save curr policy
         log_dir = LOG_PATH + "/student/" + str(n_training_traj) + "/"                                  # Where to save eval logs
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
+
         # Train for iteration
         if args.train:
             print(f"[Collector] Collecting iteration {i+1}/{args.n_iters}.")

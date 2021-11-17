@@ -41,24 +41,24 @@ class ExpertPolicy(object):
         # self.printwithName(f"Got obs={obs}")
         # self.printwithName(f"Got obs shape={obs.shape}")
 
-        self.om.printObs(obs)
+        # self.om.printObs(obs)
 
-        self.printwithName("Calling optimizer")
+        # self.printwithName("Calling optimizer")
 
-        ## Call the optimization
-        init_state=py_panther.state(); #This is initialized as zero. This is A
-        final_state=py_panther.state();#This is initialized as zero. This is G
-        final_state.pos=self.om.getf_g(obs);
+        # ## Call the optimization
+        # init_state=py_panther.state(); #This is initialized as zero. This is A
+        # final_state=py_panther.state();#This is initialized as zero. This is G
+        # final_state.pos=self.om.getf_g(obs);
 
-        total_time=self.par.factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, self.par.v_max, self.par.a_max)
+        # total_time=self.par.factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, self.par.v_max, self.par.a_max)
 
-        self.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
-        self.my_SolverIpopt.setFocusOnObstacle(True);
-        self.my_SolverIpopt.setObstaclesForOpt(self.om.getObstacles(obs));
+        # self.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
+        # self.my_SolverIpopt.setFocusOnObstacle(True);
+        # self.my_SolverIpopt.setObstaclesForOpt(self.om.getObstacles(obs));
 
-        self.my_SolverIpopt.optimize();
-        #### End of call the optimization
-        self.printwithName("===================================================")
+        # self.my_SolverIpopt.optimize();
+        # #### End of call the optimization
+        # self.printwithName("===================================================")
 
 
 

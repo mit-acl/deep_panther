@@ -13,7 +13,7 @@ def load_student_logs(seeds, log_prefix, n_iterations, agent_name="student", n_t
         for seed in seeds:  
             path_to_file = os.path.join(log_prefix, str(seed), "student", str(it))
             logs_at_iter.append(pd.read_pickle(os.path.join(path_to_file, "no_dist.pkl")).assign(training = False))
-            logs_at_iter.append(pd.read_pickle(os.path.join(path_to_file, "with_dist.pkl")).assign(training = False))
+            # logs_at_iter.append(pd.read_pickle(os.path.join(path_to_file, "with_dist.pkl")).assign(training = False))
             logs_at_iter.append(pd.read_pickle(os.path.join(path_to_file, "training.pkl")).assign(training = True))
         student_eval.append(pd.concat(logs_at_iter, axis=0, ignore_index=True).assign(iteration = it+1))
     student_eval_logs = pd.concat(student_eval, axis=0, ignore_index=True)
@@ -22,7 +22,7 @@ def load_student_logs(seeds, log_prefix, n_iterations, agent_name="student", n_t
     student_before = []
     for seed in seeds:
         student_before.append(pd.read_pickle(os.path.join(log_prefix, str(seed), "pre_train_no_dist.pkl")).assign(training = False))
-        student_before.append(pd.read_pickle(os.path.join(log_prefix, str(seed), "pre_train_with_dist.pkl")).assign(training = False))
+        # student_before.append(pd.read_pickle(os.path.join(log_prefix, str(seed), "pre_train_with_dist.pkl")).assign(training = False))
     student_before_logs = pd.concat(student_before, axis=0, ignore_index=True).assign(iteration = 0)
 
     # Combine student before and during training

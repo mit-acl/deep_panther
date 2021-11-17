@@ -44,7 +44,7 @@ def plot_logs(input_df, show_training = False):
     axs[2, 0].set(xlabel='Num. demonstrations used for training', ylabel="Success Rate")
 
 
-    plt.show()
+    
 
     if show_training: 
         axs[0, 2].set_title("Training Env.")
@@ -58,6 +58,8 @@ def plot_logs(input_df, show_training = False):
         axs[2, 2].set_title("Training Env.")
         sns.lineplot(ax = axs[2, 2], x="iteration", y="success", hue="agent", estimator='mean', ci=ci, data =training_df)
         axs[2, 2].set(xlabel='Num. demonstrations used for training', ylabel="Success Rate")
+
+    plt.show()
 
 def plot_lean_logs(full_df):
     # full_df: student logs during training/evaluation

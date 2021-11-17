@@ -80,7 +80,6 @@ class MyEnvironment(gym.Env):
     # self.printwithName(f"Received actionN={action}")
     action= self.am.denormalizeAction(action_normalized);
 
-    # print ("action.shape= ", action.shape)
     # print ("self.action_shape= ",self.action_shape)
 
     # self.printwithName(f"Received action size={action.shape}")
