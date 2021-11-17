@@ -27,8 +27,7 @@ class StudentPolicy(BasePolicy):
     :param observation_space: Obervation space
     :param action_space: Action space
     :param net_arch: Network architecture
-    :param features_extractor: Network to extract features
-        (a CNN when using images, a nn.Flatten() layer otherwise)
+    :param features_extractor: Network to extract features (a CNN when using images, a nn.Flatten() layer otherwise)
     :param features_dim: Number of features
     :param activation_fn: Activation function
     """
@@ -65,7 +64,6 @@ class StudentPolicy(BasePolicy):
         )
 
         # Save arguments to re-create object at loading
-        self.sde_features_extractor = None
         self.net_arch = net_arch
         self.features_dim = features_dim
         self.activation_fn = activation_fn
