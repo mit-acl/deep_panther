@@ -31,10 +31,6 @@ class StudentPolicy(BasePolicy):
         (a CNN when using images, a nn.Flatten() layer otherwise)
     :param features_dim: Number of features
     :param activation_fn: Activation function
-    :param use_sde: Whether to use State Dependent Exploration or not
-    :param clip_mean: Clip the mean output when using gSDE to avoid numerical instability.
-    :param normalize_images: Whether to normalize images or not,
-         dividing by 255.0 (True by default)
     """
 
     def __init__(
