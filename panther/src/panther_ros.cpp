@@ -408,25 +408,32 @@ void PantherRos::publishOwnTraj(const mt::PieceWisePol& pwp)
   pub_traj_.publish(msg);
 }
 
-bool PantherRos::pauseTime()
+void PantherRos::pauseTime()
 {
-  bool gazebo_paused = pauseGazebo_.call(emptySrv_);
-  if (gazebo_paused == false)
-  {
-    ROS_ERROR("Failed to call pauseGazebo_");
-    abort();  // Debugging
-  }
+  //// ROS Noetic
+  pauseGazebo_.call(emptySrv_);
+
+  //// Ros Melodic
+  // bool gazebo_paused = pauseGazebo_.call(emptySrv_);
+  // if (gazebo_paused == false)
+  // {
+  //   ROS_ERROR("Failed to call pauseGazebo_");
+  //   abort();  // Debugging
+  // }
 }
 
-bool PantherRos::unpauseTime()
+void PantherRos::unpauseTime()
 {
-  bool gazebo_unpaused = unpauseGazebo_.call(emptySrv_);
+  //// ROS Noetic
+  unpauseGazebo_.call(emptySrv_);
 
-  if (gazebo_unpaused == false)
-  {
-    ROS_ERROR("Failed to call unpauseGazebo_");
-    abort();  // Debugging
-  }
+  //// Ros Melodic
+  // bool gazebo_unpaused = unpauseGazebo_.call(emptySrv_);
+  // if (gazebo_unpaused == false)
+  // {
+  //   ROS_ERROR("Failed to call unpauseGazebo_");
+  //   abort();  // Debugging
+  // }
 }
 
 void PantherRos::replanCB(const ros::TimerEvent& e)
@@ -446,10 +453,10 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
     // mt::PieceWisePol pwp;
     mt::log log;
 
-    std::cout << "WAITING FOR SERVICE" << std::endl;
+    // std::cout << "WAITING FOR SERVICE" << std::endl;
     ros::service::waitForService("/gazebo/pause_physics");
-    std::cout << "SERVICE found" << std::endl;
-    std::cout << "pauseGazebo_.exists()= " << pauseGazebo_.exists() << std::endl;
+    // std::cout << "SERVICE found" << std::endl;
+    // std::cout << "pauseGazebo_.exists()= " << pauseGazebo_.exists() << std::endl;
 
     if (par_.stop_time_when_replanning)
     {

@@ -63,8 +63,8 @@ private:
   void replanCB(const ros::TimerEvent& e);
   void trajCB(const panther_msgs::DynTraj& msg);
 
-  bool pauseTime();
-  bool unpauseTime();
+  void pauseTime();
+  void unpauseTime();
 
   // void clearMarkerSetOfArrows();
   void clearMarkerActualTraj();
