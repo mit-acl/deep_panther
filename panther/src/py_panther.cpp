@@ -133,6 +133,5 @@ PYBIND11_MODULE(py_panther, m)
       .def("getSolutions", &SolverIpopt::getSolutions)
       .def("getGuesses", &SolverIpopt::getGuesses)
       .def_readwrite("par_", &SolverIpopt::par_)
-      .def_readwrite("traj_solution_", &SolverIpopt::traj_solution_)
       .def("__repr__", [](const SolverIpopt &a) { return "<py_panther.SolverIpopt>"; });
 }

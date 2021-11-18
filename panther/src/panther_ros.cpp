@@ -681,6 +681,9 @@ void PantherRos::pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_o
 
   for (auto sol_or_guess : sols_or_guesses)
   {
+    std::cout << "Publishing!" << std::endl;
+    sol_or_guess.fillTraj(par_.dc);
+
     double scale = (sol_or_guess.is_guess) ? 0.05 : 0.15;
 
     if (sol_or_guess.solver_succeeded || sol_or_guess.is_guess)

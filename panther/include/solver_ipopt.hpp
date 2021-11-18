@@ -158,15 +158,19 @@ public:
   }
   void setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obstacles_for_opt);
   mt::parameters par_;
-  mt::trajectory traj_solution_;
+  // mt::trajectory traj_solution_;
 
   std::vector<si::solOrGuess> getSolutions();
   std::vector<si::solOrGuess> getGuesses();
 
   void getPlanes(std::vector<Hyperplane3D> &planes);
 
+  si::solOrGuess fillTrajBestSololutionAndGetIt();
+
 protected:
 private:
+  bool anySolutionSucceeded();
+
   std::vector<si::solOrGuess> solutions_;
   std::vector<si::solOrGuess> guesses_;
 

@@ -424,6 +424,38 @@ std::vector<si::solOrGuess> SolverIpopt::getSolutions()
 {
   return solutions_;
 }
+
+si::solOrGuess SolverIpopt::fillTrajBestSololutionAndGetIt()
+{
+  double min_cost = std::numeric_limits<double>::max();
+  int argmin = -1;
+  for (int i = 0; i < solutions_.size(); i++)
+  {
+    if ((solutions_[i].solver_succeeded && solutions_[i].cost) < min_cost)
+    {
+      min_cost = solutions_[i].cost;
+      argmin = i;
+    }
+  }
+
+  if (argmin < 0)
+  {
+    std::cout << bold << red << "Aborting: You called fillTrajBestSololutionAndGetIt after optimize() was false"
+              << reset << std::endl;
+    abort();
+  }
+
+  solutions_[argmin].fillTraj(par_.dc);
+
+  // Force last vel and jerk =final_state_ (which it's not guaranteed because of the discretization with par_.dc)
+  solutions_[argmin].traj.back().vel = final_state_.vel;
+  solutions_[argmin].traj.back().accel = final_state_.accel;
+  solutions_[argmin].traj.back().jerk = Eigen::Vector3d::Zero();
+  solutions_[argmin].traj.back().ddyaw = final_state_.ddyaw;
+
+  return solutions_[argmin];
+}
+
 std::vector<si::solOrGuess> SolverIpopt::getGuesses()
 {
   return guesses_;
@@ -716,16 +748,11 @@ bool SolverIpopt::optimize()
       }
 
       ///////////////////////////
-      solution.fillTraj(par_.dc);
+      // solution.fillTraj(par_.dc);
 
       // CPs2Traj(solution.qp, solution.qy, knots_p_solution, knots_y_solution, solution.traj, par_.deg_pos,
       // par_.deg_yaw,
       //          par_.dc);
-      // Force last vel and jerk =final_state_ (which it's not guaranteed because of the discretization with par_.dc)
-      solution.traj.back().vel = final_state_.vel;
-      solution.traj.back().accel = final_state_.accel;
-      solution.traj.back().jerk = Eigen::Vector3d::Zero();
-      solution.traj.back().ddyaw = final_state_.ddyaw;
     }
     else
     {
@@ -743,7 +770,7 @@ bool SolverIpopt::optimize()
     ////////////////////////////////////
     //////// Only needed for visualization:
 
-    guess.fillTraj(par_.dc);
+    // guess.fillTraj(par_.dc);
 
     solutions.push_back(solution);
     guesses.push_back(guess);
@@ -767,22 +794,43 @@ bool SolverIpopt::optimize()
   solutions_ = solutions;
   guesses_ = guesses;
 
-  if (solutions[0].solver_succeeded == true)
+  if (anySolutionSucceeded())
   {
-    ///////////////// Fill  traj_solution_ and pwp_solution_
-    traj_solution_.clear();
-
-    traj_solution_ = solutions[0].traj;
-    // pwp_solution_ = solutions[0].pwp;
-
-    // Uncomment the following line if you wanna visualize the planes
-    // fillPlanesFromNDQ(n_, d_, qp);
     return true;
   }
   else
   {
     return false;
   }
+
+  // if (solutions[0].solver_succeeded == true)
+  // {
+  //   ///////////////// Fill  traj_solution_ and pwp_solution_
+  //   traj_solution_.clear();
+
+  //   traj_solution_ = solutions[0].traj;
+  //   // pwp_solution_ = solutions[0].pwp;
+
+  //   // Uncomment the following line if you wanna visualize the planes
+  //   // fillPlanesFromNDQ(n_, d_, qp);
+  //   return true;
+  // }
+  // else
+  // {
+  //   return false;
+  // }
+}
+
+bool SolverIpopt::anySolutionSucceeded()
+{
+  for (auto &solution : solutions_)
+  {
+    if (solution.solver_succeeded)
+    {
+      return true;
+    }
+  }
+  return false;
 }
 
 std::vector<double> SolverIpopt::yawCPsToGoToFinalYaw(double deltaT)

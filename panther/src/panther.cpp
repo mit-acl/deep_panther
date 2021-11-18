@@ -748,18 +748,17 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   log_ptr_->tim_initial_setup.toc();
   bool result = solver_->optimize();
 
-  best_solutions = solver_->getSolutions();
-  guesses = solver_->getGuesses();
-
-  // num_of_LPs_run = solver_->getNumOfLPsRun();
-  // num_of_QCQPs_run = solver_->getNumOfQCQPsRun();
-
   total_replannings_++;
   if (result == false)
   {
     logAndTimeReplan("Solver failed", false, log);
     return false;
   }
+
+  best_solutions = solver_->getSolutions();
+  guesses = solver_->getGuesses();
+
+  si::solOrGuess best_solution = solver_->fillTrajBestSololutionAndGetIt();
 
   solver_->getPlanes(planes);
 
@@ -784,11 +783,16 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   }
   else
   {
-    plan_.erase(plan_.end() - k_index_end - 1, plan_.end());    // this deletes also the initial condition...
-    for (int i = 0; i < (solver_->traj_solution_).size(); i++)  //... which is included in traj_solution_[0]
+    plan_.erase(plan_.end() - k_index_end - 1, plan_.end());  // this deletes also the initial condition...
+
+    for (auto& state : best_solution.traj)  //... which is included in best_solution.traj[0]
     {
-      plan_.push_back(solver_->traj_solution_[i]);
+      plan_.push_back(state);
     }
+    // for (int i = 0; i < (solver_->traj_solution_).size(); i++)
+    // {
+    //   plan_.push_back(solver_->traj_solution_[i]);
+    // }
   }
 
   mtx_plan_.unlock();
