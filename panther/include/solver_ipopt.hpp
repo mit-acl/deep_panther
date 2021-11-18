@@ -45,7 +45,6 @@ struct solOrGuess
 {
   std::vector<Eigen::Vector3d> qp;
   std::vector<double> qy;
-  mt::trajectory traj;
 
   // mt::PieceWisePol pwp;
   Eigen::RowVectorXd knots_p;
@@ -57,6 +56,8 @@ struct solOrGuess
 
   int deg_p;
   int deg_y;
+
+  mt::trajectory traj;
 
   void printInfo()  // avoid  naming it print() [for compatibility with pybind11]
   {
@@ -121,14 +122,6 @@ struct splineParam
   int num_seg;
 };
 
-struct obstacleForOpt
-{
-  // casadi::DM bbox_inflated;
-  // casadi::DM ctrl_pts;
-  std::vector<Eigen::Vector3d> ctrl_pts;
-  Eigen::Vector3d bbox_inflated;
-};
-
 struct novale
 {
   std::vector<double> value_vector;
@@ -163,7 +156,7 @@ public:
   {
     focus_on_obstacle_ = focus_on_obstacle;
   }
-  void setObstaclesForOpt(const std::vector<si::obstacleForOpt> &obstacles_for_opt);
+  void setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obstacles_for_opt);
   mt::parameters par_;
   mt::trajectory traj_solution_;
 
@@ -260,7 +253,7 @@ private:
 
   std::vector<Hyperplane3D> planes_;
 
-  std::vector<si::obstacleForOpt> obstacles_for_opt_;
+  std::vector<mt::obstacleForOpt> obstacles_for_opt_;
 
   double t_init_;
   double t_final_guess_;

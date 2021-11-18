@@ -91,7 +91,7 @@ class MyEnvironment(gym.Env):
 
     ####################################
 
-    w_posBS, w_yawBS= self.am.action2wBS(action, self.w_state)
+    w_posBS, w_yawBS= self.am.actionAndState2wBS(action, self.w_state)
 
 
     #Update state

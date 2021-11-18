@@ -265,12 +265,12 @@ bool Panther::IsTranslating()
   return (drone_status_ == DroneStatus::GOAL_SEEN || drone_status_ == DroneStatus::TRAVELING);
 }
 
-std::vector<si::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, double t_end,
+std::vector<mt::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, double t_end,
                                                             std::vector<si::solOrGuess>& splines_fitted)
 {
   // std::cout << "In getObstaclesForOpt" << std::endl;
 
-  std::vector<si::obstacleForOpt> obstacles_for_opt;
+  std::vector<mt::obstacleForOpt> obstacles_for_opt;
 
   if (trajs_.size() > par_.num_max_of_obst)
   {
@@ -285,7 +285,7 @@ std::vector<si::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
 
   for (int i = 0; i < trajs_.size(); i++)
   {
-    si::obstacleForOpt obstacle_for_opt;
+    mt::obstacleForOpt obstacle_for_opt;
 
     // Take future samples of the trajectory
     casadi::DM samples_casadi(3, par_.fitter_num_samples);
@@ -717,7 +717,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   }
   ////
 
-  std::vector<si::obstacleForOpt> obstacles_for_opt =
+  std::vector<mt::obstacleForOpt> obstacles_for_opt =
       getObstaclesForOpt(t_start, t_start + par_.fitter_total_time, splines_fitted);
 
   mtx_trajs_.unlock();

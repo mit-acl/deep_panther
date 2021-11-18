@@ -14,6 +14,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake_finders")
 # find_package(CGAL REQUIRED)
 # include(${CGAL_USE_FILE})
 
+find_package(PythonLibs REQUIRED) #See https://github.com/pybind/pybind11/issues/2232#issuecomment-655520324
+
 find_package ( Boost COMPONENTS graph REQUIRED )
 include_directories ( ${Boost_INCLUDE_DIR} )
 
@@ -95,6 +97,15 @@ target_link_libraries(move_model ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
 
 pybind_add_module(py_panther MODULE src/py_panther.cpp src/solver_ipopt.cpp src/solver_ipopt_utils.cpp src/utils.cpp src/solver_ipopt_guess.cpp src/yaw_guess_generator.cpp src/octopus_search.cpp src/bspline_utils.cpp)
 target_link_libraries(py_panther PRIVATE ${catkin_LIBRARIES} ${CASADI_LIBRARIES})
+
+
+
+add_executable(calc src/calc.cpp)
+target_link_libraries(calc  ${PYTHON_LIBRARIES}) #See https://github.com/pybind/pybind11/issues/2232#issuecomment-655520324
+
+# target_link_libraries(calc PRIVATE pybind11::embed )
+
+# add_library(disable_physics src/disable_physics.cpp)
 
 # pybind_add_module(py_panther2 MODULE src/py_panther2.cpp)
 

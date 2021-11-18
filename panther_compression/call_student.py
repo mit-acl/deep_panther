@@ -9,4 +9,4 @@ if __name__ == "__main__":
     obs=om.getRandomNormalizedObservation();
     action = student_policy.predict(obs, deterministic=True)
 
-    print (action)
+    print(action)

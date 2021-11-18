@@ -116,6 +116,34 @@ class Obstacle():
 		self.ctrl_pts=ctrl_pts
 		self.bbox_inflated=np.array([[0.5],[0.5], [0.5]])
 
+def convertPPObstacle2Obstacle(ppobstacle): #pp stands for py_panther
+	assert type(ppobstacle.ctrl_pts) is list
+
+	ctrl_pts=np.array([[],[],[]]);
+	for ctrl_pt in ppobstacle.ctrl_pts:
+		ctrl_pts=np.concatenate((ctrl_pts, ctrl_pt.reshape(3,1)), axis=1)
+
+	obstacle=Obstacle(ctrl_pts, ppobstacle.bbox_inflated.reshape(3,1));
+
+	return obstacle
+
+def convertPPObstacles2Obstacles(ppobstacles): #pp stands for py_panther
+    obstacles=[]
+    for ppobstacle in ppobstacles:
+        obstacles.append(convertPPObstacle2Obstacle(ppobstacle))
+    return obstacles
+
+def convertPPState2State(ppstate):
+
+    p=ppstate.pos.reshape(3,1)
+    v=ppstate.vel.reshape(3,1)
+    a=ppstate.accel.reshape(3,1)
+    yaw=np.array([[ppstate.yaw]])
+    dyaw=np.array([[ppstate.dyaw]])
+
+    return State(p, v, a, yaw, dyaw)
+
+
 class ObstaclesManager():
 	def __init__(self):
 		self.num_obs=1;
@@ -150,6 +178,11 @@ class ObstaclesManager():
 
 class State():
 	def __init__(self, w_pos, w_vel, w_accel, w_yaw, yaw_dot):
+		assert w_pos.shape==(3,1)
+		assert w_vel.shape==(3,1)
+		assert w_accel.shape==(3,1)
+		assert w_yaw.shape==(1,1)
+		assert yaw_dot.shape==(1,1)
 		self.w_pos = w_pos
 		self.w_vel = w_vel
 		self.w_accel = w_accel
@@ -358,9 +391,10 @@ class ObservationManager():
 		random_normalized_observation=np.random.uniform(-1,1, size=self.getObservationShape())
 		return random_normalized_observation
 
-	def construct_f_obsFrom_w_state_and_w_obs(self,w_state, w_obs, w_gterm):
+	def construct_f_obsFrom_w_state_and_w_obs(self,w_state, w_obstacles, w_gterm):
 
 		f_gterm=w_state.f_T_w * w_gterm
+
 		dist2gterm=np.linalg.norm(f_gterm);
 		f_g= min(dist2gterm-1e-4, self.Ra)*normalize(f_gterm)
 		# print("w_state.f_vel().flatten()= ", w_state.f_vel().flatten())
@@ -369,8 +403,9 @@ class ObservationManager():
 		observation=np.concatenate((w_state.f_vel().flatten(), w_state.f_accel().flatten(), w_state.yaw_dot.flatten(), f_g.flatten()));
 
 		#Convert obs to f frame and append ethem to observation
-		for w_ob in w_obs:
-			observation=np.concatenate((observation, (w_state.f_T_w*w_ob.ctrl_pts).flatten(), (w_ob.bbox_inflated).flatten()))
+		for w_obstacle in w_obstacles:
+			assert type(w_obstacle.ctrl_pts).__module__ == np.__name__, "the ctrl_pts should be a numpy matrix, not a list"
+			observation=np.concatenate((observation, (w_state.f_T_w*w_obstacle.ctrl_pts).flatten(), (w_obstacle.bbox_inflated).flatten()))
 
 
 		observation=observation.reshape(self.getObservationShape())
@@ -380,6 +415,12 @@ class ObservationManager():
 		assert observation.shape == self.getObservationShape()
 
 		return observation;
+
+def numpy3XmatrixToListOf3dVectors(data):
+	data_list=[]
+	for i in range(data.shape[1]):
+		data_list.append(data[:,i])
+	return data_list
 
 class ActionManager():
 	def __init__(self):
@@ -449,35 +490,30 @@ class ActionManager():
 	def getDegYaw(self):
 		return self.deg_yaw;
 
-	def action2wBS(self, f_action, w_state):
+	# def actionAndValues2_w_pos_ctrl_pts(self, f_action, w_pos, w_vel, w_accel, w_yaw, yaw_dot):
 
-		# print("f_action= ",f_action)
-		# print("f_action.shape= ",f_action.shape)
+	# 	w_state=State(w_pos, w_vel, w_accel, w_yaw, yaw_dot);
+	# 	w_pos_ctrl_pts=actionAndState2_w_pos_ctrl_pts(f_action, w_state)
+	# 	return w_pos_ctrl_pts
+
+
+	def actionAndState2_w_pos_ctrl_pts_and_knots(self, f_action, w_state):
+
+		assert type(w_state)==State
+
 		total_time=f_action[0,-1]
 
 		knots_pos=generateKnotsForClampedUniformBspline(0.0, total_time, self.deg_pos, self.num_seg)
-		knots_yaw=generateKnotsForClampedUniformBspline(0.0, total_time, self.deg_yaw, self.num_seg)
 
 		f_pos_ctrl_pts = f_action[0,0:self.action_size_pos_ctrl_pts].reshape((3,-1))
-		f_yaw_ctrl_pts=f_action[0,self.action_size_pos_ctrl_pts:-1].reshape((1,-1));
-
-		# print("\n f_pos_ctrl_pts= \n", f_pos_ctrl_pts)
 
 		#Convert to w frame
-		# print("\n--------------------Going to convert values--------------------\n")
 		w_pos_ctrl_pts = w_state.w_T_f * f_pos_ctrl_pts;
-		w_yaw_ctrl_pts =  f_yaw_ctrl_pts + w_state.w_yaw*np.ones(f_yaw_ctrl_pts.shape);
-
-		# print(w_pos_ctrl_pts)
-		# print(w_yaw_ctrl_pts)
-
 
 		pf=w_pos_ctrl_pts[:,-1].reshape((3,-1)); #Assumming final vel and accel=0 
 		p0=w_state.w_pos
 		v0=w_state.w_vel
 		a0=w_state.w_accel
-		y0=w_state.w_yaw
-		y_dot0=w_state.yaw_dot
 
 		p=self.deg_pos;
 
@@ -492,16 +528,23 @@ class ActionManager():
 		q1_pos = p0 + (-t1 + tpP1) * v0 / p;
 		q2_pos = (p * p * q1_pos - (t1PpP1 - t2) * (a0 * (t2 - tpP1) + v0) - p * (q1_pos + (-t1PpP1 + t2) * v0)) / ((-1 + p) * p);
 
-		# print ("q0= \n", q0_pos)
-		# print ("q1= \n", q1_pos)
-		# print ("q2= \n", q2_pos)
-		# print ("pos_ctrl_pts= \n", pos_ctrl_pts)
-		# print ("pf= \n", pf)
-
 		w_pos_ctrl_pts=np.concatenate((q0_pos, q1_pos, q2_pos, w_pos_ctrl_pts, pf, pf), axis=1) #Assumming final vel and accel=0
 
-		###########FOR YAW
-		# print("w_yaw_ctrl_pts=", w_yaw_ctrl_pts)
+		return w_pos_ctrl_pts, knots_pos
+
+
+	def actionAndState2_w_yaw_ctrl_pts_and_knots(self, f_action, w_state):
+		total_time=f_action[0,-1]
+
+		knots_yaw=generateKnotsForClampedUniformBspline(0.0, total_time, self.deg_yaw, self.num_seg)
+
+		f_yaw_ctrl_pts=f_action[0,self.action_size_pos_ctrl_pts:-1].reshape((1,-1));
+
+		w_yaw_ctrl_pts =  f_yaw_ctrl_pts + w_state.w_yaw*np.ones(f_yaw_ctrl_pts.shape);
+
+
+		y0=w_state.w_yaw
+		y_dot0=w_state.yaw_dot
 		yf=w_yaw_ctrl_pts[0,-1].reshape((1,1)); #Assumming final vel =0
 
 		p=self.deg_yaw;
@@ -510,19 +553,42 @@ class ActionManager():
 		q0_yaw = y0;
 		q1_yaw = y0 + (-t1 + tpP1) * y_dot0 / p;
 
-		# print("q0_yaw= ",q0_yaw)
-		# print("q1_yaw= ",q1_yaw)
-		# print("w_yaw_ctrl_pts= ",w_yaw_ctrl_pts)
-		# print("yf= ",yf)
-
 		w_yaw_ctrl_pts=np.concatenate((q0_yaw, q1_yaw, w_yaw_ctrl_pts, yf), axis=1) #Assumming final vel and accel=0
 
-		# print("\n knots_pos= \n", knots_pos)
-		# print("\n w_pos_ctrl_pts= \n", w_pos_ctrl_pts)
-		# print("\n self.deg_pos= ", self.deg_pos)
-		# print("\n knots_yaw= \n", knots_yaw)
+		return w_yaw_ctrl_pts, knots_yaw
 
-		#Generate the splines
+	def actionAndState2w_ppSolOrGuess(self, f_action, w_state):
+		w_p_ctrl_pts,knots_p=self.actionAndState2_w_pos_ctrl_pts_and_knots(f_action, w_state)
+		w_y_ctrl_pts,knots_y=self.actionAndState2_w_yaw_ctrl_pts_and_knots(f_action, w_state)
+
+		#Create and fill solOrGuess object
+		w_sol_or_guess=py_panther.solOrGuess();
+
+		w_sol_or_guess.qp=numpy3XmatrixToListOf3dVectors(w_p_ctrl_pts)
+		w_sol_or_guess.qy=numpy3XmatrixToListOf3dVectors(w_y_ctrl_pts)
+
+		w_sol_or_guess.knots_p=knots_p
+		w_sol_or_guess.knots_y=knots_y
+
+		w_sol_or_guess.solver_succeeded=True
+		w_sol_or_guess.cost=0.0 #TODO
+		w_sol_or_guess.is_guess=False #TODO
+
+		w_sol_or_guess.deg_p=self.deg_pos #TODO
+		w_sol_or_guess.deg_y=self.deg_yaw #TODO
+
+		return w_sol_or_guess
+
+
+
+	def actionAndState2wBS(self, f_action, w_state):
+
+
+		w_pos_ctrl_pts,_=self.actionAndState2_w_pos_ctrl_pts_and_knots(f_action, w_state)
+		w_yaw_ctrl_pts,_=self.actionAndState2_w_yaw_ctrl_pts_and_knots(f_action, w_state)
+		total_time=f_action[0,-1]
+
+
 		w_posBS = MyClampedUniformBSpline(0.0, total_time, self.deg_pos, 3, self.num_seg, w_pos_ctrl_pts) #def __init__():[BSpline(knots_pos, w_pos_ctrl_pts[0,:], self.deg_pos)
 
 		w_yawBS =  MyClampedUniformBSpline(0.0, total_time, self.deg_yaw, 1, self.num_seg, w_yaw_ctrl_pts)

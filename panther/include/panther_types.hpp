@@ -79,6 +79,14 @@ struct log
   int drone_status;                 //
 };
 
+struct obstacleForOpt
+{
+  // casadi::DM bbox_inflated;
+  // casadi::DM ctrl_pts;
+  std::vector<Eigen::Vector3d> ctrl_pts;
+  Eigen::Vector3d bbox_inflated;
+};
+
 struct state
 {
   Eigen::Vector3d pos = Eigen::Vector3d::Zero();

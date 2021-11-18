@@ -44,11 +44,11 @@ PYBIND11_MODULE(py_panther, m)
       .def("fillTraj", &si::solOrGuess::fillTraj)  //, pybind11::arg("dc")
       .def("__repr__", [](const si::solOrGuess &a) { return "<py_panther.solOrGuess>"; });
 
-  py::class_<si::obstacleForOpt>(m, "obstacleForOpt")
+  py::class_<mt::obstacleForOpt>(m, "obstacleForOpt")
       .def(py::init<>())  /////////////////////////
-      .def_readwrite("ctrl_pts", &si::obstacleForOpt::ctrl_pts)
-      .def_readwrite("bbox_inflated", &si::obstacleForOpt::bbox_inflated)
-      .def("__repr__", [](const si::obstacleForOpt &a) { return "<py_panther.obstacleForOpt>"; });
+      .def_readwrite("ctrl_pts", &mt::obstacleForOpt::ctrl_pts)
+      .def_readwrite("bbox_inflated", &mt::obstacleForOpt::bbox_inflated)
+      .def("__repr__", [](const mt::obstacleForOpt &a) { return "<py_panther.obstacleForOpt>"; });
 
   py::class_<mt::parameters>(m, "parameters")
       .def(py::init<>())  /////////////////////////

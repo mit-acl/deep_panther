@@ -44,7 +44,7 @@ private:
   mt::state M_;
   mt::committedTrajectory plan_;
 
-  std::vector<si::obstacleForOpt> getObstaclesForOpt(double t_start, double t_end,
+  std::vector<mt::obstacleForOpt> getObstaclesForOpt(double t_start, double t_end,
                                                      std::vector<si::solOrGuess>& splines_fitted);
 
   Eigen::Vector3d evalMeanDynTrajCompiled(const mt::dynTrajCompiled& traj, double t);

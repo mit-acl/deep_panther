@@ -233,7 +233,7 @@ void SolverIpopt::getPlanes(std::vector<Hyperplane3D> &planes)
 // }
 
 //////////////////////////////////////////////////////////
-void SolverIpopt::setObstaclesForOpt(const std::vector<si::obstacleForOpt> &obstacles_for_opt)
+void SolverIpopt::setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obstacles_for_opt)
 {
   obstacles_for_opt_ = obstacles_for_opt;
 
