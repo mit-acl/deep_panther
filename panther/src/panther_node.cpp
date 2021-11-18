@@ -22,21 +22,24 @@ int main(int argc, char **argv)
 
   ros::CallbackQueue custom_queue1;
   ros::CallbackQueue custom_queue2;
-  ros::CallbackQueue custom_queue3;
+  // ros::CallbackQueue custom_queue3;
 
   nh1.setCallbackQueue(&custom_queue1);
   nh2.setCallbackQueue(&custom_queue2);
-  nh3.setCallbackQueue(&custom_queue3);
+  // nh3.setCallbackQueue(&custom_queue3);
 
   PantherRos PantherRos(nh1, nh2, nh3);
 
   ros::AsyncSpinner spinner1(1, &custom_queue1);  // 1 thread for the custom_queue1 // 0 means threads= # of CPU cores
   ros::AsyncSpinner spinner2(1, &custom_queue2);  // 1 thread for the custom_queue2 // 0 means threads= # of CPU cores
-  ros::AsyncSpinner spinner3(1, &custom_queue3);  // 1 thread for the custom_queue3 // 0 means threads= # of CPU cores
+  // ros::AsyncSpinner spinner3(1, &custom_queue3);  // 1 thread for the custom_queue3 // 0 means threads= # of CPU
+  // cores
 
   spinner1.start();  // start spinner of the custom queue 1
   spinner2.start();  // start spinner of the custom queue 2
-  spinner3.start();  // start spinner of the custom queue 3
+  // spinner3.start();  // start spinner of the custom queue 3
+
+  ros::spin();  // this is for nh3 (we are using pybind11 inside the callback, see comment in test_call_student.cpp)
 
   ros::waitForShutdown();
   return 0;

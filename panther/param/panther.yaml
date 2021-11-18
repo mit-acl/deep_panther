@@ -54,3 +54,4 @@ max_dist2goal: 20.0
 max_dist2obs: 10.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
+use_expert: false

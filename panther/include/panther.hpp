@@ -20,12 +20,16 @@
 
 // status_ : YAWING-->TRAVELING-->GOAL_SEEN-->GOAL_REACHED-->YAWING-->TRAVELING-->...
 
+#include <pybind11/pybind11.h>
+#include <pybind11/embed.h>
+
 using namespace termcolor;
 
 class Panther
 {
 public:
   Panther(mt::parameters par);
+  ~Panther();
   bool replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out, std::vector<si::solOrGuess>& best_solutions,
               std::vector<si::solOrGuess>& guesses, std::vector<si::solOrGuess>& splines_fitted,
               std::vector<Hyperplane3D>& planes, mt::log& log);
@@ -41,7 +45,18 @@ public:
   void updateTrajObstacles(mt::dynTraj traj);
 
 private:
-  mt::state M_;
+  // pybind11::module calc_;
+  // pybind11::scoped_interpreter guard{};
+  // pybind11::object student_caller_;
+  // pybind11::module calc_;
+  // pybind11::detail::str_attr_accessor tmp_;
+  // std::shared_ptr<pybind11::scoped_interpreter> guard_ptr_;
+
+  pybind11::object* student_caller_ptr_;
+
+  // pybind11::scoped_interpreter guard;
+
+  // mt::state M_;
   mt::committedTrajectory plan_;
 
   std::vector<mt::obstacleForOpt> getObstaclesForOpt(double t_start, double t_end,

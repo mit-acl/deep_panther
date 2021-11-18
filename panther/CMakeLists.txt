@@ -100,8 +100,17 @@ target_link_libraries(py_panther PRIVATE ${catkin_LIBRARIES} ${CASADI_LIBRARIES}
 
 
 
-add_executable(calc src/calc.cpp)
-target_link_libraries(calc  ${PYTHON_LIBRARIES}) #See https://github.com/pybind/pybind11/issues/2232#issuecomment-655520324
+add_executable(test2_call_student src/test2_call_student.cpp)
+target_link_libraries(test2_call_student  ${PYTHON_LIBRARIES}) #See https://github.com/pybind/pybind11/issues/2232#issuecomment-655520324
+
+
+add_executable(test1_call_student src/test1_call_student.cpp)
+target_link_libraries(test1_call_student  ${PYTHON_LIBRARIES}) #See https://github.com/pybind/pybind11/issues/2232#issuecomment-655520324
+
+
+add_executable(test3_call_student src/test3_call_student.cpp)
+target_link_libraries(test3_call_student  ${PYTHON_LIBRARIES} ${catkin_LIBRARIES}) #See https://github.com/pybind/pybind11/issues/2232#issuecomment-655520324
+
 
 # target_link_libraries(calc PRIVATE pybind11::embed )
 

@@ -425,7 +425,7 @@ std::vector<si::solOrGuess> SolverIpopt::getSolutions()
   return solutions_;
 }
 
-si::solOrGuess SolverIpopt::fillTrajBestSololutionAndGetIt()
+si::solOrGuess SolverIpopt::fillTrajBestSolutionAndGetIt()
 {
   double min_cost = std::numeric_limits<double>::max();
   int argmin = -1;

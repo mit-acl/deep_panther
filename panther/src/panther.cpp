@@ -20,6 +20,12 @@
 
 #include <ros/package.h>
 
+////////////////////////// Needed to call the student
+#include <pybind11/eigen.h>
+#include <pybind11/stl.h>
+#include <pybind11/operators.h>
+//////////////////////////
+
 using namespace termcolor;
 
 // Uncomment the type of timer you want:
@@ -48,6 +54,19 @@ Panther::Panther(mt::parameters par) : par_(par)
 
   std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
   cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
+
+  pybind11::initialize_interpreter();
+
+  std::string policy_path = "/home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/1/"
+                            "final_policy.pt";
+
+  student_caller_ptr_ = new pybind11::object;
+  *student_caller_ptr_ = pybind11::module::import("compression.utils.other").attr("StudentCaller")(policy_path);
+}
+
+Panther::~Panther()
+{
+  pybind11::finalize_interpreter();
 }
 
 void Panther::dynTraj2dynTrajCompiled(const mt::dynTraj& traj, mt::dynTrajCompiled& traj_compiled)
@@ -606,6 +625,8 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   k_index = plan_.size() - 1 - k_index_end;
   A = plan_.get(k_index);
 
+  std::cout << "When selection A, plan_.size()= " << plan_.size() << std::endl;
+
   mtx_plan_.unlock();
 
   //////////////////////////////////////////////////////////////////////////
@@ -616,155 +637,166 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   mt::state G;
   G.pos = A.pos + ra * (G_term.pos - A.pos).normalized();
 
-  //////////////////////////////////////////////////////////////////////////
-  ///////////////////////// Set Times in optimization //////////////////////
-  //////////////////////////////////////////////////////////////////////////
-
-  // solver_->setMaxRuntimeOctopusSearch(par_.max_runtime_octopus_search);  //, par_.kappa, par_.mu);
-
-  //////////////////////
   double time_now = ros::Time::now().toSec();
-
   double t_start = k_index * par_.dc + time_now;
-
-  double time_allocated = getMinTimeDoubleIntegrator3D(A.pos, A.vel, G.pos, G.vel, par_.v_max, par_.a_max);
-
-  // std::cout << green << bold << "Time allocated= " << time_allocated << reset << std::endl;
-
-  double t_final = t_start + par_.factor_alloc * time_allocated;
-
-  /////////////////////////////////////////////////////////////////////////
-  ////////////////////////Compute trajectory to focus on //////////////////
-  /////////////////////////////////////////////////////////////////////////
-
-  double max_prob_collision = -std::numeric_limits<double>::max();  // it's actually a heuristics of the probability (we
-                                                                    // are summing below --> can be >1)
-  int argmax_prob_collision = -1;  // will contain the index of the trajectory to focus on
-
-  int num_samplesp1 = 20;
-  double delta = 1.0 / num_samplesp1;
-  Eigen::Vector3d R = par_.drone_radius * Eigen::Vector3d::Ones();
-
-  std::vector<double> all_probs;
-
-  mtx_trajs_.lock();
-  for (int i = 0; i < trajs_.size(); i++)
-  {
-    double prob_i = 0.0;
-    for (int j = 0; j <= num_samplesp1; j++)
-    {
-      double t = t_start + j * delta * (t_final - t_start);
-
-      Eigen::Vector3d pos_drone = A.pos + j * delta * (G_term_.pos - A.pos);  // not a random variable
-      Eigen::Vector3d pos_obs_mean = evalMeanDynTrajCompiled(trajs_[i], t);
-      Eigen::Vector3d pos_obs_std = (evalVarDynTrajCompiled(trajs_[i], t)).cwiseSqrt();
-      // std::cout << "pos_obs_std= " << pos_obs_std << std::endl;
-      prob_i += probMultivariateNormalDist(-R, R, pos_obs_mean - pos_drone, pos_obs_std);
-    }
-
-    all_probs.push_back(prob_i);
-    // std::cout << "[Selection] Trajectory " << i << " has P(collision)= " << prob_i * pow(10, 15) << "e-15" <<
-    // std::endl;
-
-    if (prob_i > max_prob_collision)
-    {
-      max_prob_collision = prob_i;
-      argmax_prob_collision = i;
-    }
-  }
-
-  std::cout << "[Selection] Probs of coll --> ";
-  for (int i = 0; i < all_probs.size(); i++)
-  {
-    std::cout << all_probs[i] * pow(10, 15) << "e-15,   ";
-  }
-  std::cout << std::endl;
-
-  // std::cout.precision(30);
-  std::cout << bold << "[Selection] Chosen Trajectory " << argmax_prob_collision
-            << ", P(collision)= " << max_prob_collision * pow(10, 5) << "e-5" << std::endl;
-
-  ////
-
-  double angle = 3.14;
-  if (argmax_prob_collision >= 0)
-  {
-    Eigen::Vector3d A2G = G_term.pos - A.pos;
-    Eigen::Vector3d A2Obstacle = evalMeanDynTrajCompiled(trajs_[argmax_prob_collision], t_start) - A.pos;
-    angle = angleBetVectors(A2G, A2Obstacle);
-  }
-
-  double angle_deg = angle * 180 / 3.14;
-
-  if (fabs(angle_deg) > par_.angle_deg_focus_front)
-  {  //
-    std::cout << bold << yellow << "[Selection] Focusing on front of me, angle=" << angle_deg << " deg" << reset
-              << std::endl;
-    solver_->par_.c_final_yaw = 0.0;
-    solver_->par_.c_fov = 0.0;
-    solver_->par_.c_yaw_smooth = 0.0;
-    solver_->setFocusOnObstacle(false);
-    G.yaw = atan2(G_term_.pos[1] - A.pos[1], G_term_.pos[0] - A.pos[0]);
-  }
-  else
-  {
-    std::cout << bold << yellow << "[Selection] Focusing on obstacle, angle=" << angle_deg << " deg" << reset
-              << std::endl;
-    solver_->setFocusOnObstacle(true);
-    solver_->par_.c_fov = par_.c_fov;
-    solver_->par_.c_final_yaw = par_.c_final_yaw;
-    solver_->par_.c_yaw_smooth = par_.c_yaw_smooth;
-  }
-  ////
 
   std::vector<mt::obstacleForOpt> obstacles_for_opt =
       getObstaclesForOpt(t_start, t_start + par_.fitter_total_time, splines_fitted);
 
-  mtx_trajs_.unlock();
-
-  //////////////////////////////////////////////////////////////////////////
-  ///////////////////////// Set init and final states //////////////////////
-  //////////////////////////////////////////////////////////////////////////
-  bool correctInitialCond = solver_->setInitStateFinalStateInitTFinalT(A, G, t_start, t_final);
-
-  if (correctInitialCond == false)
+  si::solOrGuess solution;
+  if (par_.use_expert)
   {
-    logAndTimeReplan("Solver cannot guarantee feasibility for v1", false, log);
-    return false;
+    //////////////////////////////////////////////////////////////////////////
+    ///////////////////////// Set Times in optimization //////////////////////
+    //////////////////////////////////////////////////////////////////////////
+
+    // solver_->setMaxRuntimeOctopusSearch(par_.max_runtime_octopus_search);  //, par_.kappa, par_.mu);
+
+    //////////////////////
+
+    double time_allocated = getMinTimeDoubleIntegrator3D(A.pos, A.vel, G.pos, G.vel, par_.v_max, par_.a_max);
+
+    // std::cout << green << bold << "Time allocated= " << time_allocated << reset << std::endl;
+
+    double t_final = t_start + par_.factor_alloc * time_allocated;
+
+    /////////////////////////////////////////////////////////////////////////
+    ////////////////////////Compute trajectory to focus on //////////////////
+    /////////////////////////////////////////////////////////////////////////
+
+    double max_prob_collision = -std::numeric_limits<double>::max();  // it's actually a heuristics of the probability
+                                                                      // (we are summing below --> can be >1)
+    int argmax_prob_collision = -1;  // will contain the index of the trajectory to focus on
+
+    int num_samplesp1 = 20;
+    double delta = 1.0 / num_samplesp1;
+    Eigen::Vector3d R = par_.drone_radius * Eigen::Vector3d::Ones();
+
+    std::vector<double> all_probs;
+
+    mtx_trajs_.lock();
+    for (int i = 0; i < trajs_.size(); i++)
+    {
+      double prob_i = 0.0;
+      for (int j = 0; j <= num_samplesp1; j++)
+      {
+        double t = t_start + j * delta * (t_final - t_start);
+
+        Eigen::Vector3d pos_drone = A.pos + j * delta * (G_term_.pos - A.pos);  // not a random variable
+        Eigen::Vector3d pos_obs_mean = evalMeanDynTrajCompiled(trajs_[i], t);
+        Eigen::Vector3d pos_obs_std = (evalVarDynTrajCompiled(trajs_[i], t)).cwiseSqrt();
+        // std::cout << "pos_obs_std= " << pos_obs_std << std::endl;
+        prob_i += probMultivariateNormalDist(-R, R, pos_obs_mean - pos_drone, pos_obs_std);
+      }
+
+      all_probs.push_back(prob_i);
+      // std::cout << "[Selection] Trajectory " << i << " has P(collision)= " << prob_i * pow(10, 15) << "e-15" <<
+      // std::endl;
+
+      if (prob_i > max_prob_collision)
+      {
+        max_prob_collision = prob_i;
+        argmax_prob_collision = i;
+      }
+    }
+
+    std::cout << "[Selection] Probs of coll --> ";
+    for (int i = 0; i < all_probs.size(); i++)
+    {
+      std::cout << all_probs[i] * pow(10, 15) << "e-15,   ";
+    }
+    std::cout << std::endl;
+
+    // std::cout.precision(30);
+    std::cout << bold << "[Selection] Chosen Trajectory " << argmax_prob_collision
+              << ", P(collision)= " << max_prob_collision * pow(10, 5) << "e-5" << std::endl;
+
+    ////
+
+    double angle = 3.14;
+    if (argmax_prob_collision >= 0)
+    {
+      Eigen::Vector3d A2G = G_term.pos - A.pos;
+      Eigen::Vector3d A2Obstacle = evalMeanDynTrajCompiled(trajs_[argmax_prob_collision], t_start) - A.pos;
+      angle = angleBetVectors(A2G, A2Obstacle);
+    }
+
+    double angle_deg = angle * 180 / 3.14;
+
+    if (fabs(angle_deg) > par_.angle_deg_focus_front)
+    {  //
+      std::cout << bold << yellow << "[Selection] Focusing on front of me, angle=" << angle_deg << " deg" << reset
+                << std::endl;
+      solver_->par_.c_final_yaw = 0.0;
+      solver_->par_.c_fov = 0.0;
+      solver_->par_.c_yaw_smooth = 0.0;
+      solver_->setFocusOnObstacle(false);
+      G.yaw = atan2(G_term_.pos[1] - A.pos[1], G_term_.pos[0] - A.pos[0]);
+    }
+    else
+    {
+      std::cout << bold << yellow << "[Selection] Focusing on obstacle, angle=" << angle_deg << " deg" << reset
+                << std::endl;
+      solver_->setFocusOnObstacle(true);
+      solver_->par_.c_fov = par_.c_fov;
+      solver_->par_.c_final_yaw = par_.c_final_yaw;
+      solver_->par_.c_yaw_smooth = par_.c_yaw_smooth;
+    }
+    ////
+
+    mtx_trajs_.unlock();
+
+    //////////////////////////////////////////////////////////////////////////
+    ///////////////////////// Set init and final states //////////////////////
+    //////////////////////////////////////////////////////////////////////////
+    bool correctInitialCond = solver_->setInitStateFinalStateInitTFinalT(A, G, t_start, t_final);
+
+    if (correctInitialCond == false)
+    {
+      logAndTimeReplan("Solver cannot guarantee feasibility for v1", false, log);
+      return false;
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    ///////////////////////// Solve optimization! ////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
+
+    // removeTrajsThatWillNotAffectMe(A, t_start, t_final);  // TODO: Commented (4-Feb-2021)
+
+    solver_->setObstaclesForOpt(obstacles_for_opt);
+
+    //////////////////////
+    std::cout << on_cyan << bold << "Solved so far" << solutions_found_ << "/" << total_replannings_ << reset
+              << std::endl;
+
+    log_ptr_->tim_initial_setup.toc();
+    bool result = solver_->optimize();
+
+    total_replannings_++;
+    if (result == false)
+    {
+      logAndTimeReplan("Solver failed", false, log);
+      return false;
+    }
+
+    solver_->getPlanes(planes);
+
+    best_solutions = solver_->getSolutions();
+    guesses = solver_->getGuesses();
+
+    solution = solver_->fillTrajBestSolutionAndGetIt();
   }
-
-  //////////////////////////////////////////////////////////////////////////
-  ///////////////////////// Solve optimization! ////////////////////////////
-  //////////////////////////////////////////////////////////////////////////
-
-  // removeTrajsThatWillNotAffectMe(A, t_start, t_final);  // TODO: Commented (4-Feb-2021)
-
-  solver_->setObstaclesForOpt(obstacles_for_opt);
-
-  //////////////////////
-  std::cout << on_cyan << bold << "Solved so far" << solutions_found_ << "/" << total_replannings_ << reset
-            << std::endl;
-
-  log_ptr_->tim_initial_setup.toc();
-  bool result = solver_->optimize();
-
-  total_replannings_++;
-  if (result == false)
+  else  // plan using the student
   {
-    logAndTimeReplan("Solver failed", false, log);
-    return false;
+    pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos);
+    solution = result.cast<si::solOrGuess>();
+    solution.fillTraj(par_.dc);  // This could also be done in the predict method of the python class
+    solution.printInfo();
   }
-
-  best_solutions = solver_->getSolutions();
-  guesses = solver_->getGuesses();
-
-  si::solOrGuess best_solution = solver_->fillTrajBestSololutionAndGetIt();
-
-  solver_->getPlanes(planes);
 
   solutions_found_++;
 
-  M_ = G_term;
+  std::cout << "Appending to plan" << std::endl;
 
   //////////////////////////////////////////////////////////////////////////
   ///////////////////////// Append to plan /////////////////////////////////
@@ -775,8 +807,8 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
   if ((plan_size - 1 - k_index_end) < 0)
   {
-    // std::cout << "plan_size= " << plan_size << std::endl;
-    // std::cout << "k_index_end= " << k_index_end << std::endl;
+    std::cout << "plan_size= " << plan_size << std::endl;
+    std::cout << "k_index_end= " << k_index_end << std::endl;
     mtx_plan_.unlock();
     logAndTimeReplan("Point A already published", false, log);
     return false;
@@ -785,7 +817,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   {
     plan_.erase(plan_.end() - k_index_end - 1, plan_.end());  // this deletes also the initial condition...
 
-    for (auto& state : best_solution.traj)  //... which is included in best_solution.traj[0]
+    for (auto& state : solution.traj)  //... which is included in solution.traj[0]
     {
       plan_.push_back(state);
     }
@@ -794,6 +826,8 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
     //   plan_.push_back(solver_->traj_solution_[i]);
     // }
   }
+
+  std::cout << "unlock" << std::endl;
 
   mtx_plan_.unlock();
 
@@ -895,13 +929,13 @@ bool Panther::getNextGoal(mt::state& next_goal)
     next_goal.dyaw = par_.ydot_max * cos(t * (par_.ydot_max / amplitude_rd));
   }
 
-  if (fabs(next_goal.dyaw) > (par_.ydot_max + 1e-4))
-  {
-    std::cout << red << "par_.ydot_max not satisfied!!" << reset << std::endl;
-    std::cout << red << "next_goal.dyaw= " << next_goal.dyaw << reset << std::endl;
-    std::cout << red << "par_.ydot_max= " << par_.ydot_max << reset << std::endl;
-    abort();
-  }
+  // if (fabs(next_goal.dyaw) > (par_.ydot_max + 1e-4))
+  // {
+  //   std::cout << red << "par_.ydot_max not satisfied!!" << reset << std::endl;
+  //   std::cout << red << "next_goal.dyaw= " << next_goal.dyaw << reset << std::endl;
+  //   std::cout << red << "par_.ydot_max= " << par_.ydot_max << reset << std::endl;
+  //   abort();
+  // }
 
   // verify(fabs(next_goal.dyaw) <= par_.ydot_max, "par_.ydot_max not satisfied!!");
 

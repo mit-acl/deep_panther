@@ -165,7 +165,7 @@ public:
 
   void getPlanes(std::vector<Hyperplane3D> &planes);
 
-  si::solOrGuess fillTrajBestSololutionAndGetIt();
+  si::solOrGuess fillTrajBestSolutionAndGetIt();
 
 protected:
 private:
