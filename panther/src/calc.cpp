@@ -14,7 +14,7 @@ int main()
   py::scoped_interpreter guard{};
   /////////////////////////////
 
-  py::module calc = py::module::import("panther.calc");
+  py::module calc = py::module::import("compression.utils.other");
 
   std::string policy_path = "/home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/1/"
                             "final_policy.pt";
@@ -22,7 +22,7 @@ int main()
   py::object tmp = calc.attr("StudentCaller")(policy_path);
 
   mt::state A;
-  mt::state G;
+
   double total_time = 10;
 
   mt::obstacleForOpt obstacle_for_opt;
@@ -39,8 +39,6 @@ int main()
 
   std::vector<mt::obstacleForOpt> obstacles_for_opt;
   obstacles_for_opt.push_back(obstacle_for_opt);
-
-  Eigen::Vector3d w_g = Eigen::Vector3d::Zero();
 
   Eigen::Vector3d w_gterm = 10 * Eigen::Vector3d::Ones();
 

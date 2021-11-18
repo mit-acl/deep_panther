@@ -6,6 +6,7 @@ import math
 from scipy.interpolate import BSpline
 import py_panther
 from colorama import init, Fore, Back, Style
+from imitation.algorithms import bc
 
 class TfMatrix():
 	def __init__(self, T):
@@ -272,7 +273,9 @@ def normalize(v):
 class ObservationManager():
 	def __init__(self):
 		self.obsm=ObstaclesManager();
-		#Observation =       [f_v, f_a, yaw_dot, f_g,  f_o1, bbox_o1, f_o2, bbox_o2 ,...]
+		#Observation =       [f_v, f_a, yaw_dot, f_g,  [f_ctrl_pts_o0], bbox_o0, [f_ctrl_pts_o1], bbox_o1 ,...]
+		#
+		# Where f_ctrl_pts_oi = [cp0.transpose(), cp1.transpose(), ...]
 		self.observation_size= 3 +  3 +   1    + 3   + self.obsm.getSizeAllObstacles();
 
 		params=readPANTHERparams();
@@ -291,7 +294,7 @@ class ObservationManager():
 
 		# assert print("Shape observation=", observation.shape==)
 
-	def printObs(self, obs):
+	def printObservation(self, obs):
 		print("----The observation is:")
 		print(Fore.BLUE +f"f_v.T={self.getf_v(obs).T}"+Style.RESET_ALL)
 		print(Fore.GREEN +f"f_a.T={self.getf_a(obs).T}"+Style.RESET_ALL)
@@ -405,7 +408,7 @@ class ObservationManager():
 		#Convert obs to f frame and append ethem to observation
 		for w_obstacle in w_obstacles:
 			assert type(w_obstacle.ctrl_pts).__module__ == np.__name__, "the ctrl_pts should be a numpy matrix, not a list"
-			observation=np.concatenate((observation, (w_state.f_T_w*w_obstacle.ctrl_pts).flatten(), (w_obstacle.bbox_inflated).flatten()))
+			observation=np.concatenate((observation, (w_state.f_T_w*w_obstacle.ctrl_pts).flatten(order='F'), (w_obstacle.bbox_inflated).flatten()))
 
 
 		observation=observation.reshape(self.getObservationShape())
@@ -431,11 +434,14 @@ class ActionManager():
 
 		# Define action and observation space
 
-		# action = np.array([ctrlpoints_pos   ctrol_points_yaw  total time])
-		# where ctrlpoints_pos has the ctrlpoints that are not determined by init pos/vel/accel, and final vel/accel
-		# i.e., len(ctrlpoints_pos)= (num_seg_pos + deg_pos - 1 + 1) - 3 - 2 = num_seg_pos + deg_pos - 5;
-		# where ctrlpoints_pos has the ctrlpoints that are not determined by init pos/vel, and final vel
-		# i.e., len(ctrlpoints_yaw)= (num_seg_yaw + deg_yaw - 1 + 1) - 2 - 1 = num_seg_yaw + deg_yaw - 3;
+		# action = np.array([ctrl_points_pos   ctrl_points_yaw  total time])
+		#
+		# --> where ctrlpoints_pos has the ctrlpoints that are not determined by init pos/vel/accel, and final vel/accel
+		#     i.e., len(ctrlpoints_pos)= (num_seg_pos + deg_pos - 1 + 1) - 3 - 2 = num_seg_pos + deg_pos - 5;
+		#	  and ctrl_points_pos=[cp3.transpose(), cp4.transpose(),...]
+		#
+		# --> where ctrlpoints_yaw has the ctrlpoints that are not determined by init pos/vel, and final vel
+		#     i.e., len(ctrlpoints_yaw)= (num_seg_yaw + deg_yaw - 1 + 1) - 2 - 1 = num_seg_yaw + deg_yaw - 3;
 
 		self.action_size_pos_ctrl_pts = 3*(self.num_seg + self.deg_pos - 5);
 		self.action_size_yaw_ctrl_pts = (self.num_seg + self.deg_yaw - 3);
@@ -490,13 +496,6 @@ class ActionManager():
 	def getDegYaw(self):
 		return self.deg_yaw;
 
-	# def actionAndValues2_w_pos_ctrl_pts(self, f_action, w_pos, w_vel, w_accel, w_yaw, yaw_dot):
-
-	# 	w_state=State(w_pos, w_vel, w_accel, w_yaw, yaw_dot);
-	# 	w_pos_ctrl_pts=actionAndState2_w_pos_ctrl_pts(f_action, w_state)
-	# 	return w_pos_ctrl_pts
-
-
 	def actionAndState2_w_pos_ctrl_pts_and_knots(self, f_action, w_state):
 
 		assert type(w_state)==State
@@ -505,12 +504,12 @@ class ActionManager():
 
 		knots_pos=generateKnotsForClampedUniformBspline(0.0, total_time, self.deg_pos, self.num_seg)
 
-		f_pos_ctrl_pts = f_action[0,0:self.action_size_pos_ctrl_pts].reshape((3,-1))
+		f_pos_ctrl_pts = f_action[0,0:self.action_size_pos_ctrl_pts].reshape((3,-1), order='F')
 
 		#Convert to w frame
 		w_pos_ctrl_pts = w_state.w_T_f * f_pos_ctrl_pts;
 
-		pf=w_pos_ctrl_pts[:,-1].reshape((3,-1)); #Assumming final vel and accel=0 
+		pf=w_pos_ctrl_pts[:,-1].reshape((3,1)); #Assumming final vel and accel=0 
 		p0=w_state.w_pos
 		v0=w_state.w_vel
 		a0=w_state.w_accel
@@ -594,6 +593,45 @@ class ActionManager():
 		w_yawBS =  MyClampedUniformBSpline(0.0, total_time, self.deg_yaw, 1, self.num_seg, w_yaw_ctrl_pts)
 		
 		return w_posBS, w_yawBS
+
+
+class StudentCaller():
+    def __init__(self, policy_path):
+        self.student_policy=bc.reconstruct_policy(policy_path)
+        self.om=ObservationManager();
+        self.am=ActionManager();
+
+    def predict(self, w_init_ppstate, w_ppobstacles, w_gterm): #pp stands for py_panther
+
+        print("Hi there!")
+
+        w_init_state=convertPPState2State(w_init_ppstate)
+
+        w_gterm=w_gterm.reshape(3,1)
+
+        w_obstacles=convertPPObstacles2Obstacles(w_ppobstacles)
+
+        #Construct observation
+        observation=self.om.construct_f_obsFrom_w_state_and_w_obs(w_init_state, w_obstacles, w_gterm)
+
+        action,info = self.student_policy.predict(observation, deterministic=True) 
+
+        action=action.reshape(self.am.getActionShape())
+
+        print("action.shape= ", action.shape)
+        print("action=", action)   
+
+
+        # w_pos_ctrl_pts,_ = self.am.actionAndState2_w_pos_ctrl_pts_and_knots(action,w_init_state)
+
+        # print("w_pos_ctrl_pts=", w_pos_ctrl_pts)
+
+        my_solOrGuess= self.am.actionAndState2w_ppSolOrGuess(action,w_init_state);
+
+        # py_panther.solOrGuessl
+
+
+        return my_solOrGuess   
 
 #You can check the previous function by using this Matlab script:
 # clc;
