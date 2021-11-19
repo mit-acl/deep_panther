@@ -34,7 +34,7 @@ public:
 
   ~Test()
   {
-    // pybind11::finalize_interpreter();
+    pybind11::finalize_interpreter();
   }
   void runCB(const ros::TimerEvent& e)
   {
