@@ -442,8 +442,8 @@ void Panther::doStuffTermGoal()
     /////////////////////////////////
     mtx_plan_.lock();  // must be before changeDroneStatus
 
-    changeDroneStatus(DroneStatus::YAWING);
-    // changeDroneStatus(DroneStatus::TRAVELING);  // Changed on Oct 12, 2021
+    // changeDroneStatus(DroneStatus::YAWING);
+    changeDroneStatus(DroneStatus::TRAVELING);  // hack to force it to plan for the same position all the time
 
     mt::state last_state = plan_.back();
 
@@ -570,7 +570,7 @@ bool Panther::isReplanningNeeded()
   return true;
 }
 
-bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
+bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out, si::solOrGuess& best_solution,
                      std::vector<si::solOrGuess>& best_solutions, std::vector<si::solOrGuess>& guesses,
                      std::vector<si::solOrGuess>& splines_fitted, std::vector<Hyperplane3D>& planes, mt::log& log)
 {
@@ -622,6 +622,10 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
     k_index_end = 0;
   }
 
+  // hack to force it to plan for the same position all the time
+  k_index_end = plan_.size() - 1;
+  // end of hack
+
   k_index = plan_.size() - 1 - k_index_end;
   A = plan_.get(k_index);
 
@@ -643,7 +647,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   std::vector<mt::obstacleForOpt> obstacles_for_opt =
       getObstaclesForOpt(t_start, t_start + par_.fitter_total_time, splines_fitted);
 
-  si::solOrGuess solution;
+  // si::solOrGuess best_solution;
   if (par_.use_expert)
   {
     //////////////////////////////////////////////////////////////////////////
@@ -784,14 +788,20 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
     best_solutions = solver_->getSolutions();
     guesses = solver_->getGuesses();
 
-    solution = solver_->fillTrajBestSolutionAndGetIt();
+    best_solution = solver_->fillTrajBestSolutionAndGetIt();
   }
   else  // plan using the student
   {
+    std::cout << "Calling the student!" << std::endl;
     pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos);
-    solution = result.cast<si::solOrGuess>();
-    solution.fillTraj(par_.dc);  // This could also be done in the predict method of the python class
-    solution.printInfo();
+    std::cout << "Called the student!" << std::endl;
+    best_solution = result.cast<si::solOrGuess>();
+
+    A.printHorizontal();
+
+    best_solution.fillTraj(par_.dc);  // This could also be done in the predict method of the python class
+    best_solution.printInfo();
+    // abort();
   }
 
   solutions_found_++;
@@ -817,7 +827,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   {
     plan_.erase(plan_.end() - k_index_end - 1, plan_.end());  // this deletes also the initial condition...
 
-    for (auto& state : solution.traj)  //... which is included in solution.traj[0]
+    for (auto& state : best_solution.traj)  //... which is included in best_solution.traj[0]
     {
       plan_.push_back(state);
     }
@@ -896,7 +906,6 @@ bool Panther::getNextGoal(mt::state& next_goal)
                                                // TODO: if included this part commented out, the last state (which is
                                                // the one that has zero accel) will never get published
   {
-    // std::cout << "Not publishing new goal" << std::endl;
     // std::cout << "plan_.size() ==" << plan_.size() << std::endl;
     // std::cout << "plan_.content[0] ==" << std::endl;
     // plan_.content[0].print();
@@ -911,7 +920,7 @@ bool Panther::getNextGoal(mt::state& next_goal)
 
   if (plan_.size() > 1)
   {
-    plan_.pop_front();
+    // plan_.pop_front(); //hack to force it to plan for the same position all the time
   }
 
   if (plan_.size() == 1 && drone_status_ == DroneStatus::YAWING)

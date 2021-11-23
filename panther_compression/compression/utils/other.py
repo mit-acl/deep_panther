@@ -471,6 +471,8 @@ class ActionManager():
 		assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}"
 		return action_normalized;
 
+	def getTotalTime(self,action):
+		return action[0,-1]
 
 	def denormalizeAction(self, action_normalized):
 		assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}"
@@ -614,19 +616,25 @@ class StudentCaller():
         #Construct observation
         observation=self.om.construct_f_obsFrom_w_state_and_w_obs(w_init_state, w_obstacles, w_gterm)
 
-        action,info = self.student_policy.predict(observation, deterministic=True) 
+        action_normalized,info = self.student_policy.predict(observation, deterministic=True) 
 
-        action=action.reshape(self.am.getActionShape())
+        action_normalized=action_normalized.reshape(self.am.getActionShape())
+
+        action=self.am.denormalizeAction(action_normalized)
 
         print("action.shape= ", action.shape)
         print("action=", action)   
 
+
+        assert self.am.getTotalTime(action)>0, "Time needs to be >0"
 
         # w_pos_ctrl_pts,_ = self.am.actionAndState2_w_pos_ctrl_pts_and_knots(action,w_init_state)
 
         # print("w_pos_ctrl_pts=", w_pos_ctrl_pts)
 
         my_solOrGuess= self.am.actionAndState2w_ppSolOrGuess(action,w_init_state);
+
+
 
         # py_panther.solOrGuessl
 

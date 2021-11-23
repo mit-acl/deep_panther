@@ -111,7 +111,8 @@ private:
   ros::Publisher pub_point_A_;
 
   ros::Publisher pub_traj_safe_colored_;
-  ros::Publisher pub_best_trajs_colored_;
+  ros::Publisher pub_best_solutions_colored_;
+  ros::Publisher pub_best_solution_colored_;
   ros::Publisher pub_guesses_colored_;
   ros::Publisher pub_splines_fitted_colored_;
 

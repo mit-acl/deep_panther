@@ -139,4 +139,8 @@ class StudentPolicy(BasePolicy):
         # self.printwithName(f"action={action}")
         # self.printwithName(f"Returning action shape={action.shape}")
         return action
+
+    # def predictAndDenormalize(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
+    #     action =self._predict(observation, deterministic)
+    #     return self.am.denormalizeAction(action)
         
