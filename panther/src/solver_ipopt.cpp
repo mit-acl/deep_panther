@@ -233,6 +233,33 @@ void SolverIpopt::getPlanes(std::vector<Hyperplane3D> &planes)
 // }
 
 //////////////////////////////////////////////////////////
+
+bool SolverIpopt::isInCollision(mt::state state, double t)
+{
+  for (const auto &obstacle_i : obstacles_for_opt_)
+  {
+    Eigen::RowVectorXd knots_p =
+        constructKnotsClampedUniformSpline(t_init_, t_final_guess_, par_.fitter_deg_pos, par_.fitter_num_seg);
+
+    mt::state state_obs = getStatePosSplineT(obstacle_i.ctrl_pts, knots_p, sp_.p, t);
+
+    Eigen::Array<double, 3, 1> distance = (state_obs.pos - state.pos).array().abs();
+    Eigen::Vector3d delta = obstacle_i.bbox_inflated / 2.0;
+
+    std::cout << "state_obs.pos= " << state_obs.pos.transpose() << std::endl;
+    std::cout << "state.pos= " << state.pos.transpose() << std::endl;
+    std::cout << "distance= " << distance.transpose() << std::endl;
+    std::cout << "delta= " << delta.transpose() << std::endl;
+    // std::cout << "obstacle_i.bbox_inflated= " << obstacle_i.bbox_inflated.transpose() << std::endl;
+
+    if ((distance < delta.array()).all())
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
 void SolverIpopt::setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obstacles_for_opt)
 {
   obstacles_for_opt_ = obstacles_for_opt;
@@ -266,7 +293,7 @@ void SolverIpopt::setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obst
 
         mt::state state = getStatePosSplineT(obstacle_i.ctrl_pts, knots_p, sp_.p, times[k]);
 
-        Eigen::Vector3d delta = obstacle_i.bbox_inflated;
+        Eigen::Vector3d delta = obstacle_i.bbox_inflated / 2.0;
 
         // clang-format off
          vertexes_interval_j.col(8*k)=     (Eigen::Vector3d(state.pos.x() + delta.x(), state.pos.y() + delta.y(), state.pos.z() + delta.z()));
@@ -415,23 +442,23 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
   t_init_ = t_init;
   t_final_guess_ = t_final;
 
-  std::cout << "total_time_guess= " << t_final_guess_ - t_init_ << std::endl;
+  // std::cout << "total_time_guess= " << t_final_guess_ - t_init_ << std::endl;
 
   return true;
 }
 
-std::vector<si::solOrGuess> SolverIpopt::getSolutions()
+std::vector<si::solOrGuess> SolverIpopt::getBestSolutions()
 {
   return solutions_;
 }
 
-si::solOrGuess SolverIpopt::fillTrajBestSolutionAndGetIt()
+si::solOrGuess SolverIpopt::getBestSolution()
 {
   double min_cost = std::numeric_limits<double>::max();
   int argmin = -1;
   for (int i = 0; i < solutions_.size(); i++)
   {
-    if ((solutions_[i].solver_succeeded && solutions_[i].cost) < min_cost)
+    if (solutions_[i].solver_succeeded && (solutions_[i].cost < min_cost))
     {
       min_cost = solutions_[i].cost;
       argmin = i;
@@ -445,15 +472,22 @@ si::solOrGuess SolverIpopt::fillTrajBestSolutionAndGetIt()
     abort();
   }
 
-  solutions_[argmin].fillTraj(par_.dc);
+  return solutions_[argmin];
+}
+
+si::solOrGuess SolverIpopt::fillTrajBestSolutionAndGetIt()
+{
+  si::solOrGuess best_solution = getBestSolution();
+
+  best_solution.fillTraj(par_.dc);
 
   // Force last vel and jerk =final_state_ (which it's not guaranteed because of the discretization with par_.dc)
-  solutions_[argmin].traj.back().vel = final_state_.vel;
-  solutions_[argmin].traj.back().accel = final_state_.accel;
-  solutions_[argmin].traj.back().jerk = Eigen::Vector3d::Zero();
-  solutions_[argmin].traj.back().ddyaw = final_state_.ddyaw;
+  best_solution.traj.back().vel = final_state_.vel;
+  best_solution.traj.back().accel = final_state_.accel;
+  best_solution.traj.back().jerk = Eigen::Vector3d::Zero();
+  best_solution.traj.back().ddyaw = final_state_.ddyaw;
 
-  return solutions_[argmin];
+  return best_solution;
 }
 
 std::vector<si::solOrGuess> SolverIpopt::getGuesses()
@@ -468,6 +502,14 @@ bool SolverIpopt::optimize()
   std::vector<os::solution> p_guesses;
 
   // reset some stuff
+  solutions_.clear();
+
+  if (isInCollision(initial_state_, t_init_))
+  {
+    std::cout << bold << red << "The initial state is in collision. Aborting" << reset << std::endl;
+    abort();
+  }
+
   bool guess_found = generateAStarGuess(p_guesses);  // I obtain p_guesses
   if (guess_found == false)
   {
@@ -789,17 +831,19 @@ bool SolverIpopt::optimize()
     solutions[i].printInfo();
   }
 
-  std::cout << "solutions.size()==" << solutions.size() << std::endl;
+  std::cout << "solutions.size()=" << solutions.size() << std::endl;
 
   solutions_ = solutions;
   guesses_ = guesses;
 
   if (anySolutionSucceeded())
   {
+    std::cout << "Returning true" << std::endl;
     return true;
   }
   else
   {
+    std::cout << "Returning false" << std::endl;
     return false;
   }
 

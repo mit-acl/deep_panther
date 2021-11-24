@@ -85,6 +85,8 @@ struct solOrGuess
 
     std::cout << "knots_y= " << knots_y << std::endl;
 
+    std::cout << bold << "solver_succeeded= " << solver_succeeded << reset << std::endl;
+
     if (is_guess == false && solver_succeeded == true)
     {
       std::cout << blue << std::setprecision(5) << "Cost= " << cost << reset << std::endl;
@@ -159,8 +161,8 @@ public:
   void setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obstacles_for_opt);
   mt::parameters par_;
   // mt::trajectory traj_solution_;
-
-  std::vector<si::solOrGuess> getSolutions();
+  si::solOrGuess getBestSolution();
+  std::vector<si::solOrGuess> getBestSolutions();
   std::vector<si::solOrGuess> getGuesses();
 
   void getPlanes(std::vector<Hyperplane3D> &planes);
@@ -169,6 +171,8 @@ public:
 
 protected:
 private:
+  bool isInCollision(mt::state state, double t);
+
   bool anySolutionSucceeded();
 
   std::vector<si::solOrGuess> solutions_;

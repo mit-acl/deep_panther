@@ -25,9 +25,9 @@ bool SolverIpopt::generateAStarGuess(std::vector<os::solution>& p_guesses)
 {
   octopusSolver_ptr_->setUp(t_init_, t_final_guess_, hulls_);
 
-  std::cout << "t_init_= " << t_init_ << std::endl;
-  std::cout << "t_final_guess_= " << t_final_guess_ << std::endl;
-  std::cout << "par_.vmax= " << par_.v_max << std::endl;
+  // std::cout << "t_init_= " << t_init_ << std::endl;
+  // std::cout << "t_final_guess_= " << t_final_guess_ << std::endl;
+  // std::cout << "par_.vmax= " << par_.v_max << std::endl;
 
   ///////////////////////////////
 

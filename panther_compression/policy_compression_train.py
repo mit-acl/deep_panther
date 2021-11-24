@@ -136,22 +136,25 @@ if __name__ == "__main__":
 
     printInBoldBlue("---------------- Preliminiary Evaluation: --------------------")
 
-    # Evaluate student reward before training,
-
     #NOTES: args.n_evals is the number of trajectories collected in the environment
     #A trajectory is defined as a sequence of steps in the environment (until the environment returns done)
     #Hence, each trajectory usually contains the result of eval_ep_len timesteps (it may contains less if the environent returned done before) 
     #In other words, episodes in |evaluate_policy() is the number of trajectories
     #                            |the environment is the number of time steps
 
-    pre_train_stats = evaluate_policy(trainer.get_policy(), test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/pre_train_no_dist")
-    print("[Evaluation] Student reward: {}, len: {}.".format(pre_train_stats["return_mean"], pre_train_stats["len_mean"]))
-
     # Evaluate the reward of the expert
     expert_stats = evaluate_policy( expert_policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/teacher_no_dist")
     print("[Evaluation] Expert reward: {}, len: {}.\n".format( expert_stats["return_mean"], expert_stats["len_mean"]))
 
+    # Evaluate student reward before training,
+    pre_train_stats = evaluate_policy(trainer.get_policy(), test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/pre_train_no_dist")
+    print("[Evaluation] Student reward: {}, len: {}.".format(pre_train_stats["return_mean"], pre_train_stats["len_mean"]))
+
+
     del expert_stats
+
+
+
 
     # Train and evaluate
     printInBoldBlue("---------------- Training Learner: --------------------")

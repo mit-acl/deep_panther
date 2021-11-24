@@ -55,18 +55,24 @@ Panther::Panther(mt::parameters par) : par_(par)
   std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
   cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
 
-  pybind11::initialize_interpreter();
+  if (par_.use_expert == false)
+  {
+    pybind11::initialize_interpreter();
 
-  std::string policy_path = "/home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/1/"
-                            "final_policy.pt";
+    std::string policy_path = "/home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/1/"
+                              "final_policy.pt";
 
-  student_caller_ptr_ = new pybind11::object;
-  *student_caller_ptr_ = pybind11::module::import("compression.utils.other").attr("StudentCaller")(policy_path);
+    student_caller_ptr_ = new pybind11::object;
+    *student_caller_ptr_ = pybind11::module::import("compression.utils.other").attr("StudentCaller")(policy_path);
+  }
 }
 
 Panther::~Panther()
 {
-  pybind11::finalize_interpreter();
+  if (par_.use_expert == false)
+  {
+    pybind11::finalize_interpreter();
+  }
 }
 
 void Panther::dynTraj2dynTrajCompiled(const mt::dynTraj& traj, mt::dynTrajCompiled& traj_compiled)
@@ -785,7 +791,8 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
     solver_->getPlanes(planes);
 
-    best_solutions = solver_->getSolutions();
+    best_solutions = solver_->getBestSolutions();
+
     guesses = solver_->getGuesses();
 
     best_solution = solver_->fillTrajBestSolutionAndGetIt();
