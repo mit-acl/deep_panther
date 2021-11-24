@@ -153,6 +153,10 @@ class ObstaclesManager():
 		# self.fitter_total_time=params["fitter_total_time"];
 		self.fitter_num_seg=self.params["fitter_num_seg"];
 		self.fitter_deg_pos=self.params["fitter_deg_pos"];
+		self.newRandomPos();
+
+	def newRandomPos(self):
+		self.random_pos=np.array([[random.uniform(1.0, 2.5)],[random.uniform(-1.0, 1.0)],[random.uniform(0.0, 1.0)]]);
 
 	def getNumObs(self):
 		return self.num_obs
@@ -173,10 +177,10 @@ class ObstaclesManager():
 				# tmp_x=np.random.uniform(low=0.5, high=2.5, size=(3,1))
 				# tmp_y=np.random.uniform(low=-1.0, high=1.0, size=(3,1))
 				# tmp_z=np.random.uniform(low=0.0, high=1.0, size=(3,1))
-				tmp=np.array([[random.uniform(1.0, 2.5)],[random.uniform(-1.0, 1.0)],[random.uniform(0.0, 1.0)]])
+				# tmp=np.array([[random.uniform(1.0, 2.5)],[random.uniform(-1.0, 1.0)],[random.uniform(0.0, 1.0)]])
 				# tmp=np.array([[2],[2],[2]])
 
-				w_ctrl_pts_ob=np.concatenate((w_ctrl_pts_ob, tmp), axis=1)
+				w_ctrl_pts_ob=np.concatenate((w_ctrl_pts_ob, self.random_pos), axis=1)
 				# w_ctrl_pts_ob.append(np.array([[2],[2],[2]]))
 
 			# bbox_ob=np.array([[0.5],[0.5], [0.5]]);
@@ -288,16 +292,17 @@ class ObservationManager():
 		self.observation_size= 3 +  3 +   1    + 3   + self.obsm.getSizeAllObstacles();
 
 		params=readPANTHERparams();
-		self.v_max=params["v_max"];
-		self.a_max=params["a_max"];
-		self.j_max=params["j_max"];
+		self.v_max=np.array(params["v_max"]).reshape(3,1);
+		self.a_max=np.array(params["a_max"]).reshape(3,1);
+		self.j_max=np.array(params["j_max"]).reshape(3,1);
 		self.ydot_max=params["ydot_max"];
 		# self.max_dist2goal=params["max_dist2goal"];
 		self.max_dist2obs=params["max_dist2obs"];
 		self.max_side_bbox_obs=params["max_side_bbox_obs"];
 		self.Ra=params["Ra"]
 		ones13=np.ones((1,3));
-		self.normalization_constant=np.concatenate((self.v_max*ones13, self.a_max*ones13, self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
+		#Note that the sqrt(3) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
+		self.normalization_constant=np.concatenate((math.sqrt(3)*self.v_max.T*ones13, math.sqrt(3)*self.a_max.T*ones13, self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
 		for i in range(self.obsm.getNumObs()):
 			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)
 
@@ -382,12 +387,12 @@ class ObservationManager():
 		# print("obsm.getSizeAllObstacles()=", self.obsm.getSizeAllObstacles())
 
 		observation_normalized=observation/self.normalization_constant;
-		assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
+		assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all(), f"observation_normalized= {observation_normalized}, getf_a={self.getf_a(observation)}" 
 		return observation_normalized;
 
-	def getNormalized_fObservationFromTime_w_stateAnd_w_gterm(self, time, w_state, w_gterm):
-	    w_obstacles=self.obsm.getFutureWPosObstacles(time)
-	    f_observation=self.construct_f_obsFrom_w_state_and_w_obs(w_state, w_obstacles, w_gterm)
+	def getNormalized_fObservationFromTime_w_stateAnd_w_gtermAnd_w_obstacles(self, time, w_state, w_gterm_pos, w_obstacles):
+	    # w_obstacles=self.obsm.getFutureWPosObstacles(time) #Don't do this here
+	    f_observation=self.construct_f_obsFrom_w_state_and_w_obs(w_state, w_obstacles, w_gterm_pos)
 	    f_observationn=self.normalizeObservation(f_observation) #Observation normalized
 	    return f_observationn
 
