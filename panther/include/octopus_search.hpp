@@ -158,8 +158,8 @@ public:
 
 protected:
 private:
-  bool computeAxisForNextInterval(const int i, const Eigen::Vector3d& viM1, int axis, double& constraint_L,
-                                  double& constraint_U);
+  // bool computeAxisForNextInterval(const int i, const Eigen::Vector3d& viM1, int axis, double& constraint_L,
+  //                                 double& constraint_U);
 
   Eigen::Matrix<double, 3, 4> transformBSpline2otherBasis(const Eigen::Matrix<double, 3, 4>& Qbs, int interval);
   Eigen::Matrix<double, 3, 4> transformOtherBasis2BSpline(const Eigen::Matrix<double, 3, 4>& Qmv, int interval);
@@ -185,6 +185,8 @@ private:
   double bias_;  // page 34 of https://www.cs.cmu.edu/~motionplanning/lecture/Asearch_v8.pdf
 
   int basis_ = B_SPLINE;
+
+  int num_intervals_is_zero_ = 0;
 
   Eigen::Vector3d goal_;
   Eigen::Vector3d v_max_;
