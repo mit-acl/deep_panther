@@ -147,7 +147,7 @@ if __name__ == "__main__":
     print("[Evaluation] Expert reward: {}, len: {}.\n".format( expert_stats["return_mean"], expert_stats["len_mean"]))
 
     #Debugging
-    exit();
+    # exit();
 
     # Evaluate student reward before training,
     pre_train_stats = evaluate_policy(trainer.get_policy(), test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/pre_train_no_dist")
@@ -205,12 +205,14 @@ if __name__ == "__main__":
 
         # no disturbance
         post_train_stats = evaluate_policy(trainer.get_policy(), test_venv,eval_episodes=args.n_evals, log_path=LOG_PATH + "/post_train_no_dist" )
-        student_improvement=(post_train_stats["return_mean"]-pre_train_stats["return_mean"])/abs(pre_train_stats["return_mean"]);
         print("[Complete] Reward: Pre: {}, Post: {}.".format( pre_train_stats["return_mean"], post_train_stats["return_mean"]))
-        if(student_improvement>0):
-            printInBoldGreen(f"Student improvement: {student_improvement*100}%")
-        else:
-            printInBoldRed(f"Student improvement: {student_improvement*100}%")
+        
+        if(abs(pre_train_stats["return_mean"])>0):
+            student_improvement=(post_train_stats["return_mean"]-pre_train_stats["return_mean"])/abs(pre_train_stats["return_mean"]);
+            if(student_improvement>0):
+                printInBoldGreen(f"Student improvement: {student_improvement*100}%")
+            else:
+                printInBoldRed(f"Student improvement: {student_improvement*100}%")
         
         print("[Complete] Episode length: Pre: {}, Post: {}.".format( pre_train_stats["len_mean"], post_train_stats["len_mean"]))
 

@@ -472,6 +472,15 @@ si::solOrGuess SolverIpopt::getBestSolution()
     abort();
   }
 
+  /// Debugging
+  // solutions_[argmin].fillTraj(0.05);
+
+  // for (auto &state_i : solutions_[argmin].traj)
+  // {
+  //   state_i.printHorizontal();
+  // }
+  /////////////////////////////////////
+
   return solutions_[argmin];
 }
 

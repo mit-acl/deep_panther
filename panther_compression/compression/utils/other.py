@@ -8,6 +8,7 @@ import py_panther
 from colorama import init, Fore, Back, Style
 from imitation.algorithms import bc
 import random
+import pytest
 
 class TfMatrix():
 	def __init__(self, T):
@@ -38,6 +39,9 @@ class TfMatrix():
 		np.testing.assert_allclose(R@R.T-np.identity(3), 0, atol=1e-07)
 		np.testing.assert_allclose(self.T[3,:]-np.array([[0, 0, 0, 1]]), 0, atol=1e-07)
 		# print("=============DEBUGING==========")
+	def rot(self): #Rotational part
+		return self.T[0:3,0:3]
+
 
 
 
@@ -202,14 +206,21 @@ class State():
 		self.w_accel = w_accel
 		self.w_yaw = w_yaw
 		self.yaw_dot = yaw_dot
-		self.w_T_f= posAccelYaw2TfMatrix(self.w_pos, self.w_accel, 0.0)
+		self.w_T_f= posAccelYaw2TfMatrix(self.w_pos, np.array([[0.0],[0.0], [0.0]]), w_yaw) #pos, accel, yaw
+		ez=np.array([[0.0],[0.0],[1.0]]);
+		np.testing.assert_allclose(self.w_T_f.T[0:3,2].reshape(3,1)-ez, 0, atol=1e-07)
 		self.f_T_w= self.w_T_f.inv()
 	def f_pos(self):
 		return self.f_T_w*self.w_pos;
 	def f_vel(self):
-		return self.f_T_w*self.w_vel;
+		f_vel=self.f_T_w.rot()@self.w_vel;
+		assert (np.linalg.norm(f_vel)-np.linalg.norm(self.w_vel)) == pytest.approx(0.0)
+		return f_vel;
 	def f_accel(self):
-		return self.f_T_w*self.w_accel;
+		self.f_T_w.debug();
+		f_accel=self.f_T_w.rot()@self.w_accel;
+		assert (np.linalg.norm(f_accel)-np.linalg.norm(self.w_accel)) == pytest.approx(0.0)
+		return f_accel;
 	def f_yaw(self):
 		return 0.0;
 
@@ -274,6 +285,12 @@ class MyClampedUniformBSpline():
 		for i in range(self.dim):
 			result[i,0]=self.jerk_bs[i](t)
 		return result
+
+	def getLastPos(self):
+		result1=self.ctrl_pts[0:3,-1].reshape(3,1)
+		result2=self.getPosT(self.knots[-1])
+		np.testing.assert_allclose(result1-result2, 0, atol=1e-07)
+		return result1
 
 def normalize(v):
 	norm = np.linalg.norm(v)
@@ -478,7 +495,7 @@ class ActionManager():
 													self.max_yawcPoint*np.ones((1, self.action_size_yaw_ctrl_pts))), axis=1)
 
 	def assertAction(self,action):
-		assert action.shape==self.getActionShape()
+		assert action.shape==self.getActionShape(), f"[Env] ERROR: action.shape={action.shape} but should be={self.getActionShape()}"
 		assert not np.isnan(np.sum(action)), f"Action has nan"
 
 
@@ -532,16 +549,6 @@ class ActionManager():
 		knots_pos=generateKnotsForClampedUniformBspline(0.0, total_time, self.deg_pos, self.num_seg)
 
 		f_pos_ctrl_pts = f_action[0,0:self.action_size_pos_ctrl_pts].reshape((3,-1), order='F')
-
-		# print("f_action 3= ", f_action)
-
-		# print("+++++++++++++++++++++++++")
-		# print("f_pos_ctrl_pts=\n", f_pos_ctrl_pts)
-		# print("+++++++++++++++++++++++++")
-
-		# print("************************")
-		# print("f_pos_ctrl_pts=\n", f_pos_ctrl_pts)
-		# print("************************")
 
 		#Convert to w frame
 		w_pos_ctrl_pts = w_state.w_T_f * f_pos_ctrl_pts;

@@ -11,7 +11,7 @@ impose_FOV_in_trajCB: false
 stop_time_when_replanning: true
 replanning_trigger_time: 0.5 #[seconds] 
 replanning_lookahead_time: 0.01 #[seconds] 
-max_runtime_octopus_search: 1.5 #[seconds] 
+max_runtime_octopus_search: 0.1 #[seconds] 
 fov_x_deg: 70 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Horizontal FOV
 fov_y_deg: 70 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Vertical FOV
 fov_depth: 5.0 #[m] 
@@ -51,7 +51,7 @@ print_graph_yaw_info: false
 fitter_total_time: 5.0 #[seconds] 
 mode: panther #  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther), ysweep (noPA but with sweep in yaw) 
 max_dist2goal: 20.0
-max_dist2obs: 10.0
+max_dist2obs: 20.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
-use_expert: true
+use_expert: false
