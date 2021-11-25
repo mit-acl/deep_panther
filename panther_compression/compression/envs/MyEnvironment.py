@@ -77,12 +77,12 @@ class MyEnvironment(gym.Env):
 
     self.am.assertAction(f_action_normalized)
 
-    # self.printwithName(f"Received actionN={action}")
+    # self.printwithName(f"Received actionN={f_action_normalized}")
     f_action= self.am.denormalizeAction(f_action_normalized);
     # self.printwithName(f"Received action size={action.shape}")
 
-    self.printwithName(f"Timestep={self.timestep}")
-    self.printwithName(f"w_state.w_pos={self.w_state.w_pos.T}")
+    # self.printwithName(f"Timestep={self.timestep}")
+    # self.printwithName(f"w_state.w_pos={self.w_state.w_pos.T}")
 
     ####################################
 
@@ -96,6 +96,8 @@ class MyEnvironment(gym.Env):
                         w_yawBS.getPosT(self.dt), w_yawBS.getVelT(self.dt));
 
 
+    print("w_yawBS.getPosT(self.dt)= ", w_yawBS.getPosT(self.dt))
+
     #Update time
     self.time = self.time + self.dt;
 
@@ -106,6 +108,8 @@ class MyEnvironment(gym.Env):
     # self.printwithName(f"w_obstacles={w_obstacles[0].ctrl_pts}")
 
     f_observationn=self.om.getNormalized_fObservationFromTime_w_stateAnd_w_gtermAnd_w_obstacles(self.time, self.w_state, self.w_gterm_pos, w_obstacles);
+
+    # self.printwithName(f"f_observationn={f_observationn}")
     ####################################
 
     # reward=0.0
