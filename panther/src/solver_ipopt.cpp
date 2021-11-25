@@ -513,12 +513,6 @@ bool SolverIpopt::optimize()
   // reset some stuff
   solutions_.clear();
 
-  if (isInCollision(initial_state_, t_init_))
-  {
-    std::cout << bold << red << "The initial state is in collision. Aborting" << reset << std::endl;
-    abort();
-  }
-
   bool guess_found = generateAStarGuess(p_guesses);  // I obtain p_guesses
   if (guess_found == false)
   {
@@ -809,6 +803,13 @@ bool SolverIpopt::optimize()
     {
       std::cout << red << "IPOPT failed to find a solution" << reset << std::endl;
       // log_ptr_->success_opt = false;
+
+      if (isInCollision(initial_state_, t_init_))
+      {
+        std::cout << bold << red << "The initial state was in collision." << reset << std::endl;
+        abort();
+      }
+
       success_opt = false;
       // qp = p_guesses.qp;
       // qy = qy_guess_;
