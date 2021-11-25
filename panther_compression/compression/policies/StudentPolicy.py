@@ -13,6 +13,9 @@ from stable_baselines3.common.torch_layers import (
     create_mlp,
 )
 
+from compression.utils.other import assertIsNormalized
+
+
 from colorama import init, Fore, Back, Style
 # CAP the standard deviation of the actor
 LOG_STD_MAX = 2
@@ -134,9 +137,13 @@ class StudentPolicy(BasePolicy):
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
         # self.printwithName(f"Received obs={observation}")
+        # self.printwithName(f"Received obs={observation.numpy()}")
+        assertIsNormalized(observation.numpy())
         # self.printwithName(f"Received obs shape={observation.shape}")
         action = self.forward(observation, deterministic)
-        # self.printwithName(f"action={action}")
+        self.printwithName(f"action={action}")
+        assertIsNormalized(action.numpy())
+
         # self.printwithName(f"Returning action shape={action.shape}")
         return action
 

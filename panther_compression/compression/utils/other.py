@@ -10,6 +10,9 @@ from imitation.algorithms import bc
 import random
 import pytest
 
+class ExpertDidntSucceed(Exception):
+      pass
+
 class TfMatrix():
 	def __init__(self, T):
 		self.T=T;
@@ -160,7 +163,8 @@ class ObstaclesManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.random_pos=np.array([[random.uniform(1.0, 2.5)],[random.uniform(-1.0, 1.0)],[random.uniform(0.0, 1.0)]]);
+		# self.random_pos=np.array([[random.uniform(1.0, 2.5)],[random.uniform(-1.0, 1.0)],[random.uniform(0.0, 1.0)]]);
+		self.random_pos=np.array([[2.5],[0.0],[1.0]]);
 
 	def getNumObs(self):
 		return self.num_obs
@@ -299,6 +303,15 @@ def normalize(v):
 		raise RuntimeError
 	return v / norm
 
+def isNormalized(observation_or_action_normalized):
+	return np.logical_and(observation_or_action_normalized >= -1, observation_or_action_normalized <= 1).all()
+
+def assertIsNormalized(observation_or_action_normalized):
+	if not isNormalized(observation_or_action_normalized):
+		# print("observation_normalized=\n")
+		# self.printObservation(observation_or_action_normalized)
+		raise AssertionError()
+
 
 class ObservationManager():
 	def __init__(self):
@@ -319,7 +332,8 @@ class ObservationManager():
 		self.Ra=params["Ra"]
 		ones13=np.ones((1,3));
 		#Note that the sqrt(3) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
-		self.normalization_constant=np.concatenate((math.sqrt(3)*self.v_max.T*ones13, math.sqrt(3)*self.a_max.T*ones13, self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
+		#The 2 in ydot_max is because the student sometimes may not satisfy that limit
+		self.normalization_constant=np.concatenate((math.sqrt(3)*self.v_max.T*ones13, math.sqrt(3)*self.a_max.T*ones13, 2*self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
 		for i in range(self.obsm.getNumObs()):
 			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)
 
@@ -404,7 +418,8 @@ class ObservationManager():
 		# print("obsm.getSizeAllObstacles()=", self.obsm.getSizeAllObstacles())
 
 		observation_normalized=observation/self.normalization_constant;
-		assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all(), f"observation_normalized= {observation_normalized}, getf_a={self.getf_a(observation)}" 
+		assertIsNormalized(observation_normalized)
+		assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
 		return observation_normalized;
 
 	def getNormalized_fObservationFromTime_w_stateAnd_w_gtermAnd_w_obstacles(self, time, w_state, w_gterm_pos, w_obstacles):
@@ -414,7 +429,10 @@ class ObservationManager():
 	    return f_observationn
 
 	def denormalizeObservation(self,observation_normalized):
-		assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all(), f"observation_normalized= {observation_normalized}" 
+		assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
+
+		assertIsNormalized(observation_normalized)
+		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all(), f"observation_normalized= {observation_normalized}" 
 		observation=observation_normalized*self.normalization_constant;
 		return observation;
 
@@ -681,8 +699,9 @@ class StudentCaller():
 
         #Construct observation
         observation=self.om.construct_f_obsFrom_w_state_and_w_obs(w_init_state, w_obstacles, w_gterm)
+        observation_normalized=self.om.normalizeObservation(observation)
 
-        action_normalized,info = self.student_policy.predict(observation, deterministic=True) 
+        action_normalized,info = self.student_policy.predict(observation_normalized, deterministic=True) 
 
         action_normalized=action_normalized.reshape(self.am.getActionShape())
 

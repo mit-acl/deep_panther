@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import copy
 from random import random
-from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct
+from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed
 from colorama import init, Fore, Back, Style
 import py_panther
 
@@ -85,7 +85,10 @@ class ExpertPolicy(object):
         self.my_SolverIpopt.setObstaclesForOpt(self.om.getObstacles(obs));
 
         # with nostdout():
-        self.my_SolverIpopt.optimize();
+        succeed=self.my_SolverIpopt.optimize();
+
+        if(succeed==False):
+            raise ExpertDidntSucceed()
 
         best_solution=self.my_SolverIpopt.getBestSolution();
 

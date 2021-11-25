@@ -37,18 +37,18 @@ def printInBoldGreen(data_string):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--seed", type=int)
-    parser.add_argument("--log_dir", type=str) # usually "log"
-    parser.add_argument("--policy_dir", type=str) # usually "tmp"
+    parser.add_argument("--seed", type=int, default=2)
+    parser.add_argument("--log_dir", type=str, default="evals/log_dagger") # usually "log"
+    parser.add_argument("--policy_dir", type=str, default="evals/tmp_dagger") # usually "tmp"
     parser.add_argument("--planner-params", type=str) # Contains details on the tasks to be learnt (ref. trajectories)
     parser.add_argument("--use-DAgger", dest='on_policy_trainer', action='store_true') # Use DAgger when true, BC when false
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
 
-    parser.add_argument("--n_iters", default=20, type=int)
-    parser.add_argument("--n_evals", default=5, type=int)
-    parser.add_argument("--eval_ep_len", default=70, type=int)
-    parser.add_argument("--train_ep_len", default=200, type=int)
+    parser.add_argument("--n_iters", default=40, type=int)
+    parser.add_argument("--n_evals", default=6, type=int)
+    parser.add_argument("--eval_environment_max_steps", default=10, type=int)
+    parser.add_argument("--train_environment_max_steps", default=10, type=int)
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
     parser.add_argument("--n_traj_per_iter", default=1, type=int)
@@ -56,11 +56,11 @@ if __name__ == "__main__":
     parser.add_argument("--no_train", dest='train', action='store_false')
     parser.set_defaults(train=True)
     parser.add_argument("--no_eval", dest='eval', action='store_false')
-    parser.set_defaults(eval=True)
+    parser.set_defaults(eval=False)
     parser.add_argument("--no_final_eval", dest='final_eval', action='store_false')
     parser.set_defaults(final_eval=True)
     # Dagger properties
-    parser.add_argument("--dagger_beta", default=10, type=int)
+    parser.add_argument("--dagger_beta", default=35, type=int)
        
     
     args = parser.parse_args()
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     printInBoldBlue("---------------- Input Arguments: -----------------------")
     print("Trainer: {}.".format("DAgger" if args.on_policy_trainer ==True else "BC" ))
     print(f"Seed: {args.seed}, Log: {args.log_dir}, Num iters: {args.n_iters}")
-    print(f"Eval episode len: {args.eval_ep_len}")
+    print(f"Eval episode len: {args.eval_environment_max_steps}")
     print(f"DAgger Linear Beta: {args.dagger_beta}.")
 
     print(f"Num of trajectories per iteration: {args.n_traj_per_iter}.")
@@ -82,7 +82,6 @@ if __name__ == "__main__":
 
     # directly learn the policy params (with or without sampling extra states?)
     N_VEC = 1
-    N_TRAJECTORIES = 1
     N_EPOCHS = 50           #WAS 50!! Num epochs for training.
     ENV_NAME = "my-environment-v1"
     assert N_VEC == 1, "Online N_VEC = 1 supported (environments cannot run in parallel)."
@@ -102,7 +101,7 @@ if __name__ == "__main__":
 
     train_env.seed(args.seed)
     train_env.action_space.seed(args.seed)
-    train_env.set_len_ep(args.train_ep_len) 
+    train_env.set_len_ep(args.train_environment_max_steps) 
 
     print(f"[Train Env] Ep. Len:  {train_env.get_len_ep()} [steps].")
 
@@ -112,7 +111,7 @@ if __name__ == "__main__":
     test_venv = util.make_vec_env(ENV_NAME, N_VEC)
     test_venv.seed(args.seed)
 
-    test_venv.env_method("set_len_ep", (args.eval_ep_len)) # TODO: ANDREA: increase
+    test_venv.env_method("set_len_ep", (args.eval_environment_max_steps)) # TODO: ANDREA: increase
 
     print("[Test Env] Ep. Len:  {} [steps].".format(test_venv.get_attr("len_episode")))
 
@@ -138,7 +137,7 @@ if __name__ == "__main__":
 
     #NOTES: args.n_evals is the number of trajectories collected in the environment
     #A trajectory is defined as a sequence of steps in the environment (until the environment returns done)
-    #Hence, each trajectory usually contains the result of eval_ep_len timesteps (it may contains less if the environent returned done before) 
+    #Hence, each trajectory usually contains the result of eval_environment_max_steps timesteps (it may contains less if the environent returned done before) 
     #In other words, episodes in |evaluate_policy() is the number of trajectories
     #                            |the environment is the number of time steps
 
@@ -206,7 +205,7 @@ if __name__ == "__main__":
         # no disturbance
         post_train_stats = evaluate_policy(trainer.get_policy(), test_venv,eval_episodes=args.n_evals, log_path=LOG_PATH + "/post_train_no_dist" )
         print("[Complete] Reward: Pre: {}, Post: {}.".format( pre_train_stats["return_mean"], post_train_stats["return_mean"]))
-        
+
         if(abs(pre_train_stats["return_mean"])>0):
             student_improvement=(post_train_stats["return_mean"]-pre_train_stats["return_mean"])/abs(pre_train_stats["return_mean"]);
             if(student_improvement>0):

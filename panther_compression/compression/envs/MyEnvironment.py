@@ -82,7 +82,7 @@ class MyEnvironment(gym.Env):
     # self.printwithName(f"Received action size={action.shape}")
 
     # self.printwithName(f"Timestep={self.timestep}")
-    # self.printwithName(f"w_state.w_pos={self.w_state.w_pos.T}")
+    self.printwithName(f"w_state.w_pos={self.w_state.w_pos.T}")
 
     ####################################
 

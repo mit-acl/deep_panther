@@ -217,7 +217,14 @@ class DynCorridor:
             t=rospy.get_time(); #Same as before, but it's float
 
             marker=self.marker_array.markers[i];
-          
+ 
+            #Hack
+            x_string='2.5'#str(random.uniform(1.0, 2.5))
+            y_string='0'#str(random.uniform(-1.0, 1.0))
+            z_string='1'#str(random.uniform(0.0, 1.0))         
+            self.all_dyn_traj[i].s_mean=[x_string, y_string, z_string]
+            #End of hack
+
             x = eval(self.all_dyn_traj[i].s_mean[0])
             y = eval(self.all_dyn_traj[i].s_mean[1])
             z = eval(self.all_dyn_traj[i].s_mean[2])
