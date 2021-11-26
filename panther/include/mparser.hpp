@@ -8,16 +8,11 @@
 #include <functional>
 
 // Note: PimPl (Pointer-To-Implementation) idiom
-// is a technique for reducing compile-time and
-// maintaining ABI stability which mitigates the
-// fragile-ABI problem.
-//
+// is a technique for reducing compile-time
 
 class MathEvaluator
 {
   struct impl;
-  // static void dispose(impl* p);
-  // pimpl_ptr<impl, MathEvaluator::dispose> m_pimpl;
   std::shared_ptr<impl> m_pimpl;
 
 public:
