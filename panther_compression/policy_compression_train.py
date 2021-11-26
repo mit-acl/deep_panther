@@ -45,7 +45,7 @@ if __name__ == "__main__":
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
 
-    parser.add_argument("--n_iters", default=40, type=int)
+    parser.add_argument("--n_iters", default=150, type=int)
     parser.add_argument("--n_evals", default=6, type=int)
     parser.add_argument("--eval_environment_max_steps", default=10, type=int)
     parser.add_argument("--train_environment_max_steps", default=10, type=int)

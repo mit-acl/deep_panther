@@ -9,7 +9,8 @@ drone_radius: 0.1  #(m) Used for collision checking
 Ra: 7.0           # [m] Radius of my planning sphere (planning horizon)
 impose_FOV_in_trajCB: false
 stop_time_when_replanning: true
-replanning_trigger_time: 0.5 #[seconds] 
+replanning_trigger_time_student: 0.01 #[seconds] 
+replanning_trigger_time_expert: 0.5 #[seconds] 
 replanning_lookahead_time: 0.01 #[seconds] 
 max_runtime_octopus_search: 0.1 #[seconds] 
 fov_x_deg: 70 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Horizontal FOV
@@ -27,7 +28,7 @@ v_max: [2.5, 2.5, 2.5]   #[m/s]  7.0
 a_max: [5.5, 5.5, 5.5]   #[m/s2] Note that if a_max.z() > 9.81, the drone may flip
 j_max: [30.0, 30.0, 30.0]   #[m/s3] 
 factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
-max_seconds_keeping_traj: 0.3     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
+max_seconds_keeping_traj: 30.0     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
 a_star_samp_x: 7
 a_star_samp_y: 7 
 a_star_samp_z: 7 
@@ -54,4 +55,4 @@ max_dist2goal: 20.0
 max_dist2obs: 20.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
-use_expert: false
+use_expert: true

@@ -24,7 +24,7 @@ class MyEnvironment(gym.Env):
     # self.mpc_act_size = 3
     # self.act_size = self.mpc_act_size
 
-    self.len_episode = 200     # Time steps [-] # TODO: Andrea: load from params or set from outside. 
+    self.len_episode = 200     # Time steps [-]
 
     self.am=ActionManager();
     self.om=ObservationManager();
@@ -36,8 +36,6 @@ class MyEnvironment(gym.Env):
     self.action_space = spaces.Box(low = -1.0, high = 1.0, shape=self.action_shape)
     self.observation_space = spaces.Box(low = -1.0, high = 1.0, shape=self.observation_shape)
     self.w_gterm_pos=np.array([[5], [0.0], [0.0]])
-    # self.max_act = 12.0 # Todo: make sure this is the same value as used in the MPC
-    # self.max_obs = 10.0 # Todo: make sure this is the same as in the MPC
 
     self.dt=0.2; #Timestep in seconds
     self.time=0.0;

@@ -6,6 +6,7 @@ from imitation.data import types, rollout
 from imitation.data.rollout import generate_trajectories, rollout_stats
 from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
+from compression.utils.other import ExpertDidntSucceed
 
 def make_dagger_trainer(tmpdir, env, linear_beta):
     beta_schedule=dagger.LinearBetaSchedule(linear_beta)
@@ -50,11 +51,8 @@ def train(trainer, expert, seed, n_traj_per_iter, n_epochs, log_path, save_full_
         done = False
         while not done:
             try: # Teacher may fail
-                (expert_action,), act_infos = expert.predict(
-                    obs[None], deterministic=True # Why OBS[None]??
-                )
-                assert (expert_action > -10.0).all() and (expert_action < 10.0).all(), f"Expert action is invalid! {expert_action}"
-            except Exception as e:
+                (expert_action,), act_infos = expert.predict(obs[None], deterministic=True)# Why OBS[None]??
+            except ExpertDidntSucceed as e:
                 print("[Training] The following exception occurred: {}".format(e))
                 print("[Training] Teacher unable to provide example. Concluding trajectory.")
                 print(f"[Training] Latest observation: {obs[None]}")

@@ -163,8 +163,8 @@ class ObstaclesManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		# self.random_pos=np.array([[random.uniform(1.0, 2.5)],[random.uniform(-1.0, 1.0)],[random.uniform(0.0, 1.0)]]);
-		self.random_pos=np.array([[2.5],[0.0],[1.0]]);
+		self.random_pos=np.array([[random.uniform(1.0, 4.5)],[random.uniform(-1.0, 1.0)],[random.uniform(0.0, 2.0)]]);
+		# self.random_pos=np.array([[2.5],[0.0],[1.0]]);
 
 	def getNumObs(self):
 		return self.num_obs
@@ -181,13 +181,6 @@ class ObstaclesManager():
 		for i in range(self.num_obs):
 			w_ctrl_pts_ob=np.array([[],[],[]]);
 			for j in range(self.fitter_num_seg + self.fitter_deg_pos):
-
-				# tmp_x=np.random.uniform(low=0.5, high=2.5, size=(3,1))
-				# tmp_y=np.random.uniform(low=-1.0, high=1.0, size=(3,1))
-				# tmp_z=np.random.uniform(low=0.0, high=1.0, size=(3,1))
-				# tmp=np.array([[random.uniform(1.0, 2.5)],[random.uniform(-1.0, 1.0)],[random.uniform(0.0, 1.0)]])
-				# tmp=np.array([[2],[2],[2]])
-
 				w_ctrl_pts_ob=np.concatenate((w_ctrl_pts_ob, self.random_pos), axis=1)
 				# w_ctrl_pts_ob.append(np.array([[2],[2],[2]]))
 
@@ -504,7 +497,7 @@ class ActionManager():
 		self.Npos = self.num_seg + self.deg_pos-1;
 
 		self.max_dist2BSPoscPoint=params["max_dist2BSPoscPoint"];
-		self.max_yawcPoint=2*math.pi;
+		self.max_yawcPoint=4*math.pi;
 		self.fitter_total_time=params["fitter_total_time"];
 
 		print("self.max_dist2BSPoscPoint= ", self.max_dist2BSPoscPoint)

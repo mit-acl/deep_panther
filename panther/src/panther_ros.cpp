@@ -75,7 +75,8 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "Ra", par_.Ra);
   safeGetParam(nh1_, "impose_FOV_in_trajCB", par_.impose_FOV_in_trajCB);
   safeGetParam(nh1_, "stop_time_when_replanning", par_.stop_time_when_replanning);
-  safeGetParam(nh1_, "replanning_trigger_time", par_.replanning_trigger_time);
+  safeGetParam(nh1_, "replanning_trigger_time_student", par_.replanning_trigger_time_student);
+  safeGetParam(nh1_, "replanning_trigger_time_expert", par_.replanning_trigger_time_expert);
   safeGetParam(nh1_, "replanning_lookahead_time", par_.replanning_lookahead_time);
   safeGetParam(nh1_, "max_runtime_octopus_search", par_.max_runtime_octopus_search);
   safeGetParam(nh1_, "fov_x_deg", par_.fov_x_deg);
@@ -251,7 +252,11 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
 
   // Timers
   pubCBTimer_ = nh2_.createTimer(ros::Duration(par_.dc), &PantherRos::pubCB, this);
-  replanCBTimer_ = nh3_.createTimer(ros::Duration(par_.replanning_trigger_time), &PantherRos::replanCB, this);
+
+  double replan_timer_trigger_time =
+      (par_.use_expert) ? par_.replanning_trigger_time_expert : par_.replanning_trigger_time_student;
+
+  replanCBTimer_ = nh3_.createTimer(ros::Duration(replan_timer_trigger_time), &PantherRos::replanCB, this);
 
   // For now stop all these subscribers/timers until we receive GO
   sub_state_.shutdown();

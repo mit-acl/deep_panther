@@ -803,7 +803,8 @@ struct parameters
   double          Ra;                                 //void setVar_Ra(const std::string& value) { Ra = std::stod(value); };
   bool            impose_FOV_in_trajCB;               //void setVar_impose_FOV_in_trajCB(const std::string& value) { impose_FOV_in_trajCB = string2bool(value); };
   bool            stop_time_when_replanning;          //void setVar_stop_time_when_replanning(const std::string& value) { stop_time_when_replanning = string2bool(value); };
-  double          replanning_trigger_time;            //void setVar_replanning_trigger_time(const std::string& value) { replanning_trigger_time = std::stod(value); };
+  double          replanning_trigger_time_student;    //void setVar_replanning_trigger_time(const std::string& value) { replanning_trigger_time = std::stod(value); };
+  double          replanning_trigger_time_expert;     //void setVar_replanning_trigger_time(const std::string& value) { replanning_trigger_time = std::stod(value); };
   double          replanning_lookahead_time;          //void setVar_replanning_lookahead_time(const std::string& value) { replanning_lookahead_time = std::stod(value); };
   double          max_runtime_octopus_search;         //void setVar_max_runtime_octopus_search(const std::string& value) { max_runtime_octopus_search = std::stod(value); };
   double          fov_x_deg;                          //void setVar_fov_x_deg(const std::string& value) { fov_x_deg = std::stod(value); };
