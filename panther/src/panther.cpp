@@ -26,6 +26,8 @@
 #include <pybind11/operators.h>
 //////////////////////////
 
+// #include "exprtk.hpp"
+
 using namespace termcolor;
 
 // Uncomment the type of timer you want:
@@ -88,34 +90,48 @@ void Panther::dynTraj2dynTrajCompiled(const mt::dynTraj& traj, mt::dynTrajCompil
   {
     mtx_t_.lock();
 
-    typedef exprtk::symbol_table<double> symbol_table_t;
-    typedef exprtk::expression<double> expression_t;
-    typedef exprtk::parser<double> parser_t;
+    // typedef exprtk::symbol_table<double> symbol_table_t;
+    // typedef exprtk::expression<double> expression_t;
+    // typedef exprtk::parser<double> parser_t;
 
     // Compile the mean
     for (auto function_i : traj.s_mean)
     {
-      symbol_table_t symbol_table;
-      symbol_table.add_variable("t", t_);
-      symbol_table.add_constants();
-      expression_t expression;
-      expression.register_symbol_table(symbol_table);
-      parser_t parser;
-      parser.compile(function_i, expression);
-      traj_compiled.s_mean.push_back(expression);
+      MathEvaluator engine;
+      engine.add_var("t", t_);
+      engine.compile(function_i);
+      traj_compiled.s_mean.push_back(engine);
+
+      // symbol_table_t symbol_table;
+      // symbol_table.add_variable("t", t_);
+      // symbol_table.add_constants();
+      // expression_t expression;
+      // expression.register_symbol_table(symbol_table);
+      // parser_t parser;
+      // parser.compile(function_i, expression);
+      // // traj_compiled.s_mean.push_back(expression);
+
+      // t_ = ros::Time::now().toSec();
+      // std::cout << "Option 1=" << expression.value() << std::endl;
+      // std::cout << "Option 2=" << engine.value() << std::endl;
     }
 
     // Compile the variance
     for (auto function_i : traj.s_var)
     {
-      symbol_table_t symbol_table;
-      symbol_table.add_variable("t", t_);
-      symbol_table.add_constants();
-      expression_t expression;
-      expression.register_symbol_table(symbol_table);
-      parser_t parser;
-      parser.compile(function_i, expression);
-      traj_compiled.s_var.push_back(expression);
+      MathEvaluator engine;
+      engine.add_var("t", t_);
+      engine.compile(function_i);
+      traj_compiled.s_var.push_back(engine);
+
+      // symbol_table_t symbol_table;
+      // symbol_table.add_variable("t", t_);
+      // symbol_table.add_constants();
+      // expression_t expression;
+      // expression.register_symbol_table(symbol_table);
+      // parser_t parser;
+      // parser.compile(function_i, expression);
+      // traj_compiled.s_var.push_back(expression);
     }
 
     mtx_t_.unlock();

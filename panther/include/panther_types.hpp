@@ -11,10 +11,11 @@
 #include <iostream>
 #include <iomanip>  // std::setprecision
 #include <deque>
-#include "exprtk.hpp"
 #include "termcolor.hpp"
 #include <Eigen/Dense>
 #include "timer.hpp"
+
+#include "mparser.hpp"
 // #include <any>
 // #include <utility>
 
@@ -49,6 +50,7 @@ typedef std::vector<Edge> Edges;
 
 struct log
 {
+  log(){};
   bool replanning_was_needed = false;
 
   PANTHER_timers::Timer tim_initial_setup;           //
@@ -758,10 +760,11 @@ struct dynTraj
 struct dynTrajCompiled
 {
   bool use_pwp_field;
-  std::vector<exprtk::expression<double>> function;
+  // std::vector<exprtk::expression<double>> s_mean;
+  // std::vector<exprtk::expression<double>> s_var;
+  std::vector<MathEvaluator> s_mean;
+  std::vector<MathEvaluator> s_var;
 
-  std::vector<exprtk::expression<double>> s_mean;
-  std::vector<exprtk::expression<double>> s_var;
   mt::PieceWisePol pwp_mean;
   mt::PieceWisePol pwp_var;
 
