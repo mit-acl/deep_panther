@@ -14,7 +14,7 @@ class Timer
   typedef std::chrono::nanoseconds nanoseconds;
 
 public:
-  explicit Timer(bool run = false)
+  Timer(bool run = false)
   {
     if (run)
     {
