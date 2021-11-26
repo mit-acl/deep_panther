@@ -51,6 +51,7 @@ pip install wheel
 pip install numpy Cython seals
 pip install -e .
 pip install rospkg defusedxml #This will allow you to run roslaunch panther simulation.launch with the virtual environment activated 
+pip install empy #This will allow you to compile with the virtual environment activated
 ```
 
 Now you can test the imitation repo by doing `python examples/quickstart.py`
