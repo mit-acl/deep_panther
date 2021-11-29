@@ -48,7 +48,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_rounds", default=150, type=int) #was called n_iters before
     parser.add_argument("--n_evals", default=6, type=int)
     parser.add_argument("--eval_environment_max_steps", default=10, type=int)
-    parser.add_argument("--train_environment_max_steps", default=10, type=int)
+    parser.add_argument("--train_environment_max_steps", default=20, type=int)
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
     parser.add_argument("--n_traj_per_iter", default=1, type=int)

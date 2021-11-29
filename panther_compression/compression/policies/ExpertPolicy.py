@@ -81,6 +81,10 @@ class ExpertPolicy(object):
 
         # ## Call the optimization
         init_state=py_panther.state(); #This is initialized as zero. This is A
+        init_state.vel= self.om.getf_v(obs);
+        init_state.accel= self.om.getf_a(obs);
+        init_state.dyaw = self.om.getyaw_dot(obs);
+        
         final_state=py_panther.state();#This is initialized as zero. This is G
         final_state.pos=self.om.getf_g(obs);
 
@@ -109,16 +113,19 @@ class ExpertPolicy(object):
 
         action=self.am.solOrGuess2action(best_solution)
 
-        action=self.am.normalizeAction(action)
+        action_normalized=self.am.normalizeAction(action)
 
         # self.printwithName("===================================================")
         
+        # self.printwithName(f"action_normalized= {action_normalized}")
+
+
         Q=0.0; #Not used right now I think
 
 
-        self.am.assertAction(action)
+        self.am.assertAction(action_normalized)
 
-        return action, {"Q": Q}
+        return action_normalized, {"Q": Q}
 
 
         # #### End of call the optimization

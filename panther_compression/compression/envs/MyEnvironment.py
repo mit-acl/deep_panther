@@ -105,7 +105,7 @@ class MyEnvironment(gym.Env):
 
     # self.printwithName(f"w_obstacles={w_obstacles[0].ctrl_pts}")
 
-    f_observationn=self.om.getNormalized_fObservationFromTime_w_stateAnd_w_gtermAnd_w_obstacles(self.time, self.w_state, self.w_gterm_pos, w_obstacles);
+    f_observationn=self.om.getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.w_gterm_pos, w_obstacles);
 
 
     dist2goal=np.linalg.norm(self.w_state.w_pos-self.w_gterm_pos)
@@ -117,7 +117,10 @@ class MyEnvironment(gym.Env):
     info = {}
     if(isNormalized(f_observationn)==False):
       # self.printwithName(f"f_observationn={f_observationn} is not normalized (i.e., constraints are not satisfied). Terminating")
-      self.printwithName(f"f_observationn is not normalized (i.e., constraints are not satisfied). Terminating")
+      f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.w_gterm_pos, w_obstacles)
+      self.printwithName(f"f_observation={f_observation} is not normalized (i.e., constraints are not satisfied). Terminating")
+      # exit();
+      # self.printwithName(f"f_observationn is not normalized (i.e., constraints are not satisfied). Terminating")
       # print(f"[Env] Terminated due to constraint violation: obs: {self.x}, act: {u}, steps: {self.timestep}")
       done = True
       info["constraint_violation"] = True
@@ -144,7 +147,7 @@ class MyEnvironment(gym.Env):
     self.obsm.newRandomPos();
     # observation = self.om.getRandomNormalizedObservation()
     w_obstacles=self.obsm.getFutureWPosObstacles(self.time)
-    f_observationn=self.om.getNormalized_fObservationFromTime_w_stateAnd_w_gtermAnd_w_obstacles(self.time, self.w_state, self.w_gterm_pos, w_obstacles);
+    f_observationn=self.om.getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.w_gterm_pos, w_obstacles);
     
     # assert observation.shape == self.observation_shape
     # self.printwithName(f"returning obs={observation}")

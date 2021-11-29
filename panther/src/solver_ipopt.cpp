@@ -413,7 +413,7 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
 
       if (upper_bound <= 0)
       {
-        std::cout << red << bold << "There is no way to satisfy v1" << std::endl;  //(deltat will be zero)
+        std::cout << red << bold << "There is no way to satisfy v1" << reset << std::endl;  //(deltat will be zero)
         return false;
       }
 

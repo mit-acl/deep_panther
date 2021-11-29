@@ -419,9 +419,8 @@ class ObservationManager():
 		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
 		return observation_normalized;
 
-	def getNormalized_fObservationFromTime_w_stateAnd_w_gtermAnd_w_obstacles(self, time, w_state, w_gterm_pos, w_obstacles):
-	    # w_obstacles=self.obsm.getFutureWPosObstacles(time) #Don't do this here
-	    f_observation=self.construct_f_obsFrom_w_state_and_w_obs(w_state, w_obstacles, w_gterm_pos)
+	def getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self, w_state, w_gterm_pos, w_obstacles):
+	    f_observation=self.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_state, w_gterm_pos, w_obstacles)
 	    f_observationn=self.normalizeObservation(f_observation) #Observation normalized
 	    return f_observationn
 
@@ -446,12 +445,12 @@ class ObservationManager():
 		random_normalized_observation=np.random.uniform(-1,1, size=self.getObservationShape())
 		return random_normalized_observation
 
-	def construct_f_obsFrom_w_state_and_w_obs(self,w_state, w_obstacles, w_gterm):
+	def get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self,w_state, w_gterm_pos, w_obstacles):
 
-		f_gterm=w_state.f_T_w * w_gterm
+		f_gterm_pos=w_state.f_T_w * w_gterm_pos
 
-		dist2gterm=np.linalg.norm(f_gterm);
-		f_g= min(dist2gterm-1e-4, self.Ra)*normalize(f_gterm)
+		dist2gterm=np.linalg.norm(f_gterm_pos);
+		f_g= min(dist2gterm-1e-4, self.Ra)*normalize(f_gterm_pos)
 		# print("w_state.f_vel().flatten()= ", w_state.f_vel().flatten())
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
