@@ -79,8 +79,8 @@ class MyEnvironment(gym.Env):
     f_action= self.am.denormalizeAction(f_action_normalized);
     # self.printwithName(f"Received action size={action.shape}")
 
-    self.printwithName(f"Timestep={self.timestep}")
-    self.printwithName(f"w_state.w_pos={self.w_state.w_pos.T}")
+    # self.printwithName(f"Timestep={self.timestep}")
+    # self.printwithName(f"w_state.w_pos={self.w_state.w_pos.T}")
 
     ####################################
 
@@ -108,9 +108,9 @@ class MyEnvironment(gym.Env):
     f_observationn=self.om.getNormalized_fObservationFromTime_w_stateAnd_w_gtermAnd_w_obstacles(self.time, self.w_state, self.w_gterm_pos, w_obstacles);
 
 
-    # dist2goal=np.linalg.norm(self.w_state.w_pos-self.w_gterm_pos)
-    dist2goal=np.linalg.norm(w_posBS.getLastPos()-self.w_gterm_pos) #From the end of the current traj to the goal
-    self.printwithName(f"dist2goal={dist2goal}")
+    dist2goal=np.linalg.norm(self.w_state.w_pos-self.w_gterm_pos)
+    # dist2goal=np.linalg.norm(w_posBS.getLastPos()-self.w_gterm_pos) #From the end of the current traj to the goal
+    self.printwithName(f"Timestep={self.timestep}, dist2goal={dist2goal}, w_state.w_pos={self.w_state.w_pos.T}")
 
 
     self.timestep = self.timestep + 1

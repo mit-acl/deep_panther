@@ -32,6 +32,7 @@ def make_bc_trainer(tmpdir, env):
         policy_kwargs = {"features_dim" : env.observation_space.shape[1]},
     )
 
+#Trainer is the student
 def train(trainer, expert, seed, n_traj_per_iter, n_epochs, log_path, save_full_policy_path, use_only_last_coll_ds):
     assert n_traj_per_iter > 0, "Number of trajectories per iter needs to be at least one!"
     assert n_epochs > 0, "Number of training epochs must be >= 0!"
@@ -53,9 +54,9 @@ def train(trainer, expert, seed, n_traj_per_iter, n_epochs, log_path, save_full_
             try: # Teacher may fail
                 (expert_action,), act_infos = expert.predict(obs[None], deterministic=True)# Why OBS[None]??
             except ExpertDidntSucceed as e:
-                print("[Training] The following exception occurred: {}".format(e))
+                # print("[Training] The following exception occurred: {}".format(e))
                 print("[Training] Teacher unable to provide example. Concluding trajectory.")
-                print(f"[Training] Latest observation: {obs[None]}")
+                # print(f"[Training] Latest observation: {obs[None]}")
                 collector.save_trajectory()
                 done = True
             else: 

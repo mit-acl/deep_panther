@@ -57,7 +57,7 @@ if __name__ == "__main__":
     parser.set_defaults(train=True)
     parser.add_argument("--no_eval", dest='eval', action='store_false')
     parser.set_defaults(eval=False)
-    parser.add_argument("--no_final_eval", dest='final_eval', action='store_false')
+    parser.add_argument("--no_init_and_final_eval", dest='init_and_final_eval', action='store_false')
     parser.set_defaults(final_eval=True)
     # Dagger properties
     parser.add_argument("--dagger_beta", default=35, type=int)
@@ -67,8 +67,10 @@ if __name__ == "__main__":
 
     printInBoldBlue("---------------- Input Arguments: -----------------------")
     print("Trainer: {}.".format("DAgger" if args.on_policy_trainer ==True else "BC" ))
-    print(f"Seed: {args.seed}, Log: {args.log_dir}, Num iters: {args.n_iters}")
-    print(f"Eval episode len: {args.eval_environment_max_steps}")
+    print(f"seed: {args.seed}, log_dir: {args.log_dir}, n_iters: {args.n_iters}")
+    print(f"eval_environment_max_steps: {args.eval_environment_max_steps}")
+    print(f"use_only_last_coll_ds: {args.use_only_last_coll_ds}")
+    print(f"train: {args.train}, eval: {args.eval}, final_eval: {args.final_eval}")
     print(f"DAgger Linear Beta: {args.dagger_beta}.")
 
     print(f"Num of trajectories per iteration: {args.n_traj_per_iter}.")
@@ -133,27 +135,28 @@ if __name__ == "__main__":
     print( f"All Tensorboards and logging are being written inside {tempdir_path}/.")
     logger.configure(tempdir_path / "DAgger/",  format_strs=["log", "csv"])  # "stdout"
 
-    printInBoldBlue("---------------- Preliminiary Evaluation: --------------------")
+    if(args.init_and_final_eval):
+        printInBoldBlue("---------------- Preliminiary Evaluation: --------------------")
 
-    #NOTES: args.n_evals is the number of trajectories collected in the environment
-    #A trajectory is defined as a sequence of steps in the environment (until the environment returns done)
-    #Hence, each trajectory usually contains the result of eval_environment_max_steps timesteps (it may contains less if the environent returned done before) 
-    #In other words, episodes in |evaluate_policy() is the number of trajectories
-    #                            |the environment is the number of time steps
+        #NOTES: args.n_evals is the number of trajectories collected in the environment
+        #A trajectory is defined as a sequence of steps in the environment (until the environment returns done)
+        #Hence, each trajectory usually contains the result of eval_environment_max_steps timesteps (it may contains less if the environent returned done before) 
+        #In other words, episodes in |evaluate_policy() is the number of trajectories
+        #                            |the environment is the number of time steps
 
-    # Evaluate the reward of the expert
-    expert_stats = evaluate_policy( expert_policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/teacher_no_dist")
-    print("[Evaluation] Expert reward: {}, len: {}.\n".format( expert_stats["return_mean"], expert_stats["len_mean"]))
+        # Evaluate the reward of the expert
+        expert_stats = evaluate_policy( expert_policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/teacher_no_dist")
+        print("[Evaluation] Expert reward: {}, len: {}.\n".format( expert_stats["return_mean"], expert_stats["len_mean"]))
 
-    #Debugging
-    # exit();
+        #Debugging
+        # exit();
 
-    # Evaluate student reward before training,
-    pre_train_stats = evaluate_policy(trainer.get_policy(), test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/pre_train_no_dist")
-    print("[Evaluation] Student reward: {}, len: {}.".format(pre_train_stats["return_mean"], pre_train_stats["len_mean"]))
+        # Evaluate student reward before training,
+        pre_train_stats = evaluate_policy(trainer.get_policy(), test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/pre_train_no_dist")
+        print("[Evaluation] Student reward: {}, len: {}.".format(pre_train_stats["return_mean"], pre_train_stats["len_mean"]))
 
 
-    del expert_stats
+        del expert_stats
 
 
 
@@ -196,7 +199,7 @@ if __name__ == "__main__":
         print(f"[Trainer] Training completed. Policy saved to: {save_full_policy_path}.")
 
 
-    if args.final_eval:
+    if args.init_and_final_eval:
         printInBoldBlue("---------------- Evaluation After Training: --------------------")
 
         # Evaluate reward of student post-training

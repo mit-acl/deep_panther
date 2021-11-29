@@ -111,7 +111,7 @@ class ExpertPolicy(object):
 
         action=self.am.normalizeAction(action)
 
-        self.printwithName("===================================================")
+        # self.printwithName("===================================================")
         
         Q=0.0; #Not used right now I think
 

@@ -136,12 +136,13 @@ class StudentPolicy(BasePolicy):
         return self.action_dist.log_prob_from_params(mean_actions, log_std, **kwargs)
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
+        self.printwithName(f"Calling student")
         # self.printwithName(f"Received obs={observation}")
         # self.printwithName(f"Received obs={observation.numpy()}")
         assertIsNormalized(observation.numpy())
         # self.printwithName(f"Received obs shape={observation.shape}")
         action = self.forward(observation, deterministic)
-        self.printwithName(f"action={action}")
+        # self.printwithName(f"action={action}")
         assertIsNormalized(action.numpy())
 
         # self.printwithName(f"Returning action shape={action.shape}")
