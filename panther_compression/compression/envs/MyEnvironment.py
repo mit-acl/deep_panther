@@ -119,7 +119,7 @@ class MyEnvironment(gym.Env):
       # self.printwithName(f"f_observationn={f_observationn} is not normalized (i.e., constraints are not satisfied). Terminating")
       f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.w_gterm_pos, w_obstacles)
       self.printwithName(f"f_observation={f_observation} is not normalized (i.e., constraints are not satisfied). Terminating")
-      # exit();
+      exit();
       # self.printwithName(f"f_observationn is not normalized (i.e., constraints are not satisfied). Terminating")
       # print(f"[Env] Terminated due to constraint violation: obs: {self.x}, act: {u}, steps: {self.timestep}")
       done = True

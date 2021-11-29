@@ -56,7 +56,7 @@ num_of_yaw_per_layer=40; %This will be used in the graph yaw search of C++
                          %Note that the initial layer will have only one yaw (which is given) 
 basis="MINVO"; %MINVO OR B_SPLINE or BEZIER. This is the basis used for collision checking (in position, velocity, accel and jerk space), both in Matlab and in C++
 linear_solver_name='ma27'; %mumps [default, comes when installing casadi], ma27, ma57, ma77, ma86, ma97 
-print_level=0; %From 0 (no verbose) to 12 (very verbose), default is 5
+print_level=5; %From 0 (no verbose) to 12 (very verbose), default is 5
 jit=false;
 
 t0_n=0.0; 
@@ -113,9 +113,9 @@ total_time=alpha*(tf_n-t0_n); %Total time is (tf_n-t0_n)*alpha.
 p0=opti.parameter(3,1); v0=opti.parameter(3,1); a0=opti.parameter(3,1);
 pf=opti.parameter(3,1); vf=opti.parameter(3,1); af=opti.parameter(3,1);
 
-v_max=opti.parameter(3,1);
-a_max=opti.parameter(3,1);
-j_max=opti.parameter(3,1);
+v_max=opti.parameter(1,1);
+a_max=opti.parameter(1,1);
+j_max=opti.parameter(1,1);
 
 %Normalized v0, a0, v_max,...
 v0_n=v0*alpha;
@@ -463,9 +463,9 @@ yCPs=sy.getCPsAsMatrix();
 % all_w_fe_value=cell2mat(all_w_fe_value);
 % all_w_velfewrtworld_value=cell2mat(all_w_velfewrtworld_value);
 
-v_max_value=1.6*ones(3,1);
-a_max_value=5*ones(3,1);
-j_max_value=50*ones(3,1);
+v_max_value=1.6;%*ones(3,1);
+a_max_value=5;%*ones(3,1);
+j_max_value=50;%*ones(3,1);
 
 alpha_value=10.0;
 

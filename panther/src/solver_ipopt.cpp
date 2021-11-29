@@ -391,46 +391,46 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
 
   double deltaT = (t_final - t_init) / (1.0 * (sp_.M - 2 * sp_.p - 1 + 1));
 
-  double old_deltaT = deltaT;
+  // double old_deltaT = deltaT;
 
-  //////////////////////////////
-  // Now make sure deltaT in knots_p_guess_ is such that -v_max<=v1<=v_max is satisfied:
-  for (int axis = 0; axis < 3; axis++)
-  {
-    double upper_bound, lower_bound;
-    if (fabs(a0(axis)) > 1e-7)
-    {
-      upper_bound = ((sp_.p - 1) * (sgn(a0(axis)) * par_.v_max(axis) - v0(axis)) / (a0(axis)));
-      lower_bound = ((sp_.p - 1) * (-sgn(a0(axis)) * par_.v_max(axis) - v0(axis)) / (a0(axis)));
+  // //////////////////////////////
+  // // Now make sure deltaT in knots_p_guess_ is such that -v_max<=v1<=v_max is satisfied:
+  // for (int axis = 0; axis < 3; axis++)
+  // {
+  //   double upper_bound, lower_bound;
+  //   if (fabs(a0(axis)) > 1e-7)
+  //   {
+  //     upper_bound = ((sp_.p - 1) * (sgn(a0(axis)) * par_.v_max(axis) - v0(axis)) / (a0(axis)));
+  //     lower_bound = ((sp_.p - 1) * (-sgn(a0(axis)) * par_.v_max(axis) - v0(axis)) / (a0(axis)));
 
-      ////////////////// Debugging
-      // if (upper_bound < lower_bound)
-      // {
-      //   std::cout << red << bold << "This should never happen, aborting" << std::endl;
-      //   abort();
-      // }
-      //////////////////
+  //     ////////////////// Debugging
+  //     // if (upper_bound < lower_bound)
+  //     // {
+  //     //   std::cout << red << bold << "This should never happen, aborting" << std::endl;
+  //     //   abort();
+  //     // }
+  //     //////////////////
 
-      if (upper_bound <= 0)
-      {
-        std::cout << red << bold << "There is no way to satisfy v1" << reset << std::endl;  //(deltat will be zero)
-        return false;
-      }
+  //     if (upper_bound <= 0)
+  //     {
+  //       std::cout << red << bold << "There is no way to satisfy v1" << reset << std::endl;  //(deltat will be zero)
+  //       return false;
+  //     }
 
-      saturate(deltaT, std::max(0.0, lower_bound), upper_bound);
-    }
-    else
-    {
-      // do nothing: a0 ==0 for that axis, so that means that v1==v0, and therefore v1 satisfies constraints for that
-      // axis
-    }
-  }
+  //     saturate(deltaT, std::max(0.0, lower_bound), upper_bound);
+  //   }
+  //   else
+  //   {
+  //     // do nothing: a0 ==0 for that axis, so that means that v1==v0, and therefore v1 satisfies constraints for that
+  //     // axis
+  //   }
+  // }
 
-  if (old_deltaT != deltaT)
-  {
-    std::cout << red << bold << "old_deltaT= " << old_deltaT << reset << std::endl;
-    std::cout << red << bold << "deltaT= " << deltaT << reset << std::endl;
-  }
+  // if (old_deltaT != deltaT)
+  // {
+  //   std::cout << red << bold << "old_deltaT= " << old_deltaT << reset << std::endl;
+  //   std::cout << red << bold << "deltaT= " << deltaT << reset << std::endl;
+  // }
 
   // Eigen::Vector3d bound1 = ((p_ - 1) * (par_.v_max - v0).array() / (a0.array()));
   // Eigen::Vector3d bound2 = ((p_ - 1) * (-par_.v_max - v0).array() / (a0.array()));
@@ -588,9 +588,9 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   map_arguments["ydot0"] = initial_state_.dyaw;
   map_arguments["ydotf"] =
       final_state_.dyaw;  // Needed: if not (and if you are minimizing ddyaw), ddyaw=cte --> yaw will explode
-  map_arguments["v_max"] = eigen2std(par_.v_max);
-  map_arguments["a_max"] = eigen2std(par_.a_max);
-  map_arguments["j_max"] = eigen2std(par_.j_max);
+  map_arguments["v_max"] = par_.v_max;  // eigen2std(par_.v_max);
+  map_arguments["a_max"] = par_.a_max;  // eigen2std(par_.a_max);
+  map_arguments["j_max"] = par_.j_max;  // eigen2std(par_.j_max);
   map_arguments["ydot_max"] = par_.ydot_max;
   map_arguments["x_lim"] = std::vector<double>{ par_.x_min, par_.x_max };
   map_arguments["y_lim"] = std::vector<double>{ par_.y_min, par_.y_max };
