@@ -151,7 +151,7 @@ public:
 
   ~SolverIpopt();
 
-  bool optimize();
+  bool optimize(bool supress_all_prints = false);
   bool setInitStateFinalStateInitTFinalT(mt::state initial_state, mt::state final_state, double t_init,
                                          double &t_final);
   void setFocusOnObstacle(bool focus_on_obstacle)

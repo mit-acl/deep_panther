@@ -25,6 +25,23 @@
 
 using namespace termcolor;
 
+struct PrintSupresser
+{
+  PrintSupresser(){};
+  ~PrintSupresser()
+  {
+    end();
+  };
+  void start()
+  {
+    std::cout.setstate(std::ios_base::failbit);  // https://stackoverflow.com/a/30185095
+  }
+  void end()
+  {
+    std::cout.clear();
+  }
+};
+
 template <typename T>
 int sgn(T val)
 {
@@ -364,11 +381,11 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
   }
   ///
 
-  std::cout << "initial_state= " << std::endl;
-  initial_state.printHorizontal();
+  // std::cout << "initial_state= " << std::endl;
+  // initial_state.printHorizontal();
 
-  std::cout << "final_state= " << std::endl;
-  final_state.printHorizontal();
+  // std::cout << "final_state= " << std::endl;
+  // final_state.printHorizontal();
 
   //////////////////////////////
 
@@ -504,9 +521,20 @@ std::vector<si::solOrGuess> SolverIpopt::getGuesses()
   return guesses_;
 }
 
-bool SolverIpopt::optimize()
+bool SolverIpopt::optimize(bool supress_all_prints)
 {
+  PrintSupresser print_supresser;
+  if (supress_all_prints)
+  {
+    print_supresser.start();
+  }
   std::cout << "in SolverIpopt::optimize" << std::endl;
+
+  std::cout << "initial_state= " << std::endl;
+  initial_state_.printHorizontal();
+
+  std::cout << "final_state= " << std::endl;
+  final_state_.printHorizontal();
 
   std::vector<os::solution> p_guesses;
 
