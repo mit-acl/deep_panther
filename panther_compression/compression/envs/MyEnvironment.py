@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import copy
 from gym import spaces
-from compression.utils.other import ActionManager, ObservationManager, State, ObstaclesManager
+from compression.utils.other import ActionManager, ObservationManager, State, ObstaclesManager, isNormalized
 from colorama import init, Fore, Back, Style
 
 class MyEnvironment(gym.Env):
@@ -107,36 +107,27 @@ class MyEnvironment(gym.Env):
 
     f_observationn=self.om.getNormalized_fObservationFromTime_w_stateAnd_w_gtermAnd_w_obstacles(self.time, self.w_state, self.w_gterm_pos, w_obstacles);
 
-    # self.printwithName(f"f_observationn={f_observationn}")
-    ####################################
-
-    # reward=0.0
-
-
-    info = {}
-    self.timestep = self.timestep + 1
-
 
     # dist2goal=np.linalg.norm(self.w_state.w_pos-self.w_gterm_pos)
     dist2goal=np.linalg.norm(w_posBS.getLastPos()-self.w_gterm_pos) #From the end of the current traj to the goal
-
     self.printwithName(f"dist2goal={dist2goal}")
 
-    if ( (self.timestep >= self.len_episode) or (dist2goal<0.5) ):
+
+    self.timestep = self.timestep + 1
+    info = {}
+    if(isNormalized(f_observationn)==False):
+      self.printwithName(f"f_observationn={f_observationn} is not normalized (i.e., constraints are not satisfied). Terminating")
+      # print(f"[Env] Terminated due to constraint violation: obs: {self.x}, act: {u}, steps: {self.timestep}")
       done = True
-      info["constraint_violations"] = False
-    # elif violation_bfr or violation_after: #or u_violation
-    #   done = True
-    #   info["constraint_violation"] = True
-      #print(f"[Env] Terminated due to constraint violation: obs: {self.x}, act: {u}, steps: {self.timestep}")
+      info["constraint_violation"] = True
+    elif ( (self.timestep >= self.len_episode) or (dist2goal<0.5) ):
+      done = True
+      info["constraint_violation"] = False
     else:
-      done = False
-    
-    # f_obs = self.om.getRandomNormalizedObservation()
+      done=False
 
-    # reward=-np.linalg.norm(action_normalized-self.am.getDummyOptimalNormalizedAction())
+
     reward=0.0
-
 
     # self.printwithName(f"returning reward={reward}")
     # self.printwithName(f"returning obsN={observation}")

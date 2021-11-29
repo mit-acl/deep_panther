@@ -327,9 +327,9 @@ class ObservationManager():
 		self.Ra=params["Ra"]
 		ones13=np.ones((1,3));
 		#Note that the sqrt(3) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
-		margin_v=100.0 #math.sqrt(3)
-		margin_a=100.0 #math.sqrt(3)
-		margin_ydot=100.0 #because the student sometimes may not satisfy that limit
+		margin_v=math.sqrt(3) #math.sqrt(3)
+		margin_a=math.sqrt(3) #math.sqrt(3)
+		margin_ydot=1.0 #because the student sometimes may not satisfy that limit
 		self.normalization_constant=np.concatenate((margin_v*self.v_max.T*ones13, margin_a*self.a_max.T*ones13, margin_ydot*self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
 		for i in range(self.obsm.getNumObs()):
 			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)
@@ -415,8 +415,8 @@ class ObservationManager():
 		# print("obsm.getSizeAllObstacles()=", self.obsm.getSizeAllObstacles())
 
 		observation_normalized=observation/self.normalization_constant;
-		assertIsNormalized(observation_normalized)
-		assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
+		# assertIsNormalized(observation_normalized)
+		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
 		return observation_normalized;
 
 	def getNormalized_fObservationFromTime_w_stateAnd_w_gtermAnd_w_obstacles(self, time, w_state, w_gterm_pos, w_obstacles):
@@ -428,7 +428,7 @@ class ObservationManager():
 	def denormalizeObservation(self,observation_normalized):
 		assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
 
-		assertIsNormalized(observation_normalized)
+		# assertIsNormalized(observation_normalized)
 		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all(), f"observation_normalized= {observation_normalized}" 
 		observation=observation_normalized*self.normalization_constant;
 		return observation;

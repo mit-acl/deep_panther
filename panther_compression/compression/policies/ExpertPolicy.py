@@ -42,12 +42,19 @@ class ExpertPolicy(object):
 
         self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
 
-
+        self.name=Style.BRIGHT+Fore.BLUE+"[Exp]"+Style.RESET_ALL
         self.reset()
 
     def printwithName(self,data):
-        name=Style.BRIGHT+Fore.BLUE+"[Exp]"+Style.RESET_ALL
-        print(name+data)
+        
+        print(self.name+data)
+
+    def printFailedOpt(self):
+        print(self.name+" Called optimizer--> "+Style.BRIGHT+Fore.RED +"Failed"+ Style.RESET_ALL)
+
+    def printSucessOpt(self):
+        print(self.name+" Called optimizer--> "+Style.BRIGHT+Fore.GREEN +"Success"+ Style.RESET_ALL)
+
 
     def reset(self):
         pass
@@ -70,7 +77,6 @@ class ExpertPolicy(object):
 
         # self.om.printObs(obs)
 
-        self.printwithName("Calling optimizer")
 
 
         # ## Call the optimization
@@ -85,16 +91,21 @@ class ExpertPolicy(object):
         self.my_SolverIpopt.setObstaclesForOpt(self.om.getObstacles(obs));
 
         # with nostdout():
-        succeed=self.my_SolverIpopt.optimize();
+        succeed=self.my_SolverIpopt.optimize(True);
+
+        
 
         if(succeed==False):
+            self.printFailedOpt();
             raise ExpertDidntSucceed()
+        else:
+            self.printSucessOpt();
 
         best_solution=self.my_SolverIpopt.getBestSolution();
 
-        self.printwithName("Optimizer called, best solution= ")
+        # self.printwithName("Optimizer called, best solution= ")
 
-        best_solution.printInfo()
+        # best_solution.printInfo()
 
         action=self.am.solOrGuess2action(best_solution)
 
