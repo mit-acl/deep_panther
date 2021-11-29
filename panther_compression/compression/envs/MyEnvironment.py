@@ -35,9 +35,9 @@ class MyEnvironment(gym.Env):
 
     self.action_space = spaces.Box(low = -1.0, high = 1.0, shape=self.action_shape)
     self.observation_space = spaces.Box(low = -1.0, high = 1.0, shape=self.observation_shape)
-    self.w_gterm_pos=np.array([[5], [0.0], [0.0]])
+    self.w_gterm_pos=np.array([[8], [0.0], [0.0]])
 
-    self.dt=0.2; #Timestep in seconds
+    self.dt=0.5; #Timestep in seconds
     self.time=0.0;
     
     self.name=Style.BRIGHT+Fore.GREEN+"[Env]"+Style.RESET_ALL
@@ -79,7 +79,7 @@ class MyEnvironment(gym.Env):
     f_action= self.am.denormalizeAction(f_action_normalized);
     # self.printwithName(f"Received action size={action.shape}")
 
-    # self.printwithName(f"Timestep={self.timestep}")
+    self.printwithName(f"Timestep={self.timestep}")
     self.printwithName(f"w_state.w_pos={self.w_state.w_pos.T}")
 
     ####################################
@@ -94,7 +94,7 @@ class MyEnvironment(gym.Env):
                         w_yawBS.getPosT(self.dt), w_yawBS.getVelT(self.dt));
 
 
-    print("w_yawBS.getPosT(self.dt)= ", w_yawBS.getPosT(self.dt))
+    # print("w_yawBS.getPosT(self.dt)= ", w_yawBS.getPosT(self.dt))
 
     #Update time
     self.time = self.time + self.dt;

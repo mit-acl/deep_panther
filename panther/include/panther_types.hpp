@@ -864,6 +864,7 @@ struct parameters
   double max_side_bbox_obs;
   double max_dist2BSPoscPoint;
   bool use_expert;
+  bool static_planning;
   // clang-format on
 };
 

@@ -464,8 +464,14 @@ void Panther::doStuffTermGoal()
     /////////////////////////////////
     mtx_plan_.lock();  // must be before changeDroneStatus
 
-    // changeDroneStatus(DroneStatus::YAWING);
-    changeDroneStatus(DroneStatus::TRAVELING);  // hack to force it to plan for the same position all the time
+    if (par_.static_planning)  // plan from the same position all the time
+    {
+      changeDroneStatus(DroneStatus::TRAVELING);
+    }
+    else
+    {
+      changeDroneStatus(DroneStatus::YAWING);
+    }
 
     mt::state last_state = plan_.back();
 
@@ -644,9 +650,10 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
     k_index_end = 0;
   }
 
-  // hack to force it to plan for the same position all the time
-  k_index_end = plan_.size() - 1;
-  // end of hack
+  if (par_.static_planning)  // plan from the same position all the time
+  {
+    k_index_end = plan_.size() - 1;
+  }
 
   k_index = plan_.size() - 1 - k_index_end;
   A = plan_.get(k_index);
@@ -943,7 +950,10 @@ bool Panther::getNextGoal(mt::state& next_goal)
 
   if (plan_.size() > 1)
   {
-    // plan_.pop_front(); //hack to force it to plan for the same position all the time
+    if (par_.static_planning == false)
+    {
+      plan_.pop_front();
+    }
   }
 
   if (plan_.size() == 1 && drone_status_ == DroneStatus::YAWING)

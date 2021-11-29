@@ -9,6 +9,7 @@ from colorama import init, Fore, Back, Style
 from imitation.algorithms import bc
 import random
 import pytest
+import time
 
 class ExpertDidntSucceed(Exception):
       pass
@@ -163,7 +164,7 @@ class ObstaclesManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.random_pos=np.array([[random.uniform(1.0, 4.5)],[random.uniform(-1.0, 1.0)],[random.uniform(0.0, 2.0)]]);
+		self.random_pos=np.array([[random.uniform(1.5, 2.5)],[random.uniform(-1.5, 1.5)],[random.uniform(0.0, 2.0)]]);
 		# self.random_pos=np.array([[2.5],[0.0],[1.0]]);
 
 	def getNumObs(self):
@@ -301,7 +302,8 @@ def isNormalized(observation_or_action_normalized):
 
 def assertIsNormalized(observation_or_action_normalized):
 	if not isNormalized(observation_or_action_normalized):
-		# print("observation_normalized=\n")
+		print("normalized_value=\n")
+		print(observation_or_action_normalized)
 		# self.printObservation(observation_or_action_normalized)
 		raise AssertionError()
 
@@ -325,8 +327,10 @@ class ObservationManager():
 		self.Ra=params["Ra"]
 		ones13=np.ones((1,3));
 		#Note that the sqrt(3) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
-		#The 2 in ydot_max is because the student sometimes may not satisfy that limit
-		self.normalization_constant=np.concatenate((math.sqrt(3)*self.v_max.T*ones13, math.sqrt(3)*self.a_max.T*ones13, 2*self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
+		margin_v=100.0 #math.sqrt(3)
+		margin_a=100.0 #math.sqrt(3)
+		margin_ydot=100.0 #because the student sometimes may not satisfy that limit
+		self.normalization_constant=np.concatenate((margin_v*self.v_max.T*ones13, margin_a*self.a_max.T*ones13, margin_ydot*self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
 		for i in range(self.obsm.getNumObs()):
 			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)
 
@@ -694,7 +698,10 @@ class StudentCaller():
         observation=self.om.construct_f_obsFrom_w_state_and_w_obs(w_init_state, w_obstacles, w_gterm)
         observation_normalized=self.om.normalizeObservation(observation)
 
+        start = time.time()
         action_normalized,info = self.student_policy.predict(observation_normalized, deterministic=True) 
+        end = time.time()
+        print(f"Calling the student took {(end - start)*(1e3)} ms")
 
         action_normalized=action_normalized.reshape(self.am.getActionShape())
 

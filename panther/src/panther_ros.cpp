@@ -143,6 +143,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "max_side_bbox_obs", par_.max_side_bbox_obs);
   safeGetParam(nh1_, "max_dist2BSPoscPoint", par_.max_dist2BSPoscPoint);
   safeGetParam(nh1_, "use_expert", par_.use_expert);
+  safeGetParam(nh1_, "static_planning", par_.static_planning);
 
   bool perfect_prediction;  // use_ground_truth_prediction
   safeGetParam(nh1_, "perfect_prediction", perfect_prediction);
