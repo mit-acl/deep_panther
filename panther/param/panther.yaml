@@ -48,6 +48,7 @@ c_fov: 3000.0                 #weight for the optimization
 c_final_pos: 1000.0           #weight for the optimization
 c_final_yaw: 0.0              #weight for the optimization
 c_total_time: 1000            #weight for the optimization
+c_dyn_lim: 1.0              #weight for the optimization
 print_graph_yaw_info: false
 fitter_total_time: 5.0 #[seconds] 
 mode: panther #  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther), ysweep (noPA but with sweep in yaw) 
@@ -55,5 +56,5 @@ max_dist2goal: 20.0
 max_dist2obs: 20.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
-use_expert: false
-static_planning: true
+use_expert: true
+static_planning: false #If true, it will always plan from the same initial condition

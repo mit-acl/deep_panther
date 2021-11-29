@@ -124,6 +124,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "c_final_pos", par_.c_final_pos);
   safeGetParam(nh1_, "c_final_yaw", par_.c_final_yaw);
   safeGetParam(nh1_, "c_total_time", par_.c_total_time);
+  safeGetParam(nh1_, "c_dyn_lim", par_.c_dyn_lim);
   safeGetParam(nh1_, "print_graph_yaw_info", par_.print_graph_yaw_info);
   safeGetParam(nh1_, "fitter_total_time", par_.fitter_total_time);
   safeGetParam(nh1_, "mode", par_.mode);

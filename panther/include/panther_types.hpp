@@ -845,6 +845,7 @@ struct parameters
   double          c_final_pos;                        //void setVar_c_final_pos(const std::string& value) { c_final_pos = std::stod(value); };
   double          c_final_yaw;                        //void setVar_c_final_yaw(const std::string& value) { c_final_yaw = std::stod(value); };
   double          c_total_time;                       //void setVar_c_total_time(const std::string& value) { c_total_time = std::stod(value); };
+  double          c_dyn_lim; 
   bool            print_graph_yaw_info;               //void setVar_print_graph_yaw_info(const std::string& value) { print_graph_yaw_info = string2bool(value); };
   double          fitter_total_time;                  //void setVar_fitter_total_time(const std::string& value) { fitter_total_time = std::stod(value); };
   std::string     mode;                               //void setVar_mode(const std::string& value) { mode = value; };

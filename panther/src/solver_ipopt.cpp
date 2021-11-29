@@ -611,6 +611,7 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   map_arguments["c_final_pos"] = par_.c_final_pos;
   map_arguments["c_final_yaw"] = par_.c_final_yaw;
   map_arguments["c_total_time"] = par_.c_total_time;
+  map_arguments["c_dyn_lim"] = par_.c_dyn_lim;
 
   /////////////////////////////////////////// SOLVE AN OPIMIZATION FOR EACH OF THE GUESSES FOUND
 

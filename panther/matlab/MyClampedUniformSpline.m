@@ -617,41 +617,53 @@ classdef MyClampedUniformSpline < handle
             end
         end
         
-        function constraints=getMaxVelConstraints(obj, basis, v_max_scaled)
+        function [constraints, slacks]=getMaxVelConstraints(obj, basis, v_max_scaled)
             constraints={};
+            slacks={};
             for j=1:obj.num_seg
                 cps=obj.getCPs_XX_Vel_ofInterval(basis, j);
                 for u=1:size(cps,2)
                     for xyz=1:size(cps{u},1)
-                        constraints{end+1}=cps{u}(xyz) <= v_max_scaled(xyz);
-                        constraints{end+1}=cps{u}(xyz) >= -v_max_scaled(xyz);
+                        tmp=v_max_scaled(xyz);
+                        tmp_squared=tmp*tmp;
+                        constraints{end+1}=cps{u}(xyz) <= tmp ;
+                        constraints{end+1}=cps{u}(xyz) >= -tmp;
+                        slacks{end+1}=((cps{u}(xyz))*(cps{u}(xyz))-tmp_squared)/(tmp_squared); %Should be <=0 
                     end
                 end
             end
         end
         
-        function constraints=getMaxAccelConstraints(obj, basis, a_max_scaled)
+        function [constraints, slacks]=getMaxAccelConstraints(obj, basis, a_max_scaled)
             constraints={};
+            slacks={};
             for j=1:obj.num_seg
                 cps=obj.getCPs_XX_Accel_ofInterval(basis,j);
                 for u=1:size(cps,2)
                     for xyz=1:size(cps{u},1)
-                        constraints{end+1}=cps{u}(xyz) <= a_max_scaled(xyz) ;
-                        constraints{end+1}=cps{u}(xyz) >= -a_max_scaled(xyz);
+                        tmp=a_max_scaled(xyz);
+                        tmp_squared=tmp*tmp;
+                        constraints{end+1}=cps{u}(xyz) <= tmp ;
+                        constraints{end+1}=cps{u}(xyz) >= -tmp;
+                        slacks{end+1}=((cps{u}(xyz))*(cps{u}(xyz))-tmp_squared)/(tmp_squared); %Should be <=0 
                     end
                 end
             end
         end
         
         
-        function constraints=getMaxJerkConstraints(obj, basis, j_max_scaled)
+        function [constraints, slacks]=getMaxJerkConstraints(obj, basis, j_max_scaled)
             constraints={};
+            slacks={};
             for j=1:obj.num_seg
                 cps=obj.getCPs_XX_Jerk_ofInterval(basis,j);
                 for u=1:size(cps,2)
                     for xyz=1:size(cps{u},1)
-                        constraints{end+1}=cps{u}(xyz) <= j_max_scaled(xyz) ;
-                        constraints{end+1}=cps{u}(xyz) >= -j_max_scaled(xyz);
+                        tmp=j_max_scaled(xyz);
+                        tmp_squared=tmp*tmp;
+                        constraints{end+1}=cps{u}(xyz) <= tmp ;
+                        constraints{end+1}=cps{u}(xyz) >= -tmp;
+                        slacks{end+1}=((cps{u}(xyz))*(cps{u}(xyz))-tmp_squared)/(tmp_squared); %Should be <=0 
                     end
                 end
             end

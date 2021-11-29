@@ -56,7 +56,7 @@ num_of_yaw_per_layer=40; %This will be used in the graph yaw search of C++
                          %Note that the initial layer will have only one yaw (which is given) 
 basis="MINVO"; %MINVO OR B_SPLINE or BEZIER. This is the basis used for collision checking (in position, velocity, accel and jerk space), both in Matlab and in C++
 linear_solver_name='ma27'; %mumps [default, comes when installing casadi], ma27, ma57, ma77, ma86, ma97 
-print_level=0; %From 0 (no verbose) to 12 (very verbose), default is 5
+print_level=5; %From 0 (no verbose) to 12 (very verbose), default is 5
 jit=false;
 
 t0_n=0.0; 
@@ -84,6 +84,7 @@ c_fov=        opti.parameter(1,1);
 c_final_pos = opti.parameter(1,1);
 c_final_yaw = opti.parameter(1,1);
 c_total_time = opti.parameter(1,1);
+c_dyn_lim= opti.parameter(1,1);
 % c_costs.dist_im_cost=         opti.parameter(1,1);
 
 Ra=opti.parameter(1,1);
@@ -336,7 +337,6 @@ for j=1:(sp.num_seg)
 end
 
 
-[const_p,const_y]=addDynLimConstraints(const_p,const_y, sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -425,7 +425,16 @@ total_cost=c_pos_smooth*pos_smooth_cost+...
            c_yaw_smooth*yaw_smooth_cost+...
            c_final_yaw*final_yaw_cost+...
            c_total_time*total_time_cost;
-    
+
+
+%First option: Hard constraints
+[const_p,const_y]=addDynLimConstraints(const_p,const_y, sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n);
+
+%Second option: Soft constraints:
+% total_cost=total_cost+c_dyn_lim*getCostDynLimSoftConstraints(sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n);
+
+
+
 opti.minimize(simplify(total_cost));
        
 
@@ -541,7 +550,8 @@ par_and_init_guess= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV
               {createStruct('c_fov', c_fov, 1.0)},...
               {createStruct('c_final_pos', c_final_pos, 2000)},...
               {createStruct('c_final_yaw', c_final_yaw, 0.0)},...
-              {createStruct('c_total_time', c_total_time, 1000.0)},...            
+              {createStruct('c_total_time', c_total_time, 1000.0)},...
+              {createStruct('c_dyn_lim', c_dyn_lim, 100000.0)},...
               {createStruct('all_nd', all_nd, all_nd_value)},...
               {createStruct('pCPs', pCPs, tmp1)},...
              {createStruct('yCPs', yCPs, tmp2)},...
@@ -1013,13 +1023,33 @@ function [t_proc_total, t_wall_total]= timeInfo(my_func)
     
 end
 
+function cost=getCostDynLimSoftConstraints( sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n)
+
+    [~, slacks_vel_p] =  sp.getMaxVelConstraints(basis, v_max_n);
+    [~, slacks_accel_p] =sp.getMaxAccelConstraints(basis, a_max_n);
+    [~, slacks_jerk_p] = sp.getMaxJerkConstraints(basis, j_max_n);
+    [~, slacks_vel_y] =  sy.getMaxVelConstraints(basis, ydot_max_n);   %Max vel constraints (yaw)
+
+    all_slacks=[slacks_vel_p slacks_vel_p, slacks_accel_p, slacks_vel_y];%[slacks_vel_p, slacks_accel_p, slacks_jerk_p, slacks_vel_y];
+
+    cost=0.0;
+    for i=1:length(all_slacks)
+            cost=cost+max(0,all_slacks{i})^3;% Constraint is slack<=0
+    end
+
+end
 
 function [const_p,const_y]=addDynLimConstraints(const_p,const_y, sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n)
 
-    const_p=[const_p sp.getMaxVelConstraints(basis, v_max_n)];      %Max vel constraints (position)
-    const_p=[const_p sp.getMaxAccelConstraints(basis, a_max_n)];    %Max accel constraints (position)
-    const_p=[const_p sp.getMaxJerkConstraints(basis, j_max_n)];     %Max jerk constraints (position)
-    const_y=[const_y sy.getMaxVelConstraints(basis, ydot_max_n)];   %Max vel constraints (yaw)
+    [const_vel_p, ~]=   sp.getMaxVelConstraints(basis, v_max_n);
+    [const_accel_p, ~]= sp.getMaxAccelConstraints(basis, a_max_n);
+    [const_jerk_p, ~]=  sp.getMaxJerkConstraints(basis, j_max_n);
+    [const_vel_y, ~]=   sy.getMaxVelConstraints(basis, ydot_max_n);   %Max vel constraints (yaw)
+
+    const_p=[const_p const_vel_p];      %Max vel constraints (position)
+    const_p=[const_p const_accel_p];    %Max accel constraints (position)
+    const_p=[const_p const_jerk_p];     %Max jerk constraints (position)
+    const_y=[const_y const_vel_y];   %Max vel constraints (yaw)
 
 end
 
