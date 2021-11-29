@@ -42,7 +42,7 @@ class ExpertPolicy(object):
 
         self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
 
-        self.name=Style.BRIGHT+Fore.BLUE+"[Exp]"+Style.RESET_ALL
+        self.name=Style.BRIGHT+Fore.BLUE+"  [Exp]"+Style.RESET_ALL
         self.reset()
 
     def printwithName(self,data):

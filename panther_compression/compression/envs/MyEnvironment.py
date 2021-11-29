@@ -40,7 +40,7 @@ class MyEnvironment(gym.Env):
     self.dt=0.5; #Timestep in seconds
     self.time=0.0;
     
-    self.name=Style.BRIGHT+Fore.GREEN+"[Env]"+Style.RESET_ALL
+    self.name=Style.BRIGHT+Fore.YELLOW+"  [Env]"+Style.RESET_ALL
     # print (self.params)
 
     # print("self.am.getActionShape()= ", self.am.getActionShape())
@@ -116,7 +116,8 @@ class MyEnvironment(gym.Env):
     self.timestep = self.timestep + 1
     info = {}
     if(isNormalized(f_observationn)==False):
-      self.printwithName(f"f_observationn={f_observationn} is not normalized (i.e., constraints are not satisfied). Terminating")
+      # self.printwithName(f"f_observationn={f_observationn} is not normalized (i.e., constraints are not satisfied). Terminating")
+      self.printwithName(f"f_observationn is not normalized (i.e., constraints are not satisfied). Terminating")
       # print(f"[Env] Terminated due to constraint violation: obs: {self.x}, act: {u}, steps: {self.timestep}")
       done = True
       info["constraint_violation"] = True
@@ -135,7 +136,7 @@ class MyEnvironment(gym.Env):
     return f_observationn, reward, done, info
 
   def reset(self):
-    self.printwithName("Resetting environment")
+    self.printwithName(Style.BRIGHT+Fore.YELLOW+"Resetting environment"+Style.RESET_ALL)
 
     self.time=0.0
     self.timestep = 0

@@ -45,7 +45,7 @@ if __name__ == "__main__":
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
 
-    parser.add_argument("--n_iters", default=150, type=int)
+    parser.add_argument("--n_rounds", default=150, type=int) #was called n_iters before
     parser.add_argument("--n_evals", default=6, type=int)
     parser.add_argument("--eval_environment_max_steps", default=10, type=int)
     parser.add_argument("--train_environment_max_steps", default=10, type=int)
@@ -58,23 +58,25 @@ if __name__ == "__main__":
     parser.add_argument("--no_eval", dest='eval', action='store_false')
     parser.set_defaults(eval=False)
     parser.add_argument("--no_init_and_final_eval", dest='init_and_final_eval', action='store_false')
-    parser.set_defaults(final_eval=True)
+    parser.set_defaults(init_and_final_eval=False)
     # Dagger properties
-    parser.add_argument("--dagger_beta", default=35, type=int)
+    parser.add_argument("--dagger_beta", default=140, type=int)
        
     
     args = parser.parse_args()
 
     printInBoldBlue("---------------- Input Arguments: -----------------------")
     print("Trainer: {}.".format("DAgger" if args.on_policy_trainer ==True else "BC" ))
-    print(f"seed: {args.seed}, log_dir: {args.log_dir}, n_iters: {args.n_iters}")
+    print(f"seed: {args.seed}, log_dir: {args.log_dir}, n_rounds: {args.n_rounds}")
     print(f"eval_environment_max_steps: {args.eval_environment_max_steps}")
     print(f"use_only_last_coll_ds: {args.use_only_last_coll_ds}")
-    print(f"train: {args.train}, eval: {args.eval}, final_eval: {args.final_eval}")
+    print(f"train: {args.train}, eval: {args.eval}, init_and_final_eval: {args.init_and_final_eval}")
     print(f"DAgger Linear Beta: {args.dagger_beta}.")
 
     print(f"Num of trajectories per iteration: {args.n_traj_per_iter}.")
     print("---------------------------------------------------------")
+
+    np.set_printoptions(precision=3)
 
     assert args.eval == True or args.train == True, "eval = True or train = True!"
 
@@ -166,7 +168,7 @@ if __name__ == "__main__":
     stats = {"training":list(), "eval_no_dist":list()}
     if args.on_policy_trainer == True:
         assert trainer.round_num == 0
-    for i in trange(args.n_iters, desc="Iteration"):
+    for i in trange(args.n_rounds, desc="Round"):
 
         #Create names for policies
         n_training_traj = int(i*args.n_traj_per_iter) # Note: we start to count from 0. e.g. policy_0 means that we used 1 
@@ -177,7 +179,7 @@ if __name__ == "__main__":
 
         # Train for iteration
         if args.train:
-            print(f"[Collector] Collecting iteration {i+1}/{args.n_iters}.")
+            print(f"[Collector] Collecting round {i+1}/{args.n_rounds}.")
             train_stats = train(trainer=trainer, expert=expert_policy, seed=args.seed, n_traj_per_iter=args.n_traj_per_iter, n_epochs=N_EPOCHS, 
                 log_path=os.path.join(log_dir, "training"),  save_full_policy_path=policy_path, use_only_last_coll_ds=args.use_only_last_coll_ds)
 
