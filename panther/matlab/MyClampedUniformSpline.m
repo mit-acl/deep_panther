@@ -619,6 +619,7 @@ classdef MyClampedUniformSpline < handle
         
         function constraints=getMaxVelConstraints(obj, basis, v_max_scaled)
             constraints={};
+            slacks={};
             for j=1:obj.num_seg
                 cps=obj.getCPs_XX_Vel_ofInterval(basis, j);
                 for u=1:size(cps,2)
@@ -636,6 +637,7 @@ classdef MyClampedUniformSpline < handle
         
         function constraints=getMaxAccelConstraints(obj, basis, a_max_scaled)
             constraints={};
+            slacks={};
             for j=1:obj.num_seg
                 cps=obj.getCPs_XX_Accel_ofInterval(basis,j);
                 for u=1:size(cps,2)
@@ -654,6 +656,7 @@ classdef MyClampedUniformSpline < handle
         
         function constraints=getMaxJerkConstraints(obj, basis, j_max_scaled)
             constraints={};
+            slacks={};
             for j=1:obj.num_seg
                 cps=obj.getCPs_XX_Jerk_ofInterval(basis,j);
                 for u=1:size(cps,2)

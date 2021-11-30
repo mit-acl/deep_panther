@@ -84,36 +84,43 @@ class MyEnvironment(gym.Env):
 
     ####################################
 
+
     w_posBS, w_yawBS= self.am.f_actionAnd_w_State2wBS(f_action, self.w_state)
 
+    ####################################
+    ####### MOVE THE ENVIRONMENT #######
+    ####################################
 
-    # print("w_posBS.getAccelT(self.dt)= ", w_posBS.getAccelT(self.dt).T)
+    # dist2goal=np.linalg.norm(self.w_state.w_pos-self.w_gterm_pos)
+    dist2goal=np.linalg.norm(w_posBS.getLastPos()-self.w_gterm_pos) #From the end of the current traj to the goal
+
+
+    if(dist2goal<0.5):
+      actual_dt=self.am.getTotalTime(f_action) #Advance to the end of that trajectory
+    else:
+      actual_dt=self.dt
+
 
     #Update state
-    self.w_state= State(w_posBS.getPosT(self.dt), w_posBS.getVelT(self.dt), w_posBS.getAccelT(self.dt), \
-                        w_yawBS.getPosT(self.dt), w_yawBS.getVelT(self.dt));
+    self.w_state= State(w_posBS.getPosT(actual_dt), w_posBS.getVelT(actual_dt), w_posBS.getAccelT(actual_dt), \
+                        w_yawBS.getPosT(actual_dt), w_yawBS.getVelT(actual_dt));
 
 
-    # print("w_yawBS.getPosT(self.dt)= ", w_yawBS.getPosT(self.dt))
+    #Update time and timestep
+    self.time = self.time + actual_dt;
+    self.timestep = self.timestep + 1
 
-    #Update time
-    self.time = self.time + self.dt;
+    ####################################
+    ####### CONSTRUCT OBS        #######
+    ####################################
 
-
-    ##### Construct observation
     w_obstacles=self.obsm.getFutureWPosObstacles(self.time)
-
-    # self.printwithName(f"w_obstacles={w_obstacles[0].ctrl_pts}")
-
     f_observationn=self.om.getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.w_gterm_pos, w_obstacles);
 
-
-    dist2goal=np.linalg.norm(self.w_state.w_pos-self.w_gterm_pos)
-    # dist2goal=np.linalg.norm(w_posBS.getLastPos()-self.w_gterm_pos) #From the end of the current traj to the goal
     self.printwithName(f"Timestep={self.timestep}, dist2goal={dist2goal}, w_state.w_pos={self.w_state.w_pos.T}")
 
 
-    self.timestep = self.timestep + 1
+    
     info = {}
     if(isNormalized(f_observationn)==False):
       # self.printwithName(f"f_observationn={f_observationn} is not normalized (i.e., constraints are not satisfied). Terminating")
@@ -124,7 +131,7 @@ class MyEnvironment(gym.Env):
       # print(f"[Env] Terminated due to constraint violation: obs: {self.x}, act: {u}, steps: {self.timestep}")
       done = True
       info["constraint_violation"] = True
-    elif ( (self.timestep >= self.len_episode) or (dist2goal<0.5) ):
+    elif ( (self.timestep >= self.len_episode)): # or (dist2goal<0.5) 
       done = True
       info["constraint_violation"] = False
     else:
@@ -133,6 +140,9 @@ class MyEnvironment(gym.Env):
 
     reward=0.0
 
+    # print("w_yawBS.getPosT(self.dt)= ", w_yawBS.getPosT(self.dt))
+        # self.printwithName(f"w_obstacles={w_obstacles[0].ctrl_pts}")
+    # print("w_posBS.getAccelT(self.dt)= ", w_posBS.getAccelT(self.dt).T)
     # self.printwithName(f"returning reward={reward}")
     # self.printwithName(f"returning obsN={observation}")
     # self.printwithName(f"returning obs size={observation.shape}")

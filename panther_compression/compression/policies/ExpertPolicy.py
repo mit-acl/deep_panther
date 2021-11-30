@@ -5,6 +5,7 @@ from random import random
 from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed
 from colorama import init, Fore, Back, Style
 import py_panther
+import math 
 
 ######################################################################################################
 ###### https://stackoverflow.com/questions/11130156/suppress-stdout-stderr-print-from-python-functions
@@ -88,7 +89,9 @@ class ExpertPolicy(object):
         final_state=py_panther.state();#This is initialized as zero. This is G
         final_state.pos=self.om.getf_g(obs);
 
-        total_time=self.par.factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, self.par.v_max*np.ones((3,1)), self.par.a_max*np.ones((3,1)))
+        invsqrt3_vector=math.sqrt(3)*np.ones((3,1));
+
+        total_time=self.par.factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, self.par.v_max*invsqrt3_vector, self.par.a_max*invsqrt3_vector)
 
         self.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
         self.my_SolverIpopt.setFocusOnObstacle(True);
@@ -101,6 +104,7 @@ class ExpertPolicy(object):
 
         if(succeed==False):
             self.printFailedOpt();
+            exit();
             raise ExpertDidntSucceed()
         else:
             self.printSucessOpt();

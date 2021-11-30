@@ -84,6 +84,7 @@ c_fov=        opti.parameter(1,1);
 c_final_pos = opti.parameter(1,1);
 c_final_yaw = opti.parameter(1,1);
 c_total_time = opti.parameter(1,1);
+% c_dyn_lim= opti.parameter(1,1);
 % c_costs.dist_im_cost=         opti.parameter(1,1);
 
 Ra=opti.parameter(1,1);
@@ -336,7 +337,6 @@ for j=1:(sp.num_seg)
 end
 
 
-[const_p,const_y]=addDynLimConstraints(const_p,const_y, sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -425,7 +425,16 @@ total_cost=c_pos_smooth*pos_smooth_cost+...
            c_yaw_smooth*yaw_smooth_cost+...
            c_final_yaw*final_yaw_cost+...
            c_total_time*total_time_cost;
-    
+
+
+%First option: Hard constraints
+[const_p,const_y]=addDynLimConstraints(const_p,const_y, sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n);
+
+%Second option: Soft constraints:
+% total_cost=total_cost+c_dyn_lim*getCostDynLimSoftConstraints(sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n);
+
+
+
 opti.minimize(simplify(total_cost));
        
 
@@ -541,7 +550,7 @@ par_and_init_guess= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV
               {createStruct('c_fov', c_fov, 1.0)},...
               {createStruct('c_final_pos', c_final_pos, 2000)},...
               {createStruct('c_final_yaw', c_final_yaw, 0.0)},...
-              {createStruct('c_total_time', c_total_time, 1000.0)},...            
+              {createStruct('c_total_time', c_total_time, 1000.0)},...
               {createStruct('all_nd', all_nd, all_nd_value)},...
               {createStruct('pCPs', pCPs, tmp1)},...
              {createStruct('yCPs', yCPs, tmp2)},...
@@ -1013,6 +1022,22 @@ function [t_proc_total, t_wall_total]= timeInfo(my_func)
     
 end
 
+%Not fully implemented yet
+% function cost=getCostDynLimSoftConstraints( sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n)
+% 
+%     [~, slacks_vel_p] =  sp.getMaxVelConstraints(basis, v_max_n);
+%     [~, slacks_accel_p] =sp.getMaxAccelConstraints(basis, a_max_n);
+%     [~, slacks_jerk_p] = sp.getMaxJerkConstraints(basis, j_max_n);
+%     [~, slacks_vel_y] =  sy.getMaxVelConstraints(basis, ydot_max_n);   %Max vel constraints (yaw)
+% 
+%     all_slacks=[slacks_vel_p slacks_vel_p, slacks_accel_p, slacks_vel_y];%[slacks_vel_p, slacks_accel_p, slacks_jerk_p, slacks_vel_y];
+% 
+%     cost=0.0;
+%     for i=1:length(all_slacks)
+%             cost=cost+max(0,all_slacks{i})^3;% Constraint is slack<=0
+%     end
+% 
+% end
 
 function [const_p,const_y]=addDynLimConstraints(const_p,const_y, sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n)
 
