@@ -622,7 +622,12 @@ classdef MyClampedUniformSpline < handle
             slacks={};
             for j=1:obj.num_seg
                 cps=obj.getCPs_XX_Vel_ofInterval(basis, j);
-                for u=1:size(cps,2)
+                if(j==1)
+                    init_index=obj.p;
+                else
+                    init_index=1;
+                end
+                for u=init_index:size(cps,2)
                     for xyz=1:size(cps{u},1)
                         tmp=v_max_scaled(xyz);
                         tmp_squared=tmp*tmp;
@@ -639,6 +644,11 @@ classdef MyClampedUniformSpline < handle
             slacks={};
             for j=1:obj.num_seg
                 cps=obj.getCPs_XX_Accel_ofInterval(basis,j);
+                if(j==1)
+                    init_index=obj.p-1;
+                else
+                    init_index=1;
+                end
                 for u=1:size(cps,2)
                     for xyz=1:size(cps{u},1)
                         tmp=a_max_scaled(xyz);

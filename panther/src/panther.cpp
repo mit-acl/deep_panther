@@ -687,7 +687,8 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
     //////////////////////
 
-    double time_allocated = getMinTimeDoubleIntegrator3D(A.pos, A.vel, G.pos, G.vel, par_.v_max, par_.a_max);
+    double time_allocated =
+        getMinTimeDoubleIntegrator3D(A.pos, A.vel, G.pos, G.vel, sqrt(3) * par_.v_max, sqrt(3) * par_.a_max);
 
     // std::cout << green << bold << "Time allocated= " << time_allocated << reset << std::endl;
 

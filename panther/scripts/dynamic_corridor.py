@@ -219,12 +219,12 @@ class DynCorridor:
             marker=self.marker_array.markers[i];
  
             #Hack
-            # x_string='2.5'
-            # y_string='0'
-            # z_string='1'
-            x_string=str(random.uniform(2.0, 2.0))
-            y_string=str(random.uniform(-2.0, 2.0))
-            z_string=str(random.uniform(0.0, 2.0))         
+            x_string='2.5'
+            y_string='0'
+            z_string='1'
+            # x_string=str(random.uniform(2.0, 2.0))
+            # y_string=str(random.uniform(-2.0, 2.0))
+            # z_string=str(random.uniform(0.0, 2.0))         
             self.all_dyn_traj[i].s_mean=[x_string, y_string, z_string]
             #End of hack
 
@@ -535,7 +535,7 @@ class DynCorridor:
 
 def startNode(total_num_obs, gazebo):
     c = DynCorridor(total_num_obs,gazebo)
-    rospy.Timer(rospy.Duration(0.4), c.pubTF) #was 0.01
+    rospy.Timer(rospy.Duration(0.2), c.pubTF) #was 0.01
     rospy.spin()
 
 if __name__ == '__main__':

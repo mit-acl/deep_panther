@@ -154,6 +154,16 @@ def convertPPState2State(ppstate):
     return State(p, v, a, yaw, dyaw)
 
 
+class GTermManager():
+	def __init__(self):
+		self.newGTermPos();
+
+	def newGTermPos(self):
+		self.random_pos=np.array([[random.uniform(3.0, 4.0)],[random.uniform(-1.5, 1.5)],[random.uniform(0.0, 2.0)]]);
+
+	def getGTerm(self):
+		return self.random_pos;
+
 class ObstaclesManager():
 	def __init__(self):
 		self.num_obs=1;
@@ -327,9 +337,9 @@ class ObservationManager():
 		self.Ra=params["Ra"]
 		ones13=np.ones((1,3));
 		#Note that the sqrt(3) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
-		margin_v=math.sqrt(3) #math.sqrt(3)
-		margin_a=math.sqrt(3) #math.sqrt(3)
-		margin_ydot=1.0 #because the student sometimes may not satisfy that limit
+		margin_v=3.0 #math.sqrt(3) #math.sqrt(3)
+		margin_a=3.0 #math.sqrt(3) #math.sqrt(3)
+		margin_ydot=3.0 #1.0 #because the student sometimes may not satisfy that limit
 		self.normalization_constant=np.concatenate((margin_v*self.v_max.T*ones13, margin_a*self.a_max.T*ones13, margin_ydot*self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
 		for i in range(self.obsm.getNumObs()):
 			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)
@@ -694,8 +704,11 @@ class StudentCaller():
         w_obstacles=convertPPObstacles2Obstacles(w_ppobstacles)
 
         #Construct observation
-        observation=self.om.construct_f_obsFrom_w_state_and_w_obs(w_init_state, w_obstacles, w_gterm)
-        observation_normalized=self.om.normalizeObservation(observation)
+
+        observation_normalized=self.om.getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_init_state, w_gterm, w_obstacles)
+
+        # observation=self.om.construct_f_obsFrom_w_state_and_w_obs(w_init_state, w_obstacles, w_gterm)
+        # observation_normalized=self.om.normalizeObservation(observation)
 
         start = time.time()
         action_normalized,info = self.student_policy.predict(observation_normalized, deterministic=True) 

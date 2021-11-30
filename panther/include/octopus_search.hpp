@@ -96,8 +96,8 @@ public:
   void setUp(double t_min, double t_max, const ConvexHullsOfCurves_Std& hulls);
   ~OctopusSearch();
 
-  void setMaxValuesAndSamples(Eigen::Vector3d& v_max, Eigen::Vector3d& a_max, int num_samples_x, int num_samples_y,
-                              int num_samples_z, double fraction_voxel_size);
+  void setMaxValuesAndSamples(const Eigen::Vector3d& v_max, const Eigen::Vector3d& a_max, int num_samples_x,
+                              int num_samples_y, int num_samples_z, double fraction_voxel_size);
   void setq0q1q2(Eigen::Vector3d& q0, Eigen::Vector3d& q1, Eigen::Vector3d& q2);
   void setGoal(Eigen::Vector3d& goal);
   void setSamples(int num_samples_x, int num_samples_y, int num_samples_z);

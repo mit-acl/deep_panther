@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import copy
 from gym import spaces
-from compression.utils.other import ActionManager, ObservationManager, State, ObstaclesManager, isNormalized
+from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager, isNormalized
 from colorama import init, Fore, Back, Style
 
 class MyEnvironment(gym.Env):
@@ -29,13 +29,14 @@ class MyEnvironment(gym.Env):
     self.am=ActionManager();
     self.om=ObservationManager();
     self.obsm=ObstaclesManager();
+    self.gm=GTermManager();
 
     self.action_shape=self.am.getActionShape();
     self.observation_shape=self.om.getObservationShape();
 
     self.action_space = spaces.Box(low = -1.0, high = 1.0, shape=self.action_shape)
     self.observation_space = spaces.Box(low = -1.0, high = 1.0, shape=self.observation_shape)
-    self.w_gterm_pos=np.array([[8], [0.0], [0.0]])
+    self.w_gterm_pos=self.gm.getGTerm();#np.array([[8], [0.0], [0.0]])
 
     self.dt=0.5; #Timestep in seconds
     self.time=0.0;
@@ -145,6 +146,7 @@ class MyEnvironment(gym.Env):
     self.timestep = 0
     self.w_state=State(np.zeros((3,1)), np.zeros((3,1)), np.zeros((3,1)), np.zeros((1,1)), np.zeros((1,1)))
     self.obsm.newRandomPos();
+    self.gm.newGTermPos();
     # observation = self.om.getRandomNormalizedObservation()
     w_obstacles=self.obsm.getFutureWPosObstacles(self.time)
     f_observationn=self.om.getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.w_gterm_pos, w_obstacles);
