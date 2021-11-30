@@ -72,7 +72,7 @@ class StudentPolicy(BasePolicy):
         self.activation_fn = activation_fn
 
 
-        self.name=Style.BRIGHT+Fore.RED+"  [Stu]"+Style.RESET_ALL
+        self.name=Style.BRIGHT+Fore.WHITE+"  [Stu]"+Style.RESET_ALL
 
         print("features_dim= ", features_dim)
 
