@@ -23,7 +23,7 @@ optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
 optimize_d_planes=true;     %Optimize the scalar "d" of the planes
 optimize_time_alloc=true;
 
-make_plots=true;
+make_plots=false;
 
 
 deg_pos=3;
@@ -467,7 +467,7 @@ v_max_value=1.6;%*ones(3,1);
 a_max_value=5;%*ones(3,1);
 j_max_value=50;%*ones(3,1);
 
-alpha_value=10.0;
+alpha_value=15.0;
 
 ydot_max_value=1.0; 
 % total_time_value=10.5;
