@@ -14,6 +14,9 @@ from stable_baselines3.common import on_policy_algorithm
 import torch
 import random
 from tqdm import trange
+# import os
+import subprocess
+
 
 from colorama import init, Fore, Back, Style
 
@@ -61,7 +64,6 @@ if __name__ == "__main__":
     parser.set_defaults(init_and_final_eval=False)
     # Dagger properties
     parser.add_argument("--rampdown_rounds", default=100, type=int)
-       
     
     args = parser.parse_args()
 
@@ -135,9 +137,9 @@ if __name__ == "__main__":
 
     # Init logging
     tempdir = tempfile.TemporaryDirectory(prefix="quickstart")
-    tempdir_path = pathlib.Path(tempdir.name)
+    tempdir_path = LOG_PATH#"evals/log_tensorboard"#LOG_PATH#pathlib.Path(tempdir.name)
     print( f"All Tensorboards and logging are being written inside {tempdir_path}/.")
-    logger.configure(tempdir_path / "DAgger/",  format_strs=["log", "csv"])  # "stdout"
+    logger.configure(tempdir_path,  format_strs=["log", "csv", "tensorboard"])  # "stdout"
 
     if(args.init_and_final_eval):
         printInBoldBlue("---------------- Preliminiary Evaluation: --------------------")
@@ -167,6 +169,15 @@ if __name__ == "__main__":
 
     # Train and evaluate
     printInBoldBlue("---------------- Training Learner: --------------------")
+
+
+    #Launch tensorboard visualization
+    proc1 = subprocess.Popen(["tensorboard","--logdir",args.log_dir,"--bind_all"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    proc2 = subprocess.Popen(["google-chrome","http://jtorde-alienware-aurora-r8:6006/"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    # os.system("tensorboard --logdir "+args.log_dir +" --bind_all")
+    # os.system("google-chrome http://jtorde-alienware-aurora-r8:6006/")  
+
+
     stats = {"training":list(), "eval_no_dist":list()}
     if args.on_policy_trainer == True:
         assert trainer.round_num == 0

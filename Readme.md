@@ -75,6 +75,10 @@ You should change:
 
 and recompile
 
+
+
+Example of how to write using tensorboard/pytorch is [here](https://pytorch.org/tutorials/recipes/recipes/tensorboard_with_pytorch.html)
+
 ---
 
 **If you are looking for a Planner** 
