@@ -63,6 +63,8 @@ Panther::Panther(mt::parameters par) : par_(par)
 
     std::string policy_path = "/home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/"
                               "final_policy.pt";
+    // std::string policy_path = "/home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/"
+    //                           "intermediate_policy_42.pt";
 
     student_caller_ptr_ = new pybind11::object;
     *student_caller_ptr_ = pybind11::module::import("compression.utils.other").attr("StudentCaller")(policy_path);

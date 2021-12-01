@@ -746,6 +746,13 @@ bool SolverIpopt::optimize(bool supress_all_prints)
     solution.is_guess = false;
     solution.cost = double(result["total_cost"]);
 
+    // hack (TODO): sometimes the total time is very small (and final position is very close to initial position)
+    if (double(result["alpha"]) < 1e-4)
+    {
+      optimstatus = "The alpha found is too small";
+    }
+    /////////////////////
+
     ///////////////// DECIDE ACCORDING TO STATUS OF THE SOLVER
 
     // std::vector<Eigen::Vector3d> qp;  // Solution found (Control points for position)
@@ -755,8 +762,8 @@ bool SolverIpopt::optimize(bool supress_all_prints)
     bool success_opt;
 
     // See names here:
-    // https://github.com/casadi/casadi/blob/fadc86444f3c7ab824dc3f2d91d4c0cfe7f9dad5/casadi/interfaces/ipopt/ipopt_interface.cpp
-    if (optimstatus == "Solve_Succeeded" || optimstatus == "Solved_To_Acceptable_Level")
+    // https://github.com/casadi/casadi/blob/fadc86444f3c7ab824dc3f2d91d4c0cfe7f9dad5/casadi/interfaces/ipopt/ipopt_interface.cpp#L368
+    if (optimstatus == "Solve_Succeeded")  //|| optimstatus == "Solved_To_Acceptable_Level"
     {
       std::cout << green << "IPOPT found a solution" << reset << std::endl;
       // log_ptr_->success_opt = true;

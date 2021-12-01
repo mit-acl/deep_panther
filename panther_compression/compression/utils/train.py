@@ -8,8 +8,8 @@ from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
 from compression.utils.other import ExpertDidntSucceed
 
-def make_dagger_trainer(tmpdir, env, linear_beta):
-    beta_schedule=dagger.LinearBetaSchedule(linear_beta)
+def make_dagger_trainer(tmpdir, env, rampdown_rounds):
+    beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
     return dagger.DAggerTrainer(
         env,
         tmpdir,

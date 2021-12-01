@@ -154,6 +154,23 @@ def convertPPState2State(ppstate):
     return State(p, v, a, yaw, dyaw)
 
 
+class GTermManager():
+	def __init__(self):
+		self.newRandomPos();
+
+	def newRandomPos(self):
+		self.w_gterm=np.array([[random.uniform(-4.0, 4.0)],[random.uniform(-8.0, 8.0)],[random.uniform(0.0, 2.0)]]);
+
+	def newRandomPosFarFrom_w_Position(self, w_position):
+		dist=0.0
+		while dist<3.0: #Goal at least 3 meters away from the current position
+			self.newRandomPos()
+			dist=np.linalg.norm(self.w_gterm-w_position)
+
+	def get_w_GTermPos(self):
+		return self.w_gterm;
+
+
 class ObstaclesManager():
 	def __init__(self):
 		self.num_obs=1;
@@ -212,12 +229,12 @@ class State():
 		return self.f_T_w*self.w_pos;
 	def f_vel(self):
 		f_vel=self.f_T_w.rot()@self.w_vel;
-		assert (np.linalg.norm(f_vel)-np.linalg.norm(self.w_vel)) == pytest.approx(0.0)
+		assert (np.linalg.norm(f_vel)-np.linalg.norm(self.w_vel)) == pytest.approx(0.0), f"f_vel={f_vel} (norm={np.linalg.norm(f_vel)}), w_vel={self.w_vel} (norm={np.linalg.norm(self.w_vel)}), f_R_w={self.f_T_w.rot()}, "
 		return f_vel;
 	def f_accel(self):
 		self.f_T_w.debug();
 		f_accel=self.f_T_w.rot()@self.w_accel;
-		assert (np.linalg.norm(f_accel)-np.linalg.norm(self.w_accel)) == pytest.approx(0.0)
+		assert (np.linalg.norm(f_accel)-np.linalg.norm(self.w_accel)) == pytest.approx(0.0), f"f_accel={f_accel} (norm={np.linalg.norm(f_accel)}), w_accel={self.w_accel} (norm={np.linalg.norm(self.w_accel)}), f_R_w={self.f_T_w.rot()}, " 
 		return f_accel;
 	def f_yaw(self):
 		return 0.0;
@@ -297,17 +314,6 @@ def normalize(v):
 		raise RuntimeError
 	return v / norm
 
-def isNormalized(observation_or_action_normalized):
-	return np.logical_and(observation_or_action_normalized >= -1, observation_or_action_normalized <= 1).all()
-
-def assertIsNormalized(observation_or_action_normalized):
-	if not isNormalized(observation_or_action_normalized):
-		print("normalized_value=\n")
-		print(observation_or_action_normalized)
-		# self.printObservation(observation_or_action_normalized)
-		raise AssertionError()
-
-
 class ObservationManager():
 	def __init__(self):
 		self.obsm=ObstaclesManager();
@@ -335,6 +341,22 @@ class ObservationManager():
 			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)
 
 		# assert print("Shape observation=", observation.shape==)
+
+	def obsIsNormalized(self, observation_normalized):
+		# print(observation_normalized.shape)
+		assert observation_normalized.shape == self.getObservationShape()
+
+		return np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
+
+	def assertObsIsNormalized(self, observation_normalized, msg_before=""):
+
+		if not self.obsIsNormalized(observation_normalized):
+			print(msg_before+"The observation is not normalized")
+			print(f"NORMALIZED VALUE={observation_normalized}")
+			observation=self.denormalizeObservation(observation_normalized)
+			print(f"VALUE={observation}")
+			self.printObservation(observation);
+			raise AssertionError()
 
 	def printObservation(self, obs):
 		print("----The observation is:")
@@ -425,7 +447,7 @@ class ObservationManager():
 	    return f_observationn
 
 	def denormalizeObservation(self,observation_normalized):
-		assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
+		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
 
 		# assertIsNormalized(observation_normalized)
 		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all(), f"observation_normalized= {observation_normalized}" 
@@ -508,6 +530,20 @@ class ActionManager():
 		self.normalization_constant=np.concatenate((self.max_dist2BSPoscPoint*np.ones((1, self.action_size_pos_ctrl_pts)), \
 													self.max_yawcPoint*np.ones((1, self.action_size_yaw_ctrl_pts))), axis=1)
 
+	def actionIsNormalized(self, action_normalized):
+		assert action_normalized.shape == self.getActionShape()
+
+		return np.logical_and(action_normalized >= -1, action_normalized <= 1).all()
+
+	def assertActionIsNormalized(self, action_normalized, msg_before=""):
+		if not self.actionIsNormalized(action_normalized):
+			print(msg_before+"The observation is not normalized")
+			print(f"NORMALIZED VALUE={action_normalized}")
+			action=denormalizeObservation(action_normalized)
+			print(f"VALUE={action}")
+			# self.printObservation(observation);
+			raise AssertionError()
+
 	def assertAction(self,action):
 		assert action.shape==self.getActionShape(), f"[Env] ERROR: action.shape={action.shape} but should be={self.getActionShape()}"
 		assert not np.isnan(np.sum(action)), f"Action has nan"
@@ -524,14 +560,26 @@ class ActionManager():
 		action_normalized=np.empty(action.shape)
 		action_normalized[0,0:-1]=action[0,0:-1]/self.normalization_constant #Elementwise division
 		action_normalized[0,-1]=(2.0/self.fitter_total_time)*action[0,-1]-1 #Note that action[0,-1] is in [0, fitter_total_time]
-		assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}"
+
+		time_normalized=self.getTotalTime(action_normalized);
+		slack=1-abs(time_normalized);
+		if(slack<0):
+			if abs(slack)<1e-5: #Can happen due to the tolerances in the optimization
+				print(f"Before= {action_normalized[0,-1]}")
+				action_normalized[0,-1]=np.clip(time_normalized, -1.0, 1.0) #Saturate within limits
+				print(f"After= {action_normalized[0,-1]}")
+			else:
+				assert False, f"time_normalized={time_normalized}"
+
+
+		# assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}, last element={action_normalized[0,-1]}"
 		return action_normalized;
 
 	def getTotalTime(self,action):
 		return action[0,-1]
 
 	def denormalizeAction(self, action_normalized):
-		assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}"
+		# assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}"
 		action=np.empty(action_normalized.shape)
 		action[0,0:-1]=action_normalized[0,0:-1]*self.normalization_constant #Elementwise multiplication
 		action[0,-1]=(self.fitter_total_time/2.0)*(action_normalized[0,-1]+1) #Note that action[0,-1] is in [0, fitter_total_time]
@@ -646,6 +694,8 @@ class ActionManager():
 		total_time=f_action[0,-1]
 
 
+		# print(f"f_action={f_action}")
+		# print(f"total_time={total_time}")
 		w_posBS = MyClampedUniformBSpline(0.0, total_time, self.deg_pos, 3, self.num_seg, w_pos_ctrl_pts) #def __init__():[BSpline(knots_pos, w_pos_ctrl_pts[0,:], self.deg_pos)
 
 		w_yawBS =  MyClampedUniformBSpline(0.0, total_time, self.deg_yaw, 1, self.num_seg, w_yaw_ctrl_pts)
@@ -694,7 +744,7 @@ class StudentCaller():
         w_obstacles=convertPPObstacles2Obstacles(w_ppobstacles)
 
         #Construct observation
-        observation=self.om.construct_f_obsFrom_w_state_and_w_obs(w_init_state, w_obstacles, w_gterm)
+        observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_init_state, w_gterm, w_obstacles)
         observation_normalized=self.om.normalizeObservation(observation)
 
         start = time.time()
@@ -706,8 +756,8 @@ class StudentCaller():
 
         action=self.am.denormalizeAction(action_normalized)
 
-        print("action.shape= ", action.shape)
-        print("action=", action)   
+        # print("action.shape= ", action.shape)
+        # print("action=", action)   
 
 
         assert self.am.getTotalTime(action)>0, "Time needs to be >0"

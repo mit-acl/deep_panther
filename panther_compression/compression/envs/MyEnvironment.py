@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import copy
 from gym import spaces
-from compression.utils.other import ActionManager, ObservationManager, State, ObstaclesManager, isNormalized
+from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager
 from colorama import init, Fore, Back, Style
 
 class MyEnvironment(gym.Env):
@@ -29,18 +29,20 @@ class MyEnvironment(gym.Env):
     self.am=ActionManager();
     self.om=ObservationManager();
     self.obsm=ObstaclesManager();
+    self.gm=GTermManager();
 
     self.action_shape=self.am.getActionShape();
     self.observation_shape=self.om.getObservationShape();
 
     self.action_space = spaces.Box(low = -1.0, high = 1.0, shape=self.action_shape)
     self.observation_space = spaces.Box(low = -1.0, high = 1.0, shape=self.observation_shape)
-    self.w_gterm_pos=np.array([[8], [0.0], [0.0]])
 
     self.dt=0.5; #Timestep in seconds
     self.time=0.0;
+
+    self.color=Style.BRIGHT+Fore.YELLOW
     
-    self.name=Style.BRIGHT+Fore.YELLOW+"  [Env]"+Style.RESET_ALL
+    self.name=self.color+"  [Env]"+Style.RESET_ALL
     # print (self.params)
 
     # print("self.am.getActionShape()= ", self.am.getActionShape())
@@ -54,6 +56,10 @@ class MyEnvironment(gym.Env):
 
   def printwithName(self,data):
     print(self.name+data)
+
+  def printwithNameAndColor(self,data):
+    print(self.name+self.color+data+Style.RESET_ALL)
+
 
   def seed(self, seed=None):
     """Set seed function in this environment and calls
@@ -91,14 +97,18 @@ class MyEnvironment(gym.Env):
     ####### MOVE THE ENVIRONMENT #######
     ####################################
 
-    # dist2goal=np.linalg.norm(self.w_state.w_pos-self.w_gterm_pos)
-    dist2goal=np.linalg.norm(w_posBS.getLastPos()-self.w_gterm_pos) #From the end of the current traj to the goal
+    # dist2goal=np.linalg.norm(self.w_state.w_pos-self.gm.get_w_GTermPos())
+    dist2goal=np.linalg.norm(w_posBS.getLastPos()-self.gm.get_w_GTermPos()) #From the end of the current traj to the goal
 
 
     if(dist2goal<0.5):
-      actual_dt=self.am.getTotalTime(f_action) #Advance to the end of that trajectory
-    else:
-      actual_dt=self.dt
+      # actual_dt=self.am.getTotalTime(f_action) #Advance to the end of that trajectory
+      self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos);
+      self.printwithNameAndColor(f"New goal!")
+    # else:
+    #   actual_dt=self.dt
+    actual_dt=self.dt
+
 
 
     #Update state
@@ -115,18 +125,18 @@ class MyEnvironment(gym.Env):
     ####################################
 
     w_obstacles=self.obsm.getFutureWPosObstacles(self.time)
-    f_observationn=self.om.getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.w_gterm_pos, w_obstacles);
+    f_observationn=self.om.getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), w_obstacles);
 
     self.printwithName(f"Timestep={self.timestep}, dist2goal={dist2goal}, w_state.w_pos={self.w_state.w_pos.T}")
 
 
     
     info = {}
-    if(isNormalized(f_observationn)==False):
+    if(self.om.obsIsNormalized(f_observationn)==False):
       # self.printwithName(f"f_observationn={f_observationn} is not normalized (i.e., constraints are not satisfied). Terminating")
-      f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.w_gterm_pos, w_obstacles)
-      self.printwithName(f"f_observation={f_observation} is not normalized (i.e., constraints are not satisfied). Terminating")
-      exit();
+      f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), w_obstacles)
+      # self.printwithName(f"f_observation={f_observation} is not normalized (i.e., constraints are not satisfied). Terminating")
+      # exit();
       # self.printwithName(f"f_observationn is not normalized (i.e., constraints are not satisfied). Terminating")
       # print(f"[Env] Terminated due to constraint violation: obs: {self.x}, act: {u}, steps: {self.timestep}")
       done = True
@@ -149,15 +159,16 @@ class MyEnvironment(gym.Env):
     return f_observationn, reward, done, info
 
   def reset(self):
-    self.printwithName(Style.BRIGHT+Fore.YELLOW+"Resetting environment"+Style.RESET_ALL)
+    self.printwithNameAndColor("Resetting environment")
 
     self.time=0.0
     self.timestep = 0
     self.w_state=State(np.zeros((3,1)), np.zeros((3,1)), np.zeros((3,1)), np.zeros((1,1)), np.zeros((1,1)))
     self.obsm.newRandomPos();
+    self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos);
     # observation = self.om.getRandomNormalizedObservation()
     w_obstacles=self.obsm.getFutureWPosObstacles(self.time)
-    f_observationn=self.om.getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.w_gterm_pos, w_obstacles);
+    f_observationn=self.om.getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), w_obstacles);
     
     # assert observation.shape == self.observation_shape
     # self.printwithName(f"returning obs={observation}")

@@ -45,7 +45,7 @@ if __name__ == "__main__":
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
 
-    parser.add_argument("--n_rounds", default=150, type=int) #was called n_iters before
+    parser.add_argument("--n_rounds", default=100, type=int) #was called n_iters before
     parser.add_argument("--n_evals", default=6, type=int)
     parser.add_argument("--eval_environment_max_steps", default=20, type=int)
     parser.add_argument("--train_environment_max_steps", default=20, type=int)
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("--no_init_and_final_eval", dest='init_and_final_eval', action='store_false')
     parser.set_defaults(init_and_final_eval=False)
     # Dagger properties
-    parser.add_argument("--dagger_beta", default=140, type=int)
+    parser.add_argument("--rampdown_rounds", default=100, type=int)
        
     
     args = parser.parse_args()
@@ -71,12 +71,14 @@ if __name__ == "__main__":
     print(f"eval_environment_max_steps: {args.eval_environment_max_steps}")
     print(f"use_only_last_coll_ds: {args.use_only_last_coll_ds}")
     print(f"train: {args.train}, eval: {args.eval}, init_and_final_eval: {args.init_and_final_eval}")
-    print(f"DAgger Linear Beta: {args.dagger_beta}.")
+    print(f"DAgger rampdown_rounds: {args.rampdown_rounds}.")
 
     print(f"Num of trajectories per iteration: {args.n_traj_per_iter}.")
     print("---------------------------------------------------------")
 
-    np.set_printoptions(precision=3)
+    # np.set_printoptions(precision=3)
+
+    assert args.rampdown_rounds<=args.n_rounds, f"Are you sure you wanna this? rampdown_rounds={args.rampdown_rounds}, n_rounds={args.n_rounds}"
 
     assert args.eval == True or args.train == True, "eval = True or train = True!"
 
@@ -112,7 +114,7 @@ if __name__ == "__main__":
     # Create and set properties for EVALUATION environment
     # TODO: Andrea: remove venv since it is not properly used, or implement it correctly. 
     print("[Test Env] Making test environment...")
-    test_venv = util.make_vec_env(ENV_NAME, N_VEC)
+    test_venv = util.make_vec_env(env_name=ENV_NAME, n_envs=N_VEC, seed=args.seed, parallel=False)
     test_venv.seed(args.seed)
 
     test_venv.env_method("set_len_ep", (args.eval_environment_max_steps)) # TODO: ANDREA: increase
@@ -123,7 +125,7 @@ if __name__ == "__main__":
     printInBoldBlue("---------------- Making Learner Policy: -------------------")
     # Create learner policy
     if args.on_policy_trainer: 
-        trainer = make_dagger_trainer(tmpdir=DATA_POLICY_PATH, env=train_env, linear_beta=args.dagger_beta)
+        trainer = make_dagger_trainer(tmpdir=DATA_POLICY_PATH, env=train_env, rampdown_rounds=args.rampdown_rounds)
     else: 
         trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, env=train_env)
 

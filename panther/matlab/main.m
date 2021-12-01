@@ -565,6 +565,7 @@ opts = struct;
 opts.expand=true; %When this option is true, it goes WAY faster!
 opts.print_time=true;
 opts.ipopt.print_level=print_level; 
+opts.ipopt.max_iter=1000;
 %opts.ipopt.print_frequency_iter=1e10;%1e10 %Big if you don't want to print all the iteratons
 opts.ipopt.linear_solver=linear_solver_name;
 opts.jit=jit;%If true, when I call solve(), Matlab will automatically generate a .c file, convert it to a .mex and then solve the problem using that compiled code

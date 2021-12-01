@@ -104,7 +104,7 @@ class ExpertPolicy(object):
 
         if(succeed==False):
             self.printFailedOpt();
-            exit();
+            # exit();
             raise ExpertDidntSucceed()
         else:
             self.printSucessOpt();
