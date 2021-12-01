@@ -8,7 +8,7 @@ from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
 from compression.utils.other import ExpertDidntSucceed
 
-def make_dagger_trainer(tmpdir, env, rampdown_rounds):
+def make_dagger_trainer(tmpdir, env, rampdown_rounds, batch_size):
     beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
     return dagger.DAggerTrainer(
         env,
@@ -17,9 +17,10 @@ def make_dagger_trainer(tmpdir, env, rampdown_rounds):
         optimizer_kwargs=dict(lr=1e-3),
         policy_class = StudentPolicy,
         policy_kwargs = {"features_dim" : env.observation_space.shape[1]},
+        batch_size= batch_size,
     )
 
-def make_bc_trainer(tmpdir, env):
+def make_bc_trainer(tmpdir, env, batch_size):
     """Will make DAgger, but with a constant beta, set to 1 
     (always 100% prob of using expert)"""
     beta_schedule=dagger.AlwaysExpertBetaSchedule()
@@ -30,6 +31,7 @@ def make_bc_trainer(tmpdir, env):
         optimizer_kwargs=dict(lr=1e-3),
         policy_class = StudentPolicy,
         policy_kwargs = {"features_dim" : env.observation_space.shape[1]},
+        batch_size= batch_size,
     )
 
 #Trainer is the student
@@ -65,7 +67,6 @@ def train(trainer, expert, seed, n_traj_per_iter, n_epochs, log_path, save_full_
     
     # Add the collected rollout to the dataset and trains the classifier.
     #next_round_num = trainer.extend_and_update(n_epochs=n_epochs)
-    print(f"[Training]: Num demos loaded: {len(trainer._all_demos)}")
     next_round_num = trainer.selective_extend_and_update(n_epochs=n_epochs, use_only_last_coll_ds=use_only_last_coll_ds)
 
     # Use the round number to figure out stats of the trajectories we just collected.

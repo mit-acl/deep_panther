@@ -78,6 +78,11 @@ if __name__ == "__main__":
     print(f"Num of trajectories per iteration: {args.n_traj_per_iter}.")
     print("---------------------------------------------------------")
 
+
+    #Remove previous directories
+    os.system("rm -rf "+args.log_dir)
+    os.system("rm -rf "+args.policy_dir)
+
     # np.set_printoptions(precision=3)
 
     assert args.rampdown_rounds<=args.n_rounds, f"Are you sure you wanna this? rampdown_rounds={args.rampdown_rounds}, n_rounds={args.n_rounds}"
@@ -91,6 +96,7 @@ if __name__ == "__main__":
     # directly learn the policy params (with or without sampling extra states?)
     N_VEC = 1
     N_EPOCHS = 50           #WAS 50!! Num epochs for training.
+    BATCH_SIZE = 32
     ENV_NAME = "my-environment-v1"
     assert N_VEC == 1, "Online N_VEC = 1 supported (environments cannot run in parallel)."
 
@@ -127,9 +133,9 @@ if __name__ == "__main__":
     printInBoldBlue("---------------- Making Learner Policy: -------------------")
     # Create learner policy
     if args.on_policy_trainer: 
-        trainer = make_dagger_trainer(tmpdir=DATA_POLICY_PATH, env=train_env, rampdown_rounds=args.rampdown_rounds)
+        trainer = make_dagger_trainer(tmpdir=DATA_POLICY_PATH, env=train_env, rampdown_rounds=args.rampdown_rounds, batch_size=BATCH_SIZE)
     else: 
-        trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, env=train_env)
+        trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, env=train_env, batch_size=BATCH_SIZE)
 
     printInBoldBlue("---------------- Making Expert Policy: --------------------")
     # Create expert policy 
@@ -172,7 +178,8 @@ if __name__ == "__main__":
 
 
     #Launch tensorboard visualization
-    proc1 = subprocess.Popen(["tensorboard","--logdir",args.log_dir,"--bind_all"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    os.system("pkill -f tensorboard")
+    proc1 = subprocess.Popen(["tensorboard","--logdir",LOG_PATH,"--bind_all"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     proc2 = subprocess.Popen(["google-chrome","http://jtorde-alienware-aurora-r8:6006/"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     # os.system("tensorboard --logdir "+args.log_dir +" --bind_all")
     # os.system("google-chrome http://jtorde-alienware-aurora-r8:6006/")  
