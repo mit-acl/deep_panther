@@ -35,6 +35,14 @@ struct Node
   int idx;
   int idy;
   int idz;
+
+  void print(double bias)
+  {
+    using namespace termcolor;
+
+    std::cout << red << "qi= " << qi.transpose() << reset << " (h=" << h << ", g=" << g << ", total=" << blue
+              << g + bias * h << reset << ")" << std::endl;
+  }
 };
 
 namespace os  // Octopus Search
