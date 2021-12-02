@@ -49,6 +49,8 @@ def train(trainer, expert, seed, n_traj_per_iter, n_epochs, log_path, save_full_
     #                     n_extra_samples=expert.get_num_extra_samples(),
     #                     get_extra_samples_callback=expert.get_extra_states_actions)
     
+    expert_succeded_at_least_once=False;
+
     for _ in range(n_traj_per_iter):
         obs = collector.reset()
         done = False
@@ -59,11 +61,14 @@ def train(trainer, expert, seed, n_traj_per_iter, n_epochs, log_path, save_full_
                 # print("[Training] The following exception occurred: {}".format(e))
                 print("[Training] Teacher unable to provide example. Concluding trajectory.")
                 # print(f"[Training] Latest observation: {obs[None]}")
-                collector.save_trajectory()
                 done = True
+                if(expert_succeded_at_least_once):
+                    collector.save_trajectory()
             else: 
                 # Executed if no exception occurs
                 obs, _, done, _ = collector.step(expert_action, act_infos)
+                expert_succeded_at_least_once = True
+
     
     # Add the collected rollout to the dataset and trains the classifier.
     #next_round_num = trainer.extend_and_update(n_epochs=n_epochs)
