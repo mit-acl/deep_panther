@@ -1001,11 +1001,11 @@ void OctopusSearch::expandAndAddToQueue(Node& current, double constraint_xL, dou
 
     neighbor.qi = (knots_(i + p_ + 1) - knots_(i + 1)) * vi / (1.0 * p_) + current.qi;
 
-    if ((fabs(vi.x() < 1e-5) && fabs(vi.y() < 1e-5) && fabs(vi.z() < 1e-5)) ||  // Not wanna use v=[0,0,0]
-        neighbor.qi.x() > x_max_ || neighbor.qi.x() < x_min_ ||                 /// Outside the limits
-        neighbor.qi.y() > y_max_ || neighbor.qi.y() < y_min_ ||                 /// Outside the limits
-        neighbor.qi.z() > z_max_ || neighbor.qi.z() < z_min_ ||                 /// Outside the limits
-        (neighbor.qi - q0_).norm() >= Ra_                                       // ||  /// Outside the limits
+    if (vi.norm() < 1e-5 ||                                      // Not wanna use v=[0,0,0]
+        neighbor.qi.x() > x_max_ || neighbor.qi.x() < x_min_ ||  /// Outside the limits
+        neighbor.qi.y() > y_max_ || neighbor.qi.y() < y_min_ ||  /// Outside the limits
+        neighbor.qi.z() > z_max_ || neighbor.qi.z() < z_min_ ||  /// Outside the limits
+        (neighbor.qi - q0_).norm() >= Ra_                        //  Outside the limits
         // (ix >= bbox_x_ / voxel_size_ ||                            // Out. the search box
         //  iy >= bbox_y_ / voxel_size_ ||                            // Out. the search box
         //  iz >= bbox_z_ / voxel_size_)                              // Out. the search box
@@ -1020,6 +1020,8 @@ void OctopusSearch::expandAndAddToQueue(Node& current, double constraint_xL, dou
 
     // std::cout << green << neighbor.qi.transpose() << " cost=" << neighbor.g + bias_ * neighbor.h << reset <<
     // std::endl;
+    // std::cout << " Pushing (goal=" << goal_.transpose() << ") ";
+    // neighbor.print(bias_);
     openList_.push(neighbor);
   }
   // std::cout << "pushing to openList  took " << time_openList << std::endl;
@@ -1122,7 +1124,11 @@ bool OctopusSearch::run(std::vector<os::solution>& solutions, int num_of_trajs_p
     *current_ptr = openList_.top();  // copy the first element onto (*current_ptr)
     openList_.pop();                 // remove it from the list
 
+    // std::cout << "__________________________" << std::endl;
     double dist = ((*current_ptr).qi - goal_).norm();
+
+    // std::cout << "Choosing ";
+    // (*current_ptr).print(bias_);
 
     if (closest_result_so_far_ptr_ == NULL)
     {
