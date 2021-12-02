@@ -270,8 +270,9 @@ private:
 
   std::priority_queue<Node, std::vector<Node>, CompareCost> openList_;  //= OpenSet, = Q
 
-  std::vector<Node*> nodesptr_cg_;   // Complete and  reach the goal
-  std::vector<Node*> nodesptr_cng_;  // Complete but don't reach the goal
+  std::vector<Node*> nodesptr_cg_;          // Complete and  reach the goal
+  std::vector<Node*> nodesptr_cng_;         // Complete but don't reach the goal
+  std::vector<Node*> nodesptr_cg_and_cng_;  // The concatenation of the previous ones
 
   double Ra_ = 1e10;
 

@@ -74,7 +74,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "drone_radius", par_.drone_radius);
   safeGetParam(nh1_, "Ra", par_.Ra);
   safeGetParam(nh1_, "impose_FOV_in_trajCB", par_.impose_FOV_in_trajCB);
-  safeGetParam(nh1_, "stop_time_when_replanning", par_.stop_time_when_replanning);
+  safeGetParam(nh1_, "pause_time_when_replanning", par_.pause_time_when_replanning);
   safeGetParam(nh1_, "replanning_trigger_time_student", par_.replanning_trigger_time_student);
   safeGetParam(nh1_, "replanning_trigger_time_expert", par_.replanning_trigger_time_expert);
   safeGetParam(nh1_, "replanning_lookahead_time", par_.replanning_lookahead_time);
@@ -130,6 +130,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "c_total_time", par_.c_total_time);
   safeGetParam(nh1_, "print_graph_yaw_info", par_.print_graph_yaw_info);
   safeGetParam(nh1_, "fitter_total_time", par_.fitter_total_time);
+  safeGetParam(nh1_, "z_goal_when_using_rviz", par_.z_goal_when_using_rviz);
   safeGetParam(nh1_, "mode", par_.mode);
   // b_T_c (see above)
   safeGetParam(nh1_, "basis", par_.basis);
@@ -147,6 +148,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "max_side_bbox_obs", par_.max_side_bbox_obs);
   safeGetParam(nh1_, "max_dist2BSPoscPoint", par_.max_dist2BSPoscPoint);
   safeGetParam(nh1_, "use_expert", par_.use_expert);
+  safeGetParam(nh1_, "expert_policy_path", par_.expert_policy_path);
   safeGetParam(nh1_, "static_planning", par_.static_planning);
 
   bool perfect_prediction;  // use_ground_truth_prediction
@@ -471,7 +473,7 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
     // std::cout << "SERVICE found" << std::endl;
     // std::cout << "pauseGazebo_.exists()= " << pauseGazebo_.exists() << std::endl;
 
-    if (par_.stop_time_when_replanning)
+    if (par_.pause_time_when_replanning)
     {
       pauseTime();
     }
@@ -479,7 +481,7 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
     bool replanned = panther_ptr_->replan(edges_obstacles, X_safe, best_solution, best_solutions, guesses,
                                           splines_fitted, planes, log);
 
-    if (par_.stop_time_when_replanning)
+    if (par_.pause_time_when_replanning)
     {
       unpauseTime();
     }
@@ -855,7 +857,7 @@ void PantherRos::terminalGoalCB(const geometry_msgs::PoseStamped& msg)
   double z;
   if (fabs(msg.pose.position.z) < 1e-5)  // This happens when you click in RVIZ (msg.z is 0.0)
   {
-    z = 2.0;
+    z = par_.z_goal_when_using_rviz;
   }
   else  // This happens when you publish by yourself the goal (should always be above the ground)
   {

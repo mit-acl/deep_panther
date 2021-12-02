@@ -91,7 +91,7 @@ if __name__ == '__main__':
 	# par_.drone_radius =                     params_yaml["drone_radius"]
 	# par_.Ra =                               params_yaml["Ra"]
 	# par_.impose_FOV_in_trajCB =             params_yaml["impose_FOV_in_trajCB"]
-	# par_.stop_time_when_replanning =        params_yaml["stop_time_when_replanning"]
+	# par_.pause_time_when_replanning =        params_yaml["pause_time_when_replanning"]
 	# par_.replanning_trigger_time =          params_yaml["replanning_trigger_time"]
 	# par_.replanning_lookahead_time =        params_yaml["replanning_lookahead_time"]
 	# par_.max_runtime_octopus_search =       params_yaml["max_runtime_octopus_search"]

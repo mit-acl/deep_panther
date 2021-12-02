@@ -805,7 +805,7 @@ struct parameters
   double          drone_radius;                       //void setVar_drone_radius(const std::string& value) { drone_radius = std::stod(value); };//
   double          Ra;                                 //void setVar_Ra(const std::string& value) { Ra = std::stod(value); };
   bool            impose_FOV_in_trajCB;               //void setVar_impose_FOV_in_trajCB(const std::string& value) { impose_FOV_in_trajCB = string2bool(value); };
-  bool            stop_time_when_replanning;          //void setVar_stop_time_when_replanning(const std::string& value) { stop_time_when_replanning = string2bool(value); };
+  bool            pause_time_when_replanning;          //void setVar_pause_time_when_replanning(const std::string& value) { pause_time_when_replanning = string2bool(value); };
   double          replanning_trigger_time_student;    //void setVar_replanning_trigger_time(const std::string& value) { replanning_trigger_time = std::stod(value); };
   double          replanning_trigger_time_expert;     //void setVar_replanning_trigger_time(const std::string& value) { replanning_trigger_time = std::stod(value); };
   double          replanning_lookahead_time;          //void setVar_replanning_lookahead_time(const std::string& value) { replanning_lookahead_time = std::stod(value); };
@@ -847,6 +847,7 @@ struct parameters
   double          c_total_time;                       //void setVar_c_total_time(const std::string& value) { c_total_time = std::stod(value); };
   bool            print_graph_yaw_info;               //void setVar_print_graph_yaw_info(const std::string& value) { print_graph_yaw_info = string2bool(value); };
   double          fitter_total_time;                  //void setVar_fitter_total_time(const std::string& value) { fitter_total_time = std::stod(value); };
+  double          z_goal_when_using_rviz;                  
   std::string     mode;                               //void setVar_mode(const std::string& value) { mode = value; };
   Eigen::Matrix4d b_T_c;                              //Computed inside C++
   std::string     basis;                              //From Casadi                //void setVar_basis(const std::string& value) { basis = value; };
@@ -864,6 +865,7 @@ struct parameters
   double max_side_bbox_obs;
   double max_dist2BSPoscPoint;
   bool use_expert;
+  std::string expert_policy_path;
   bool static_planning;
   // clang-format on
 };

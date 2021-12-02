@@ -168,7 +168,7 @@ void OctopusSearch::getBestTrajsFound(std::vector<mt::trajectory>& all_trajs_fou
 {
   all_trajs_found.clear();
 
-  for (auto node_ptr : nodesptr_cg_)
+  for (auto node_ptr : nodesptr_cg_and_cng_)
   {
     std::vector<Eigen::Vector3d> cps;
 
@@ -1079,6 +1079,7 @@ bool OctopusSearch::run(std::vector<os::solution>& solutions, int num_of_trajs_p
 
   nodesptr_cg_.clear();
   nodesptr_cng_.clear();
+  nodesptr_cg_and_cng_.clear();
 
   ////////////////////////////
 
@@ -1113,6 +1114,8 @@ bool OctopusSearch::run(std::vector<os::solution>& solutions, int num_of_trajs_p
 
       goto exitloop;
     }
+
+    // std::cout << "openList_.size()=" << openList_.size() << std::endl;
 
     current_ptr = new Node;
 
@@ -1190,10 +1193,13 @@ bool OctopusSearch::run(std::vector<os::solution>& solutions, int num_of_trajs_p
 
     if (collides)
     {
+      // std::cout << "collides!" << std::endl;
       continue;
     }
     else
     {
+      // std::cout << "does not collide!" << std::endl;
+
       map_open_list_[Eigen::Vector3i(ix, iy, iz)] = true;
       expanded_valid_nodes_.push_back(*current_ptr);
     }
@@ -1219,8 +1225,8 @@ bool OctopusSearch::run(std::vector<os::solution>& solutions, int num_of_trajs_p
     {
       nodesptr_cg_.push_back(current_ptr);
 
-      std::cout << "[A*] Goal was reached!" << std::endl;
-      std::cout << "nodesptr_cg_.size()==" << nodesptr_cg_.size() << std::endl;
+      // std::cout << "[A*] Goal was reached!" << std::endl;
+      // std::cout << "nodesptr_cg_.size()==" << nodesptr_cg_.size() << std::endl;
 
       if (nodesptr_cg_.size() == 60)
       {
@@ -1258,25 +1264,32 @@ exitloop:
   std::cout << "nodesptr_cng_.size()==" << nodesptr_cng_.size() << std::endl;
   std::cout << "nodesptr_cg_.size()==" << nodesptr_cg_.size() << std::endl;
 
-  // Concatenate: First the nodes that are complete and reached the goal, and then the ones that are only complete
-  std::vector<Node*> nodesptr;
+  nodesptr_cg_and_cng_.clear();
 
-  for (int i = 0; (nodesptr.size() < num_of_trajs_per_replan)  ////////
+  // Concatenate: First the nodes that are complete and reached the goal, and then the ones that are only complete
+  for (int i = 0; (nodesptr_cg_and_cng_.size() < num_of_trajs_per_replan)  ////////
                   && (i < nodesptr_cg_.size());
        i++)
   {
-    nodesptr.push_back(nodesptr_cg_[i]);
+    nodesptr_cg_and_cng_.push_back(nodesptr_cg_[i]);
   }
 
   // And then fill with complete paths that did not reach the goal
-  for (int i = 0; (nodesptr.size() < num_of_trajs_per_replan) && (i < nodesptr_cng_.size()); i++)
+  for (int i = 0; (nodesptr_cg_and_cng_.size() < num_of_trajs_per_replan) && (i < nodesptr_cng_.size()); i++)
   {
-    nodesptr.push_back(nodesptr_cng_[i]);
+    nodesptr_cg_and_cng_.push_back(nodesptr_cng_[i]);
   }
 
-  if (nodesptr.size() != num_of_trajs_per_replan)
+  std::cout << "nodesptr_cg_and_cng_.size()=" << nodesptr_cg_and_cng_.size() << std::endl;
+
+  if (nodesptr_cg_and_cng_.size() != num_of_trajs_per_replan)
   {
-    std::cout << red << bold << "Not enough pats found. Increase time allowed for Oct. Search" << reset << std::endl;
+    std::cout << red << bold
+              << "Not enough paths found. Increase time allowed for Oct. Search or decrease num_of_trajs_per_replan"
+              << reset << std::endl;
+
+    std::cout << "Found " << nodesptr_cg_and_cng_.size()
+              << "trajs, but num_of_trajs_per_replan=" << num_of_trajs_per_replan << std::endl;
 
     std::cout << "Returning false" << std::endl;
     return false;
@@ -1284,26 +1297,26 @@ exitloop:
   }
 
   // // And then fill with incomplete paths
-  // for (int i = 0; (nodesptr.size() < num_of_trajs_per_replan) &&  //////////
+  // for (int i = 0; (nodesptr_cg_and_cng_.size() < num_of_trajs_per_replan) &&  //////////
   //                 (i < openList_.size());                                 //////////
   //      i++)
   // {
-  //   nodesptr.push_back(&openList_[i]);
+  //   nodesptr_cg_and_cng_.push_back(&openList_[i]);
   // }
 
   // //////////////////// And if there are still , just copy the first element
-  // for (int i = 0; nodesptr.size() < num_of_trajs_per_replan; i++)
+  // for (int i = 0; nodesptr_cg_and_cng_.size() < num_of_trajs_per_replan; i++)
   // {
-  //   nodesptr.push_back(nodesptr[0]);
+  //   nodesptr_cg_and_cng_.push_back(nodesptr_cg_and_cng_[0]);
   // }
 
   ////
-  std::cout << "nodesptr.size()==" << nodesptr.size() << std::endl;
+  std::cout << "nodesptr_cg_and_cng_.size()==" << nodesptr_cg_and_cng_.size() << std::endl;
 
   solutions.clear();
 
   ////
-  for (Node* best_node_ptr : nodesptr)
+  for (Node* best_node_ptr : nodesptr_cg_and_cng_)
   {
     os::solution solution;
 
@@ -1327,9 +1340,14 @@ exitloop:
     solutions.push_back(solution);
   }
 
-  best_solution_ = solutions[0];
+  if (solutions.size() == 0)
+  {
+    return false;
+  }
+  else
+  {
+    best_solution_ = solutions[0];
 
-  // result_ = solutions[0].qp;
-
-  return true;  // Todo
+    return true;
+  }
 }
