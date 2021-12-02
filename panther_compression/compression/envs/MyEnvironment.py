@@ -97,16 +97,13 @@ class MyEnvironment(gym.Env):
     ####### MOVE THE ENVIRONMENT #######
     ####################################
 
-    # dist2goal=np.linalg.norm(self.w_state.w_pos-self.gm.get_w_GTermPos())
-    dist2goal=np.linalg.norm(w_posBS.getLastPos()-self.gm.get_w_GTermPos()) #From the end of the current traj to the goal
 
-
-    if(dist2goal<0.5):
-      # actual_dt=self.am.getTotalTime(f_action) #Advance to the end of that trajectory
-      self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos);
-      self.printwithNameAndColor(f"New goal!")
-    # else:
-    #   actual_dt=self.dt
+    # if(dist2goal<0.5):
+    #   # actual_dt=self.am.getTotalTime(f_action) #Advance to the end of that trajectory
+    #   self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos);   #DONT DO THIS HERE!(the observation will change with no correlation with the action sent)
+    #   self.printwithNameAndColor(f"New goal at {self.gm.get_w_GTermPos()}") 
+    # # else:
+    # #   actual_dt=self.dt
     actual_dt=self.dt
 
 
@@ -127,8 +124,16 @@ class MyEnvironment(gym.Env):
     w_obstacles=self.obsm.getFutureWPosObstacles(self.time)
     f_observationn=self.om.getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), w_obstacles);
 
+
+    dist2goal=np.linalg.norm(self.w_state.w_pos-self.gm.get_w_GTermPos()) #From the current position to the goal
+
+    goal_reached=(dist2goal<0.5) 
+    # dist2goal=np.linalg.norm(w_posBS.getLastPos()-self.gm.get_w_GTermPos()) #From the end of the current traj to the goal
+
     self.printwithName(f"Timestep={self.timestep}, dist2goal={dist2goal}, w_state.w_pos={self.w_state.w_pos.T}")
 
+    if(goal_reached):
+      self.printwithNameAndColor("Goal reached!")
 
     
     info = {}
@@ -141,7 +146,7 @@ class MyEnvironment(gym.Env):
       # print(f"[Env] Terminated due to constraint violation: obs: {self.x}, act: {u}, steps: {self.timestep}")
       done = True
       info["constraint_violation"] = True
-    elif ( (self.timestep >= self.len_episode)): # or (dist2goal<0.5) 
+    elif ( (self.timestep >= self.len_episode) or goal_reached ):
       done = True
       info["constraint_violation"] = False
     else:
