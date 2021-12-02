@@ -865,7 +865,7 @@ struct parameters
   double max_side_bbox_obs;
   double max_dist2BSPoscPoint;
   bool use_expert;
-  std::string expert_policy_path;
+  std::string student_policy_path;
   bool static_planning;
   // clang-format on
 };

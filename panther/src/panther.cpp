@@ -63,7 +63,7 @@ Panther::Panther(mt::parameters par) : par_(par)
 
     student_caller_ptr_ = new pybind11::object;
     *student_caller_ptr_ =
-        pybind11::module::import("compression.utils.other").attr("StudentCaller")(par_.expert_policy_path);
+        pybind11::module::import("compression.utils.other").attr("StudentCaller")(par_.student_policy_path);
   }
 }
 

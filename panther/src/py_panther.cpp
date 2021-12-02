@@ -124,7 +124,7 @@ PYBIND11_MODULE(py_panther, m)
 .def_readwrite("max_side_bbox_obs", &mt::parameters::max_side_bbox_obs)
 .def_readwrite("max_dist2BSPoscPoint", &mt::parameters::max_dist2BSPoscPoint)
 .def_readwrite("use_expert", &mt::parameters::use_expert)
-.def_readwrite("expert_policy_path", &mt::parameters::expert_policy_path)
+.def_readwrite("student_policy_path", &mt::parameters::student_policy_path)
 .def_readwrite("static_planning", &mt::parameters::static_planning)
       // clang-format on
       .def("__repr__", [](const mt::parameters &a) { return "<py_panther.obstacleForOpt>"; });
