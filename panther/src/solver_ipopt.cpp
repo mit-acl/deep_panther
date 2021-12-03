@@ -75,6 +75,16 @@ casadi::DM stdVectorEigen3d2CasadiMatrix(const std::vector<Eigen::Vector3d> &qp)
   return casadi_matrix;
 }
 
+casadi::DM stdVectorDouble2CasadiRowVector(const std::vector<double> &qy)
+{
+  casadi::DM casadi_matrix(1, qy.size());
+  for (int i = 0; i < casadi_matrix.columns(); i++)
+  {
+    casadi_matrix(0, i) = qy[i];
+  }
+  return casadi_matrix;
+}
+
 casadi::DM eigen3d2CasadiMatrix(const Eigen::Vector3d &data)
 {
   casadi::DM casadi_matrix(3, 1);
@@ -145,6 +155,7 @@ SolverIpopt::SolverIpopt(const mt::parameters &par)
   cf_fit_yaw_ = casadi::Function::load(folder + "fit_yaw.casadi");
   // cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
   cf_visibility_ = casadi::Function::load(folder + "visibility.casadi");
+  cf_compute_cost_ = casadi::Function::load(folder + "compute_cost.casadi");
 
   b_Tmatrixcasadi_c_ = casadi::DM(4, 4);
 
@@ -521,6 +532,86 @@ std::vector<si::solOrGuess> SolverIpopt::getGuesses()
   return guesses_;
 }
 
+double SolverIpopt::computeCost(si::solOrGuess guess)
+{
+  std::map<std::string, casadi::DM> map_arguments = getMapConstantArguments();
+
+  casadi::DM matrix_qp_guess = stdVectorEigen3d2CasadiMatrix(guess.qp);
+  casadi::DM matrix_qy_guess = stdVectorDouble2CasadiRowVector(guess.qy);
+
+  map_arguments["alpha"] = guess.getTotalTime();  // Initial guess for alpha
+  map_arguments["pCPs"] = matrix_qp_guess;        // matrix_qp_guess;
+  map_arguments["yCPs"] = matrix_qy_guess;        // matrix_qy_guess;
+  // map_arguments["all_nd"] = all_nd;                                 // Only appears in the constraints
+
+  std::map<std::string, casadi::DM> result = cf_compute_cost_(map_arguments);
+
+  double cost = double(result["total_cost"]);
+  return cost;
+}
+
+std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
+{
+  // Conversion DM <--> Eigen:  https://github.com/casadi/casadi/issues/2563
+  auto eigen2std = [](Eigen::Vector3d &v) { return std::vector<double>{ v.x(), v.y(), v.z() }; };
+
+  std::map<std::string, casadi::DM> map_arguments;
+  map_arguments["thetax_FOV_deg"] = par_.fov_x_deg;
+  map_arguments["thetay_FOV_deg"] = par_.fov_y_deg;
+  map_arguments["b_T_c"] = b_Tmatrixcasadi_c_;
+  map_arguments["Ra"] = par_.Ra;
+  map_arguments["p0"] = eigen2std(initial_state_.pos);
+  map_arguments["v0"] = eigen2std(initial_state_.vel);
+  map_arguments["a0"] = eigen2std(initial_state_.accel);
+  map_arguments["pf"] = eigen2std(final_state_.pos);
+  map_arguments["vf"] = eigen2std(final_state_.vel);
+  map_arguments["af"] = eigen2std(final_state_.accel);
+  map_arguments["y0"] = initial_state_.yaw;
+  map_arguments["yf"] = final_state_.yaw;
+
+  // if (fabs(final_state_.yaw) > 1e-5 || par_.c_final_yaw > 0.0)
+  // {
+  //   std::cout << red << bold << "Implement this!" << std::endl;
+  //   abort();
+  // }
+
+  map_arguments["ydot0"] = initial_state_.dyaw;
+  map_arguments["ydotf"] =
+      final_state_.dyaw;  // Needed: if not (and if you are minimizing ddyaw), ddyaw=cte --> yaw will explode
+  map_arguments["v_max"] = par_.v_max;  // eigen2std(par_.v_max);
+  map_arguments["a_max"] = par_.a_max;  // eigen2std(par_.a_max);
+  map_arguments["j_max"] = par_.j_max;  // eigen2std(par_.j_max);
+  map_arguments["ydot_max"] = par_.ydot_max;
+  map_arguments["x_lim"] = std::vector<double>{ par_.x_min, par_.x_max };
+  map_arguments["y_lim"] = std::vector<double>{ par_.y_min, par_.y_max };
+  map_arguments["z_lim"] = std::vector<double>{ par_.z_min, par_.z_max };
+
+  for (int i = 0; i < par_.num_max_of_obst; i++)
+  {  // clang-format off
+    map_arguments["obs_" + std::to_string(i) + "_ctrl_pts"] = stdVectorEigen3d2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
+    map_arguments["obs_" + std::to_string(i) + "_bbox_inflated"] = eigen3d2CasadiMatrix(obstacles_for_opt_[i].bbox_inflated);
+     // clang-format on
+  }
+
+  map_arguments["c_pos_smooth"] = par_.c_pos_smooth;
+  map_arguments["c_yaw_smooth"] = par_.c_yaw_smooth;
+  map_arguments["c_fov"] = par_.c_fov;
+  map_arguments["c_final_pos"] = par_.c_final_pos;
+  map_arguments["c_final_yaw"] = par_.c_final_yaw;
+  map_arguments["c_total_time"] = par_.c_total_time;
+
+  // NOT INCLUDED ABOVE: (because they are variables in the optimization)
+
+  // map_arguments["alpha"] = alpha_guess;  // Initial guess for alpha
+  // map_arguments["pCPs"] = matrix_qp_guess;
+  // map_arguments["yCPs"] = matrix_qy_guess;
+  // map_arguments["all_nd"] = all_nd;  // Only appears in the constraints
+
+  ///////
+
+  return map_arguments;
+}
+
 bool SolverIpopt::optimize(bool supress_all_prints)
 {
   PrintSupresser print_supresser;
@@ -562,55 +653,10 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   ////////////////////////////////////
   //////////////////////////////////// CASADI
 
-  // Conversion DM <--> Eigen:  https://github.com/casadi/casadi/issues/2563
-  auto eigen2std = [](Eigen::Vector3d &v) { return std::vector<double>{ v.x(), v.y(), v.z() }; };
+  std::map<std::string, casadi::DM> map_arguments = getMapConstantArguments();
 
-  std::map<std::string, casadi::DM> map_arguments;
-  map_arguments["thetax_FOV_deg"] = par_.fov_x_deg;
-  map_arguments["thetay_FOV_deg"] = par_.fov_y_deg;
-  map_arguments["b_T_c"] = b_Tmatrixcasadi_c_;
-  map_arguments["Ra"] = par_.Ra;
-  map_arguments["p0"] = eigen2std(initial_state_.pos);
-  map_arguments["v0"] = eigen2std(initial_state_.vel);
-  map_arguments["a0"] = eigen2std(initial_state_.accel);
-  map_arguments["pf"] = eigen2std(final_state_.pos);
-  map_arguments["vf"] = eigen2std(final_state_.vel);
-  map_arguments["af"] = eigen2std(final_state_.accel);
-  map_arguments["y0"] = initial_state_.yaw;
-  map_arguments["yf"] = final_state_.yaw;
-
-  // if (fabs(final_state_.yaw) > 1e-5 || par_.c_final_yaw > 0.0)
-  // {
-  //   std::cout << red << bold << "Implement this!" << std::endl;
-  //   abort();
-  // }
-
-  map_arguments["ydot0"] = initial_state_.dyaw;
-  map_arguments["ydotf"] =
-      final_state_.dyaw;  // Needed: if not (and if you are minimizing ddyaw), ddyaw=cte --> yaw will explode
-  map_arguments["v_max"] = par_.v_max;  // eigen2std(par_.v_max);
-  map_arguments["a_max"] = par_.a_max;  // eigen2std(par_.a_max);
-  map_arguments["j_max"] = par_.j_max;  // eigen2std(par_.j_max);
-  map_arguments["ydot_max"] = par_.ydot_max;
-  map_arguments["x_lim"] = std::vector<double>{ par_.x_min, par_.x_max };
-  map_arguments["y_lim"] = std::vector<double>{ par_.y_min, par_.y_max };
-  map_arguments["z_lim"] = std::vector<double>{ par_.z_min, par_.z_max };
   double alpha_guess = (t_final_guess_ - t_init_);
   map_arguments["alpha"] = alpha_guess;  // Initial guess for alpha
-
-  for (int i = 0; i < par_.num_max_of_obst; i++)
-  {  // clang-format off
-    map_arguments["obs_" + std::to_string(i) + "_ctrl_pts"] = stdVectorEigen3d2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
-    map_arguments["obs_" + std::to_string(i) + "_bbox_inflated"] = eigen3d2CasadiMatrix(obstacles_for_opt_[i].bbox_inflated);
-     // clang-format on
-  }
-
-  map_arguments["c_pos_smooth"] = par_.c_pos_smooth;
-  map_arguments["c_yaw_smooth"] = par_.c_yaw_smooth;
-  map_arguments["c_fov"] = par_.c_fov;
-  map_arguments["c_final_pos"] = par_.c_final_pos;
-  map_arguments["c_final_yaw"] = par_.c_final_yaw;
-  map_arguments["c_total_time"] = par_.c_total_time;
 
   /////////////////////////////////////////// SOLVE AN OPIMIZATION FOR EACH OF THE GUESSES FOUND
 
@@ -833,6 +879,15 @@ bool SolverIpopt::optimize(bool supress_all_prints)
       // CPs2Traj(solution.qp, solution.qy, knots_p_solution, knots_y_solution, solution.traj, par_.deg_pos,
       // par_.deg_yaw,
       //          par_.dc);
+      /////////////////
+
+      // ////////////////
+      // double total_cost = computeCost(solution);
+      // verify(fabs(total_cost - solution.cost) < 1e-7, "The two costs differ");
+      // std::cout << red << bold << std::setprecision(10) << "Total cost with function= " << total_cost << reset
+      //           << std::endl;
+      // std::cout << red << bold << std::setprecision(10) << "Total cost = " << solution.cost << reset << std::endl;
+      // ////////////////
     }
     else
     {

@@ -56,7 +56,7 @@ num_of_yaw_per_layer=40; %This will be used in the graph yaw search of C++
                          %Note that the initial layer will have only one yaw (which is given) 
 basis="MINVO"; %MINVO OR B_SPLINE or BEZIER. This is the basis used for collision checking (in position, velocity, accel and jerk space), both in Matlab and in C++
 linear_solver_name='ma27'; %mumps [default, comes when installing casadi], ma27, ma57, ma77, ma86, ma97 
-print_level=0; %From 0 (no verbose) to 12 (very verbose), default is 5
+print_level=5; %From 0 (no verbose) to 12 (very verbose), default is 5
 jit=false;
 
 t0_n=0.0; 
@@ -588,6 +588,18 @@ end
 results_expresion={pCPs,yCPs, all_nd, total_cost, yaw_smooth_cost, pos_smooth_cost, alpha, fov_cost, final_yaw_cost, final_pos_cost}; %Note that this containts both parameters, variables, and combination of both. If they are parameters, the corresponding value will be returned
 results_names={'pCPs','yCPs','all_nd','total_cost', 'yaw_smooth_cost', 'pos_smooth_cost','alpha','fov_cost','final_yaw_cost','final_pos_cost'};
 
+
+%%%%
+
+
+compute_cost = Function('compute_cost', par_and_init_guess_exprs ,{total_cost},...
+                                        par_and_init_guess_names ,{'total_cost'});
+compute_cost(names_value{:})
+compute_cost=compute_cost.expand();
+compute_cost.save('./casadi_generated_files/compute_cost.casadi') %The file generated is quite big
+
+
+%%%%%
 
 my_func = opti.to_function('my_func', par_and_init_guess_exprs, results_expresion, par_and_init_guess_names, results_names);
 

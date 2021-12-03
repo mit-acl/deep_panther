@@ -37,6 +37,7 @@ typedef PANTHER_timers::Timer MyTimer;
 std::vector<Eigen::Vector3d> casadiMatrix2StdVectorEigen3d(const casadi::DM &qp_casadi);
 std::vector<double> casadiMatrix2StdVectorDouble(const casadi::DM &qy_casadi);
 casadi::DM stdVectorEigen3d2CasadiMatrix(const std::vector<Eigen::Vector3d> &qp);
+casadi::DM stdVectorDouble2CasadiRowVector(const std::vector<Eigen::Vector3d> &qp);
 casadi::DM eigen3d2CasadiMatrix(const Eigen::Vector3d &data);
 
 namespace si  // Solver Ipopt
@@ -96,6 +97,14 @@ struct solOrGuess
   void fillTraj(double dc)
   {
     CPs2Traj(qp, qy, knots_p, knots_y, traj, deg_p, deg_y, dc);
+  }
+
+  double getTotalTime()
+  {
+    double total_time_p = knots_p(0, knots_p.cols() - 1) - knots_p(0, 0);
+    double total_time_y = knots_y(0, knots_y.cols() - 1) - knots_y(0, 0);
+    verify(fabs(total_time_p - total_time_y) < 1e-6, "This solOrGuess has different total time in p and y");
+    return total_time_p;
   }
 
   // casadi::DM getQpAsCasadiMatrix()
@@ -234,6 +243,10 @@ private:
   void generateRandomN(std::vector<Eigen::Vector3d> &n);
   void generateRandomQ(std::vector<Eigen::Vector3d> &q);
 
+  double computeCost(si::solOrGuess guess);
+
+  std::map<std::string, casadi::DM> getMapConstantArguments();
+
   void printQVA(const std::vector<Eigen::Vector3d> &q);
 
   void printQND(std::vector<Eigen::Vector3d> &q, std::vector<Eigen::Vector3d> &n, std::vector<double> &d);
@@ -288,6 +301,7 @@ private:
   casadi::Function cf_fixed_pos_op_;
   casadi::Function cf_fit_yaw_;
   casadi::Function cf_visibility_;
+  casadi::Function cf_compute_cost_;
 
   casadi::DM b_Tmatrixcasadi_c_;
   struct data
