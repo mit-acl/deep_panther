@@ -125,12 +125,13 @@ class MyEnvironment(gym.Env):
     f_observationn=self.om.getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), w_obstacles);
 
 
-    dist2goal=np.linalg.norm(self.w_state.w_pos-self.gm.get_w_GTermPos()) #From the current position to the goal
+    dist_current_2goal=np.linalg.norm(self.w_state.w_pos-self.gm.get_w_GTermPos()) #From the current position to the goal
+    dist_endtraj_2goal=np.linalg.norm(w_posBS.getLastPos()-self.gm.get_w_GTermPos()) #From the end of the current traj to the goal
 
-    goal_reached=(dist2goal<0.5) 
-    # dist2goal=np.linalg.norm(w_posBS.getLastPos()-self.gm.get_w_GTermPos()) #From the end of the current traj to the goal
 
-    self.printwithName(f"Timestep={self.timestep}, dist2goal={dist2goal}, w_state.w_pos={self.w_state.w_pos.T}")
+    goal_reached=(dist_current_2goal<3.0 and dist_endtraj_2goal<0.5) 
+
+    self.printwithName(f"Timestep={self.timestep}, dist_current_2goal={dist_current_2goal}, w_state.w_pos={self.w_state.w_pos.T}")
 
     if(goal_reached):
       self.printwithNameAndColor("Goal reached!")
@@ -154,6 +155,13 @@ class MyEnvironment(gym.Env):
 
 
     reward=0.0
+
+    # self.om.printObservation(f_observationn)
+    # np.set_printoptions(precision=2)
+    # print("w_obstacles[0].ctrl_pts=", w_obstacles[0].ctrl_pts)
+    # print("w_obstacles[0].bbox_inflated=", w_obstacles[0].bbox_inflated.T)
+    # print("self.gm.get_w_GTermPos()=", self.gm.get_w_GTermPos().T)
+    # print("observation=", f_observationn)
 
     # print("w_yawBS.getPosT(self.dt)= ", w_yawBS.getPosT(self.dt))
         # self.printwithName(f"w_obstacles={w_obstacles[0].ctrl_pts}")
