@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_environment_max_steps", default=20, type=int)
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
-    parser.add_argument("--n_traj_per_round", default=1, type=int)
+    parser.add_argument("--n_traj_per_round", default=10, type=int)
     # Method changes
     parser.add_argument("--no_train", dest='train', action='store_false')
     parser.set_defaults(train=True)
@@ -212,7 +212,7 @@ if __name__ == "__main__":
 
             # Evaluate
             eval_stats = evaluate_policy(student_policy, test_venv, eval_episodes=args.n_evals, log_path = log_path_student_n + "student_after_training_iteration")
-            print(Fore.BLUE+"[Evaluation] Iter.: {}, rwrd: {}, len: {}.\n".format(i+1, eval_stats["return_mean"], eval_stats["len_mean"])+Style.RESET_ALL)
+            printInBoldGreen("[Evaluation] Iter.: {}, rwrd: {}, len: {}.\n".format(i+1, eval_stats["return_mean"], eval_stats["len_mean"]))
             del eval_stats
 
 

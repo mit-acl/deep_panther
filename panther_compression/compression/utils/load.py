@@ -4,12 +4,12 @@ import pandas as pd
 import numpy as np
 
 #From andrea
-def load_student_logs(seeds, log_prefix, n_iterations, agent_name="student", n_traj_per_iter = 1):
+def load_student_logs(seeds, log_prefix, n_rounds, agent_name="student", n_traj_per_round = 1):
     # agent_name: change according to type of algorithm. E.g. Dagger, Augmented Dagger, ...
     # Load student during training
     student_eval = []
-    for it in range(n_iterations):
-        it = it*n_traj_per_iter
+    for it in range(n_rounds):
+        it = it*n_traj_per_round
         logs_at_iter = []
         for seed in seeds:  
             path_to_file = os.path.join(log_prefix, str(seed), "student", str(it))
@@ -32,7 +32,7 @@ def load_student_logs(seeds, log_prefix, n_iterations, agent_name="student", n_t
     student_logs = student_logs.assign(agent=agent_name)
     return student_logs
 
-def load_teacher_logs(seeds, log_prefix, n_iterations, agent_name="teacher"):
+def load_teacher_logs(seeds, log_prefix, n_rounds, agent_name="teacher"):
     # Load teacher 
     teacher = []
     for seed in seeds: 
@@ -41,7 +41,7 @@ def load_teacher_logs(seeds, log_prefix, n_iterations, agent_name="teacher"):
     teacher_logs = pd.concat(teacher, axis=0, ignore_index=True)    
     # Repeat these numbers for every iteration (is there a better way?)
     all_teacher_logs = []
-    for it in range(n_iterations+1):
+    for it in range(n_rounds+1):
         teacher_logs_copy = copy.deepcopy(teacher_logs)
         all_teacher_logs.append(teacher_logs_copy.assign(iteration=it))
     teacher_logs = pd.concat(all_teacher_logs, axis=0, ignore_index=True)
