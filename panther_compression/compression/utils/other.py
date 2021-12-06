@@ -243,7 +243,34 @@ class State():
 		# assert (np.linalg.norm(f_accel)-np.linalg.norm(self.w_accel)) == pytest.approx(0.0), f"f_accel={f_accel} (norm={np.linalg.norm(f_accel)}), w_accel={self.w_accel} (norm={np.linalg.norm(self.w_accel)}), f_R_w={self.f_T_w.rot()}, " 
 		return f_accel;
 	def f_yaw(self):
-		return 0.0;
+		return np.array([[0.0]]);
+	def print_w_frameHorizontal(self, msg_before=""):
+		np.set_printoptions(precision=3, suppress=True)
+		print(msg_before + "(In w frame)"+ \
+		Fore.RED +f"pos, "+ \
+		Fore.BLUE +f"vel, "+ \
+		Fore.GREEN +f"accel, "+ \
+		Fore.YELLOW +f"yaw, "+ \
+		Fore.MAGENTA +f"dyaw: "+ \
+		Fore.RED +f"{self.w_pos.T}"+Style.RESET_ALL+ \
+		Fore.BLUE +f"{self.w_vel.T}"+Style.RESET_ALL+ \
+		Fore.GREEN +f"{self.w_accel.T}"+Style.RESET_ALL+ \
+		Fore.YELLOW +f"{self.w_yaw}"+Style.RESET_ALL+ \
+		Fore.MAGENTA +f"{self.yaw_dot}"+Style.RESET_ALL)
+
+	def print_f_frameHorizontal(self, msg_before=""):
+		np.set_printoptions(precision=3, suppress=True)
+		print(msg_before + "(In f frame)"+ \
+		Fore.RED +f"pos, "+ \
+		Fore.BLUE +f"vel, "+ \
+		Fore.GREEN +f"accel, "+ \
+		Fore.YELLOW +f"yaw, "+ \
+		Fore.MAGENTA +f"dyaw: "+ \
+		Fore.RED +f"{self.f_pos().T}"+Style.RESET_ALL+ \
+		Fore.BLUE +f"{self.f_vel().T}"+Style.RESET_ALL+ \
+		Fore.GREEN +f"{self.f_accel().T}"+Style.RESET_ALL+ \
+		Fore.YELLOW +f"{self.f_yaw()}"+Style.RESET_ALL+ \
+		Fore.MAGENTA +f"{self.yaw_dot}"+Style.RESET_ALL)
 
 def generateKnotsForClampedUniformBspline(t0, tf, deg, num_seg):
 	
@@ -610,6 +637,18 @@ class ActionManager():
 	def getTotalTime(self,action):
 		return action[0,-1]
 
+	def getPosCtrlPts(self, action):
+		return action[0,0:self.action_size_pos_ctrl_pts].reshape((3,-1), order='F')
+
+	def getYawCtrlPts(self, action):
+		return action[0,self.action_size_pos_ctrl_pts:-1].reshape((1,-1));
+
+	def printAction(self, action):
+		print(f"Raw={action}")
+		print(Fore.RED+f"f pos ctrl_pts=\n{self.getPosCtrlPts(action)}"+Style.RESET_ALL)
+		print(Fore.YELLOW+f"f yaw ctrl_pts={self.getYawCtrlPts(action)}"+Style.RESET_ALL)
+		print(Fore.BLUE+f"Total time={self.getTotalTime(action)}"+Style.RESET_ALL)
+
 	def denormalizeAction(self, action_normalized):
 		# assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}"
 		action=np.empty(action_normalized.shape)
@@ -642,7 +681,7 @@ class ActionManager():
 
 		knots_pos=generateKnotsForClampedUniformBspline(0.0, total_time, self.deg_pos, self.num_seg)
 
-		f_pos_ctrl_pts = f_action[0,0:self.action_size_pos_ctrl_pts].reshape((3,-1), order='F')
+		f_pos_ctrl_pts = self.getPosCtrlPts(f_action)
 
 		#Convert to w frame
 		w_pos_ctrl_pts = w_state.w_T_f * f_pos_ctrl_pts;
@@ -675,7 +714,7 @@ class ActionManager():
 
 		knots_yaw=generateKnotsForClampedUniformBspline(0.0, total_time, self.deg_yaw, self.num_seg)
 
-		f_yaw_ctrl_pts=f_action[0,self.action_size_pos_ctrl_pts:-1].reshape((1,-1));
+		f_yaw_ctrl_pts= self.getYawCtrlPts(f_action)
 
 		w_yaw_ctrl_pts =  f_yaw_ctrl_pts + w_state.w_yaw*np.ones(f_yaw_ctrl_pts.shape);
 
