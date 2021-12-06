@@ -92,6 +92,7 @@ class MyEnvironment(gym.Env):
     f_action_normalized=f_action_normalized.reshape(self.action_shape) 
 
     self.am.assertAction(f_action_normalized)
+    self.am.assertActionIsNormalized(f_action_normalized)
 
     # self.printwithName(f"Received actionN={f_action_normalized}")
     f_action= self.am.denormalizeAction(f_action_normalized);
@@ -100,6 +101,7 @@ class MyEnvironment(gym.Env):
     # self.printwithName(f"Timestep={self.timestep}")
     # self.printwithName(f"w_state.w_pos={self.w_state.w_pos.T}")
 
+    # self.am.printAction(f_action)
     ####################################
 
 
@@ -119,11 +121,19 @@ class MyEnvironment(gym.Env):
     actual_dt=self.dt
 
 
+    # self.printwithName("w and f state BEFORE UPDATE")
+    # self.w_state.print_w_frameHorizontal(self.name);
+    # # print(f"Matrix w_T_f=\n{self.w_state.w_T_f.T}")
+    # self.w_state.print_f_frameHorizontal(self.name);
 
     #Update state
     self.w_state= State(w_posBS.getPosT(actual_dt), w_posBS.getVelT(actual_dt), w_posBS.getAccelT(actual_dt), \
                         w_yawBS.getPosT(actual_dt), w_yawBS.getVelT(actual_dt));
 
+    # self.printwithName("w and f state AFTER UPDATE")
+    # self.w_state.print_w_frameHorizontal(self.name);
+    # # print(f"Matrix w_T_f=\n{self.w_state.w_T_f.T}")
+    # self.w_state.print_f_frameHorizontal(self.name);
 
     #Update time and timestep
     self.time = self.time + actual_dt;
@@ -138,13 +148,13 @@ class MyEnvironment(gym.Env):
     f_observationn=self.om.normalizeObservation(f_observation);
 
 
-    dist_current_2goal=np.linalg.norm(self.w_state.w_pos-self.gm.get_w_GTermPos()) #From the current position to the goal
-    dist_endtraj_2goal=np.linalg.norm(w_posBS.getLastPos()-self.gm.get_w_GTermPos()) #From the end of the current traj to the goal
+    dist_current_2gterm=np.linalg.norm(self.w_state.w_pos-self.gm.get_w_GTermPos()) #From the current position to the goal
+    dist_endtraj_2gterm=np.linalg.norm(w_posBS.getLastPos()-self.gm.get_w_GTermPos()) #From the end of the current traj to the goal
 
 
-    goal_reached=(dist_current_2goal<4.0 and dist_endtraj_2goal<self.par.goal_radius) 
+    goal_reached=(dist_current_2gterm<4.0 and dist_endtraj_2gterm<self.par.goal_radius) 
 
-    self.printwithName(f"Timestep={self.timestep}, dist_current_2goal={dist_current_2goal}, w_state.w_pos={self.w_state.w_pos.T}")
+    self.printwithName(f"Timestep={self.timestep}, dist_current_2gterm={dist_current_2gterm}, w_state.w_pos={self.w_state.w_pos.T}")
 
     if(goal_reached):
       self.printwithNameAndColor("Goal reached!")
@@ -154,6 +164,7 @@ class MyEnvironment(gym.Env):
     if(self.om.obsIsNormalized(f_observationn)==False):
       # self.printwithName(f"f_observationn={f_observationn} is not normalized (i.e., constraints are not satisfied). Terminating")
       # self.printwithName(f"f_observation={f_observation} is not normalized (i.e., constraints are not satisfied). Terminating")
+      # self.om.printObservation(f_observation)
       # exit();
       # self.printwithName(f"f_observationn is not normalized (i.e., constraints are not satisfied). Terminating")
       # print(f"[Env] Terminated due to constraint violation: obs: {self.x}, act: {u}, steps: {self.timestep}")
@@ -178,6 +189,7 @@ class MyEnvironment(gym.Env):
     # print(reward)
     ###################
 
+    # self.printwithName("THIS IS THE OBSERVATION:")
     # self.om.printObservation(f_observationn)
     # np.set_printoptions(precision=2)
     # print("w_obstacles[0].ctrl_pts=", w_obstacles[0].ctrl_pts)
@@ -201,7 +213,9 @@ class MyEnvironment(gym.Env):
 
     self.time=0.0
     self.timestep = 0
-    self.w_state=State(np.array([[0.0],[0.0],[1.0]]), np.zeros((3,1)), np.zeros((3,1)), np.zeros((1,1)), np.zeros((1,1)))
+
+    accel0=np.array([[0.0],[0.0],[0.0]])
+    self.w_state=State(np.array([[0.0],[0.0],[1.0]]), np.zeros((3,1)), accel0, np.zeros((1,1)), np.zeros((1,1)))
 
     if(isinstance(self.constant_obstacle_pos, type(None))):
       self.obsm.newRandomPos();
@@ -216,9 +230,12 @@ class MyEnvironment(gym.Env):
     
     # observation = self.om.getRandomNormalizedObservation()
     w_obstacles=self.obsm.getFutureWPosObstacles(self.time)
+    # print("w_obstacles[0].ctrl_pts=", w_obstacles[0].ctrl_pts)
     f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), w_obstacles);
     f_observationn=self.om.normalizeObservation(f_observation);
 
+    # self.printwithName("THIS IS THE OBSERVATION:")
+    # self.om.printObservation(f_observation)
 
     self.previous_f_observation=self.om.denormalizeObservation(f_observationn)
     # assert observation.shape == self.observation_shape
