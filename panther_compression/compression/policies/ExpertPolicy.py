@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import copy
 from random import random
-from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed
+from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed, computeTotalTime
 from colorama import init, Fore, Back, Style
 import py_panther
 import math 
@@ -81,17 +81,12 @@ class ExpertPolicy(object):
 
 
         # ## Call the optimization
-        init_state=py_panther.state(); #This is initialized as zero. This is A
-        init_state.vel= self.om.getf_v(obs);
-        init_state.accel= self.om.getf_a(obs);
-        init_state.dyaw = self.om.getyaw_dot(obs);
-        
-        final_state=py_panther.state();#This is initialized as zero. This is G
-        final_state.pos=self.om.getf_g(obs);
+        init_state=self.om.getInit_f_StateFromObservation(obs);        
+        final_state=self.om.getFinal_f_StateFromObservation(obs);        
 
-        invsqrt3_vector=math.sqrt(3)*np.ones((3,1));
-
-        total_time=self.par.factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, self.par.v_max*invsqrt3_vector, self.par.a_max*invsqrt3_vector)
+        # invsqrt3_vector=math.sqrt(3)*np.ones((3,1));
+        # total_time=self.par.factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, self.par.v_max*invsqrt3_vector, self.par.a_max*invsqrt3_vector)
+        total_time=computeTotalTime(init_state, final_state, self.par.v_max, self.par.a_max, self.par.factor_alloc)
 
         self.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
         self.my_SolverIpopt.setFocusOnObstacle(True);

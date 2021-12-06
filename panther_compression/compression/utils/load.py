@@ -3,6 +3,7 @@ import copy
 import pandas as pd
 import numpy as np
 
+#From andrea
 def load_student_logs(seeds, log_prefix, n_iterations, agent_name="student", n_traj_per_iter = 1):
     # agent_name: change according to type of algorithm. E.g. Dagger, Augmented Dagger, ...
     # Load student during training
@@ -12,16 +13,16 @@ def load_student_logs(seeds, log_prefix, n_iterations, agent_name="student", n_t
         logs_at_iter = []
         for seed in seeds:  
             path_to_file = os.path.join(log_prefix, str(seed), "student", str(it))
-            logs_at_iter.append(pd.read_pickle(os.path.join(path_to_file, "no_dist.pkl")).assign(training = False))
+            logs_at_iter.append(pd.read_pickle(os.path.join(path_to_file, "student_after_training_iteration.pkl")).assign(training = False))
             # logs_at_iter.append(pd.read_pickle(os.path.join(path_to_file, "with_dist.pkl")).assign(training = False))
-            logs_at_iter.append(pd.read_pickle(os.path.join(path_to_file, "training.pkl")).assign(training = True))
+            # logs_at_iter.append(pd.read_pickle(os.path.join(path_to_file, "training.pkl")).assign(training = True)) #Was uncommented (jtorde)
         student_eval.append(pd.concat(logs_at_iter, axis=0, ignore_index=True).assign(iteration = it+1))
     student_eval_logs = pd.concat(student_eval, axis=0, ignore_index=True)
 
     # Load student before training
     student_before = []
     for seed in seeds:
-        student_before.append(pd.read_pickle(os.path.join(log_prefix, str(seed), "pre_train_no_dist.pkl")).assign(training = False))
+        student_before.append(pd.read_pickle(os.path.join(log_prefix, str(seed), "student_pre_train.pkl")).assign(training = False))
         # student_before.append(pd.read_pickle(os.path.join(log_prefix, str(seed), "pre_train_with_dist.pkl")).assign(training = False))
     student_before_logs = pd.concat(student_before, axis=0, ignore_index=True).assign(iteration = 0)
 
@@ -35,7 +36,7 @@ def load_teacher_logs(seeds, log_prefix, n_iterations, agent_name="teacher"):
     # Load teacher 
     teacher = []
     for seed in seeds: 
-        teacher.append(pd.read_pickle(os.path.join(log_prefix, str(seed), "teacher_no_dist.pkl")).assign(training = False))
+        teacher.append(pd.read_pickle(os.path.join(log_prefix, str(seed), "teacher.pkl")).assign(training = False))
         # teacher.append(pd.read_pickle(os.path.join(log_prefix, str(seed), "teacher_with_dist.pkl")).assign(training = False))
     teacher_logs = pd.concat(teacher, axis=0, ignore_index=True)    
     # Repeat these numbers for every iteration (is there a better way?)

@@ -167,6 +167,9 @@ class GTermManager():
 			self.newRandomPos()
 			dist=np.linalg.norm(self.w_gterm-w_position)
 
+	def setPos(self, pos):
+		self.w_gterm=pos
+
 	def get_w_GTermPos(self):
 		return self.w_gterm;
 
@@ -183,6 +186,9 @@ class ObstaclesManager():
 	def newRandomPos(self):
 		self.random_pos=np.array([[random.uniform(1.5, 2.5)],[random.uniform(-1.5, 1.5)],[random.uniform(0.0, 2.0)]]);
 		# self.random_pos=np.array([[2.5],[0.0],[1.0]]);
+
+	def setPos(self, pos):
+		self.random_pos=pos
 
 	def getNumObs(self):
 		return self.num_obs
@@ -310,9 +316,15 @@ class MyClampedUniformBSpline():
 def normalize(v):
 	norm = np.linalg.norm(v)
 	if norm == 0: 
-		print("The norm is zero, aborting")
-		raise RuntimeError
+		# print("The norm is zero, aborting!!")
+		# exit()
+		raise RuntimeError("The norm is zero")
 	return v / norm
+
+def computeTotalTime(init_state, final_state, par_vmax, par_amax, par_factor_alloc):
+	invsqrt3_vector=math.sqrt(3)*np.ones((3,1));
+	total_time=par_factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, par_vmax*invsqrt3_vector, par_amax*invsqrt3_vector)
+	return total_time
 
 class ObservationManager():
 	def __init__(self):
@@ -430,6 +442,25 @@ class ObservationManager():
 
 		return obstacles
 
+	def getInit_f_StateFromObservation(self, obs):
+		init_state=py_panther.state();  #Everything initialized as zero
+		init_state.pos= np.array([[0.0],[0.0],[0.0]]);#Because it's in f frame
+		init_state.vel= self.getf_v(obs);
+		init_state.accel= self.getf_a(obs);
+		init_state.yaw= 0.0  #Because it's in f frame
+		init_state.dyaw = self.getyaw_dot(obs);
+		return init_state
+
+	def getFinal_f_StateFromObservation(self, obs):
+		final_state=py_panther.state();  #Everything initialized as zero
+		final_state.pos= self.getf_g(obs);
+		# final_state.vel= 
+		# final_state.accel= 
+		# final_state.yaw= 
+		# final_state.dyaw = 
+		return final_state
+
+
 	#Normalize in [-1,1]
 	def normalizeObservation(self, observation):
 		# print("Shape observation=", observation.shape)
@@ -440,11 +471,6 @@ class ObservationManager():
 		# assertIsNormalized(observation_normalized)
 		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
 		return observation_normalized;
-
-	def getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self, w_state, w_gterm_pos, w_obstacles):
-	    f_observation=self.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_state, w_gterm_pos, w_obstacles)
-	    f_observationn=self.normalizeObservation(f_observation) #Observation normalized
-	    return f_observationn
 
 	def denormalizeObservation(self,observation_normalized):
 		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
@@ -491,6 +517,12 @@ class ObservationManager():
 		assert observation.shape == self.getObservationShape()
 
 		return observation;
+
+	def getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self, w_state, w_gterm_pos, w_obstacles):
+	    f_observation=self.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_state, w_gterm_pos, w_obstacles)
+	    f_observationn=self.normalizeObservation(f_observation) #Observation normalized
+	    return f_observationn
+
 
 def numpy3XmatrixToListOf3dVectors(data):
 	data_list=[]
@@ -662,7 +694,7 @@ class ActionManager():
 
 		return w_yaw_ctrl_pts, knots_yaw
 
-	def f_actionAnd_w_State2w_ppSolOrGuess(self, f_action, w_state):
+	def f_actionAnd_w_State2w_ppSolOrGuess(self, f_action, w_state): #pp stands for py_panther
 		w_p_ctrl_pts,knots_p=self.f_actionAnd_w_State2_w_pos_ctrl_pts_and_knots(f_action, w_state)
 		w_y_ctrl_pts,knots_y=self.f_actionAnd_w_State2_w_yaw_ctrl_pts_and_knots(f_action, w_state)
 
@@ -684,6 +716,9 @@ class ActionManager():
 
 		return w_sol_or_guess
 
+	def f_action2f_ppSolOrGuess(self, f_action): #pp stands for py_panther
+		zero_state=State(np.zeros((3,1)), np.zeros((3,1)), np.zeros((3,1)), np.zeros((1,1)), np.zeros((1,1)))
+		return self.f_actionAnd_w_State2w_ppSolOrGuess(f_action, zero_state)
 
 
 	def f_actionAnd_w_State2wBS(self, f_action, w_state):

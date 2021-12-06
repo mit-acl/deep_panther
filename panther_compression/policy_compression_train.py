@@ -48,34 +48,34 @@ if __name__ == "__main__":
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
 
-    parser.add_argument("--n_rounds", default=100, type=int) #was called n_iters before
-    parser.add_argument("--n_evals", default=6, type=int)
-    parser.add_argument("--eval_environment_max_steps", default=20, type=int)
+    parser.add_argument("--n_rounds", default=40, type=int) #was called n_iters before
+    parser.add_argument("--n_evals", default=1, type=int)
+    parser.add_argument("--test_environment_max_steps", default=20, type=int)
     parser.add_argument("--train_environment_max_steps", default=20, type=int)
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
-    parser.add_argument("--n_traj_per_iter", default=1, type=int)
+    parser.add_argument("--n_traj_per_round", default=1, type=int)
     # Method changes
     parser.add_argument("--no_train", dest='train', action='store_false')
     parser.set_defaults(train=True)
     parser.add_argument("--no_eval", dest='eval', action='store_false')
-    parser.set_defaults(eval=False)
+    parser.set_defaults(eval=True)
     parser.add_argument("--no_init_and_final_eval", dest='init_and_final_eval', action='store_false')
-    parser.set_defaults(init_and_final_eval=False)
+    parser.set_defaults(init_and_final_eval=True)
     # Dagger properties
-    parser.add_argument("--rampdown_rounds", default=100, type=int)
+    parser.add_argument("--rampdown_rounds", default=40, type=int)
     
     args = parser.parse_args()
 
     printInBoldBlue("---------------- Input Arguments: -----------------------")
     print("Trainer: {}.".format("DAgger" if args.on_policy_trainer ==True else "BC" ))
     print(f"seed: {args.seed}, log_dir: {args.log_dir}, n_rounds: {args.n_rounds}")
-    print(f"eval_environment_max_steps: {args.eval_environment_max_steps}")
+    print(f"test_environment_max_steps: {args.test_environment_max_steps}")
     print(f"use_only_last_coll_ds: {args.use_only_last_coll_ds}")
     print(f"train: {args.train}, eval: {args.eval}, init_and_final_eval: {args.init_and_final_eval}")
     print(f"DAgger rampdown_rounds: {args.rampdown_rounds}.")
 
-    print(f"Num of trajectories per iteration: {args.n_traj_per_iter}.")
+    print(f"Num of trajectories per round: {args.n_traj_per_round}.")
     print("---------------------------------------------------------")
 
 
@@ -112,10 +112,9 @@ if __name__ == "__main__":
     printInBoldBlue("---------------- Making Environments: -------------------")
     print("[Train Env] Making training environment...")
     train_env = gym.make(ENV_NAME)
-
     train_env.seed(args.seed)
     train_env.action_space.seed(args.seed)
-    train_env.set_len_ep(args.train_environment_max_steps) 
+    # train_env.set_len_ep(args.train_environment_max_steps) 
 
     print(f"[Train Env] Ep. Len:  {train_env.get_len_ep()} [steps].")
 
@@ -124,10 +123,14 @@ if __name__ == "__main__":
     print("[Test Env] Making test environment...")
     test_venv = util.make_vec_env(env_name=ENV_NAME, n_envs=N_VEC, seed=args.seed, parallel=False)
     test_venv.seed(args.seed)
-
-    test_venv.env_method("set_len_ep", (args.eval_environment_max_steps)) # TODO: ANDREA: increase
-
+    test_venv.env_method("set_len_ep", (args.test_environment_max_steps)) # TODO: ANDREA: increase
     print("[Test Env] Ep. Len:  {} [steps].".format(test_venv.get_attr("len_episode")))
+    # test_venv = gym.make(ENV_NAME)
+    # test_venv.seed(args.seed)
+    # test_venv.action_space.seed(args.seed)
+    # test_venv.set_len_ep(args.test_environment_max_steps)
+    # print(f"[Train Env] Ep. Len:  {test_venv.get_len_ep()} [steps].")
+
 
     
     printInBoldBlue("---------------- Making Learner Policy: -------------------")
@@ -150,21 +153,21 @@ if __name__ == "__main__":
     if(args.init_and_final_eval):
         printInBoldBlue("---------------- Preliminiary Evaluation: --------------------")
 
+        test_venv.env_method("changeConstantObstacleAndGtermPos", gterm_pos=np.array([[6.0],[0.0],[1.0]]), obstacle_pos=np.array([[2.0],[0.0],[1.0]])) 
+
         #NOTES: args.n_evals is the number of trajectories collected in the environment
         #A trajectory is defined as a sequence of steps in the environment (until the environment returns done)
-        #Hence, each trajectory usually contains the result of eval_environment_max_steps timesteps (it may contains less if the environent returned done before) 
+        #Hence, each trajectory usually contains the result of test_environment_max_steps timesteps (it may contains less if the environent returned done before) 
         #In other words, episodes in |evaluate_policy() is the number of trajectories
         #                            |the environment is the number of time steps
 
         # Evaluate the reward of the expert
-        expert_stats = evaluate_policy( expert_policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/teacher_no_dist")
+        expert_stats = evaluate_policy( expert_policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/teacher")
         print("[Evaluation] Expert reward: {}, len: {}.\n".format( expert_stats["return_mean"], expert_stats["len_mean"]))
 
-        #Debugging
-        # exit();
 
         # Evaluate student reward before training,
-        pre_train_stats = evaluate_policy(trainer.get_policy(), test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/pre_train_no_dist")
+        pre_train_stats = evaluate_policy(trainer.get_policy(), test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/student_pre_train")
         print("[Evaluation] Student reward: {}, len: {}.".format(pre_train_stats["return_mean"], pre_train_stats["len_mean"]))
 
 
@@ -191,25 +194,24 @@ if __name__ == "__main__":
     for i in trange(args.n_rounds, desc="Round"):
 
         #Create names for policies
-        n_training_traj = int(i*args.n_traj_per_iter) # Note: we start to count from 0. e.g. policy_0 means that we used 1 
+        n_training_traj = int(i*args.n_traj_per_round) # Note: we start to count from 0. e.g. policy_0 means that we used 1 
         policy_path = os.path.join(DATA_POLICY_PATH, "intermediate_policy_"+str(n_training_traj)+".pt") # Where to save curr policy
-        log_dir = LOG_PATH + "/student/" + str(n_training_traj) + "/"                                  # Where to save eval logs
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+        log_path_student_n = LOG_PATH + "/student/" + str(n_training_traj) + "/"                                  # Where to save eval logs
+        if not os.path.exists(log_path_student_n):
+            os.makedirs(log_path_student_n)
 
         # Train for iteration
         if args.train:
             print(f"[Collector] Collecting round {i+1}/{args.n_rounds}.")
-            train_stats = train(trainer=trainer, expert=expert_policy, seed=args.seed, n_traj_per_iter=args.n_traj_per_iter, n_epochs=N_EPOCHS, 
-                log_path=os.path.join(log_dir, "training"),  save_full_policy_path=policy_path, use_only_last_coll_ds=args.use_only_last_coll_ds)
+            train_stats = train(trainer=trainer, expert=expert_policy, seed=args.seed, n_traj_per_round=args.n_traj_per_round, n_epochs=N_EPOCHS, 
+                log_path=os.path.join(log_path_student_n, "training"),  save_full_policy_path=policy_path, use_only_last_coll_ds=args.use_only_last_coll_ds)
 
         if args.eval:
             # Load saved policy
             student_policy = bc.reconstruct_policy(policy_path)
 
             # Evaluate
-            log_path = os.path.join(log_dir, "no_dist") 
-            eval_stats = evaluate_policy(student_policy, test_venv, eval_episodes=args.n_evals, log_path = log_path)
+            eval_stats = evaluate_policy(student_policy, test_venv, eval_episodes=args.n_evals, log_path = log_path_student_n + "student_after_training_iteration")
             print(Fore.BLUE+"[Evaluation] Iter.: {}, rwrd: {}, len: {}.\n".format(i+1, eval_stats["return_mean"], eval_stats["len_mean"])+Style.RESET_ALL)
             del eval_stats
 
@@ -228,7 +230,7 @@ if __name__ == "__main__":
         post_train_stats = dict()
 
         # no disturbance
-        post_train_stats = evaluate_policy(trainer.get_policy(), test_venv,eval_episodes=args.n_evals, log_path=LOG_PATH + "/post_train_no_dist" )
+        post_train_stats = evaluate_policy(trainer.get_policy(), test_venv,eval_episodes=args.n_evals, log_path=LOG_PATH + "/student_post_train" )
         print("[Complete] Reward: Pre: {}, Post: {}.".format( pre_train_stats["return_mean"], post_train_stats["return_mean"]))
 
         if(abs(pre_train_stats["return_mean"])>0):

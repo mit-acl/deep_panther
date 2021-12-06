@@ -35,8 +35,8 @@ def make_bc_trainer(tmpdir, env, batch_size):
     )
 
 #Trainer is the student
-def train(trainer, expert, seed, n_traj_per_iter, n_epochs, log_path, save_full_policy_path, use_only_last_coll_ds):
-    assert n_traj_per_iter > 0, "Number of trajectories per iter needs to be at least one!"
+def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full_policy_path, use_only_last_coll_ds):
+    assert n_traj_per_round > 0, "n_traj_per_roundneeds to be at least one!"
     assert n_epochs > 0, "Number of training epochs must be >= 0!"
     
     collector = trainer.get_trajectory_collector()
@@ -51,7 +51,7 @@ def train(trainer, expert, seed, n_traj_per_iter, n_epochs, log_path, save_full_
     
     expert_succeeded_at_least_once=False;
 
-    for _ in range(n_traj_per_iter):
+    for _ in range(n_traj_per_round):
         obs = collector.reset()
         done = False
         while not done:

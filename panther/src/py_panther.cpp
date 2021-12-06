@@ -138,6 +138,7 @@ PYBIND11_MODULE(py_panther, m)
       .def("getBestSolutions", &SolverIpopt::getBestSolutions)
       .def("getBestSolution", &SolverIpopt::getBestSolution)
       .def("getGuesses", &SolverIpopt::getGuesses)
+      .def("computeCost", &SolverIpopt::computeCost)
       .def_readwrite("par_", &SolverIpopt::par_)
       .def("__repr__", [](const SolverIpopt &a) { return "<py_panther.SolverIpopt>"; });
 }

@@ -177,6 +177,7 @@ public:
   void getPlanes(std::vector<Hyperplane3D> &planes);
 
   si::solOrGuess fillTrajBestSolutionAndGetIt();
+  double computeCost(si::solOrGuess guess);
 
 protected:
 private:
@@ -242,8 +243,6 @@ private:
   void generateRandomD(std::vector<double> &d);
   void generateRandomN(std::vector<Eigen::Vector3d> &n);
   void generateRandomQ(std::vector<Eigen::Vector3d> &q);
-
-  double computeCost(si::solOrGuess guess);
 
   std::map<std::string, casadi::DM> getMapConstantArguments();
 
