@@ -49,9 +49,10 @@ def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full
     #                     n_extra_samples=expert.get_num_extra_samples(),
     #                     get_extra_samples_callback=expert.get_extra_states_actions)
     
-    expert_succeeded_at_least_once=False;
 
     for _ in range(n_traj_per_round):
+        expert_succeeded_at_least_once=False;
+
         obs = collector.reset()
         done = False
         while not done:
