@@ -190,7 +190,9 @@ struct state
   const void printHorizontal()
   {
     using namespace termcolor;
-    std::cout << std::setprecision(3) << "Pos, Vel, Accel, Jerk, Yaw, DYaw= " << red << pos.transpose() << reset;
+    std::cout << std::setprecision(3) << red << "Pos" << reset << ", " << blue << "Vel" << reset << ", " << green
+              << "Accel" << reset << ", " << white << "Jerk" << reset << ", " << yellow << "Yaw" << reset << ", "
+              << magenta << "DYaw" << reset << "= " << red << pos.transpose() << reset;
     std::cout << " " << std::setprecision(3) << blue << vel.transpose() << reset;
     std::cout << " " << std::setprecision(3) << green << accel.transpose() << reset;
     std::cout << " " << std::setprecision(3) << jerk.transpose() << reset;
