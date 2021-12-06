@@ -142,7 +142,7 @@ class MyEnvironment(gym.Env):
     dist_endtraj_2goal=np.linalg.norm(w_posBS.getLastPos()-self.gm.get_w_GTermPos()) #From the end of the current traj to the goal
 
 
-    goal_reached=(dist_current_2goal<4.0 and dist_endtraj_2goal<0.5) 
+    goal_reached=(dist_current_2goal<4.0 and dist_endtraj_2goal<self.par.goal_radius) 
 
     self.printwithName(f"Timestep={self.timestep}, dist_current_2goal={dist_current_2goal}, w_state.w_pos={self.w_state.w_pos.T}")
 
@@ -201,7 +201,7 @@ class MyEnvironment(gym.Env):
 
     self.time=0.0
     self.timestep = 0
-    self.w_state=State(np.zeros((3,1)), np.zeros((3,1)), np.zeros((3,1)), np.zeros((1,1)), np.zeros((1,1)))
+    self.w_state=State(np.array([[0.0],[0.0],[1.0]]), np.zeros((3,1)), np.zeros((3,1)), np.zeros((1,1)), np.zeros((1,1)))
 
     if(isinstance(self.constant_obstacle_pos, type(None))):
       self.obsm.newRandomPos();
