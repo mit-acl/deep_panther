@@ -1,3 +1,7 @@
+
+(Dec, 6)--> In Oct. Search, use max(v_max, initial_state_vel) [same for a_max]
+--> bbox doesn't make too  much sense given that we keep changing the axis 
+
 Ahora mismo, la feature se queda en el extremo del FOV (probably because the cost aossociated with the FOV constraint is ____/ (zero if constraint satisfied))
 Checkout last version of MINVO (Creo que main.m da algunos errores por lack of double conversion de A)
 
