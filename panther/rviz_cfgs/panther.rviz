@@ -72,8 +72,6 @@ Visualization Manager:
           Value: false
         SQ01s/camera_link:
           Value: false
-        obs_4000:
-          Value: true
         vicon:
           Value: false
         world:
@@ -86,8 +84,6 @@ Visualization Manager:
       Show Names: true
       Tree:
         world:
-          obs_4000:
-            {}
           vicon:
             SQ01s:
               SQ01s/camera_link:
@@ -166,7 +162,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/fov
       Name: FOV
       Namespaces:
-        marker_fov: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -174,7 +170,7 @@ Visualization Manager:
       Marker Topic: /obstacles_mesh
       Name: Obstacles
       Namespaces:
-        mesh: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -270,7 +266,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/best_solution
       Name: BestSolution
       Namespaces:
-        SQ01s_best_solution0: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -357,7 +353,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 10.268428802490234
+      Distance: 16.00764274597168
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
