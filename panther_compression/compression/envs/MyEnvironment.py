@@ -197,7 +197,6 @@ class MyEnvironment(gym.Env):
     return f_observationn, reward, done, info
 
   def reset(self):
-    print("In reset base")
     self.printwithNameAndColor("Resetting environment")
 
     self.time=0.0

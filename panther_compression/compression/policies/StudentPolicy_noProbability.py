@@ -13,13 +13,9 @@ from stable_baselines3.common.torch_layers import (
     create_mlp,
 )
 
-from compression.utils.other import assertIsNormalized
-
-
+from compression.utils.other import ActionManager, ObservationManager
 from colorama import init, Fore, Back, Style
-# CAP the standard deviation of the actor
-LOG_STD_MAX = 2
-LOG_STD_MIN = -20
+
 
 
 class StudentPolicy(BasePolicy):
@@ -40,7 +36,7 @@ class StudentPolicy(BasePolicy):
         observation_space: gym.spaces.Space,
         action_space: gym.spaces.Space,
         lr_schedule = Callable[[float], float], #TODO: Andrea: not used, dummy
-        net_arch: [List[int]] = [32, 32],
+        net_arch: [List[int]] = [64, 64],
         features_extractor_class: Type[BaseFeaturesExtractor] = FlattenExtractor,
         features_extractor_kwargs: Optional[Dict[str, Any]] = None,
         features_dim: int = 2, # Size of input features
@@ -68,29 +64,18 @@ class StudentPolicy(BasePolicy):
 
         # Save arguments to re-create object at loading
         self.net_arch = net_arch
-        self.features_dim = features_dim
+        self.input_dim = features_dim
         self.activation_fn = activation_fn
-
-
         self.name=Style.BRIGHT+Fore.WHITE+"  [Stu]"+Style.RESET_ALL
 
-        print("features_dim= ", features_dim)
+        self.om=ObservationManager();
+        self.am=ActionManager();
 
         action_dim = get_action_dim(self.action_space)
-        latent_pi_net = create_mlp(features_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
-        self.latent_pi = nn.Sequential(*latent_pi_net)
-        last_layer_dim = net_arch[-1] if len(net_arch) > 0 else features_dim
 
+        mlp = create_mlp(features_dim, action_dim, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
+        self.my_nn = nn.Sequential(*mlp) #https://pytorch.org/docs/stable/generated/torch.nn.Sequential.html
 
-
-        print(f"self.net_arch={self.net_arch}") #This is a list containing the number of neurons in each layer (excluding input and output)
-        #features_dim is the number of inputs (i.e., the number of input layers)
-        print(f"last_layer_dim={last_layer_dim}") 
-        print(f"action_dim={action_dim}") 
-
-        self.action_dist = SquashedDiagGaussianDistribution(action_dim)
-        self.mu = nn.Linear(last_layer_dim, action_dim)
-        self.log_std = nn.Linear(last_layer_dim, action_dim)
 
     def _get_data(self) -> Dict[str, Any]:
         data = super()._get_data()
@@ -108,50 +93,22 @@ class StudentPolicy(BasePolicy):
     def printwithName(self,data):
         print(self.name+data)
 
-
-    def get_action_dist_params(self, obs: th.Tensor) -> Tuple[th.Tensor, th.Tensor, Dict[str, th.Tensor]]:
-        """
-        Get the parameters for the action distribution.
-
-        :param obs:
-        :return:
-            Mean, standard deviation and optional keyword arguments.
-        """
-        features = self.extract_features(obs)
-        latent_pi = self.latent_pi(features)
-        mean_actions = self.mu(latent_pi)
-
-        log_std = self.log_std(latent_pi)
-        log_std = th.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
-        return mean_actions.float(), log_std, {}
-
     def forward(self, obs: th.Tensor, deterministic: bool = False) -> th.Tensor:
-        mean_actions, log_std, kwargs = self.get_action_dist_params(obs)
-        # Note: the action is squashed
-        output=self.action_dist.actions_from_params(mean_actions, log_std, deterministic=deterministic, **kwargs);
-        print(output.shape)
-        exit()
-        return output
 
-    # def action_log_prob(self, obs: th.Tensor) -> Tuple[th.Tensor, th.Tensor]:
-    #     mean_actions, log_std, kwargs = self.get_action_dist_params(obs)
-    #     # return action and associated log prob
-    #     return self.action_dist.log_prob_from_params(mean_actions, log_std, **kwargs)
+        features = self.extract_features(obs)
+        output = th.tanh(self.my_nn(features))
+
+        return output #self.action_dist.actions_from_params(mean_actions, log_std, deterministic=deterministic, **kwargs)
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
         self.printwithName(f"Calling student")
         # self.printwithName(f"Received obs={observation}")
         # self.printwithName(f"Received obs={observation.numpy()}")
-        assertIsNormalized(observation.cpu().numpy())
+        # self.om.assertObsIsNormalized(observation.cpu().numpy().reshape(self.om.getObservationShape()), self.name)
         # self.printwithName(f"Received obs shape={observation.shape}")
         action = self.forward(observation, deterministic)
         # self.printwithName(f"action={action}")
-        assertIsNormalized(action.cpu().numpy())
+        self.am.assertActionIsNormalized(action.cpu().numpy().reshape(self.am.getActionShape()), self.name)
 
         # self.printwithName(f"Returning action shape={action.shape}")
         return action
-
-    # def predictAndDenormalize(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
-    #     action =self._predict(observation, deterministic)
-    #     return self.am.denormalizeAction(action)
-        
