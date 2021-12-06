@@ -922,16 +922,18 @@ bool SolverIpopt::optimize(bool supress_all_prints)
     // TODO: Fill here n and d (if they are included as decision variables)
   }
 
-  for (int i = 0; i < solutions.size(); i++)
-  {
-    std::cout << bold << "\n===================================" << std::endl;
-    std::cout << bold << "=======Guess:" << reset << std::endl;
-    guesses[i].printInfo();
-    std::cout << bold << "=======Solution:" << reset << std::endl;
-    solutions[i].printInfo();
-  }
+  // PRINTING STUFF
+  // for (int i = 0; i < solutions.size(); i++)
+  // {
+  //   std::cout << bold << "\n===================================" << std::endl;
+  //   std::cout << bold << "=======Guess:" << reset << std::endl;
+  //   guesses[i].printInfo();
+  //   std::cout << bold << "=======Solution:" << reset << std::endl;
+  //   solutions[i].printInfo();
+  // }
 
-  std::cout << "solutions.size()=" << solutions.size() << std::endl;
+  // std::cout << "solutions.size()=" << solutions.size() << std::endl;
+  //////////////////////////////
 
   solutions_ = solutions;
   guesses_ = guesses;
