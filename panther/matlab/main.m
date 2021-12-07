@@ -782,7 +782,9 @@ end
 grid on; xlabel('x'); ylabel('y'); zlabel('z'); camlight; lightangle(gca,45,0)
 
 syms x y z real
-all_nd_solved=full(sol.all_nd)/1e5;
+all_nd_solved=full(sol.all_nd);
+cte_visualization=repmat(vecnorm(all_nd_solved),4,1); %Does not changes the planes
+all_nd_solved=all_nd_solved./cte_visualization;
 
 for i=1:size(all_nd_solved,2)
     fimplicit3(all_nd_solved(:,i)'*[x;y;z;1],[-4 4 -4 4 -2 2], 'MeshDensity',2, 'FaceAlpha',0.6) 
