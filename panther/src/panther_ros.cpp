@@ -91,21 +91,21 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "z_max", par_.z_max);
   safeGetParam(nh1_, "ydot_max", par_.ydot_max);
 
-  // std::vector<double> v_max_tmp;
-  // std::vector<double> a_max_tmp;
-  // std::vector<double> j_max_tmp;
+  std::vector<double> v_max_tmp;
+  std::vector<double> a_max_tmp;
+  std::vector<double> j_max_tmp;
 
-  // safeGetParam(nh1_, "v_max", v_max_tmp);
-  // safeGetParam(nh1_, "a_max", a_max_tmp);
-  // safeGetParam(nh1_, "j_max", j_max_tmp);
+  safeGetParam(nh1_, "v_max", v_max_tmp);
+  safeGetParam(nh1_, "a_max", a_max_tmp);
+  safeGetParam(nh1_, "j_max", j_max_tmp);
 
-  // par_.v_max << v_max_tmp[0], v_max_tmp[1], v_max_tmp[2];
-  // par_.a_max << a_max_tmp[0], a_max_tmp[1], a_max_tmp[2];
-  // par_.j_max << j_max_tmp[0], j_max_tmp[1], j_max_tmp[2];
+  par_.v_max << v_max_tmp[0], v_max_tmp[1], v_max_tmp[2];
+  par_.a_max << a_max_tmp[0], a_max_tmp[1], a_max_tmp[2];
+  par_.j_max << j_max_tmp[0], j_max_tmp[1], j_max_tmp[2];
 
-  safeGetParam(nh1_, "v_max", par_.v_max);
-  safeGetParam(nh1_, "a_max", par_.a_max);
-  safeGetParam(nh1_, "j_max", par_.j_max);
+  // safeGetParam(nh1_, "v_max", par_.v_max);
+  // safeGetParam(nh1_, "a_max", par_.a_max);
+  // safeGetParam(nh1_, "j_max", par_.j_max);
 
   safeGetParam(nh1_, "factor_alpha", par_.factor_alpha);
   safeGetParam(nh1_, "max_seconds_keeping_traj", par_.max_seconds_keeping_traj);
@@ -718,8 +718,8 @@ void PantherRos::pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_o
       int increm = (int)std::max(sol_or_guess.traj.size() / par_.res_plot_traj, 1.0);  // this is to speed up rviz
 
       visualization_msgs::MarkerArray tmp;
-      tmp = trajectory2ColoredMarkerArray(sol_or_guess.traj, par_.v_max, increm, ns + std::to_string(j), scale,
-                                          par_.color_type, id_, par_.n_agents);
+      tmp = trajectory2ColoredMarkerArray(sol_or_guess.traj, par_.v_max.maxCoeff(), increm, ns + std::to_string(j),
+                                          scale, par_.color_type, id_, par_.n_agents);
 
       // append to best_trajs
       best_trajs.markers.insert(best_trajs.markers.end(), tmp.markers.begin(), tmp.markers.end());
@@ -761,8 +761,8 @@ void PantherRos::pubTraj(const std::vector<mt::state>& data)
 
   double scale = 0.15;
 
-  traj_safe_colored_ =
-      trajectory2ColoredMarkerArray(data, par_.v_max, increm, name_drone_, scale, par_.color_type, id_, par_.n_agents);
+  traj_safe_colored_ = trajectory2ColoredMarkerArray(data, par_.v_max.maxCoeff(), increm, name_drone_, scale,
+                                                     par_.color_type, id_, par_.n_agents);
   pub_traj_safe_colored_.publish(traj_safe_colored_);
 }
 
@@ -784,7 +784,7 @@ void PantherRos::pubActualTraj()
 
   if (par_.color_type == "vel")
   {
-    m.color = getColorJet(current_state.vel.norm(), 0, par_.v_max);  // note that par_.v_max is per axis!
+    m.color = getColorJet(current_state.vel.norm(), 0, par_.v_max.maxCoeff());  // note that par_.v_max is per axis!
   }
   else
   {

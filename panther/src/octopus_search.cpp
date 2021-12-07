@@ -830,73 +830,73 @@ bool OctopusSearch::checkFeasAndFillND(std::vector<Eigen::Vector3d>& q, std::vec
   }
 
   // // Check velocity and accel constraints
-  // Eigen::Vector3d vi, vip1, vip2;
-  // Eigen::Vector3d ai;
-  // double epsilon = 1.0001;
-  // for (int i = 0; i <= (N_ - 3); i++)
-  // {
-  //   vi = p_ * (q[i + 1] - q[i]) / (knots_(i + p_ + 1) - knots_(i + 1));
-  //   vip1 = p_ * (q[i + 2] - q[i + 1]) / (knots_(i + 1 + p_ + 1) - knots_(i + 1 + 1));
-  //   vip2 = p_ * (q[i + 3] - q[i + 2]) / (knots_(i + 1 + p_ + 1 + 1) - knots_(i + 1 + 1 + 1));
+  Eigen::Vector3d vi, vip1, vip2;
+  Eigen::Vector3d ai;
+  double epsilon = 1.0001;
+  for (int i = 0; i <= (N_ - 3); i++)
+  {
+    vi = p_ * (q[i + 1] - q[i]) / (knots_(i + p_ + 1) - knots_(i + 1));
+    vip1 = p_ * (q[i + 2] - q[i + 1]) / (knots_(i + 1 + p_ + 1) - knots_(i + 1 + 1));
+    vip2 = p_ * (q[i + 3] - q[i + 2]) / (knots_(i + 1 + p_ + 1 + 1) - knots_(i + 1 + 1 + 1));
 
-  //   if (i == (N_ - 2))
-  //   {
-  //     std::cout << "knots_= " << knots_ << std::endl;
-  //     std::cout << "knots_(i + 1 + 1 + 1)= " << knots_(i + 1 + 1 + 1) << std::endl;
-  //     std::cout << "knots_(i + 1 + p_ + 1 + 1)= " << knots_(i + 1 + p_ + 1 + 1) << std::endl;
-  //     std::cout << "i + 1 + 1 + 1= " << i + 1 + 1 + 1 << std::endl;
-  //     std::cout << "i + 1 + p_ + 1 + 1= " << i + 1 + p_ + 1 + 1 << std::endl;
-  //   }
+    if (i == (N_ - 2))
+    {
+      std::cout << "knots_= " << knots_ << std::endl;
+      std::cout << "knots_(i + 1 + 1 + 1)= " << knots_(i + 1 + 1 + 1) << std::endl;
+      std::cout << "knots_(i + 1 + p_ + 1 + 1)= " << knots_(i + 1 + p_ + 1 + 1) << std::endl;
+      std::cout << "i + 1 + 1 + 1= " << i + 1 + 1 + 1 << std::endl;
+      std::cout << "i + 1 + p_ + 1 + 1= " << i + 1 + p_ + 1 + 1 << std::endl;
+    }
 
-  //   ai = (p_ - 1) * (vip1 - vi) / (knots_(i + p_ + 1) - knots_(i + 2));
+    ai = (p_ - 1) * (vip1 - vi) / (knots_(i + p_ + 1) - knots_(i + 2));
 
-  //   Eigen::Matrix<double, 3, 3> Vbs;
-  //   Vbs.col(0) = vi;
-  //   Vbs.col(1) = vip1;
-  //   Vbs.col(2) = vip2;
+    Eigen::Matrix<double, 3, 3> Vbs;
+    Vbs.col(0) = vi;
+    Vbs.col(1) = vip1;
+    Vbs.col(2) = vip2;
 
-  //   Eigen::Matrix<double, 3, 3> V_newbasis = Vbs * M_vel_bs2basis_[i];
+    Eigen::Matrix<double, 3, 3> V_newbasis = Vbs * M_vel_bs2basis_[i];
 
-  //   // if ((vi.array() > epsilon * v_max_.array()).any() || (vi.array() < -epsilon * v_max_.array()).any())
+    // if ((vi.array() > epsilon * v_max_.array()).any() || (vi.array() < -epsilon * v_max_.array()).any())
 
-  //   // Assumming here that all the elements of v_max_ are the same
-  //   if (V_newbasis.maxCoeff() > epsilon * v_max_.x() || V_newbasis.minCoeff() < -epsilon * v_max_.x())
-  //   {
-  //     std::cout << red << "velocity constraint for vi is not satisfied, i=" << i << reset << std::endl;
+    // Assumming here that all the elements of v_max_ are the same
+    if (V_newbasis.maxCoeff() > epsilon * v_max_.x() || V_newbasis.minCoeff() < -epsilon * v_max_.x())
+    {
+      std::cout << red << "velocity constraint for vi is not satisfied, i=" << i << reset << std::endl;
 
-  //     std::cout << "N_=" << N_ << std::endl;
+      std::cout << "N_=" << N_ << std::endl;
 
-  //     std::cout << "qa= " << q[i].transpose() << std::endl;
-  //     std::cout << "qb= " << q[i + 1].transpose() << std::endl;
-  //     std::cout << "qc= " << q[i + 2].transpose() << std::endl;
-  //     std::cout << "qd= " << q[i + 3].transpose() << std::endl;
+      std::cout << "qa= " << q[i].transpose() << std::endl;
+      std::cout << "qb= " << q[i + 1].transpose() << std::endl;
+      std::cout << "qc= " << q[i + 2].transpose() << std::endl;
+      std::cout << "qd= " << q[i + 3].transpose() << std::endl;
 
-  //     std::cout << "Vbs= \n" << Vbs << std::endl;
-  //     std::cout << "V_newbasis= \n" << V_newbasis << std::endl;
-  //     std::cout << "v_max_= \n" << v_max_ << std::endl;
-  //     std::cout << "Using matrix \n" << M_vel_bs2basis_[i] << std::endl;
-  //     isFeasible = false;
-  //   }
+      std::cout << "Vbs= \n" << Vbs << std::endl;
+      std::cout << "V_newbasis= \n" << V_newbasis << std::endl;
+      std::cout << "v_max_= \n" << v_max_ << std::endl;
+      std::cout << "Using matrix \n" << M_vel_bs2basis_[i] << std::endl;
+      isFeasible = false;
+    }
 
-  //   // if (i == N_ - 2)
-  //   // {  // Check also vNm1 (which should be zero)
-  //   //   if ((vip1.array() > epsilon * v_max_.array()).any() || (vip1.array() < -epsilon * v_max_.array()).any())
-  //   //   {
-  //   //     isFeasible = false;
-  //   //     std::cout << red << "velocity constraint for vNm1 is not satisfied" << reset << std::endl;
-  //   //   }
-  //   // }
-  //   if ((ai.array() > epsilon * a_max_.array()).any() || (ai.array() < -epsilon * a_max_.array()).any())
-  //   {
-  //     std::cout << red << "acceleration constraints are not satisfied" << reset << std::endl;
-  //     std::cout << "ai= " << ai.transpose() << std::endl;
-  //     std::cout << "i= " << i << std::endl;
-  //     std::cout << "N_=" << N_ << std::endl;
+    // if (i == N_ - 2)
+    // {  // Check also vNm1 (which should be zero)
+    //   if ((vip1.array() > epsilon * v_max_.array()).any() || (vip1.array() < -epsilon * v_max_.array()).any())
+    //   {
+    //     isFeasible = false;
+    //     std::cout << red << "velocity constraint for vNm1 is not satisfied" << reset << std::endl;
+    //   }
+    // }
+    if ((ai.array() > epsilon * a_max_.array()).any() || (ai.array() < -epsilon * a_max_.array()).any())
+    {
+      std::cout << red << "acceleration constraints are not satisfied" << reset << std::endl;
+      std::cout << "ai= " << ai.transpose() << std::endl;
+      std::cout << "i= " << i << std::endl;
+      std::cout << "N_=" << N_ << std::endl;
 
-  //     std::cout << "a_max_= " << a_max_.transpose() << std::endl;
-  //     isFeasible = false;
-  //   }
-  // }
+      std::cout << "a_max_= " << a_max_.transpose() << std::endl;
+      isFeasible = false;
+    }
+  }
 
   return isFeasible;
 }

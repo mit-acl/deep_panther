@@ -450,27 +450,27 @@ classdef MyClampedUniformSpline < handle
             subplot(4,1,4); hold on; title('jerk')
             obj.plotJerk();
             style={'-.r','-.g','-.b'}; 
-%             if(nargin>=2)
-%                 subplot(4,1,2);
-%                 for coordinate=1:numel(v_max)
-%                     yline(v_max(coordinate),style{coordinate}); %TODO: this will crash if there are moree than three coordinates (because of the def of style above)
-%                     yline(-v_max(coordinate),style{coordinate});
-%                 end
-%             end
-%             if(nargin>=3)
-%                 subplot(4,1,3);
-%                 for coordinate=1:numel(a_max)
-%                     yline(a_max(coordinate),style{coordinate}); %TODO: this will crash if there are moree than three coordinates (because of the def of style above)
-%                     yline(-a_max(coordinate),style{coordinate});
-%                 end
-%             end     
-%             if(nargin>=4)
-%                 subplot(4,1,4);
-%                 for coordinate=1:numel(j_max)
-%                     yline(j_max(coordinate),style{coordinate}); %TODO: this will crash if there are moree than three coordinates (because of the def of style above)
-%                     yline(-j_max(coordinate),style{coordinate});
-%                 end
-%             end     
+            if(nargin>=2)
+                subplot(4,1,2);
+                for coordinate=1:numel(v_max)
+                    yline(v_max(coordinate),style{coordinate}); %TODO: this will crash if there are moree than three coordinates (because of the def of style above)
+                    yline(-v_max(coordinate),style{coordinate});
+                end
+            end
+            if(nargin>=3)
+                subplot(4,1,3);
+                for coordinate=1:numel(a_max)
+                    yline(a_max(coordinate),style{coordinate}); %TODO: this will crash if there are moree than three coordinates (because of the def of style above)
+                    yline(-a_max(coordinate),style{coordinate});
+                end
+            end     
+            if(nargin>=4)
+                subplot(4,1,4);
+                for coordinate=1:numel(j_max)
+                    yline(j_max(coordinate),style{coordinate}); %TODO: this will crash if there are moree than three coordinates (because of the def of style above)
+                    yline(-j_max(coordinate),style{coordinate});
+                end
+            end     
         end
         
         function plotDerivative(obj,order)
@@ -622,13 +622,13 @@ classdef MyClampedUniformSpline < handle
             for j=1:obj.num_seg
                 cps=obj.getCPs_XX_Vel_ofInterval(basis, j);
                 for u=1:size(cps,2)
-                    constraints{end+1}=(cps{u}'*cps{u})<=(v_max_scaled^2);
+%                     constraints{end+1}=(cps{u}'*cps{u})<=(v_max_scaled^2);
 %                     total_squared=0;
-%                     for xyz=1:size(cps{u},1)
-% %                         constraints{end+1}=cps{u}(xyz) <= v_max_scaled(xyz);
-% %                         constraints{end+1}=cps{u}(xyz) >= -v_max_scaled(xyz);
+                    for xyz=1:size(cps{u},1)
+                        constraints{end+1}=cps{u}(xyz) <= v_max_scaled(xyz);
+                        constraints{end+1}=cps{u}(xyz) >= -v_max_scaled(xyz);
 %                         total_squared=total_squared+(cps{u}(xyz)^2);
-%                     end
+                    end
 %                     constraints{end+1}=total_squared<=(v_max_scaled^2);
                 end
             end
@@ -639,13 +639,13 @@ classdef MyClampedUniformSpline < handle
             for j=1:obj.num_seg
                 cps=obj.getCPs_XX_Accel_ofInterval(basis,j);
                 for u=1:size(cps,2)
-                    constraints{end+1}=(cps{u}'*cps{u})<=(a_max_scaled^2);
+%                     constraints{end+1}=(cps{u}'*cps{u})<=(a_max_scaled^2);
 %                     total_squared=0;
-%                     for xyz=1:size(cps{u},1)
-% %                         constraints{end+1}=cps{u}(xyz) <= v_max_scaled(xyz);
-% %                         constraints{end+1}=cps{u}(xyz) >= -v_max_scaled(xyz);
+                    for xyz=1:size(cps{u},1)
+                        constraints{end+1}=cps{u}(xyz) <= a_max_scaled(xyz);
+                        constraints{end+1}=cps{u}(xyz) >= -a_max_scaled(xyz);
 %                         total_squared=total_squared+(cps{u}(xyz)^2);
-%                     end
+                    end
 %                     constraints{end+1}=total_squared<=(a_max_scaled^2);
                 end
             end
@@ -657,13 +657,13 @@ classdef MyClampedUniformSpline < handle
             for j=1:obj.num_seg
                 cps=obj.getCPs_XX_Jerk_ofInterval(basis,j);
                 for u=1:size(cps,2)
-                     constraints{end+1}=(cps{u}'*cps{u})<=(j_max_scaled^2);
+%                      constraints{end+1}=(cps{u}'*cps{u})<=(j_max_scaled^2);
 %                     total_squared=0;
-%                     for xyz=1:size(cps{u},1)
-% %                         constraints{end+1}=cps{u}(xyz) <= v_max_scaled(xyz);
-% %                         constraints{end+1}=cps{u}(xyz) >= -v_max_scaled(xyz);
+                    for xyz=1:size(cps{u},1)
+                        constraints{end+1}=cps{u}(xyz) <= j_max_scaled(xyz);
+                        constraints{end+1}=cps{u}(xyz) >= -j_max_scaled(xyz);
 %                         total_squared=total_squared+(cps{u}(xyz)^2);
-%                     end
+                    end
 %                     constraints{end+1}=total_squared<=(j_max_scaled^2);
                 end
             end

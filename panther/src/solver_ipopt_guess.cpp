@@ -81,11 +81,10 @@ bool SolverIpopt::generateAStarGuess(std::vector<os::solution>& p_guesses)
   octopusSolver_ptr_->setXYZMinMaxAndRa(par_.x_min, par_.x_max, par_.y_min, par_.y_max, par_.z_min, par_.z_max,
                                         par_.Ra);             // limits for the search, in world frame
   octopusSolver_ptr_->setBBoxSearch(2000.0, 2000.0, 2000.0);  // limits for the search, centered on q2
-  Eigen::Vector3d invsqrt3Vector = (1.0 / sqrt(3)) * Eigen::Vector3d::Ones();
+  // Eigen::Vector3d invsqrt3Vector = (1.0 / sqrt(3)) * Eigen::Vector3d::Ones();
 
-  octopusSolver_ptr_->setMaxValuesAndSamples(par_.v_max * invsqrt3Vector, par_.a_max * invsqrt3Vector,
-                                             par_.a_star_samp_x, par_.a_star_samp_y, par_.a_star_samp_z,
-                                             par_.a_star_fraction_voxel_size);
+  octopusSolver_ptr_->setMaxValuesAndSamples(par_.v_max, par_.a_max, par_.a_star_samp_x, par_.a_star_samp_y,
+                                             par_.a_star_samp_z, par_.a_star_fraction_voxel_size);
 
   octopusSolver_ptr_->setRunTime(par_.max_runtime_octopus_search);  // hack, should be kappa_ * max_runtime_
   octopusSolver_ptr_->setGoalSize(goal_size);

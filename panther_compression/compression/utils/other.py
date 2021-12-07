@@ -349,8 +349,8 @@ def normalize(v):
 	return v / norm
 
 def computeTotalTime(init_state, final_state, par_vmax, par_amax, par_factor_alloc):
-	invsqrt3_vector=math.sqrt(3)*np.ones((3,1));
-	total_time=par_factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, par_vmax*invsqrt3_vector, par_amax*invsqrt3_vector)
+	# invsqrt3_vector=math.sqrt(3)*np.ones((3,1));
+	total_time=par_factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, par_vmax, par_amax)
 	return total_time
 
 class ObservationManager():
@@ -362,9 +362,9 @@ class ObservationManager():
 		self.observation_size= 3 +  3 +   1    + 3   + self.obsm.getSizeAllObstacles();
 
 		params=readPANTHERparams();
-		self.v_max=params["v_max"]*np.ones((3,1))#np.array(params["v_max"]).reshape(3,1);
-		self.a_max=params["a_max"]*np.ones((3,1))#np.array(params["a_max"]).reshape(3,1);
-		self.j_max=params["j_max"]*np.ones((3,1))#np.array(params["j_max"]).reshape(3,1);
+		self.v_max=np.array(params["v_max"]).reshape(3,1);
+		self.a_max=np.array(params["a_max"]).reshape(3,1);
+		self.j_max=np.array(params["j_max"]).reshape(3,1);
 		self.ydot_max=params["ydot_max"];
 		# self.max_dist2goal=params["max_dist2goal"];
 		self.max_dist2obs=params["max_dist2obs"];
