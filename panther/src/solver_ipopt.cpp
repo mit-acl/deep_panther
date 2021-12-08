@@ -402,68 +402,68 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
 
   double deltaT = (t_final - t_init) / (1.0 * (sp_.M - 2 * sp_.p - 1 + 1));
 
-  double old_deltaT = deltaT;
+  // double old_deltaT = deltaT;
 
-  // //////////////////////////////
-  // Now make sure deltaT in knots_p_guess_ is such that -v_max<=v1<=v_max is satisfied:
-  for (int axis = 0; axis < 3; axis++)
-  {
-    double upper_bound, lower_bound;
-    if (fabs(a0(axis)) > 1e-7)
-    {
-      upper_bound = ((sp_.p - 1) * (sgn(a0(axis)) * par_.v_max(axis) - v0(axis)) / (a0(axis)));
-      lower_bound = ((sp_.p - 1) * (-sgn(a0(axis)) * par_.v_max(axis) - v0(axis)) / (a0(axis)));
+  // // //////////////////////////////
+  // // Now make sure deltaT in knots_p_guess_ is such that -v_max<=v1<=v_max is satisfied:
+  // for (int axis = 0; axis < 3; axis++)
+  // {
+  //   double upper_bound, lower_bound;
+  //   if (fabs(a0(axis)) > 1e-7)
+  //   {
+  //     upper_bound = ((sp_.p - 1) * (sgn(a0(axis)) * par_.v_max(axis) - v0(axis)) / (a0(axis)));
+  //     lower_bound = ((sp_.p - 1) * (-sgn(a0(axis)) * par_.v_max(axis) - v0(axis)) / (a0(axis)));
 
-      ////////////////// Debugging
-      // if (upper_bound < lower_bound)
-      // {
-      //   std::cout << red << bold << "This should never happen, aborting" << std::endl;
-      //   abort();
-      // }
-      //////////////////
+  //     ////////////////// Debugging
+  //     // if (upper_bound < lower_bound)
+  //     // {
+  //     //   std::cout << red << bold << "This should never happen, aborting" << std::endl;
+  //     //   abort();
+  //     // }
+  //     //////////////////
 
-      if (upper_bound <= 0)
-      {
-        std::cout << red << bold << "There is no way to satisfy v1" << reset << std::endl;  //(deltat will be zero)
-        return false;
-      }
+  //     if (upper_bound <= 0)
+  //     {
+  //       std::cout << red << bold << "There is no way to satisfy v1" << reset << std::endl;  //(deltat will be zero)
+  //       return false;
+  //     }
 
-      saturate(deltaT, std::max(0.0, lower_bound), upper_bound);
-    }
-    else
-    {
-      // do nothing: a0 ==0 for that axis, so that means that v1==v0, and therefore v1 satisfies constraints for that
-      // axis
-    }
-  }
+  //     saturate(deltaT, std::max(0.0, lower_bound), upper_bound);
+  //   }
+  //   else
+  //   {
+  //     // do nothing: a0 ==0 for that axis, so that means that v1==v0, and therefore v1 satisfies constraints for that
+  //     // axis
+  //   }
+  // }
 
-  if (old_deltaT != deltaT)
-  {
-    std::cout << red << bold << "old_deltaT= " << old_deltaT << reset << std::endl;
-    std::cout << red << bold << "deltaT= " << deltaT << reset << std::endl;
-  }
+  // if (old_deltaT != deltaT)
+  // {
+  //   std::cout << red << bold << "old_deltaT= " << old_deltaT << reset << std::endl;
+  //   std::cout << red << bold << "deltaT= " << deltaT << reset << std::endl;
+  // }
 
-  // Eigen::Vector3d bound1 = ((p_ - 1) * (par_.v_max - v0).array() / (a0.array()));
-  // Eigen::Vector3d bound2 = ((p_ - 1) * (-par_.v_max - v0).array() / (a0.array()));
+  // // Eigen::Vector3d bound1 = ((p_ - 1) * (par_.v_max - v0).array() / (a0.array()));
+  // // Eigen::Vector3d bound2 = ((p_ - 1) * (-par_.v_max - v0).array() / (a0.array()));
 
-  // // note that if any element of a0 is ==0.0, then its corresponding element in bound1 (or bound2) is +-infinity,
-  // but
-  // // valid  for the saturation below
+  // // // note that if any element of a0 is ==0.0, then its corresponding element in bound1 (or bound2) is +-infinity,
+  // // but
+  // // // valid  for the saturation below
 
-  // saturate(deltaT, std::min(bound1.x(), bound2.x()), std::max(bound1.x(), bound2.x()));
-  // saturate(deltaT, std::min(bound1.y(), bound2.y()), std::max(bound1.y(), bound2.y()));
-  // saturate(deltaT, std::min(bound1.z(), bound2.z()), std::max(bound1.z(), bound2.z()));
+  // // saturate(deltaT, std::min(bound1.x(), bound2.x()), std::max(bound1.x(), bound2.x()));
+  // // saturate(deltaT, std::min(bound1.y(), bound2.y()), std::max(bound1.y(), bound2.y()));
+  // // saturate(deltaT, std::min(bound1.z(), bound2.z()), std::max(bound1.z(), bound2.z()));
 
-  // std::cout << "std::min(bound1.x(), bound2.x()= " << std::min(bound1.x(), bound2.x()) << std::endl;
-  // std::cout << "std::max(bound1.x(), bound2.x()= " << std::max(bound1.x(), bound2.x()) << std::endl;
+  // // std::cout << "std::min(bound1.x(), bound2.x()= " << std::min(bound1.x(), bound2.x()) << std::endl;
+  // // std::cout << "std::max(bound1.x(), bound2.x()= " << std::max(bound1.x(), bound2.x()) << std::endl;
 
-  // std::cout << "std::min(bound1.y(), bound2.y()= " << std::min(bound1.y(), bound2.y()) << std::endl;
-  // std::cout << "std::max(bound1.y(), bound2.y()= " << std::max(bound1.y(), bound2.y()) << std::endl;
+  // // std::cout << "std::min(bound1.y(), bound2.y()= " << std::min(bound1.y(), bound2.y()) << std::endl;
+  // // std::cout << "std::max(bound1.y(), bound2.y()= " << std::max(bound1.y(), bound2.y()) << std::endl;
 
-  // std::cout << "std::min(bound1.z(), bound2.z()= " << std::min(bound1.z(), bound2.z()) << std::endl;
-  // std::cout << "std::max(bound1.z(), bound2.z()= " << std::max(bound1.z(), bound2.z()) << std::endl;
+  // // std::cout << "std::min(bound1.z(), bound2.z()= " << std::min(bound1.z(), bound2.z()) << std::endl;
+  // // std::cout << "std::max(bound1.z(), bound2.z()= " << std::max(bound1.z(), bound2.z()) << std::endl;
 
-  // std::cout << bold << "deltaT after= " << deltaT << reset << std::endl;
+  // // std::cout << bold << "deltaT after= " << deltaT << reset << std::endl;
 
   t_final = t_init + (1.0 * (sp_.M - 2 * sp_.p - 1 + 1)) * deltaT;
 
