@@ -114,7 +114,7 @@ if __name__ == "__main__":
     train_env = gym.make(ENV_NAME)
     train_env.seed(args.seed)
     train_env.action_space.seed(args.seed)
-    # train_env.set_len_ep(args.train_environment_max_steps) 
+    train_env.set_len_ep(args.train_environment_max_steps) 
 
     print(f"[Train Env] Ep. Len:  {train_env.get_len_ep()} [steps].")
 
@@ -180,12 +180,12 @@ if __name__ == "__main__":
     printInBoldBlue("---------------- Training Learner: --------------------")
 
 
-    #Launch tensorboard visualization
-    os.system("pkill -f tensorboard")
-    proc1 = subprocess.Popen(["tensorboard","--logdir",LOG_PATH,"--bind_all"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-    proc2 = subprocess.Popen(["google-chrome","http://jtorde-alienware-aurora-r8:6006/"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-    # os.system("tensorboard --logdir "+args.log_dir +" --bind_all")
-    # os.system("google-chrome http://jtorde-alienware-aurora-r8:6006/")  
+    # #Launch tensorboard visualization
+    # os.system("pkill -f tensorboard")
+    # proc1 = subprocess.Popen(["tensorboard","--logdir",LOG_PATH,"--bind_all"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    # proc2 = subprocess.Popen(["google-chrome","http://jtorde-alienware-aurora-r8:6006/"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    # # os.system("tensorboard --logdir "+args.log_dir +" --bind_all")
+    # # os.system("google-chrome http://jtorde-alienware-aurora-r8:6006/")  
 
 
     stats = {"training":list(), "eval_no_dist":list()}
