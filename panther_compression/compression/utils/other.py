@@ -159,7 +159,8 @@ class GTermManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.w_gterm=np.array([[random.uniform(4.0, 6.0)],[random.uniform(0.0, 0.0)],[random.uniform(1.0,1.0)]]);
+		# self.w_gterm=np.array([[random.uniform(-6.0, 6.0)],[random.uniform(-6.0, 6.0)],[random.uniform(1.0,1.0)]]);
+		self.w_gterm=np.array([[random.uniform(6.0, 6.0)],[random.uniform(0.0, 0.0)],[random.uniform(1.0,1.0)]]);
 
 	def newRandomPosFarFrom_w_Position(self, w_position):
 		dist=0.0
@@ -184,7 +185,8 @@ class ObstaclesManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.random_pos=np.array([[random.uniform(1.5, 2.5)],[random.uniform(-1.5, 1.5)],[random.uniform(1.0,1.0)]]);
+		# self.random_pos=np.array([[random.uniform(-2.5, 2.5)],[random.uniform(-2.5, 2.5)],[random.uniform(1.0,1.0)]]);
+		self.random_pos=np.array([[random.uniform(2.5, 2.5)],[random.uniform(0.0, 0.0)],[random.uniform(1.0,1.0)]]);
 		# self.random_pos=np.array([[2.5],[0.0],[1.0]]);
 
 	def setPos(self, pos):
@@ -213,6 +215,10 @@ class ObstaclesManager():
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 		return w_obs;
 
+#Wraps an angle in [-pi, pi)
+#Works also for np arrays
+def wrapInmPiPi(data): #https://stackoverflow.com/a/15927914
+	return (data + np.pi) % (2 * np.pi) - np.pi
 
 
 class State():
@@ -225,9 +231,10 @@ class State():
 		self.w_pos = w_pos
 		self.w_vel = w_vel
 		self.w_accel = w_accel
-		self.w_yaw = w_yaw
+		self.w_yaw = wrapInmPiPi(w_yaw)
 		self.yaw_dot = yaw_dot
-		self.w_T_f= posAccelYaw2TfMatrix(self.w_pos, np.array([[0.0],[0.0], [0.0]]), w_yaw) #pos, accel, yaw
+		# self.w_T_f= posAccelYaw2TfMatrix(self.w_pos, np.array([[0.0],[0.0], [0.0]]), w_yaw) #pos, accel, yaw
+		self.w_T_f= posAccelYaw2TfMatrix(self.w_pos, np.array([[0.0],[0.0], [0.0]]), np.array([[0.0]])) #pos, accel, yaw
 		ez=np.array([[0.0],[0.0],[1.0]]);
 		np.testing.assert_allclose(self.w_T_f.T[0:3,2].reshape(3,1)-ez, 0, atol=1e-07)
 		self.f_T_w= self.w_T_f.inv()
@@ -243,7 +250,7 @@ class State():
 		# assert (np.linalg.norm(f_accel)-np.linalg.norm(self.w_accel)) == pytest.approx(0.0), f"f_accel={f_accel} (norm={np.linalg.norm(f_accel)}), w_accel={self.w_accel} (norm={np.linalg.norm(self.w_accel)}), f_R_w={self.f_T_w.rot()}, " 
 		return f_accel;
 	def f_yaw(self):
-		return np.array([[0.0]]);
+		return self.w_yaw #Yaw of the drone wrt frame f    #np.array([[0.0]]);
 	def print_w_frameHorizontal(self, msg_before=""):
 		np.set_printoptions(precision=3, suppress=True)
 		print(msg_before + "(In w frame)"+ \
@@ -356,10 +363,10 @@ def computeTotalTime(init_state, final_state, par_vmax, par_amax, par_factor_all
 class ObservationManager():
 	def __init__(self):
 		self.obsm=ObstaclesManager();
-		#Observation =       [f_v, f_a, yaw_dot, f_g,  [f_ctrl_pts_o0], bbox_o0, [f_ctrl_pts_o1], bbox_o1 ,...]
+		#Observation =       [f_v, f_a, yaw, yaw_dot, f_g,  [f_ctrl_pts_o0], bbox_o0, [f_ctrl_pts_o1], bbox_o1 ,...]
 		#
 		# Where f_ctrl_pts_oi = [cp0.transpose(), cp1.transpose(), ...]
-		self.observation_size= 3 +  3 +   1    + 3   + self.obsm.getSizeAllObstacles();
+		self.observation_size=  3 +  3 + 1 +  1    + 3   + self.obsm.getSizeAllObstacles();
 
 		params=readPANTHERparams();
 		self.v_max=np.array(params["v_max"]).reshape(3,1);
@@ -372,14 +379,28 @@ class ObservationManager():
 		self.Ra=params["Ra"]
 		ones13=np.ones((1,3));
 		#Note that the sqrt(3) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
+		margin_yaw=1.0*math.pi 
 		margin_v=1.0 #math.sqrt(3) #math.sqrt(3)
 		margin_a=1.0 #math.sqrt(3) #math.sqrt(3)
 		margin_ydot=1.0 #because the student sometimes may not satisfy that limit
-		self.normalization_constant=np.concatenate((margin_v*self.v_max.T*ones13, margin_a*self.a_max.T*ones13, margin_ydot*self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
+		self.normalization_constant=np.concatenate((margin_v*self.v_max.T*ones13, margin_a*self.a_max.T*ones13, margin_yaw*np.ones((1,1)), margin_ydot*self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
 		for i in range(self.obsm.getNumObs()):
 			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)
 
 		# assert print("Shape observation=", observation.shape==)
+
+	def randomVel(self):
+		return np.random.uniform(-self.v_max,self.v_max)
+
+	def randomAccel(self):
+		return np.random.uniform(-self.a_max,self.a_max)
+
+	def randomYdot(self):
+		return np.random.uniform(-self.ydot_max,self.ydot_max, size=(1,1))
+
+	def randomYaw(self):
+		return wrapInmPiPi(np.random.uniform(-np.pi,np.pi, size=(1,1)))
+
 
 	def obsIsNormalized(self, observation_normalized):
 		# print(observation_normalized.shape)
@@ -401,6 +422,7 @@ class ObservationManager():
 		print("----The observation is:")
 		print(Fore.BLUE +f"f_v.T={self.getf_v(obs).T}"+Style.RESET_ALL)
 		print(Fore.GREEN +f"f_a.T={self.getf_a(obs).T}"+Style.RESET_ALL)
+		print(Fore.YELLOW +f"yaw={self.getyaw(obs)}"+Style.RESET_ALL)
 		print(Fore.MAGENTA +f"yaw_dot={self.getyaw_dot(obs)}"+Style.RESET_ALL)
 		print(Fore.CYAN +f"f_g.T={self.getf_g(obs).T}"+Style.RESET_ALL)
 
@@ -417,7 +439,7 @@ class ObservationManager():
 
 
 	def getIndexStartObstacleI(self,i):
-		return 10+(self.obsm.getCPsPerObstacle()+3)*i
+		return 11+(self.obsm.getCPsPerObstacle()+3)*i
 
 	def getCtrlPtsObstacleI(self,obs,i):
 		index_start_obstacle_i=self.getIndexStartObstacleI(i)
@@ -445,11 +467,14 @@ class ObservationManager():
 	def getf_a(self, obs):
 		return obs[0,3:6].reshape((3,1)) #Column vector
 
-	def getyaw_dot(self, obs):
+	def getyaw(self, obs):
 		return obs[0,6].reshape((1,1)) 
 
+	def getyaw_dot(self, obs):
+		return obs[0,7].reshape((1,1)) 
+
 	def getf_g(self, obs):
-		return obs[0,7:10].reshape((3,1)) #Column vector
+		return obs[0,8:11].reshape((3,1)) #Column vector
 
 	def getObstacles(self, obs):
 		# print("obs is= ", obs)
@@ -474,7 +499,7 @@ class ObservationManager():
 		init_state.pos= np.array([[0.0],[0.0],[0.0]]);#Because it's in f frame
 		init_state.vel= self.getf_v(obs);
 		init_state.accel= self.getf_a(obs);
-		init_state.yaw= 0.0  #Because it's in f frame
+		init_state.yaw= self.getyaw(obs);
 		init_state.dyaw = self.getyaw_dot(obs);
 		return init_state
 
@@ -529,7 +554,7 @@ class ObservationManager():
 		# print("w_state.f_vel().flatten()= ", w_state.f_vel().flatten())
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
-		observation=np.concatenate((w_state.f_vel().flatten(), w_state.f_accel().flatten(), w_state.yaw_dot.flatten(), f_g.flatten()));
+		observation=np.concatenate((w_state.f_vel().flatten(), w_state.f_accel().flatten(), w_state.f_yaw().flatten(), w_state.yaw_dot.flatten(), f_g.flatten()));
 
 		#Convert obs to f frame and append ethem to observation
 		for w_obstacle in w_obstacles:
@@ -716,7 +741,7 @@ class ActionManager():
 
 		f_yaw_ctrl_pts= self.getYawCtrlPts(f_action)
 
-		w_yaw_ctrl_pts =  f_yaw_ctrl_pts + w_state.w_yaw*np.ones(f_yaw_ctrl_pts.shape);
+		w_yaw_ctrl_pts =  f_yaw_ctrl_pts; # + w_state.w_yaw*np.ones(f_yaw_ctrl_pts.shape);
 
 
 		y0=w_state.w_yaw

@@ -9,7 +9,7 @@ drone_radius: 0.1  #(m) Used for collision checking
 Ra: 7.0           # [m] Radius of my planning sphere (planning horizon)
 impose_FOV_in_trajCB: false
 pause_time_when_replanning: true
-replanning_trigger_time_student: 0.01 #[seconds] 
+replanning_trigger_time_student: 0.5 #[seconds] 
 replanning_trigger_time_expert: 0.5 #[seconds] 
 replanning_lookahead_time: 0.01 #[seconds] 
 max_runtime_octopus_search: 0.1 #[seconds] 
@@ -57,5 +57,5 @@ max_dist2obs: 20.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
 use_expert: false
-student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_200.pt #final_policy.pt   intermediate_policy_42.pt
+student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/final_policy.pt #final_policy.pt   intermediate_policy_42.pt
 static_planning: false #If true, it will always plan from the same initial condition

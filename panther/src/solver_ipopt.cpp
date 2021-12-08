@@ -411,6 +411,9 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
     double upper_bound, lower_bound;
     if (fabs(a0(axis)) > 1e-7)
     {
+      // Note that t_{l+p+1}-t{l+2} --> When l=0, and p=3 --> t_{4}-t{2} = deltaT
+      // Hence, a0 = (p+1)*(v1-v0)/(t_{4}-t{2}) = (p+1)*(v1-v0)/deltaT
+      // These lines below are valid only for sp_.p=3 (TODO)
       upper_bound = ((sp_.p - 1) * (sgn(a0(axis)) * par_.v_max(axis) - v0(axis)) / (a0(axis)));
       lower_bound = ((sp_.p - 1) * (-sgn(a0(axis)) * par_.v_max(axis) - v0(axis)) / (a0(axis)));
 
@@ -439,8 +442,8 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
 
   if (old_deltaT != deltaT)
   {
-    std::cout << red << bold << "old_deltaT= " << old_deltaT << reset << std::endl;
-    std::cout << red << bold << "deltaT= " << deltaT << reset << std::endl;
+    // std::cout << red << bold << "old_deltaT= " << old_deltaT << reset << std::endl;
+    // std::cout << red << bold << "deltaT= " << deltaT << reset << std::endl;
   }
 
   // Eigen::Vector3d bound1 = ((p_ - 1) * (par_.v_max - v0).array() / (a0.array()));

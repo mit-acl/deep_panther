@@ -214,8 +214,21 @@ class MyEnvironment(gym.Env):
     self.time=0.0
     self.timestep = 0
 
-    accel0=np.array([[0.0],[0.0],[0.0]])
-    self.w_state=State(np.array([[0.0],[0.0],[1.0]]), np.zeros((3,1)), accel0, np.zeros((1,1)), np.zeros((1,1)))
+    # p0=np.array([[0.0],[0.0],[1.0]])
+    # v0=np.array([[0.0],[0.0],[0.0]])
+    # a0=np.array([[0.0],[0.0],[0.0]])
+    # y0=np.zeros((1,1))
+    # ydot0=np.zeros((1,1))
+
+    p0=np.array([[0.0],[0.0],[1.0]])
+    v0=self.om.randomVel();
+    a0=self.om.randomAccel();
+    y0=self.om.randomYaw();
+    print("initial yaw= ",y0)
+    ydot0=self.om.randomYdot();
+
+
+    self.w_state=State(p0, v0, a0, y0, ydot0)
 
     if(isinstance(self.constant_obstacle_pos, type(None))):
       self.obsm.newRandomPos();
@@ -236,6 +249,14 @@ class MyEnvironment(gym.Env):
 
     # self.printwithName("THIS IS THE OBSERVATION:")
     # self.om.printObservation(f_observation)
+
+    # #################
+    # vel=self.om.randomVel();
+    # f_observation=self.om.getRandomObservation()
+    # f_observationn=self.om.normalizeObservation(f_observation);
+    # #################
+
+    self.om.assertObsIsNormalized(f_observationn, self.name + "[reset]" )
 
     self.previous_f_observation=self.om.denormalizeObservation(f_observationn)
     # assert observation.shape == self.observation_shape

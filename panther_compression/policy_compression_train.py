@@ -48,7 +48,7 @@ if __name__ == "__main__":
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
 
-    parser.add_argument("--n_rounds", default=40, type=int) #was called n_iters before
+    parser.add_argument("--n_rounds", default=150, type=int) #was called n_iters before
     parser.add_argument("--n_evals", default=1, type=int)
     parser.add_argument("--test_environment_max_steps", default=20, type=int)
     parser.add_argument("--train_environment_max_steps", default=20, type=int)
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     parser.add_argument("--no_init_and_final_eval", dest='init_and_final_eval', action='store_false')
     parser.set_defaults(init_and_final_eval=True)
     # Dagger properties
-    parser.add_argument("--rampdown_rounds", default=40, type=int)
+    parser.add_argument("--rampdown_rounds", default=150, type=int)
     
     args = parser.parse_args()
 

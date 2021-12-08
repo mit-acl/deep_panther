@@ -71,6 +71,8 @@ class ExpertPolicy(object):
 
         obs=self.om.denormalizeObservation(obs_n);
 
+        self.om.assertObsIsNormalized(obs_n, self.name)
+
         # self.printwithName(f"Got obs={obs}")
         # self.printwithName(f"Got the following observation")
         # self.om.printObservation(obs)
