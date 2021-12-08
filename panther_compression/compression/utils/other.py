@@ -159,7 +159,7 @@ class GTermManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.w_gterm=np.array([[random.uniform(4.0, 6.0)],[random.uniform(0.0, 0.0)],[random.uniform(1.0,1.0)]]);
+		self.w_gterm=np.array([[random.uniform(4.0, 6.0)],[random.uniform(-1.5, 1.5)],[random.uniform(1.0,1.0)]]);
 
 	def newRandomPosFarFrom_w_Position(self, w_position):
 		dist=0.0
@@ -335,7 +335,7 @@ class MyClampedUniformBSpline():
 		return result
 
 	def getLastPos(self):
-		result1=self.ctrl_pts[0:3,-1].reshape(3,1)
+		result1=self.ctrl_pts[0:3,-1].reshape(self.dim,1)
 		result2=self.getPosT(self.knots[-1])
 		np.testing.assert_allclose(result1-result2, 0, atol=1e-07)
 		return result1
@@ -352,6 +352,11 @@ def computeTotalTime(init_state, final_state, par_vmax, par_amax, par_factor_all
 	# invsqrt3_vector=math.sqrt(3)*np.ones((3,1));
 	total_time=par_factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, par_vmax, par_amax)
 	return total_time
+
+#Wraps an angle in [-pi, pi)
+#Works also for np arrays
+def wrapInmPiPi(data): #https://stackoverflow.com/a/15927914
+	return (data + np.pi) % (2 * np.pi) - np.pi
 
 class ObservationManager():
 	def __init__(self):
@@ -380,6 +385,18 @@ class ObservationManager():
 			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)
 
 		# assert print("Shape observation=", observation.shape==)
+
+	def randomVel(self):
+		return np.random.uniform(-self.v_max,self.v_max)
+
+	def randomAccel(self):
+		return np.random.uniform(-self.a_max,self.a_max)
+
+	def randomYdot(self):
+		return np.random.uniform(-self.ydot_max,self.ydot_max, size=(1,1))
+
+	def randomYaw(self):
+		return wrapInmPiPi(np.random.uniform(-np.pi,np.pi, size=(1,1)))
 
 	def obsIsNormalized(self, observation_normalized):
 		# print(observation_normalized.shape)
