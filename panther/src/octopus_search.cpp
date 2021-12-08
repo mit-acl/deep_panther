@@ -272,8 +272,9 @@ void OctopusSearch::setMaxValuesAndSamples(const Eigen::Vector3d& v_max, const E
     }
   }
 
-  unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-  shuffle(all_combinations_.begin(), all_combinations_.end(), std::default_random_engine(seed));
+  // This randomness below is commented because it doesn't help the student in the imitation learning framework
+  // unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+  // shuffle(all_combinations_.begin(), all_combinations_.end(), std::default_random_engine(seed));
 
   double min_voxel_size;
   double max_voxel_size;
