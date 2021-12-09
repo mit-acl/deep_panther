@@ -146,6 +146,8 @@ SolverIpopt::SolverIpopt(const mt::parameters &par)
   octopusSolver_ptr_ =
       std::unique_ptr<OctopusSearch>(new OctopusSearch(par_.basis, par_.num_seg, par_.deg_pos, par_.alpha_shrink));
 
+  std::cout << bold << "Reading .casadi files" << reset << std::endl;
+
   std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
   std::fstream myfile(folder + "index_instruction.txt", std::ios_base::in);
   myfile >> index_instruction_;
