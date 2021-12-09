@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import copy
 from gym import spaces
-from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager, getPANTHERparamsAsCppStruct, computeTotalTime
+from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager, getPANTHERparamsAsCppStruct, computeTotalTime, getObsAndGtermToCrossPath
 from colorama import init, Fore, Back, Style
 import py_panther
 
@@ -217,15 +217,21 @@ class MyEnvironment(gym.Env):
     accel0=np.array([[0.0],[0.0],[0.0]])
     self.w_state=State(np.array([[0.0],[0.0],[1.0]]), np.zeros((3,1)), accel0, np.zeros((1,1)), np.zeros((1,1)))
 
-    if(isinstance(self.constant_obstacle_pos, type(None))):
-      self.obsm.newRandomPos();
+    if(isinstance(self.constant_obstacle_pos, type(None)) and isinstance(self.constant_gterm_pos, type(None))):
+
+      if np.random.uniform(0, 1) > 0.5:
+        self.obsm.newRandomPos();
+        self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos);
+      else:
+        w_pos_obstacle, w_pos_g_term = getObsAndGtermToCrossPath();
+        self.obsm.setPos(w_pos_obstacle)
+        self.gm.setPos(w_pos_g_term);        
+        self.printwithNameAndColor("Using cross!")
+
     else:
       self.obsm.setPos(self.constant_obstacle_pos)
-
-    if(isinstance(self.constant_gterm_pos, type(None))):
-      self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos);
-    else:
       self.gm.setPos(self.constant_gterm_pos);
+
 
     
     # observation = self.om.getRandomNormalizedObservation()

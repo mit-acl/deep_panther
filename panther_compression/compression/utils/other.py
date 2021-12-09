@@ -154,12 +154,27 @@ def convertPPState2State(ppstate):
     return State(p, v, a, yaw, dyaw)
 
 
+def getObsAndGtermToCrossPath():
+
+	theta=random.uniform(-np.pi, np.pi)
+	radius_obstacle=random.uniform(1.5, 4.5)
+	radius_gterm=radius_obstacle + random.uniform(1.0, 3.0)
+
+	center=np.zeros((3,1))
+
+	w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
+	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta)],[radius_gterm*math.sin(theta)],[1.0]])
+
+	return w_pos_obstacle, w_pos_g_term
+
+
 class GTermManager():
 	def __init__(self):
 		self.newRandomPos();
 
 	def newRandomPos(self):
 		self.w_gterm=np.array([[random.uniform(4.0, 6.0)],[random.uniform(-1.5, 1.5)],[random.uniform(1.0,1.0)]]);
+		# self.w_gterm=np.array([[6.0],[0.0],[1.0]]);
 
 	def newRandomPosFarFrom_w_Position(self, w_position):
 		dist=0.0
