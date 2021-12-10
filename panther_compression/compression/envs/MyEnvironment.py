@@ -214,8 +214,12 @@ class MyEnvironment(gym.Env):
     self.time=0.0
     self.timestep = 0
 
-    accel0=np.array([[0.0],[0.0],[0.0]])
-    self.w_state=State(np.array([[0.0],[0.0],[1.0]]), np.zeros((3,1)), accel0, np.zeros((1,1)), np.zeros((1,1)))
+    p0=np.array([[6.0],[0.0],[1.0]])
+    v0=np.array([[0.0],[0.0],[0.0]])
+    a0=np.array([[0.0],[0.0],[0.0]])
+    y0=np.array([[-np.pi]])
+    ydot0=np.array([[0.0]])
+    self.w_state=State(p0, v0, a0, y0, ydot0)
 
     if(isinstance(self.constant_obstacle_pos, type(None)) and isinstance(self.constant_gterm_pos, type(None))):
 
