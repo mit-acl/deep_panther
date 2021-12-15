@@ -199,7 +199,7 @@ class ObstaclesManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		# self.random_pos=np.array([[random.uniform(-6.0, 6.0)],[random.uniform(-6.0, 6.0)],[random.uniform(0.5,1.5)]]);
+		self.random_pos=np.array([[random.uniform(-6.0, 6.0)],[random.uniform(-6.0, 6.0)],[random.uniform(0.5,1.5)]]);
 		# self.random_pos=np.array([[2.5],[0.0],[1.0]]);
 
 	def setPos(self, pos):

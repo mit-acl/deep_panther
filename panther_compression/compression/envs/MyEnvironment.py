@@ -214,7 +214,7 @@ class MyEnvironment(gym.Env):
     self.time=0.0
     self.timestep = 0
 
-    p0=np.array([[6.0],[0.0],[1.0]])
+    p0=np.array([[0.0],[0.0],[1.0]])
     v0=np.array([[0.0],[0.0],[0.0]])
     a0=np.array([[0.0],[0.0],[0.0]])
     y0=np.array([[-np.pi]])
