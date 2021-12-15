@@ -45,6 +45,8 @@ class TfMatrix():
 		# print("=============DEBUGING==========")
 	def rot(self): #Rotational part
 		return self.T[0:3,0:3]
+	def translation(self): #Translational part
+		return self.T[0:3,3].reshape(3,1)
 
 
 
@@ -354,6 +356,12 @@ class MyClampedUniformBSpline():
 		result2=self.getPosT(self.knots[-1])
 		np.testing.assert_allclose(result1-result2, 0, atol=1e-07)
 		return result1
+
+	def getT0(self):
+		return self.knots[0]
+
+	def getTf(self):
+		return self.knots[-1]
 
 def normalize(v):
 	norm = np.linalg.norm(v)

@@ -3,9 +3,20 @@ import sys
 import numpy as np
 import copy
 from gym import spaces
-from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager, getPANTHERparamsAsCppStruct, computeTotalTime, getObsAndGtermToCrossPath
+from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager, getPANTHERparamsAsCppStruct, computeTotalTime, getObsAndGtermToCrossPath, posAccelYaw2TfMatrix
 from colorama import init, Fore, Back, Style
 import py_panther
+##### For rosbag logging
+import rosbag
+from geometry_msgs.msg import PointStamped, TransformStamped, PoseStamped, Vector3, Quaternion, Pose
+import time
+import rospy
+from os.path import exists
+from visualization_msgs.msg import Marker
+from nav_msgs.msg import Path
+from tf2_msgs.msg import TFMessage
+import tf.transformations as tr
+#############################################
 
 class MyEnvironment(gym.Env):
   """
@@ -56,15 +67,28 @@ class MyEnvironment(gym.Env):
     self.constant_obstacle_pos=None
     self.constant_gterm_pos=None
 
+    self.record_bag=False
+
     self.reset()
 
   def __del__(self):
-    # self.eng.quit()
-    pass
+    if(self.record_bag==True):
+      self.bag.close();
+    # pass
 
   def changeConstantObstacleAndGtermPos(self, obstacle_pos, gterm_pos):
     self.constant_obstacle_pos=obstacle_pos
     self.constant_gterm_pos=gterm_pos
+
+  def startRecordBag(self, name_bag):
+    self.record_bag=True
+
+    if(exists(name_bag)):
+        option='a'
+    else:
+        option='w'
+    print("option= ", option)
+    self.bag=rosbag.Bag(name_bag, option)
 
   def printwithName(self,data):
     print(self.name+data)
@@ -106,6 +130,11 @@ class MyEnvironment(gym.Env):
 
 
     w_posBS, w_yawBS= self.am.f_actionAnd_w_State2wBS(f_action, self.w_state)
+
+    ######################################
+    if(self.record_bag==True):
+      self.saveInBag(self.previous_f_observation, w_posBS, w_yawBS, self.w_state)
+    ######################################
 
     ####################################
     ####### MOVE THE ENVIRONMENT #######
@@ -217,7 +246,7 @@ class MyEnvironment(gym.Env):
     p0=np.array([[0.0],[0.0],[1.0]])
     v0=np.array([[0.0],[0.0],[0.0]])
     a0=np.array([[0.0],[0.0],[0.0]])
-    y0=np.array([[-np.pi]])
+    y0=np.array([[0.0]])
     ydot0=np.array([[0.0]])
     self.w_state=State(p0, v0, a0, y0, ydot0)
 
@@ -260,6 +289,118 @@ class MyEnvironment(gym.Env):
   def close (self):
     raise NotImplementedError()
     return
+
+  def TfMatrix2RosQuatAndVector3(self, tf_matrix):
+
+      translation_ros=Vector3();
+      rotation_ros=Quaternion();
+
+      translation=tf_matrix.translation();
+      translation_ros.x=translation[0];
+      translation_ros.y=translation[1];
+      translation_ros.z=translation[2];
+      # q=tr.quaternion_from_matrix(w_state.w_T_f.T)
+      quaternion=tr.quaternion_from_matrix(tf_matrix.T) #See https://github.com/ros/geometry/issues/64
+      rotation_ros.x=quaternion[0] #See order at http://docs.ros.org/en/jade/api/tf/html/python/transformations.html
+      rotation_ros.y=quaternion[1]
+      rotation_ros.z=quaternion[2]
+      rotation_ros.w=quaternion[3]
+
+      return rotation_ros, translation_ros
+
+
+  def TfMatrix2RosPose(self, tf_matrix):
+
+      rotation_ros, translation_ros=self.TfMatrix2RosQuatAndVector3(tf_matrix);
+
+      pose_ros=Pose();
+      pose_ros.position.x=translation_ros.x
+      pose_ros.position.y=translation_ros.y
+      pose_ros.position.z=translation_ros.z
+
+      pose_ros.orientation=rotation_ros
+
+      return pose_ros
+
+
+  def saveInBag(self, f_obs, w_posBS, w_yawBS, w_state):
+
+      time_now=rospy.Time.from_sec(time.time());
+
+      # with rosbag.Bag(name_file, option) as bag:
+      f_v=self.om.getf_v(f_obs)
+      f_a=self.om.getf_a(f_obs)
+      yaw_dot=self.om.getyaw_dot(f_obs)
+      f_g=self.om.getf_g(f_obs)
+      obstacles=self.om.getObstacles(f_obs)
+      point_msg=PointStamped()
+
+      point_msg.header.frame_id = "f";
+      point_msg.header.stamp = time_now;
+      point_msg.point.x=f_g[0,0]
+      point_msg.point.y=f_g[1,0]
+      point_msg.point.z=f_g[2,0]
+
+      marker_msg=Marker();
+      marker_msg.header.frame_id = "f";
+      marker_msg.header.stamp = time_now;
+      marker_msg.ns = "ns";
+      marker_msg.id = 0;
+      marker_msg.type = marker_msg.CUBE;
+      marker_msg.action = marker_msg.ADD;
+      marker_msg.pose.position.x = obstacles[0].ctrl_pts[0][0];
+      marker_msg.pose.position.y = obstacles[0].ctrl_pts[0][1];
+      marker_msg.pose.position.z = obstacles[0].ctrl_pts[0][2];
+      marker_msg.pose.orientation.x = 0.0;
+      marker_msg.pose.orientation.y = 0.0;
+      marker_msg.pose.orientation.z = 0.0;
+      marker_msg.pose.orientation.w = 1.0;
+      marker_msg.scale.x = obstacles[0].bbox_inflated[0];
+      marker_msg.scale.y = obstacles[0].bbox_inflated[1];
+      marker_msg.scale.z = obstacles[0].bbox_inflated[2];
+      marker_msg.color.a = 1.0; 
+      marker_msg.color.r = 0.0;
+      marker_msg.color.g = 1.0;
+      marker_msg.color.b = 0.0;
+
+      obstacles[0].ctrl_pts[0][1]
+
+
+      tf_stamped=TransformStamped();
+      tf_stamped.header.frame_id="world"
+      tf_stamped.header.stamp=time_now
+      tf_stamped.child_frame_id="f"
+      rotation_ros, translation_ros=self.TfMatrix2RosQuatAndVector3(w_state.w_T_f)
+      tf_stamped.transform.translation=translation_ros
+      tf_stamped.transform.rotation=rotation_ros
+
+      tf_msg=TFMessage()
+      tf_msg.transforms.append(tf_stamped)
+
+
+      traj_msg=Path()
+      traj_msg.header.frame_id="world"
+      traj_msg.header.stamp=time_now
+
+      t0=w_posBS.getT0();
+      tf=w_posBS.getTf();
+
+      for t_i in np.arange(t0, tf, (tf-t0)/10.0):
+        pose_stamped=PoseStamped();
+        pose_stamped.header.frame_id="world"
+        pose_stamped.header.stamp=time_now
+        tf_matrix=posAccelYaw2TfMatrix(w_posBS.getPosT(t_i),w_posBS.getAccelT(t_i),w_yawBS.getPosT(t_i))
+
+        pose_stamped.pose=self.TfMatrix2RosPose(tf_matrix)
+
+        traj_msg.poses.append(pose_stamped)
+
+
+
+      self.bag.write('/path', traj_msg, time_now)
+      self.bag.write('/g', point_msg, time_now)
+      self.bag.write('/obs', marker_msg, time_now)
+      self.bag.write('/tf', tf_msg, time_now)
 
 
 
