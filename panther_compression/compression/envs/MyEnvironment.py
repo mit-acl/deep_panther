@@ -252,9 +252,10 @@ class MyEnvironment(gym.Env):
 
     if(isinstance(self.constant_obstacle_pos, type(None)) and isinstance(self.constant_gterm_pos, type(None))):
 
-      if np.random.uniform(0, 1) > 0.5:
+      if np.random.uniform(0, 1) > 0.0:
         self.obsm.newRandomPos();
-        self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos);
+        # self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos);
+        self.gm.newRandomPos();
       else:
         w_pos_obstacle, w_pos_g_term = getObsAndGtermToCrossPath();
         self.obsm.setPos(w_pos_obstacle)

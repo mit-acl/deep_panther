@@ -175,8 +175,8 @@ class GTermManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.w_gterm=np.array([[random.uniform(-6.0, 6.0)],[random.uniform(-6.0, 6.0)],[random.uniform(1.0,1.0)]]);
-		# self.w_gterm=np.array([[6.0],[0.0],[1.0]]);
+		# self.w_gterm=np.array([[random.uniform(3.0, 6.0)],[random.uniform(-4.0, 4.0)],[random.uniform(1.0,1.0)]]);
+		self.w_gterm=np.array([[5.0],[0.0],[1.0]]);
 
 	def newRandomPosFarFrom_w_Position(self, w_position):
 		dist=0.0
@@ -201,8 +201,8 @@ class ObstaclesManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.random_pos=np.array([[random.uniform(-6.0, 6.0)],[random.uniform(-6.0, 6.0)],[random.uniform(1.0,1.0)]]);
-		# self.random_pos=np.array([[2.5],[0.0],[1.0]]);
+		self.random_pos=np.array([[random.uniform(2.5, 2.5)],[random.uniform(-4.0, 4.0)],[random.uniform(1.0,1.0)]]);
+		#self.random_pos=np.array([[2.5],[0.0],[1.0]]);
 
 	def setPos(self, pos):
 		self.random_pos=pos
