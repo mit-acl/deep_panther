@@ -38,7 +38,7 @@ class StudentPolicy(BasePolicy):
         observation_space: gym.spaces.Space,
         action_space: gym.spaces.Space,
         lr_schedule = Callable[[float], float], #TODO: Andrea: not used, dummy
-        net_arch: [List[int]] = [32, 32],
+        net_arch: [List[int]] = [128, 128],
         features_extractor_class: Type[BaseFeaturesExtractor] = FlattenExtractor,
         features_extractor_kwargs: Optional[Dict[str, Any]] = None,
         features_dim: int = 2, # Size of input features
@@ -111,15 +111,15 @@ class StudentPolicy(BasePolicy):
         print(self.name+data)
 
 
-    def get_action_dist_params(self, obs: th.Tensor) -> Tuple[th.Tensor, th.Tensor, Dict[str, th.Tensor]]:
+    def get_action_dist_params(self, obs_n: th.Tensor) -> Tuple[th.Tensor, th.Tensor, Dict[str, th.Tensor]]:
         """
         Get the parameters for the action distribution.
 
-        :param obs:
+        :param obs_n:
         :return:
             Mean, standard deviation and optional keyword arguments.
         """
-        features = self.extract_features(obs)
+        features = self.extract_features(obs_n)
         latent_pi = self.latent_pi(features)
         mean_actions = self.mu(latent_pi)
 
@@ -127,8 +127,8 @@ class StudentPolicy(BasePolicy):
         log_std = th.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
         return mean_actions.float(), log_std, {}
 
-    def forward(self, obs: th.Tensor, deterministic: bool = False) -> th.Tensor:
-        mean_actions, log_std, kwargs = self.get_action_dist_params(obs)
+    def forward(self, obs_n: th.Tensor, deterministic: bool = False) -> th.Tensor:
+        mean_actions, log_std, kwargs = self.get_action_dist_params(obs_n)
         # Note: the action is squashed
         output=self.action_dist.actions_from_params(mean_actions, log_std, deterministic=deterministic, **kwargs);
         return output
@@ -138,13 +138,16 @@ class StudentPolicy(BasePolicy):
     #     # return action and associated log prob
     #     return self.action_dist.log_prob_from_params(mean_actions, log_std, **kwargs)
 
-    def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
+    def _predict(self, obs_n: th.Tensor, deterministic: bool = False) -> th.Tensor:
         self.printwithName(f"Calling student")
-        # self.printwithName(f"Received obs={observation}")
+        # self.printwithName(f"Received obs={obs_n}")
+        obs=self.om.denormalizeObservation(obs_n.cpu().numpy().reshape(self.om.getObservationShape()))
+        self.om.printObservation(obs)
+
         # self.printwithName(f"Received obs={observation.numpy()}")
         # assertIsNormalized(observation.cpu().numpy())
         # self.printwithName(f"Received obs shape={observation.shape}")
-        action = self.forward(observation, deterministic)
+        action = self.forward(obs_n, deterministic)
         # self.printwithName(f"action={action}")
         self.am.assertActionIsNormalized(action.cpu().numpy().reshape(self.am.getActionShape()), self.name)
 
