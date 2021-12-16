@@ -48,13 +48,13 @@ if __name__ == "__main__":
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
 
-    parser.add_argument("--n_rounds", default=5, type=int) #was called n_iters before
+    parser.add_argument("--n_rounds", default=10, type=int) #was called n_iters before
     parser.add_argument("--n_evals", default=1, type=int)
-    parser.add_argument("--test_environment_max_steps", default=20, type=int)
-    parser.add_argument("--train_environment_max_steps", default=20, type=int)
+    parser.add_argument("--test_environment_max_steps", default=1, type=int)
+    parser.add_argument("--train_environment_max_steps", default=1, type=int)
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
-    parser.add_argument("--n_traj_per_round", default=10, type=int)
+    parser.add_argument("--n_traj_per_round", default=32, type=int)
     # Method changes
     parser.add_argument("--no_train", dest='train', action='store_false')
     parser.set_defaults(train=True)
@@ -63,8 +63,10 @@ if __name__ == "__main__":
     parser.add_argument("--no_init_and_final_eval", dest='init_and_final_eval', action='store_false')
     parser.set_defaults(init_and_final_eval=False)
     # Dagger properties
-    parser.add_argument("--rampdown_rounds", default=5000, type=int)
+    parser.add_argument("--rampdown_rounds", default=10, type=int)
     
+    record_bag=False;
+
     args = parser.parse_args()
 
     printInBoldBlue("---------------- Input Arguments: -----------------------")
@@ -115,7 +117,8 @@ if __name__ == "__main__":
     train_env.seed(args.seed)
     train_env.action_space.seed(args.seed)
     train_env.set_len_ep(args.train_environment_max_steps) 
-    train_env.startRecordBag("training.bag") 
+    if(record_bag):
+        train_env.startRecordBag("training.bag") 
 
     print(f"[Train Env] Ep. Len:  {train_env.get_len_ep()} [steps].")
 
@@ -182,11 +185,11 @@ if __name__ == "__main__":
 
 
     # #Launch tensorboard visualization
-    # os.system("pkill -f tensorboard")
-    # proc1 = subprocess.Popen(["tensorboard","--logdir",LOG_PATH,"--bind_all"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-    # proc2 = subprocess.Popen(["google-chrome","http://jtorde-alienware-aurora-r8:6006/"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-    # # os.system("tensorboard --logdir "+args.log_dir +" --bind_all")
-    # # os.system("google-chrome http://jtorde-alienware-aurora-r8:6006/")  
+    os.system("pkill -f tensorboard")
+    proc1 = subprocess.Popen(["tensorboard","--logdir",LOG_PATH,"--bind_all"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    proc2 = subprocess.Popen(["google-chrome","http://jtorde-alienware-aurora-r8:6006/"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    # os.system("tensorboard --logdir "+args.log_dir +" --bind_all")
+    # os.system("google-chrome http://jtorde-alienware-aurora-r8:6006/")  
 
 
     stats = {"training":list(), "eval_no_dist":list()}
