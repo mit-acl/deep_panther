@@ -26,7 +26,7 @@ def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger):
         custom_logger=custom_logger,
     )
 
-def make_bc_trainer(tmpdir, venv, custom_logger)):
+def make_bc_trainer(tmpdir, venv, custom_logger):
     """Will make DAgger, but with a constant beta, set to 1 
     (always 100% prob of using expert)"""
     beta_schedule=dagger.AlwaysExpertBetaSchedule()
@@ -92,7 +92,8 @@ def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full
     next_round_num = trainer.extend_and_update(dict(n_epochs=n_epochs))#use_only_last_coll_ds=use_only_last_coll_ds
 
     # Use the round number to figure out stats of the trajectories we just collected.
-    curr_rollout_stats, descriptors = rollout_stats(trainer.load_demos_at_round(next_round_num-1, augmented_demos=False))
+    tmp=trainer.load_demos_at_round(next_round_num-1, augmented_demos=False)
+    curr_rollout_stats, descriptors = rollout_stats(tmp)
     print("[Training] reward: {}, len: {}.".format(curr_rollout_stats["return_mean"], curr_rollout_stats["len_mean"]))
 
     # Store the policy obtained at this round
@@ -100,7 +101,7 @@ def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full
     print(f"[Training] Training completed. Policy saved to: {save_full_policy_path}.")
 
     # Save training logs
-    descriptors["success"] = compute_success(trainer.load_demos_at_round(next_round_num-1, augmented_demos=False), trainer.env)
+    descriptors["success"] = compute_success(trainer.load_demos_at_round(next_round_num-1, augmented_demos=False), trainer.venv)
     logs = pd.DataFrame(descriptors)
     logs = logs.assign(disturbance = False) # TODO: Andrea: change this flag if disturbance is set to true in training environment
     # (maybe read flag from training environment itself)
