@@ -113,21 +113,30 @@ if __name__ == "__main__":
     # Create and set properties for TRAINING environment:
     printInBoldBlue("---------------- Making Environments: -------------------")
     print("[Train Env] Making training environment...")
-    train_env = gym.make(ENV_NAME)
-    train_env.seed(args.seed)
-    train_env.action_space.seed(args.seed)
-    train_env.set_len_ep(args.train_environment_max_steps) 
-    if(record_bag):
-        train_env.startRecordBag("training.bag") 
+    # train_env = gym.make(ENV_NAME)
+    # train_env.seed(args.seed)
+    # train_env.action_space.seed(args.seed)
+    # train_env.set_len_ep(args.train_environment_max_steps) 
+    # if(record_bag):
+    #     train_env.startRecordBag("training.bag")
+    # print(f"[Train Env] Ep. Len:  {train_env.get_len_ep()} [steps].")
 
-    print(f"[Train Env] Ep. Len:  {train_env.get_len_ep()} [steps].")
+
+    train_venv = util.make_vec_env(env_name=ENV_NAME, n_envs=N_VEC, seed=args.seed, parallel=False)
+    train_venv.seed(args.seed)
+    train_venv.env_method("set_len_ep", (args.train_environment_max_steps)) 
+    print("[Train Env] Ep. Len:  {} [steps].".format(train_venv.get_attr("len_episode")))
+
+    if(record_bag):
+        train_venv.startRecordBag("training.bag") 
+
 
     # Create and set properties for EVALUATION environment
     # TODO: Andrea: remove venv since it is not properly used, or implement it correctly. 
     print("[Test Env] Making test environment...")
     test_venv = util.make_vec_env(env_name=ENV_NAME, n_envs=N_VEC, seed=args.seed, parallel=False)
     test_venv.seed(args.seed)
-    test_venv.env_method("set_len_ep", (args.test_environment_max_steps)) # TODO: ANDREA: increase
+    test_venv.env_method("set_len_ep", (args.test_environment_max_steps)) 
     print("[Test Env] Ep. Len:  {} [steps].".format(test_venv.get_attr("len_episode")))
     # test_venv = gym.make(ENV_NAME)
     # test_venv.seed(args.seed)
@@ -135,24 +144,25 @@ if __name__ == "__main__":
     # test_venv.set_len_ep(args.test_environment_max_steps)
     # print(f"[Train Env] Ep. Len:  {test_venv.get_len_ep()} [steps].")
 
+    # Init logging
+    tempdir = tempfile.TemporaryDirectory(prefix="quickstart")
+    tempdir_path = LOG_PATH#"evals/log_tensorboard"#LOG_PATH#pathlib.Path(tempdir.name)
+    print( f"All Tensorboards and logging are being written inside {tempdir_path}/.")
+    custom_logger=logger.configure(tempdir_path,  format_strs=["log", "csv", "tensorboard"])  # "stdout"
 
     
     printInBoldBlue("---------------- Making Learner Policy: -------------------")
     # Create learner policy
     if args.on_policy_trainer: 
-        trainer = make_dagger_trainer(tmpdir=DATA_POLICY_PATH, env=train_env, rampdown_rounds=args.rampdown_rounds, batch_size=BATCH_SIZE)
+        trainer = make_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger) #, batch_size=BATCH_SIZE
     else: 
-        trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, env=train_env, batch_size=BATCH_SIZE)
+        trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger) #, batch_size=BATCH_SIZE
 
     printInBoldBlue("---------------- Making Expert Policy: --------------------")
     # Create expert policy 
     expert_policy = ExpertPolicy()
 
-    # Init logging
-    tempdir = tempfile.TemporaryDirectory(prefix="quickstart")
-    tempdir_path = LOG_PATH#"evals/log_tensorboard"#LOG_PATH#pathlib.Path(tempdir.name)
-    print( f"All Tensorboards and logging are being written inside {tempdir_path}/.")
-    logger.configure(tempdir_path,  format_strs=["log", "csv", "tensorboard"])  # "stdout"
+
 
     if(args.init_and_final_eval):
         printInBoldBlue("---------------- Preliminiary Evaluation: --------------------")

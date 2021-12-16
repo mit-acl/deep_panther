@@ -8,30 +8,43 @@ from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
 from compression.utils.other import ExpertDidntSucceed
 
-def make_dagger_trainer(tmpdir, env, rampdown_rounds, batch_size):
+def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger):
     beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
-    return dagger.DAggerTrainer(
-        env,
-        tmpdir,
-        beta_schedule,
+    bc_trainer = bc.BC(
+        observation_space=venv.observation_space,
+        action_space=venv.action_space,
         optimizer_kwargs=dict(lr=1e-3),
-        policy_class = StudentPolicy,
-        policy_kwargs = {"features_dim" : env.observation_space.shape[1]},
-        batch_size= batch_size,
+        custom_logger=custom_logger,
+        policy=StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space)
     )
 
-def make_bc_trainer(tmpdir, env, batch_size):
+    return dagger.DAggerTrainer(
+        venv=venv,
+        scratch_dir=tmpdir,
+        beta_schedule=beta_schedule,
+        bc_trainer=bc_trainer,
+        custom_logger=custom_logger,
+    )
+
+def make_bc_trainer(tmpdir, venv, custom_logger)):
     """Will make DAgger, but with a constant beta, set to 1 
     (always 100% prob of using expert)"""
     beta_schedule=dagger.AlwaysExpertBetaSchedule()
-    return dagger.DAggerTrainer(
-        env,
-        tmpdir,
-        beta_schedule,
+
+    bc_trainer = bc.BC(
+        observation_space=venv.observation_space,
+        action_space=venv.action_space,
         optimizer_kwargs=dict(lr=1e-3),
-        policy_class = StudentPolicy,
-        policy_kwargs = {"features_dim" : env.observation_space.shape[1]},
-        batch_size= batch_size,
+        custom_logger=custom_logger,
+        policy=StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space)
+    )
+
+    return dagger.DAggerTrainer(
+        venv=venv,
+        scratch_dir=tmpdir,
+        beta_schedule=beta_schedule,
+        bc_trainer=bc_trainer,
+        custom_logger=custom_logger,
     )
 
 #Trainer is the student
@@ -57,7 +70,7 @@ def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full
         done = False
         while not done:
             try: # Teacher may fail
-                (expert_action,), act_infos = expert.predict(obs[None], deterministic=True)# Why OBS[None]??
+                expert_action, act_infos = expert.predict(obs[None], deterministic=True)# Why OBS[None]??
             except ExpertDidntSucceed as e:
                 # print("[Training] The following exception occurred: {}".format(e))
                 # print(f"[Training] Latest observation: {obs[None]}")
@@ -70,13 +83,13 @@ def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full
                     obs = collector.reset()
             else: 
                 # Executed if no exception occurs
-                obs, _, done, _ = collector.step(expert_action, act_infos)
+                obs, _, done, _ = collector.step(expert_action)#act_infos
                 expert_succeeded_at_least_once = True
 
     
     # Add the collected rollout to the dataset and trains the classifier.
     #next_round_num = trainer.extend_and_update(n_epochs=n_epochs)
-    next_round_num = trainer.selective_extend_and_update(n_epochs=n_epochs, use_only_last_coll_ds=use_only_last_coll_ds)
+    next_round_num = trainer.extend_and_update(dict(n_epochs=n_epochs))#use_only_last_coll_ds=use_only_last_coll_ds
 
     # Use the round number to figure out stats of the trajectories we just collected.
     curr_rollout_stats, descriptors = rollout_stats(trainer.load_demos_at_round(next_round_num-1, augmented_demos=False))

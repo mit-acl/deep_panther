@@ -549,6 +549,9 @@ class ObservationManager():
 
 	# def denormalize(self, )
 
+	def getObservationSize(self):
+		return self.observation_size
+
 	def getObservationShape(self):
 		return (1,self.observation_size)
 
@@ -695,6 +698,9 @@ class ActionManager():
 		action[0,0:-1]=action_normalized[0,0:-1]*self.normalization_constant #Elementwise multiplication
 		action[0,-1]=(self.fitter_total_time/2.0)*(action_normalized[0,-1]+1) #Note that action[0,-1] is in [0, fitter_total_time]
 		return action
+
+	def getActionSize(self):
+		return self.action_size
 
 	def getActionShape(self):
 		return (1,self.action_size)

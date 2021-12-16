@@ -38,10 +38,9 @@ class StudentPolicy(BasePolicy):
         observation_space: gym.spaces.Space,
         action_space: gym.spaces.Space,
         lr_schedule = Callable[[float], float], #TODO: Andrea: not used, dummy
-        net_arch: [List[int]] = [128, 128],
+        net_arch: [List[int]] = [64, 64],
         features_extractor_class: Type[BaseFeaturesExtractor] = FlattenExtractor,
         features_extractor_kwargs: Optional[Dict[str, Any]] = None,
-        features_dim: int = 2, # Size of input features
         activation_fn: Type[nn.Module] = nn.ReLU,
         optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
         optimizer_kwargs: Optional[Dict[str, Any]] = None,
@@ -66,7 +65,6 @@ class StudentPolicy(BasePolicy):
 
         # Save arguments to re-create object at loading
         self.net_arch = net_arch
-        self.features_dim = features_dim
         self.activation_fn = activation_fn
 
 
@@ -76,12 +74,14 @@ class StudentPolicy(BasePolicy):
         self.om=ObservationManager();
         self.am=ActionManager();
 
-        print("features_dim= ", features_dim)
+        self.features_dim=self.om.getObservationSize()
+
+        print("features_dim= ", self.features_dim)
 
         action_dim = get_action_dim(self.action_space)
-        latent_pi_net = create_mlp(features_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
+        latent_pi_net = create_mlp(self.features_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
         self.latent_pi = nn.Sequential(*latent_pi_net)
-        last_layer_dim = net_arch[-1] if len(net_arch) > 0 else features_dim
+        last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
 
 
 
