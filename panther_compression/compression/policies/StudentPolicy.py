@@ -142,7 +142,7 @@ class StudentPolicy(BasePolicy):
         self.printwithName(f"Calling student")
         # self.printwithName(f"Received obs={obs_n}")
         obs=self.om.denormalizeObservation(obs_n.cpu().numpy().reshape(self.om.getObservationShape()))
-        self.om.printObservation(obs)
+        # self.om.printObservation(obs)
 
         # self.printwithName(f"Received obs={observation.numpy()}")
         # assertIsNormalized(observation.cpu().numpy())
