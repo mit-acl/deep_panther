@@ -65,7 +65,7 @@ if __name__ == "__main__":
     # Dagger properties
     parser.add_argument("--rampdown_rounds", default=1, type=int)
     
-    record_bag=True;
+    record_bag=False;
     lr=1e-3
 
     args = parser.parse_args()
