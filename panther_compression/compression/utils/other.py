@@ -158,14 +158,17 @@ def convertPPState2State(ppstate):
 
 def getObsAndGtermToCrossPath():
 
-	theta=random.uniform(-np.pi, np.pi)
+	# thetas=[-np.pi/4, np.pi/4]
+	# theta=random.choice(thetas)
+	theta=random.uniform(-np.pi/2, np.pi/2)
 	radius_obstacle=random.uniform(1.5, 4.5)
+	radius_obstacle=2.0
 	radius_gterm=radius_obstacle + random.uniform(1.0, 3.0)
-
+	theta_g_term=theta + random.uniform(-0.35, 0.35) 
 	center=np.zeros((3,1))
 
 	w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
-	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta)],[radius_gterm*math.sin(theta)],[1.0]])
+	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[1.0]])
 
 	return w_pos_obstacle, w_pos_g_term
 
@@ -175,8 +178,8 @@ class GTermManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		# self.w_gterm=np.array([[random.uniform(3.0, 6.0)],[random.uniform(-4.0, 4.0)],[random.uniform(1.0,1.0)]]);
-		self.w_gterm=np.array([[5.0],[0.0],[1.0]]);
+		self.w_gterm=np.array([[random.uniform(-4.0, 4.0)],[random.uniform(-4.0, 4.0)],[random.uniform(1.0,1.0)]]);
+		#self.w_gterm=np.array([[5.0],[0.0],[1.0]]);
 
 	def newRandomPosFarFrom_w_Position(self, w_position):
 		dist=0.0
@@ -201,8 +204,8 @@ class ObstaclesManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.random_pos=np.array([[random.uniform(2.5, 2.5)],[random.uniform(-4.0, 4.0)],[random.uniform(1.0,1.0)]]);
-		#self.random_pos=np.array([[2.5],[0.0],[1.0]]);
+		self.random_pos=np.array([[random.uniform(-4.0, 4.0)],[random.uniform(-4.0, 4.0)],[random.uniform(1.0,1.0)]]);
+		#self.random_pos=np.array([[2.5],[1.0],[1.0]]);
 
 	def setPos(self, pos):
 		self.random_pos=pos
@@ -569,6 +572,7 @@ class ObservationManager():
 
 		dist2gterm=np.linalg.norm(f_gterm_pos);
 		f_g= min(dist2gterm-1e-4, self.Ra)*normalize(f_gterm_pos)
+		#f_g= self.Ra*normalize(f_gterm_pos)
 		# print("w_state.f_vel().flatten()= ", w_state.f_vel().flatten())
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
@@ -865,6 +869,10 @@ class StudentCaller():
         #Construct observation
         observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_init_state, w_gterm, w_obstacles)
         observation_normalized=self.om.normalizeObservation(observation)
+
+        print(f"Going to call student with this raw sobservation={observation}")
+        print(f"Which is...")
+        self.om.printObservation(observation)
 
         start = time.time()
         action_normalized,info = self.student_policy.predict(observation_normalized, deterministic=True) 

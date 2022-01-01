@@ -117,6 +117,9 @@ class ExpertPolicy(object):
         # self.printwithName("===================================================")
         
         # self.printwithName(f"action_normalized= {action_normalized}")
+        # self.printwithName(f"action= {action}")
+        # self.printwithName(f"action=")
+        # self.am.printAction(action)
 
 
         Q=0.0; #Not used right now I think

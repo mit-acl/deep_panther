@@ -8,12 +8,12 @@ from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
 from compression.utils.other import ExpertDidntSucceed
 
-def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger):
+def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr):
     beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
     bc_trainer = bc.BC(
         observation_space=venv.observation_space,
         action_space=venv.action_space,
-        optimizer_kwargs=dict(lr=1e-3),
+        optimizer_kwargs=dict(lr=lr),
         custom_logger=custom_logger,
         policy=StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space)
     )
@@ -49,7 +49,7 @@ def make_bc_trainer(tmpdir, venv, custom_logger):
 
 #Trainer is the student
 def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full_policy_path, use_only_last_coll_ds):
-    assert n_traj_per_round > 0, "n_traj_per_roundneeds to be at least one!"
+    # assert n_traj_per_round > 0, "n_traj_per_round needs to be at least one!"
     assert n_epochs > 0, "Number of training epochs must be >= 0!"
     
     collector = trainer.get_trajectory_collector()
@@ -92,8 +92,7 @@ def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full
     next_round_num = trainer.extend_and_update(dict(n_epochs=n_epochs))#use_only_last_coll_ds=use_only_last_coll_ds
 
     # Use the round number to figure out stats of the trajectories we just collected.
-    tmp=trainer.load_demos_at_round(next_round_num-1, augmented_demos=False)
-    curr_rollout_stats, descriptors = rollout_stats(tmp)
+    curr_rollout_stats, descriptors = rollout_stats(trainer.load_demos_at_round(next_round_num-1, augmented_demos=False))
     print("[Training] reward: {}, len: {}.".format(curr_rollout_stats["return_mean"], curr_rollout_stats["len_mean"]))
 
     # Store the policy obtained at this round

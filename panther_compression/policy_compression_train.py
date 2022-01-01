@@ -48,13 +48,13 @@ if __name__ == "__main__":
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
 
-    parser.add_argument("--n_rounds", default=40, type=int) #was called n_iters before
+    parser.add_argument("--n_rounds", default=20, type=int) #was called n_iters before
     parser.add_argument("--n_evals", default=1, type=int)
     parser.add_argument("--test_environment_max_steps", default=1, type=int)
     parser.add_argument("--train_environment_max_steps", default=1, type=int)
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
-    parser.add_argument("--n_traj_per_round", default=32, type=int)
+    parser.add_argument("--n_traj_per_round", default=90, type=int)
     # Method changes
     parser.add_argument("--no_train", dest='train', action='store_false')
     parser.set_defaults(train=True)
@@ -63,11 +63,23 @@ if __name__ == "__main__":
     parser.add_argument("--no_init_and_final_eval", dest='init_and_final_eval', action='store_false')
     parser.set_defaults(init_and_final_eval=False)
     # Dagger properties
-    parser.add_argument("--rampdown_rounds", default=40, type=int)
+    parser.add_argument("--rampdown_rounds", default=1, type=int)
     
-    record_bag=False;
+    record_bag=True;
+    lr=1e-3
 
     args = parser.parse_args()
+
+    train_only_supervised=False
+
+    if(train_only_supervised==True):
+        args.n_rounds=40; #It will use the demonstrations of these folders
+        args.n_traj_per_round=0
+    else:
+        os.system("rm -rf "+args.log_dir)
+        os.system("rm -rf "+args.policy_dir)
+        pass
+
 
     printInBoldBlue("---------------- Input Arguments: -----------------------")
     print("Trainer: {}.".format("DAgger" if args.on_policy_trainer ==True else "BC" ))
@@ -82,8 +94,8 @@ if __name__ == "__main__":
 
 
     #Remove previous directories
-    os.system("rm -rf "+args.log_dir)
-    os.system("rm -rf "+args.policy_dir)
+    # os.system("rm -rf "+args.log_dir)
+    # os.system("rm -rf "+args.policy_dir)
 
     # np.set_printoptions(precision=3)
 
@@ -154,7 +166,7 @@ if __name__ == "__main__":
     printInBoldBlue("---------------- Making Learner Policy: -------------------")
     # Create learner policy
     if args.on_policy_trainer: 
-        trainer = make_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger) #, batch_size=BATCH_SIZE
+        trainer = make_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr) #, batch_size=BATCH_SIZE
     else: 
         trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger) #, batch_size=BATCH_SIZE
 
