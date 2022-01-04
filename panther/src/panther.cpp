@@ -825,9 +825,11 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
     std::cout << "Calling the student!" << std::endl;
     pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos);
     std::cout << "Called the student!" << std::endl;
-    best_solution = result.cast<si::solOrGuess>();
+    best_solutions = result.cast<std::vector<si::solOrGuess>>();
 
-    A.printHorizontal();
+    // Hack: for now take the first traj
+    best_solution = best_solutions[0];
+    ///////////////////////////////
 
     best_solution.fillTraj(par_.dc);  // This could also be done in the predict method of the python class
     best_solution.printInfo();

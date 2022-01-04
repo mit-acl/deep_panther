@@ -1,3 +1,9 @@
+[Jan 2022] Check the Hacks
+
+[Jan 2022] in solver_ipopt.cpp, I'm copying with same solution in case no enough solutions suceeded
+
+
+
 
 (Dec, 6)--> In Oct. Search, use max(v_max, initial_state_vel) [same for a_max]
 --> bbox doesn't make too  much sense given that we keep changing the axis 

@@ -942,12 +942,21 @@ bool SolverIpopt::optimize(bool supress_all_prints)
 
   if (anySolutionSucceeded())
   {
+    // Copy the best solution found to the non-successful solutions
+    si::solOrGuess best_solution = getBestSolution();
+    for (auto &solution : solutions_)
+    {
+      if (solution.solver_succeeded == false)
+      {
+        solution = best_solution;
+      }
+    }
     std::cout << "Returning true" << std::endl;
     return true;
   }
   else
   {
-    std::cout << "Returning false" << std::endl;
+    std::cout << "NOT ENOUGH SOLUTIONS SUCCESSFUL" << std::endl;
     return false;
   }
 

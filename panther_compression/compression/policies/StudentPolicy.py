@@ -131,6 +131,14 @@ class StudentPolicy(BasePolicy):
         mean_actions, log_std, kwargs = self.get_action_dist_params(obs_n)
         # Note: the action is squashed
         output=self.action_dist.actions_from_params(mean_actions, log_std, deterministic=deterministic, **kwargs);
+
+
+        # self.printwithName(f"In forward, output before reshaping={output.shape}")
+        before_shape=list(output.shape)
+        #Note that before_shape[i,:,:] containes one action i
+        output=th.reshape(output, (before_shape[0],) + self.am.getActionShape())
+        # self.printwithName(f"In forward, returning shape={output.shape}")
+        
         return output
 
     # def action_log_prob(self, obs: th.Tensor) -> Tuple[th.Tensor, th.Tensor]:
@@ -151,7 +159,7 @@ class StudentPolicy(BasePolicy):
         # self.printwithName(f"action={action}")
         self.am.assertActionIsNormalized(action.cpu().numpy().reshape(self.am.getActionShape()), self.name)
 
-        # self.printwithName(f"Returning action shape={action.shape}")
+        self.printwithName(f"In predict_, returning shape={action.shape}")
         return action
 
     # def predictAndDenormalize(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:

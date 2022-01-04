@@ -104,13 +104,13 @@ class ExpertPolicy(object):
         else:
             self.printSucessOpt();
 
-        best_solution=self.my_SolverIpopt.getBestSolution();
+        best_solutions=self.my_SolverIpopt.getBestSolutions();
 
         # self.printwithName("Optimizer called, best solution= ")
 
         # best_solution.printInfo()
 
-        action=self.am.solOrGuess2action(best_solution)
+        action=self.am.solsOrGuesses2action(best_solutions)
 
         action_normalized=self.am.normalizeAction(action)
 

@@ -6,16 +6,22 @@ from imitation.data import types, rollout
 from imitation.data.rollout import generate_trajectories, rollout_stats
 from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
-from compression.utils.other import ExpertDidntSucceed
+from compression.utils.other import ExpertDidntSucceed, ActionManager
 
-def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr):
+def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size):
     beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
+
+    am=ActionManager()
+
+
     bc_trainer = bc.BC(
         observation_space=venv.observation_space,
         action_space=venv.action_space,
         optimizer_kwargs=dict(lr=lr),
         custom_logger=custom_logger,
-        policy=StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space)
+        policy=StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space),
+        batch_size=batch_size,
+        traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts
     )
 
     return dagger.DAggerTrainer(
@@ -26,17 +32,22 @@ def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr):
         custom_logger=custom_logger,
     )
 
-def make_bc_trainer(tmpdir, venv, custom_logger):
+def make_bc_trainer(tmpdir, venv, custom_logger, lr, batch_size):
     """Will make DAgger, but with a constant beta, set to 1 
     (always 100% prob of using expert)"""
     beta_schedule=dagger.AlwaysExpertBetaSchedule()
+
+    am=ActionManager()
+
 
     bc_trainer = bc.BC(
         observation_space=venv.observation_space,
         action_space=venv.action_space,
         optimizer_kwargs=dict(lr=1e-3),
         custom_logger=custom_logger,
-        policy=StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space)
+        policy=StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space),
+        batch_size=batch_size,
+        traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts
     )
 
     return dagger.DAggerTrainer(
@@ -83,7 +94,7 @@ def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full
                     obs = collector.reset()
             else: 
                 # Executed if no exception occurs
-                obs, _, done, _ = collector.step(expert_action)#act_infos
+                obs, _, done, _ = collector.step([expert_action])#The [] were added by jtorde, 1/1/22 #act_infos
                 expert_succeeded_at_least_once = True
 
     

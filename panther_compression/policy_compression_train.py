@@ -30,6 +30,11 @@ from compression.utils.eval import evaluate_policy
 
 from stable_baselines3.common.env_checker import check_env
 
+#################### Coloring of the python errors, https://stackoverflow.com/a/52797444/6057617
+import sys
+from IPython.core import ultratb
+###########################
+
 def printInBoldBlue(data_string):
     print(Style.BRIGHT+Fore.BLUE+data_string+Style.RESET_ALL)
 def printInBoldRed(data_string):
@@ -39,6 +44,12 @@ def printInBoldGreen(data_string):
 
 
 if __name__ == "__main__":
+
+    #################### Coloring of the python errors, https://stackoverflow.com/a/52797444/6057617
+    sys.excepthook = ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_pdb=False)
+    ####################
+
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=2)
     parser.add_argument("--log_dir", type=str, default="evals/log_dagger") # usually "log"
@@ -48,13 +59,13 @@ if __name__ == "__main__":
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
 
-    parser.add_argument("--n_rounds", default=20, type=int) #was called n_iters before
+    parser.add_argument("--n_rounds", default=10, type=int) #was called n_iters before
     parser.add_argument("--n_evals", default=1, type=int)
     parser.add_argument("--test_environment_max_steps", default=1, type=int)
     parser.add_argument("--train_environment_max_steps", default=1, type=int)
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
-    parser.add_argument("--n_traj_per_round", default=90, type=int)
+    parser.add_argument("--n_traj_per_round", default=32, type=int)
     # Method changes
     parser.add_argument("--no_train", dest='train', action='store_false')
     parser.set_defaults(train=True)
@@ -65,20 +76,26 @@ if __name__ == "__main__":
     # Dagger properties
     parser.add_argument("--rampdown_rounds", default=1, type=int)
     
-    record_bag=False;
     lr=1e-3
 
     args = parser.parse_args()
-
+    
+    record_bag=False;
+    reuse_previous_samples=False
     train_only_supervised=False
+    launch_tensorboard=True
+    batch_size = 32
+
 
     if(train_only_supervised==True):
+        reuse_previous_samples=True
         args.n_rounds=40; #It will use the demonstrations of these folders
         args.n_traj_per_round=0
-    else:
+
+    if(reuse_previous_samples==False):
         os.system("rm -rf "+args.log_dir)
         os.system("rm -rf "+args.policy_dir)
-        pass
+
 
 
     printInBoldBlue("---------------- Input Arguments: -----------------------")
@@ -110,7 +127,6 @@ if __name__ == "__main__":
     # directly learn the policy params (with or without sampling extra states?)
     N_VEC = 1
     N_EPOCHS = 50           #WAS 50!! Num epochs for training.
-    BATCH_SIZE = 32
     ENV_NAME = "my-environment-v1"
     assert N_VEC == 1, "Online N_VEC = 1 supported (environments cannot run in parallel)."
 
@@ -166,9 +182,9 @@ if __name__ == "__main__":
     printInBoldBlue("---------------- Making Learner Policy: -------------------")
     # Create learner policy
     if args.on_policy_trainer: 
-        trainer = make_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr) #, batch_size=BATCH_SIZE
+        trainer = make_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size) 
     else: 
-        trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger) #, batch_size=BATCH_SIZE
+        trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size)
 
     printInBoldBlue("---------------- Making Expert Policy: --------------------")
     # Create expert policy 
@@ -206,12 +222,13 @@ if __name__ == "__main__":
     printInBoldBlue("---------------- Training Learner: --------------------")
 
 
-    # #Launch tensorboard visualization
-    os.system("pkill -f tensorboard")
-    proc1 = subprocess.Popen(["tensorboard","--logdir",LOG_PATH,"--bind_all"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-    proc2 = subprocess.Popen(["google-chrome","http://jtorde-alienware-aurora-r8:6006/"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-    # os.system("tensorboard --logdir "+args.log_dir +" --bind_all")
-    # os.system("google-chrome http://jtorde-alienware-aurora-r8:6006/")  
+    # # #Launch tensorboard visualization
+    if(launch_tensorboard==True):
+        os.system("pkill -f tensorboard")
+        proc1 = subprocess.Popen(["tensorboard","--logdir",LOG_PATH,"--bind_all"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+        proc2 = subprocess.Popen(["google-chrome","http://jtorde-alienware-aurora-r8:6006/"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    # # os.system("tensorboard --logdir "+args.log_dir +" --bind_all")
+    # # os.system("google-chrome http://jtorde-alienware-aurora-r8:6006/")  
 
 
     stats = {"training":list(), "eval_no_dist":list()}

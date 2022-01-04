@@ -10,6 +10,7 @@ from imitation.algorithms import bc
 import random
 import pytest
 import time
+import numpy.matlib
 
 class ExpertDidntSucceed(Exception):
       pass
@@ -164,11 +165,16 @@ def getObsAndGtermToCrossPath():
 	radius_obstacle=random.uniform(1.5, 4.5)
 	radius_obstacle=2.0
 	radius_gterm=radius_obstacle + random.uniform(1.0, 3.0)
-	theta_g_term=theta + random.uniform(-0.35, 0.35) 
+	theta_g_term=theta #+ random.uniform(-0.15, 0.15) 
 	center=np.zeros((3,1))
 
 	w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
 	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[1.0]])
+
+	#Hack 
+	w_pos_obstacle=np.array([[2.5],[0.0],[1.0]]);
+	w_pos_g_term=np.array([[8.32],[-0.68],[1.0]]);
+	###########
 
 	return w_pos_obstacle, w_pos_g_term
 
@@ -622,9 +628,12 @@ class ActionManager():
 		# --> where ctrlpoints_yaw has the ctrlpoints that are not determined by init pos/vel, and final vel
 		#     i.e., len(ctrlpoints_yaw)= (num_seg_yaw + deg_yaw - 1 + 1) - 2 - 1 = num_seg_yaw + deg_yaw - 3;
 
-		self.action_size_pos_ctrl_pts = 3*(self.num_seg + self.deg_pos - 5);
-		self.action_size_yaw_ctrl_pts = (self.num_seg + self.deg_yaw - 3);
-		self.action_size = self.action_size_pos_ctrl_pts + self.action_size_yaw_ctrl_pts +1;
+		self.num_traj_per_action=params["num_of_trajs_per_replan"];
+
+		self.traj_size_pos_ctrl_pts = 3*(self.num_seg + self.deg_pos - 5);
+		self.traj_size_yaw_ctrl_pts = (self.num_seg + self.deg_yaw - 3);
+		self.traj_size = self.traj_size_pos_ctrl_pts + self.traj_size_yaw_ctrl_pts +1;
+		self.action_size = self.num_traj_per_action*self.traj_size;
 		self.Npos = self.num_seg + self.deg_pos-1;
 
 		self.max_dist2BSPoscPoint=params["max_dist2BSPoscPoint"];
@@ -633,8 +642,11 @@ class ActionManager():
 
 		print("self.max_dist2BSPoscPoint= ", self.max_dist2BSPoscPoint)
 		print("self.max_yawcPoint= ", self.max_yawcPoint)
-		self.normalization_constant=np.concatenate((self.max_dist2BSPoscPoint*np.ones((1, self.action_size_pos_ctrl_pts)), \
-													self.max_yawcPoint*np.ones((1, self.action_size_yaw_ctrl_pts))), axis=1)
+		self.normalization_constant_traj=np.concatenate((self.max_dist2BSPoscPoint*np.ones((1, self.traj_size_pos_ctrl_pts)), \
+													self.max_yawcPoint*np.ones((1, self.traj_size_yaw_ctrl_pts))), axis=1)
+
+		self.normalization_constant=np.matlib.repmat(self.normalization_constant_traj, self.num_traj_per_action, 1)
+
 
 	def actionIsNormalized(self, action_normalized):
 		assert action_normalized.shape == self.getActionShape()
@@ -664,50 +676,65 @@ class ActionManager():
 
 	def normalizeAction(self, action):
 		action_normalized=np.empty(action.shape)
-		action_normalized[0,0:-1]=action[0,0:-1]/self.normalization_constant #Elementwise division
-		action_normalized[0,-1]=(2.0/self.fitter_total_time)*action[0,-1]-1 #Note that action[0,-1] is in [0, fitter_total_time]
+		action_normalized[:,0:-1]=action[:,0:-1]/self.normalization_constant #Elementwise division
+		action_normalized[:,-1]=(2.0/self.fitter_total_time)*action[:,-1]-1 #Note that action[0,-1] is in [0, fitter_total_time]
 
-		time_normalized=self.getTotalTime(action_normalized);
-		slack=1-abs(time_normalized);
-		if(slack<0):
-			if abs(slack)<1e-5: #Can happen due to the tolerances in the optimization
-				print(f"Before= {action_normalized[0,-1]}")
-				action_normalized[0,-1]=np.clip(time_normalized, -1.0, 1.0) #Saturate within limits
-				print(f"After= {action_normalized[0,-1]}")
-			else:
-				assert False, f"time_normalized={time_normalized}"
+		for index_traj in range(self.num_traj_per_action):
+			time_normalized=self.getTotalTime(action_normalized, index_traj);
+			slack=1-abs(time_normalized);
+			if(slack<0):
+				if abs(slack)<1e-5: #Can happen due to the tolerances in the optimization
+					print(f"Before= {action_normalized[0,-1]}")
+					action_normalized[index_traj,-1]=np.clip(time_normalized, -1.0, 1.0) #Saturate within limits
+					print(f"After= {action_normalized[0,-1]}")
+				else:
+					assert False, f"time_normalized={time_normalized}"
 
 
 		# assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}, last element={action_normalized[0,-1]}"
 		return action_normalized;
 
-	def getTotalTime(self,action):
-		return action[0,-1]
+	def getTotalTime(self,action, index_traj):
+		return action[index_traj,-1]
 
-	def getPosCtrlPts(self, action):
-		return action[0,0:self.action_size_pos_ctrl_pts].reshape((3,-1), order='F')
+	def getPosCtrlPts(self, action, index_traj):
+		return action[index_traj,0:self.traj_size_pos_ctrl_pts].reshape((3,-1), order='F')
 
-	def getYawCtrlPts(self, action):
-		return action[0,self.action_size_pos_ctrl_pts:-1].reshape((1,-1));
+	def getYawCtrlPts(self, action, index_traj):
+		return action[index_traj,self.traj_size_pos_ctrl_pts:-1].reshape((1,-1));
+
+	def getTotalTimeTraj(self,traj):
+		return self.getTotalTime(traj, 0)
+
+	def getPosCtrlPtsTraj(self, traj):
+		return self.getPosCtrlPts(traj,0)
+
+	def getYawCtrlPtsTraj(self, traj):
+		return self.getYawCtrlPts(traj, 0);
 
 	def printAction(self, action):
 		print(f"Raw={action}")
-		print(Fore.RED+f"f pos ctrl_pts=\n{self.getPosCtrlPts(action)}"+Style.RESET_ALL)
-		print(Fore.YELLOW+f"f yaw ctrl_pts={self.getYawCtrlPts(action)}"+Style.RESET_ALL)
-		print(Fore.BLUE+f"Total time={self.getTotalTime(action)}"+Style.RESET_ALL)
+		for index_traj in range(self.num_traj_per_action):
+			print(Fore.WHITE+f"Traj {index_traj}: "+Style.RESET_ALL)
+			print(Fore.RED+f"  f pos ctrl_pts=\n{self.getPosCtrlPts(action, index_traj)}"+Style.RESET_ALL)
+			print(Fore.YELLOW+f"  f yaw ctrl_pts={self.getYawCtrlPts(action, index_traj)}"+Style.RESET_ALL)
+			print(Fore.BLUE+f"  Total time={self.getTotalTime(action, index_traj)}"+Style.RESET_ALL)
 
 	def denormalizeAction(self, action_normalized):
 		# assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}"
 		action=np.empty(action_normalized.shape)
-		action[0,0:-1]=action_normalized[0,0:-1]*self.normalization_constant #Elementwise multiplication
-		action[0,-1]=(self.fitter_total_time/2.0)*(action_normalized[0,-1]+1) #Note that action[0,-1] is in [0, fitter_total_time]
+		action[:,0:-1]=action_normalized[:,0:-1]*self.normalization_constant #Elementwise multiplication
+		action[:,-1]=(self.fitter_total_time/2.0)*(action_normalized[:,-1]+1) #Note that action[:,-1] is in [0, fitter_total_time]
 		return action
 
 	def getActionSize(self):
 		return self.action_size
 
 	def getActionShape(self):
-		return (1,self.action_size)
+		return (self.num_traj_per_action,self.traj_size)
+
+	def getTrajShape(self):
+		return (1,self.traj_size)
 
 	def getRandomAction(self):
 		random_action=self.denormalizeAction(self.getRandomNormalizedAction())
@@ -723,15 +750,15 @@ class ActionManager():
 	def getDegYaw(self):
 		return self.deg_yaw;
 
-	def f_actionAnd_w_State2_w_pos_ctrl_pts_and_knots(self, f_action, w_state):
+	def f_trajAnd_w_State2_w_pos_ctrl_pts_and_knots(self, f_traj, w_state):
 
 		assert type(w_state)==State
 
-		total_time=self.getTotalTime(f_action)
+		total_time=self.getTotalTimeTraj(f_traj)
 
 		knots_pos=generateKnotsForClampedUniformBspline(0.0, total_time, self.deg_pos, self.num_seg)
 
-		f_pos_ctrl_pts = self.getPosCtrlPts(f_action)
+		f_pos_ctrl_pts = self.getPosCtrlPtsTraj(f_traj)
 
 		#Convert to w frame
 		w_pos_ctrl_pts = w_state.w_T_f * f_pos_ctrl_pts;
@@ -759,12 +786,12 @@ class ActionManager():
 		return w_pos_ctrl_pts, knots_pos
 
 
-	def f_actionAnd_w_State2_w_yaw_ctrl_pts_and_knots(self, f_action, w_state):
-		total_time=self.getTotalTime(f_action)
+	def f_trajAnd_w_State2_w_yaw_ctrl_pts_and_knots(self, f_traj, w_state):
+		total_time=self.getTotalTimeTraj(f_traj)
 
 		knots_yaw=generateKnotsForClampedUniformBspline(0.0, total_time, self.deg_yaw, self.num_seg)
 
-		f_yaw_ctrl_pts= self.getYawCtrlPts(f_action)
+		f_yaw_ctrl_pts= self.getYawCtrlPtsTraj(f_traj)
 
 		w_yaw_ctrl_pts =  f_yaw_ctrl_pts + w_state.w_yaw*np.ones(f_yaw_ctrl_pts.shape);
 
@@ -783,9 +810,9 @@ class ActionManager():
 
 		return w_yaw_ctrl_pts, knots_yaw
 
-	def f_actionAnd_w_State2w_ppSolOrGuess(self, f_action, w_state): #pp stands for py_panther
-		w_p_ctrl_pts,knots_p=self.f_actionAnd_w_State2_w_pos_ctrl_pts_and_knots(f_action, w_state)
-		w_y_ctrl_pts,knots_y=self.f_actionAnd_w_State2_w_yaw_ctrl_pts_and_knots(f_action, w_state)
+	def f_trajAnd_w_State2w_ppSolOrGuess(self, f_traj, w_state): #pp stands for py_panther
+		w_p_ctrl_pts,knots_p=self.f_trajAnd_w_State2_w_pos_ctrl_pts_and_knots(f_traj, w_state)
+		w_y_ctrl_pts,knots_y=self.f_trajAnd_w_State2_w_yaw_ctrl_pts_and_knots(f_traj, w_state)
 
 		#Create and fill solOrGuess object
 		w_sol_or_guess=py_panther.solOrGuess();
@@ -805,49 +832,63 @@ class ActionManager():
 
 		return w_sol_or_guess
 
-	def f_action2f_ppSolOrGuess(self, f_action): #pp stands for py_panther
+	def f_traj2f_ppSolOrGuess(self, f_traj): #pp stands for py_panther
 		zero_state=State(np.zeros((3,1)), np.zeros((3,1)), np.zeros((3,1)), np.zeros((1,1)), np.zeros((1,1)))
-		return self.f_actionAnd_w_State2w_ppSolOrGuess(f_action, zero_state)
+		return self.f_trajAnd_w_State2w_ppSolOrGuess(f_traj, zero_state)
 
 
-	def f_actionAnd_w_State2wBS(self, f_action, w_state):
+	def getTrajFromAction(self, action, index_traj):
+		return action[index_traj,:].reshape(1,-1)
+
+	def f_trajAnd_w_State2wBS(self, f_traj, w_state):
 
 
-		w_pos_ctrl_pts,_=self.f_actionAnd_w_State2_w_pos_ctrl_pts_and_knots(f_action, w_state)
-		w_yaw_ctrl_pts,_=self.f_actionAnd_w_State2_w_yaw_ctrl_pts_and_knots(f_action, w_state)
-		total_time=f_action[0,-1]
+		w_pos_ctrl_pts,_=self.f_trajAnd_w_State2_w_pos_ctrl_pts_and_knots(f_traj, w_state)
+		w_yaw_ctrl_pts,_=self.f_trajAnd_w_State2_w_yaw_ctrl_pts_and_knots(f_traj, w_state)
+		total_time=f_traj[0,-1]
 
 
 		# print(f"f_action={f_action}")
 		# print(f"total_time={total_time}")
 		w_posBS = MyClampedUniformBSpline(0.0, total_time, self.deg_pos, 3, self.num_seg, w_pos_ctrl_pts) #def __init__():[BSpline(knots_pos, w_pos_ctrl_pts[0,:], self.deg_pos)
 
-		w_yawBS =  MyClampedUniformBSpline(0.0, total_time, self.deg_yaw, 1, self.num_seg, w_yaw_ctrl_pts)
+		w_yawBS = MyClampedUniformBSpline(0.0, total_time, self.deg_yaw, 1, self.num_seg, w_yaw_ctrl_pts)
 		
 		return w_posBS, w_yawBS
 
-	def solOrGuess2action(self, sol_or_guess):
-		action=np.array([[]]);
+	def solOrGuess2traj(self, sol_or_guess):
+		traj=np.array([[]]);
 
 		#Append position control points
 		for i in range(3,len(sol_or_guess.qp)-2):
 			# print(sol_or_guess.qp[i].reshape(1,3))
-			action=np.concatenate((action, sol_or_guess.qp[i].reshape(1,3)), axis=1)
+			traj=np.concatenate((traj, sol_or_guess.qp[i].reshape(1,3)), axis=1)
 
 		#Append yaw control points
 		for i in range(2,len(sol_or_guess.qy)-1):
-			action=np.concatenate((action, np.array([[sol_or_guess.qy[i]]])), axis=1)
+			traj=np.concatenate((traj, np.array([[sol_or_guess.qy[i]]])), axis=1)
 
 		#Append total time
 		assert sol_or_guess.knots_p[-1]==sol_or_guess.knots_y[-1]
 		assert sol_or_guess.knots_p[0]==0
 		assert sol_or_guess.knots_y[0]==0
-		action=np.concatenate((action, np.array([[sol_or_guess.knots_p[-1]]])), axis=1)
+		traj=np.concatenate((traj, np.array([[sol_or_guess.knots_p[-1]]])), axis=1)
 
+
+		assert traj.shape==self.getTrajShape()
+
+		return traj
+
+	def solsOrGuesses2action(self, sols_or_guesses):
+		assert len(sols_or_guesses)==self.num_traj_per_action
+		action=np.empty((0,self.traj_size));
+		for sol_or_guess in sols_or_guesses:
+			traj=self.solOrGuess2traj(sol_or_guess)
+			action=np.concatenate((action, traj), axis=0)
 
 		assert action.shape==self.getActionShape()
-
 		return action
+
 
 
 
@@ -886,21 +927,20 @@ class StudentCaller():
         # print("action.shape= ", action.shape)
         # print("action=", action)   
 
-
-        assert self.am.getTotalTime(action)>0, "Time needs to be >0"
+        all_solOrGuess=[]
+        for i in range( np.shape(action)[0]): #For each row of action
+        	traj=action[i,:].reshape(1,-1);
+	        assert self.am.getTotalTimeTraj(traj)>0, "Time needs to be >0"
+        	my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state);
+        	all_solOrGuess.append(my_solOrGuess)
 
         # w_pos_ctrl_pts,_ = self.am.actionAndState2_w_pos_ctrl_pts_and_knots(action,w_init_state)
-
         # print("w_pos_ctrl_pts=", w_pos_ctrl_pts)
-
-        my_solOrGuess= self.am.f_actionAnd_w_State2w_ppSolOrGuess(action,w_init_state);
-
-
-
+        # my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state);
         # py_panther.solOrGuessl
 
 
-        return my_solOrGuess   
+        return all_solOrGuess   
 
 #You can check the previous function by using this Matlab script:
 # clc;

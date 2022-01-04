@@ -113,6 +113,9 @@ class MyEnvironment(gym.Env):
     self.reset()
 
   def step(self, f_action_normalized):
+
+    # self.printwithName(f"Received actionN={f_action_normalized}")
+
     f_action_normalized=f_action_normalized.reshape(self.action_shape) 
 
     self.am.assertAction(f_action_normalized)
@@ -129,12 +132,24 @@ class MyEnvironment(gym.Env):
     ####################################
 
 
-    w_posBS, w_yawBS= self.am.f_actionAnd_w_State2wBS(f_action, self.w_state)
-
     ######################################
     if(self.record_bag==True):
-      self.saveInBag(self.previous_f_observation, w_posBS, w_yawBS, self.w_state)
+
+      w_posBS_list=[]
+      w_yawBS_list=[]
+
+      for i in range( np.shape(f_action)[0]): #For each row of action   
+         f_traj=self.am.getTrajFromAction(f_action, i)
+         w_posBS, w_yawBS= self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
+         w_posBS_list.append(w_posBS)
+         w_yawBS_list.append(w_yawBS)
+
+      self.saveInBag(self.previous_f_observation, w_posBS_list, w_yawBS_list, self.w_state)
     ######################################
+
+    #Hack for now: choose always the first trajectory
+    f_traj=self.am.getTrajFromAction(f_action, 0)
+    w_posBS, w_yawBS= self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
 
     ####################################
     ####### MOVE THE ENVIRONMENT #######
@@ -213,7 +228,7 @@ class MyEnvironment(gym.Env):
     self.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
     self.my_SolverIpopt.setFocusOnObstacle(True);
     self.my_SolverIpopt.setObstaclesForOpt(self.om.getObstacles(self.previous_f_observation));
-    cost=self.my_SolverIpopt.computeCost(self.am.f_action2f_ppSolOrGuess(f_action))
+    cost=self.my_SolverIpopt.computeCost(self.am.f_traj2f_ppSolOrGuess(f_traj))
     reward=-cost;
     # print(reward)
     ###################
@@ -251,8 +266,8 @@ class MyEnvironment(gym.Env):
     self.w_state=State(p0, v0, a0, y0, ydot0)
 
     if(isinstance(self.constant_obstacle_pos, type(None)) and isinstance(self.constant_gterm_pos, type(None))):
-
-      if np.random.uniform(0, 1) > 0.0:
+      prob_choose_cross=1.0;
+      if np.random.uniform(0, 1) < 1 - prob_choose_cross:
         self.obsm.newRandomPos();
         # self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos);
         self.gm.newRandomPos();
@@ -324,7 +339,7 @@ class MyEnvironment(gym.Env):
       return pose_ros
 
 
-  def saveInBag(self, f_obs, w_posBS, w_yawBS, w_state):
+  def saveInBag(self, f_obs, w_posBS_list, w_yawBS_list, w_state):
 
       time_now=rospy.Time.from_sec(time.time());
 
@@ -379,26 +394,31 @@ class MyEnvironment(gym.Env):
       tf_msg.transforms.append(tf_stamped)
 
 
-      traj_msg=Path()
-      traj_msg.header.frame_id="world"
-      traj_msg.header.stamp=time_now
+      for i in range(len(w_posBS_list)):
 
-      t0=w_posBS.getT0();
-      tf=w_posBS.getTf();
+        w_posBS=w_posBS_list[i]
+        w_yawBS=w_yawBS_list[i]
 
-      for t_i in np.arange(t0, tf, (tf-t0)/10.0):
-        pose_stamped=PoseStamped();
-        pose_stamped.header.frame_id="world"
-        pose_stamped.header.stamp=time_now
-        tf_matrix=posAccelYaw2TfMatrix(w_posBS.getPosT(t_i),w_posBS.getAccelT(t_i),w_yawBS.getPosT(t_i))
+        t0=w_posBS.getT0();
+        tf=w_posBS.getTf();
 
-        pose_stamped.pose=self.TfMatrix2RosPose(tf_matrix)
+        traj_msg=Path()
+        traj_msg.header.frame_id="world"
+        traj_msg.header.stamp=time_now
 
-        traj_msg.poses.append(pose_stamped)
+        for t_i in np.arange(t0, tf, (tf-t0)/10.0):
+          pose_stamped=PoseStamped();
+          pose_stamped.header.frame_id="world"
+          pose_stamped.header.stamp=time_now
+          tf_matrix=posAccelYaw2TfMatrix(w_posBS.getPosT(t_i),w_posBS.getAccelT(t_i),w_yawBS.getPosT(t_i))
+
+          pose_stamped.pose=self.TfMatrix2RosPose(tf_matrix)
+
+          traj_msg.poses.append(pose_stamped)
+
+        self.bag.write('/path'+str(i), traj_msg, time_now)
 
 
-
-      self.bag.write('/path', traj_msg, time_now)
       self.bag.write('/g', point_msg, time_now)
       self.bag.write('/obs', marker_msg, time_now)
       self.bag.write('/tf', tf_msg, time_now)
