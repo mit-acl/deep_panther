@@ -82,14 +82,13 @@ if __name__ == "__main__":
     
     only_collect_data=False
     train_only_supervised=True
-
     reuse_previous_samples=True
 
-    record_bag=False
+    record_bag=True
     launch_tensorboard=True
     verbose_python_errors=False
     batch_size = 8
-    N_EPOCHS = 100000           #WAS 50!! Num epochs for training.
+    N_EPOCHS = 150           #WAS 50!! Num epochs for training.
     lr=1e-3
 
     if(only_collect_data==True):
@@ -123,7 +122,7 @@ if __name__ == "__main__":
         os.system("rm -rf "+args.policy_dir)
 
     if(record_bag==True):
-        os.system("rm training.bag")
+        os.system("rm training*.bag")
 
     if(verbose_python_errors==False):
         mode='Plain'
@@ -171,9 +170,9 @@ if __name__ == "__main__":
             os.makedirs(LOG_PATH)
         t0 = time.time()
 
-        torch.manual_seed(args.seed)
-        np.random.seed(args.seed)
-        random.seed(args.seed)
+        torch.manual_seed(args.seed+thread_count)
+        np.random.seed(args.seed+thread_count)
+        random.seed(args.seed+thread_count)
 
         # Create and set properties for TRAINING environment:
         printInBoldBlue("---------------- Making Environments: -------------------")

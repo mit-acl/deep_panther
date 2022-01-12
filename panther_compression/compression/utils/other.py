@@ -163,16 +163,17 @@ def getObsAndGtermToCrossPath():
 	# theta=random.choice(thetas)
 	theta=random.uniform(-np.pi/2, np.pi/2)
 	radius_obstacle=random.uniform(1.5, 4.5)
-	radius_gterm=radius_obstacle + random.uniform(9.0, 9.0)
-	theta_g_term=theta + random.uniform(-0.35, 0.35) 
+	radius_gterm=radius_obstacle + random.uniform(1.0, 6.0)
+	std_deg=30
+	theta_g_term=theta + random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
 	center=np.zeros((3,1))
 
 	w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
 	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[1.0]])
 
 	#Hack 
-	w_pos_obstacle=np.array([[2.5],[0.0],[1.0]]);
-	w_pos_g_term=w_pos_obstacle + np.array([[random.uniform(1.0, 8.0)],[random.uniform(-2.0, 2.0)],[0.0]]);
+	# w_pos_obstacle=np.array([[2.5],[0.0],[1.0]]);
+	# w_pos_g_term=w_pos_obstacle + np.array([[random.uniform(1.0, 8.0)],[random.uniform(-2.0, 2.0)],[0.0]]);
 	###########
 
 	return w_pos_obstacle, w_pos_g_term
