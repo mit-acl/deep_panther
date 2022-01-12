@@ -1038,12 +1038,15 @@ std::vector<si::solOrGuess> SolverIpopt::getOnlySucceededAndDifferent(std::vecto
 
   std::vector<int> indexes_to_delete;
 
-  for (int i = 0; i < (solutions_succeeded.size() - 1); i++)
+  int num_sol_succeded =
+      int(solutions_succeeded.size());  // This must be an int, see https://stackoverflow.com/a/65645023/6057617
+
+  for (int i = 0; i < (num_sol_succeded - 1); i++)
   {
     // std::cout << "i= " << i << std::endl;
 
     // solutions_succeeded[i].printInfo();
-    for (int j = i + 1; j < solutions_succeeded.size(); j++)
+    for (int j = i + 1; j < num_sol_succeded; j++)
     {
       // std::cout << "j= " << j << std::endl;
       si::solOrGuess sol1 = solutions_succeeded[i];
