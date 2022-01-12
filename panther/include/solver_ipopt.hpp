@@ -184,6 +184,9 @@ private:
   bool isInCollision(mt::state state, double t);
 
   bool anySolutionSucceeded();
+  int numSolutionsSucceeded();
+  std::vector<si::solOrGuess> getOnlySucceeded(std::vector<si::solOrGuess> solutions);
+  std::vector<si::solOrGuess> getOnlySucceededAndDifferent(std::vector<si::solOrGuess> solutions);
 
   std::vector<si::solOrGuess> solutions_;
   std::vector<si::solOrGuess> guesses_;

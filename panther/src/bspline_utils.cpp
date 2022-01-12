@@ -102,10 +102,10 @@ void CPs2Traj(std::vector<Eigen::Vector3d> &qp, std::vector<double> &qy, Eigen::
 
   // std::cout << std::setprecision(15) << "knots_y= " << knots_y << std::endl;
 
-  std::cout << "============================================" << std::endl;
-  std::cout << "knots_p=" << knots_p << std::endl;
-  std::cout << "qp_matrix=" << qp_matrix << std::endl;
-  std::cout << "============================================" << std::endl;
+  // std::cout << "============================================" << std::endl;
+  // std::cout << "knots_p=" << knots_p << std::endl;
+  // std::cout << "qp_matrix=" << qp_matrix << std::endl;
+  // std::cout << "============================================" << std::endl;
 
   // Construct now the B-Spline, see https://github.com/libigl/eigen/blob/master/unsupported/test/splines.cpp#L37
   Eigen::Spline<double, 3, Eigen::Dynamic> spline_p(knots_p, qp_matrix);

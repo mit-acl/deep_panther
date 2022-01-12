@@ -2,7 +2,8 @@ use_ff: true # use feedforward #Needs to be true if you are using perfect_tracke
 visual: true #publish visualization stuff
 color_type: "vel" #"vel" or "plain"
 n_agents: 16 #only used for the color in the trajectory
-num_of_trajs_per_replan: 2
+num_of_trajs_per_replan: 3
+num_of_initial_guesses: 10
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 goal_radius: 0.5    #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
 drone_radius: 0.1  #(m) Used for collision checking
@@ -32,7 +33,7 @@ max_seconds_keeping_traj: 30.0     #% If a trajectory has been kept for this lon
 a_star_samp_x: 3
 a_star_samp_y: 3 
 a_star_samp_z: 3 
-a_star_fraction_voxel_size: 0.05 #\in [0,1] The higher, the bigger the voxel size in A* is(i.e. more prunning)
+a_star_fraction_voxel_size: 0.00 #\in [0,1] The higher, the bigger the voxel size in A* is(i.e. more prunning)
 a_star_bias: 1.0 #Bias (cost=g+bias*h) in the A* search 
 res_plot_traj: 60.0  #Higher --> More resolution when plotting the trajectory 
 factor_alloc: 1.0 #>=1. Used to find the total duration of a given trajectory.
@@ -57,5 +58,5 @@ max_dist2obs: 20.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
 use_expert: false
-student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_128.pt #final_policy.pt   intermediate_policy_42.pt
+student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round_0_log383.pt #final_policy.pt   intermediate_policy_42.pt
 static_planning: true #If true, it will always plan from the same initial condition

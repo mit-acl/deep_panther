@@ -1065,7 +1065,7 @@ exit:
   return (!satisfies_LP);
 }
 
-bool OctopusSearch::run(std::vector<os::solution>& solutions, int num_of_trajs_per_replan)
+bool OctopusSearch::run(std::vector<os::solution>& solutions, int num_of_solutions_needed)
 {
   /////////// reset some stuff
   // stores the closest node found
@@ -1274,7 +1274,7 @@ exitloop:
   nodesptr_cg_and_cng_.clear();
 
   // Concatenate: First the nodes that are complete and reached the goal, and then the ones that are only complete
-  for (int i = 0; (nodesptr_cg_and_cng_.size() < num_of_trajs_per_replan)  ////////
+  for (int i = 0; (nodesptr_cg_and_cng_.size() < num_of_solutions_needed)  ////////
                   && (i < nodesptr_cg_.size());
        i++)
   {
@@ -1282,21 +1282,21 @@ exitloop:
   }
 
   // And then fill with complete paths that did not reach the goal
-  for (int i = 0; (nodesptr_cg_and_cng_.size() < num_of_trajs_per_replan) && (i < nodesptr_cng_.size()); i++)
+  for (int i = 0; (nodesptr_cg_and_cng_.size() < num_of_solutions_needed) && (i < nodesptr_cng_.size()); i++)
   {
     nodesptr_cg_and_cng_.push_back(nodesptr_cng_[i]);
   }
 
   std::cout << "nodesptr_cg_and_cng_.size()=" << nodesptr_cg_and_cng_.size() << std::endl;
 
-  if (nodesptr_cg_and_cng_.size() != num_of_trajs_per_replan)
+  if (nodesptr_cg_and_cng_.size() != num_of_solutions_needed)
   {
     std::cout << red << bold
-              << "Not enough paths found. Increase time allowed for Oct. Search or decrease num_of_trajs_per_replan"
+              << "Not enough paths found. Increase time allowed for Oct. Search or decrease num_of_solutions_needed"
               << reset << std::endl;
 
     std::cout << "Found " << nodesptr_cg_and_cng_.size()
-              << "trajs, but num_of_trajs_per_replan=" << num_of_trajs_per_replan << std::endl;
+              << "trajs, but num_of_solutions_needed=" << num_of_solutions_needed << std::endl;
 
     std::cout << "Returning false" << std::endl;
     return false;
@@ -1304,7 +1304,7 @@ exitloop:
   }
 
   // // And then fill with incomplete paths
-  // for (int i = 0; (nodesptr_cg_and_cng_.size() < num_of_trajs_per_replan) &&  //////////
+  // for (int i = 0; (nodesptr_cg_and_cng_.size() < num_of_solutions_needed) &&  //////////
   //                 (i < openList_.size());                                 //////////
   //      i++)
   // {
@@ -1312,7 +1312,7 @@ exitloop:
   // }
 
   // //////////////////// And if there are still , just copy the first element
-  // for (int i = 0; nodesptr_cg_and_cng_.size() < num_of_trajs_per_replan; i++)
+  // for (int i = 0; nodesptr_cg_and_cng_.size() < num_of_solutions_needed; i++)
   // {
   //   nodesptr_cg_and_cng_.push_back(nodesptr_cg_and_cng_[0]);
   // }

@@ -937,28 +937,69 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   // std::cout << "solutions.size()=" << solutions.size() << std::endl;
   //////////////////////////////
 
+  solutions = getOnlySucceededAndDifferent(solutions);
+
   solutions_ = solutions;
   guesses_ = guesses;
 
-  if (anySolutionSucceeded())
+  std::cout << bold << red << solutions_.size() << "/" << par_.num_of_trajs_per_replan << " solutions found" << reset
+            << std::endl;
+
+  // PRINTING STUFF
+  for (int i = 0; i < solutions_.size(); i++)
   {
-    // Copy the best solution found to the non-successful solutions
-    si::solOrGuess best_solution = getBestSolution();
-    for (auto &solution : solutions_)
-    {
-      if (solution.solver_succeeded == false)
-      {
-        solution = best_solution;
-      }
-    }
-    std::cout << "Returning true" << std::endl;
-    return true;
+    std::cout << bold << "\n===================================" << std::endl;
+    solutions_[i].printInfo();
   }
-  else
+
+  // NO SOLUTION FOUND
+  if (solutions_.size() == 0)
   {
     std::cout << "NOT ENOUGH SOLUTIONS SUCCESSFUL" << std::endl;
     return false;
   }
+  // TOO MANY SOLUTIONS: RETAIN ONLY SOME//TODO: any better option?
+  else if (solutions_.size() > par_.num_of_trajs_per_replan)
+  {
+    int elements_to_delete = solutions_.size() - par_.num_of_trajs_per_replan;
+    solutions_.erase(solutions_.end() - elements_to_delete, solutions_.end());
+  }
+  // TOO FEW SOLUTIONS: DUPLICATE SOME//TODO: any better option?
+  else
+  {
+    si::solOrGuess best_solution = getBestSolution();  // Copy the best solution found
+    while (solutions_.size() < par_.num_of_trajs_per_replan)
+    {
+      solutions_.push_back(best_solution);
+    }
+  }
+  std::cout << "Returning true" << std::endl;
+  return true;
+  //
+
+  // if (anySolutionSucceeded())
+  // {
+  //   // Copy the best solution found
+  //   si::solOrGuess best_solution = getBestSolution();
+  //   while (solutions_.size() < par_.num_of_trajs_per_replan)
+  //   {
+  //     solutions_.push_back(best_solution);
+  //   }
+  //   // for (auto &solution : solutions_)
+  //   // {
+  //   //   if (solution.solver_succeeded == false)
+  //   //   {
+  //   //     solution = best_solution;
+  //   //   }
+  //   // }
+  //   std::cout << "Returning true" << std::endl;
+  //   return true;
+  // }
+  // else
+  // {
+  //   std::cout << "NOT ENOUGH SOLUTIONS SUCCESSFUL" << std::endl;
+  //   return false;
+  // }
 
   // if (solutions[0].solver_succeeded == true)
   // {
@@ -978,16 +1019,96 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   // }
 }
 
-bool SolverIpopt::anySolutionSucceeded()
+std::vector<si::solOrGuess> SolverIpopt::getOnlySucceeded(std::vector<si::solOrGuess> solutions)
 {
+  std::vector<si::solOrGuess> solutions_succeeded;
+  for (auto &solution : solutions)
+  {
+    if (solution.solver_succeeded)
+    {
+      solutions_succeeded.push_back(solution);
+    }
+  }
+  return solutions_succeeded;
+}
+
+std::vector<si::solOrGuess> SolverIpopt::getOnlySucceededAndDifferent(std::vector<si::solOrGuess> solutions)
+{
+  std::vector<si::solOrGuess> solutions_succeeded = getOnlySucceeded(solutions);
+
+  std::vector<int> indexes_to_delete;
+
+  for (int i = 0; i < (solutions_succeeded.size() - 1); i++)
+  {
+    // std::cout << "i= " << i << std::endl;
+
+    // solutions_succeeded[i].printInfo();
+    for (int j = i + 1; j < solutions_succeeded.size(); j++)
+    {
+      // std::cout << "j= " << j << std::endl;
+      si::solOrGuess sol1 = solutions_succeeded[i];
+      si::solOrGuess sol2 = solutions_succeeded[j];
+      bool are_different = false;
+      for (int k = 0; k < sol1.qp.size(); k++)
+      {
+        double distance_cpk = (sol1.qp[k] - sol2.qp[k]).norm();
+        if (distance_cpk > 1e-3)  // Sufficiently different in the translational space. TODO:
+                                  // include yaw
+                                  // + time?
+        {
+          // std::cout << "distance cpk=" << distance_cpk << std::endl;
+          // std::cout << "sol1.qp[k]= " << sol1.qp[k].transpose() << std::endl;
+          // std::cout << "sol2.qp[k]= " << sol2.qp[k].transpose() << std::endl;
+          are_different = true;
+          break;
+        }
+      }
+      // std::cout << "are_different= " << are_different << std::endl;
+      // if reached this point, the two solutions are the same ones
+      if (are_different == false)
+      {
+        // std::cout << "Pushing " << j << std::endl;
+        indexes_to_delete.push_back(j);
+        // std::cout << "Going to delete j!" << std::endl;
+      }
+      // std::cout << "here" << std::endl;
+    }
+  }
+
+  // https://stackoverflow.com/a/1041939
+  sort(indexes_to_delete.begin(), indexes_to_delete.end());
+  indexes_to_delete.erase(unique(indexes_to_delete.begin(), indexes_to_delete.end()), indexes_to_delete.end());
+  /////
+
+  // std::cout << "end of all loops" << std::endl;
+  // std::cout << "indexes_to_delete.size()= " << indexes_to_delete.size() << std::endl;
+
+  for (int i = indexes_to_delete.size() - 1; i >= 0; i--)
+  {
+    solutions_succeeded.erase(solutions_succeeded.begin() + indexes_to_delete[i]);
+  }
+
+  // std::cout << "different solutions_succeeded.size()=" << solutions_succeeded.size() << std::endl;
+
+  return solutions_succeeded;
+}
+
+int SolverIpopt::numSolutionsSucceeded()
+{
+  int result = 0;
   for (auto &solution : solutions_)
   {
     if (solution.solver_succeeded)
     {
-      return true;
+      result += 1;
     }
   }
-  return false;
+  return result;
+}
+
+bool SolverIpopt::anySolutionSucceeded()
+{
+  return (numSolutionsSucceeded() > 0);
 }
 
 std::vector<double> SolverIpopt::yawCPsToGoToFinalYaw(double deltaT)

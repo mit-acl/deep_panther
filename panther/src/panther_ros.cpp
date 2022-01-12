@@ -69,6 +69,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "color_type", par_.color_type);
   safeGetParam(nh1_, "n_agents", par_.n_agents);
   safeGetParam(nh1_, "num_of_trajs_per_replan", par_.num_of_trajs_per_replan);
+  safeGetParam(nh1_, "num_of_initial_guesses", par_.num_of_initial_guesses);
   safeGetParam(nh1_, "dc", par_.dc);
   safeGetParam(nh1_, "goal_radius", par_.goal_radius);
   safeGetParam(nh1_, "drone_radius", par_.drone_radius);
@@ -170,6 +171,9 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
 
   // CHECK parameters
   std::cout << bold << "Parameters obtained, checking them..." << reset << std::endl;
+
+  verify((par_.num_of_trajs_per_replan <= par_.num_of_initial_guesses), "par_.num_of_trajs_per_replan<=par_.num_of_"
+                                                                        "initial_guesses must hold");
 
   verify((par_.c_smooth_yaw_search >= 0), "par_.c_smooth_yaw_search>=0 must hold");
   verify((par_.c_visibility_yaw_search >= 0), "par_.c_visibility_yaw_search>=0 must hold");
@@ -705,7 +709,7 @@ void PantherRos::pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_o
       continue;
     }
 
-    std::cout << "Publishing!" << std::endl;
+    // std::cout << "Publishing!" << std::endl;
     sol_or_guess.fillTraj(par_.dc);
 
     double scale = (sol_or_guess.is_guess) ? 0.05 : 0.15;
