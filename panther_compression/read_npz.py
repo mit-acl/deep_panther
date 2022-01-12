@@ -61,7 +61,6 @@ for demo in demos:
     for pair_file in pairs_files:
         with np.load(path_demo + pair_file) as b:
             all_pairs.append({'obs':b['obs'][0], 'acts':b['acts'] })
-    all_pairs
 
 
     policy=policies[round_num];
@@ -73,13 +72,19 @@ for demo in demos:
     for pair in all_pairs:
         # print("pair= ",pair)
         # print("pair['obs']= ",pair['obs'])
-        with suppress_stdout():
-            action_student = student_policy.predict(pair['obs'], deterministic=True)
-            action_student=action_student[0].reshape(1,-1)
-            # action_student=action_student.reshape(1,-1)
-            # print(action_student)
-            # print(pair['acts'])
-            error = error + np.linalg.norm(action_student-pair['acts'])**2
+        # with suppress_stdout():
+        action_student = student_policy.predict(pair['obs'], deterministic=True)
+        print("action_student[0].shape = ", action_student[0].shape)
+        print("pair['acts'].shape = ", pair['acts'].shape)
+        
+        action_student=action_student[0].reshape(pair['acts'].shape)
+        # action_student=action_student.reshape(1,-1)
+        # print(action_student)
+        # print(pair['acts'])
+        norm_diff_pair=np.linalg.norm(action_student-pair['acts'])
+        print("norm_diff_pair= ",norm_diff_pair)
+
+        error = error + norm_diff_pair**2
     error=error/len(all_pairs)
     all_errors.append(error)
     line1.set_ydata(all_errors)
