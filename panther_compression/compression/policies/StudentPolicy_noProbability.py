@@ -64,16 +64,18 @@ class StudentPolicy(BasePolicy):
 
         # Save arguments to re-create object at loading
         self.net_arch = net_arch
-        self.input_dim = features_dim
         self.activation_fn = activation_fn
         self.name=Style.BRIGHT+Fore.WHITE+"  [Stu]"+Style.RESET_ALL
 
         self.om=ObservationManager();
         self.am=ActionManager();
 
+        self.features_dim=self.om.getObservationSize()
+
+
         action_dim = get_action_dim(self.action_space)
 
-        mlp = create_mlp(features_dim, action_dim, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
+        mlp = create_mlp(self.features_dim, action_dim, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
         self.my_nn = nn.Sequential(*mlp) #https://pytorch.org/docs/stable/generated/torch.nn.Sequential.html
 
 
@@ -98,6 +100,12 @@ class StudentPolicy(BasePolicy):
         features = self.extract_features(obs)
         output = th.tanh(self.my_nn(features))
 
+        # self.printwithName(f"In forward, output before reshaping={output.shape}")
+        before_shape=list(output.shape)
+        #Note that before_shape[i,:,:] containes one action i
+        output=th.reshape(output, (before_shape[0],) + self.am.getActionShape())
+        # self.printwithName(f"In forward, returning shape={output.shape}")
+
         return output #self.action_dist.actions_from_params(mean_actions, log_std, deterministic=deterministic, **kwargs)
 
     def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
@@ -112,3 +120,4 @@ class StudentPolicy(BasePolicy):
 
         # self.printwithName(f"Returning action shape={action.shape}")
         return action
+        
