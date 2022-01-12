@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 import copy
-from random import random
+from random import random, shuffle
 from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed, computeTotalTime
 from colorama import init, Fore, Back, Style
 import py_panther
@@ -107,8 +107,24 @@ class ExpertPolicy(object):
         best_solutions=self.my_SolverIpopt.getBestSolutions();
 
         # self.printwithName("Optimizer called, best solution= ")
-
         # best_solution.printInfo()
+        # ###HACK
+        # ctrl_pts=self.om.getCtrlPtsObstacleI(obs, 0);
+        # indexes_elevation=list(range(len(best_solutions)))
+        # shuffle(indexes_elevation)
+        # print(f"indexes_elevation= {indexes_elevation}")
+        # for i in range(len(best_solutions)):
+        #     # print("\nbest_solutions[i].qp ANTES= ", best_solutions[i].qp)
+        #     novale_tmp=[];
+        #     tmp=(ctrl_pts[0] + indexes_elevation[i]*np.array([[0],[1],[0]])).reshape((3,))
+        #     # print("Setting to ", tmp)
+        #     for j in range(len(best_solutions[i].qp)):
+        #         novale_tmp.append(tmp)
+        #     best_solutions[i].qp=novale_tmp
+        #     # print(f"[After]       best_solutions[i].qp={best_solutions[i].qp}")
+
+        #     # print("\nbest_solutions[i].qp DESPUES= ", best_solutions[i].qp)
+        # #######
 
         action=self.am.solsOrGuesses2action(best_solutions)
 
