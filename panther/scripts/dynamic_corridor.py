@@ -223,7 +223,7 @@ class DynCorridor:
             # y_string='0'
             # z_string='1'
             x_string=str(random.uniform(2.5, 2.5))
-            y_string=str(random.uniform(-1.0, 1.0))
+            y_string=str(random.uniform(0.0, 0.0))
             z_string=str(random.uniform(1.0, 1.0))         
             self.all_dyn_traj[i].s_mean=[x_string, y_string, z_string]
             # #End of hack
