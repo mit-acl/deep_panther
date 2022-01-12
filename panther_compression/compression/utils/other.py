@@ -163,9 +163,8 @@ def getObsAndGtermToCrossPath():
 	# theta=random.choice(thetas)
 	theta=random.uniform(-np.pi/2, np.pi/2)
 	radius_obstacle=random.uniform(1.5, 4.5)
-	radius_obstacle=2.0
-	radius_gterm=radius_obstacle + random.uniform(1.0, 3.0)
-	theta_g_term=theta #+ random.uniform(-0.15, 0.15) 
+	radius_gterm=radius_obstacle + random.uniform(9.0, 9.0)
+	theta_g_term=theta + random.uniform(-0.35, 0.35) 
 	center=np.zeros((3,1))
 
 	w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
@@ -173,7 +172,7 @@ def getObsAndGtermToCrossPath():
 
 	#Hack 
 	w_pos_obstacle=np.array([[2.5],[0.0],[1.0]]);
-	w_pos_g_term=np.array([[8.32],[-0.68],[1.0]]);
+	w_pos_g_term=w_pos_obstacle + np.array([[random.uniform(1.0, 8.0)],[random.uniform(-2.0, 2.0)],[0.0]]);
 	###########
 
 	return w_pos_obstacle, w_pos_g_term
@@ -630,7 +629,8 @@ class ActionManager():
 
 		self.num_traj_per_action=params["num_of_trajs_per_replan"];
 
-		self.traj_size_pos_ctrl_pts = 3*(self.num_seg + self.deg_pos - 5);
+		self.total_num_pos_ctrl_pts = self.num_seg + self.deg_pos
+		self.traj_size_pos_ctrl_pts = 3*(self.total_num_pos_ctrl_pts - 5);
 		self.traj_size_yaw_ctrl_pts = (self.num_seg + self.deg_yaw - 3);
 		self.traj_size = self.traj_size_pos_ctrl_pts + self.traj_size_yaw_ctrl_pts +1;
 		self.action_size = self.num_traj_per_action*self.traj_size;
@@ -657,7 +657,7 @@ class ActionManager():
 		if not self.actionIsNormalized(action_normalized):
 			print(msg_before+"The observation is not normalized")
 			print(f"NORMALIZED VALUE={action_normalized}")
-			action=denormalizeObservation(action_normalized)
+			action=self.denormalizeAction(action_normalized)
 			print(f"VALUE={action}")
 			# self.printObservation(observation);
 			raise AssertionError()

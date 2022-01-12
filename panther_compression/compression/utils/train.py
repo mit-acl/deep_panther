@@ -59,7 +59,7 @@ def make_bc_trainer(tmpdir, venv, custom_logger, lr, batch_size):
     )
 
 #Trainer is the student
-def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full_policy_path, use_only_last_coll_ds):
+def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full_policy_path, use_only_last_coll_ds, only_collect_data):
     # assert n_traj_per_round > 0, "n_traj_per_round needs to be at least one!"
     assert n_epochs > 0, "Number of training epochs must be >= 0!"
     
@@ -97,26 +97,27 @@ def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full
                 obs, _, done, _ = collector.step([expert_action])#The [] were added by jtorde, 1/1/22 #act_infos
                 expert_succeeded_at_least_once = True
 
-    
-    # Add the collected rollout to the dataset and trains the classifier.
-    #next_round_num = trainer.extend_and_update(n_epochs=n_epochs)
-    next_round_num = trainer.extend_and_update(dict(n_epochs=n_epochs))#use_only_last_coll_ds=use_only_last_coll_ds
+    curr_rollout_stats=None
+    if(only_collect_data==False):
+        # Add the collected rollout to the dataset and trains the classifier.
+        #next_round_num = trainer.extend_and_update(n_epochs=n_epochs)
+        next_round_num = trainer.extend_and_update(dict(n_epochs=n_epochs, save_full_policy_path=save_full_policy_path))#use_only_last_coll_ds=use_only_last_coll_ds
 
-    # Use the round number to figure out stats of the trajectories we just collected.
-    curr_rollout_stats, descriptors = rollout_stats(trainer.load_demos_at_round(next_round_num-1, augmented_demos=False))
-    print("[Training] reward: {}, len: {}.".format(curr_rollout_stats["return_mean"], curr_rollout_stats["len_mean"]))
+        # Use the round number to figure out stats of the trajectories we just collected.
+        curr_rollout_stats, descriptors = rollout_stats(trainer.load_demos_at_round(next_round_num-1, augmented_demos=False))
+        print("[Training] reward: {}, len: {}.".format(curr_rollout_stats["return_mean"], curr_rollout_stats["len_mean"]))
 
-    # Store the policy obtained at this round
-    trainer.save_policy(save_full_policy_path)
-    print(f"[Training] Training completed. Policy saved to: {save_full_policy_path}.")
+        # Store the policy obtained at this round
+        trainer.save_policy(save_full_policy_path)
+        print(f"[Training] Training completed. Policy saved to: {save_full_policy_path}.")
 
-    # Save training logs
-    descriptors["success"] = compute_success(trainer.load_demos_at_round(next_round_num-1, augmented_demos=False), trainer.venv)
-    logs = pd.DataFrame(descriptors)
-    logs = logs.assign(disturbance = False) # TODO: Andrea: change this flag if disturbance is set to true in training environment
-    # (maybe read flag from training environment itself)
-    # save logs 
-    if log_path is not None:
-        logs.to_pickle(log_path+".pkl")
+        # Save training logs
+        descriptors["success"] = compute_success(trainer.load_demos_at_round(next_round_num-1, augmented_demos=False), trainer.venv)
+        logs = pd.DataFrame(descriptors)
+        logs = logs.assign(disturbance = False) # TODO: Andrea: change this flag if disturbance is set to true in training environment
+        # (maybe read flag from training environment itself)
+        # save logs 
+        if log_path is not None:
+            logs.to_pickle(log_path+".pkl")
     
     return curr_rollout_stats
