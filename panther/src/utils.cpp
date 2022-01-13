@@ -748,16 +748,21 @@ std_msgs::ColorRGBA color(int id)
   orange_trans.g = 0.5;
   orange_trans.b = 0;
   orange_trans.a = 0.7;
-  std_msgs::ColorRGBA teal_normal;  // orange transparent
+  std_msgs::ColorRGBA teal_normal;  // teal transparent
   teal_normal.r = 25 / 255.0;
   teal_normal.g = 1.0;
   teal_normal.b = 240.0 / 255.0;
   teal_normal.a = 1.0;
-  std_msgs::ColorRGBA black_trans;  // orange transparent
+  std_msgs::ColorRGBA black_trans;  // black transparent
   black_trans.r = 0.0;
   black_trans.g = 0.0;
   black_trans.b = 0.0;
   black_trans.a = 0.2;
+  std_msgs::ColorRGBA black;  // black
+  black.r = 0.0;
+  black.g = 0.0;
+  black.b = 0.0;
+  black.a = 1.0;
 
   switch (id)
   {
@@ -793,6 +798,9 @@ std_msgs::ColorRGBA color(int id)
       break;
     case BLACK_TRANS:
       return black_trans;
+      break;
+    case BLACK:
+      return black;
       break;
     case TEAL_NORMAL:
       return teal_normal;
@@ -1011,6 +1019,10 @@ visualization_msgs::MarkerArray trajectory2ColoredMarkerArray(const mt::trajecto
     else if (color_type == "agent")  // TODO: "time" is hand-coded
     {
       m.color = getColorJet(id_agent, 0, n_agents);  // note that par_.v_max is per axis!
+    }
+    else if (color_type == "black")  // TODO: "time" is hand-coded
+    {
+      m.color = color(BLACK);
     }
     else
     {

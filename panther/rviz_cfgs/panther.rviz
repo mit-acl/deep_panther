@@ -5,7 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /TF1/Frames1
-      Splitter Ratio: 0.5105105042457581
+      Splitter Ratio: 0.8058823347091675
     Tree Height: 1157
   - Class: rviz/Selection
     Name: Selection
@@ -267,18 +267,38 @@ Visualization Manager:
       Value: false
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /SQ01s/panther/best_solution
-      Name: BestSolution
+      Marker Topic: /SQ01s/panther/best_solution_expert
+      Name: BestSolutionExp
       Namespaces:
-        SQ01s_best_solution0: true
+        SQ01s_best_solution_expert0: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /SQ01s/panther/best_solutions
-      Name: BestSolutions
+      Marker Topic: /SQ01s/panther/best_solutions_expert
+      Name: BestSolutionsExp
       Namespaces:
-        {}
+        SQ01s_best_solutions_expert0: true
+        SQ01s_best_solutions_expert1: true
+        SQ01s_best_solutions_expert2: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /SQ01s/panther/best_solution_student
+      Name: BestSolutionStu
+      Namespaces:
+        SQ01s_best_solution_student0: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /SQ01s/panther/best_solutions_student
+      Name: BestSolutionsStu
+      Namespaces:
+        SQ01s_best_solutions_student0: true
+        SQ01s_best_solutions_student1: true
+        SQ01s_best_solutions_student2: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -314,13 +334,13 @@ Visualization Manager:
       Queue Size: 100
       Value: false
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /SQ01s/panther/guesses
       Name: Guesses
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
       Enabled: false
       Marker Topic: /SQ01s/panther/splines_fitted
@@ -357,7 +377,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 16.00764274597168
+      Distance: 23.1805362701416
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -365,17 +385,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 2.502439022064209
-        Y: -1.8077330589294434
-        Z: -1.1625602382991929e-05
+        X: 1.6267004013061523
+        Y: -0.3223552703857422
+        Z: -1.0671928066585679e-05
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7347970008850098
+      Pitch: 0.7197969555854797
       Target Frame: <Fixed Frame>
-      Yaw: 3.5699825286865234
+      Yaw: 3.2499797344207764
     Saved: ~
 Window Geometry:
   DepthImage:

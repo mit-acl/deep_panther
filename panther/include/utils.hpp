@@ -37,7 +37,8 @@
 #define YELLOW_NORMAL 9
 #define ORANGE_TRANS 10
 #define BLACK_TRANS 11
-#define TEAL_NORMAL 12
+#define BLACK 12
+#define TEAL_NORMAL 13
 
 // #define STATE 0
 // #define INPUT 1

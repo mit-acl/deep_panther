@@ -66,7 +66,8 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
 
   safeGetParam(nh1_, "use_ff", par_.use_ff);
   safeGetParam(nh1_, "visual", par_.visual);
-  safeGetParam(nh1_, "color_type", par_.color_type);
+  safeGetParam(nh1_, "color_type_expert", par_.color_type_expert);
+  safeGetParam(nh1_, "color_type_student", par_.color_type_student);
   safeGetParam(nh1_, "n_agents", par_.n_agents);
   safeGetParam(nh1_, "num_of_trajs_per_replan", par_.num_of_trajs_per_replan);
   safeGetParam(nh1_, "num_of_initial_guesses", par_.num_of_initial_guesses);
@@ -149,6 +150,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "max_side_bbox_obs", par_.max_side_bbox_obs);
   safeGetParam(nh1_, "max_dist2BSPoscPoint", par_.max_dist2BSPoscPoint);
   safeGetParam(nh1_, "use_expert", par_.use_expert);
+  safeGetParam(nh1_, "use_student", par_.use_student);
   safeGetParam(nh1_, "student_policy_path", par_.student_policy_path);
   safeGetParam(nh1_, "static_planning", par_.static_planning);
 
@@ -176,6 +178,8 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
                                                                         "initial_guesses must hold");
 
   verify((par_.c_smooth_yaw_search >= 0), "par_.c_smooth_yaw_search>=0 must hold");
+  verify((par_.use_expert == true || par_.use_student == true), "(use_expert == true || use_student == true) must "
+                                                                "hold");
   verify((par_.c_visibility_yaw_search >= 0), "par_.c_visibility_yaw_search>=0 must hold");
   verify((par_.num_of_yaw_per_layer >= 1), "par_.num_of_yaw_per_layer>=1 must hold");
 
@@ -221,8 +225,12 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   poly_safe_pub_ = nh1_.advertise<decomp_ros_msgs::PolyhedronArray>("polys", 1, true);
   pub_traj_safe_colored_ = nh1_.advertise<visualization_msgs::MarkerArray>("traj_obtained", 1);
 
-  pub_best_solution_colored_ = nh1_.advertise<visualization_msgs::MarkerArray>("best_solution", 1);
-  pub_best_solutions_colored_ = nh1_.advertise<visualization_msgs::MarkerArray>("best_solutions", 1);
+  pub_best_solution_expert_ = nh1_.advertise<visualization_msgs::MarkerArray>("best_solution_expert", 1);
+  pub_best_solutions_expert_ = nh1_.advertise<visualization_msgs::MarkerArray>("best_solutions_expert", 1);
+
+  pub_best_solution_student_ = nh1_.advertise<visualization_msgs::MarkerArray>("best_solution_student", 1);
+  pub_best_solutions_student_ = nh1_.advertise<visualization_msgs::MarkerArray>("best_solutions_student", 1);
+
   pub_guesses_colored_ = nh1_.advertise<visualization_msgs::MarkerArray>("guesses", 1);
   pub_splines_fitted_colored_ = nh1_.advertise<visualization_msgs::MarkerArray>("splines_fitted", 1);
 
@@ -463,8 +471,10 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
     mt::Edges edges_obstacles;
     mt::trajectory X_safe;
 
-    si::solOrGuess best_solution;
-    std::vector<si::solOrGuess> best_solutions;
+    si::solOrGuess best_solution_expert;
+    std::vector<si::solOrGuess> best_solutions_expert;
+    si::solOrGuess best_solution_student;
+    std::vector<si::solOrGuess> best_solutions_student;
     std::vector<si::solOrGuess> guesses;
     std::vector<si::solOrGuess> splines_fitted;
 
@@ -482,8 +492,9 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
       pauseTime();
     }
 
-    bool replanned = panther_ptr_->replan(edges_obstacles, X_safe, best_solution, best_solutions, guesses,
-                                          splines_fitted, planes, log);
+    bool replanned =
+        panther_ptr_->replan(edges_obstacles, X_safe, best_solution_expert, best_solutions_expert,
+                             best_solution_student, best_solutions_student, guesses, splines_fitted, planes, log);
 
     if (par_.pause_time_when_replanning)
     {
@@ -507,14 +518,30 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 
       // pubBestTrajs(best_solutions);
 
-      std::vector<si::solOrGuess> best_solution_vector;
-      best_solution_vector.push_back(best_solution);
+      if (par_.use_student)
+      {
+        std::vector<si::solOrGuess> best_solution_student_vector;
+        best_solution_student_vector.push_back(best_solution_student);
+        // clang-format off
+        pubVectorOfsolOrGuess(best_solution_student_vector, pub_best_solution_student_, name_drone_ + "_best_solution_student", par_.color_type_student);
+        pubVectorOfsolOrGuess(best_solutions_student, pub_best_solutions_student_, name_drone_ + "_best_solutions_student", par_.color_type_student);
+        // clang-format on
+      }
+
+      if (par_.use_expert)
+      {
+        std::vector<si::solOrGuess> best_solution_expert_vector;
+        best_solution_expert_vector.push_back(best_solution_expert);
+        // clang-format off
+        pubVectorOfsolOrGuess(best_solution_expert_vector, pub_best_solution_expert_, name_drone_ + "_best_solution_expert", par_.color_type_expert);
+        pubVectorOfsolOrGuess(best_solutions_expert, pub_best_solutions_expert_, name_drone_ + "_best_solutions_expert", par_.color_type_expert);
+        pubVectorOfsolOrGuess(guesses, pub_guesses_colored_, name_drone_ + "_guess", par_.color_type_expert);
+        // clang-format on
+      }
 
       // std::cout << "best_solutions.size= " << best_solutions.size() << std::endl;
-      pubVectorOfsolOrGuess(best_solution_vector, pub_best_solution_colored_, name_drone_ + "_best_solution");
-      pubVectorOfsolOrGuess(best_solutions, pub_best_solutions_colored_, name_drone_ + "_best_solutions");
-      pubVectorOfsolOrGuess(guesses, pub_guesses_colored_, name_drone_ + "_guess");
-      pubVectorOfsolOrGuess(splines_fitted, pub_splines_fitted_colored_, name_drone_ + "_spline_fitted");
+
+      pubVectorOfsolOrGuess(splines_fitted, pub_splines_fitted_colored_, name_drone_ + "_spline_fitted", "vel");
     }
 
     // if (replanned)
@@ -695,7 +722,7 @@ void PantherRos::clearMarkerArray(visualization_msgs::MarkerArray* tmp, ros::Pub
 }
 
 void PantherRos::pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_or_guesses, ros::Publisher& publisher,
-                                       std::string ns)
+                                       std::string ns, std::string color_type)
 {
   visualization_msgs::MarkerArray best_trajs;
 
@@ -727,7 +754,7 @@ void PantherRos::pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_o
       // double alpha = sol_or_guess.prob;
       // saturate(sol_or_guess.prob, 0.08, 1.0);  // min_value so that it can be seen at least a little bit
       tmp = trajectory2ColoredMarkerArray(sol_or_guess.traj, par_.v_max.maxCoeff(), increm, ns + std::to_string(j),
-                                          scale, par_.color_type, id_, par_.n_agents, sol_or_guess.prob);
+                                          scale, color_type, id_, par_.n_agents, sol_or_guess.prob);
 
       // append to best_trajs
       best_trajs.markers.insert(best_trajs.markers.end(), tmp.markers.begin(), tmp.markers.end());
@@ -769,8 +796,8 @@ void PantherRos::pubTraj(const std::vector<mt::state>& data)
 
   double scale = 0.15;
 
-  traj_safe_colored_ = trajectory2ColoredMarkerArray(data, par_.v_max.maxCoeff(), increm, name_drone_, scale,
-                                                     par_.color_type, id_, par_.n_agents);
+  traj_safe_colored_ =
+      trajectory2ColoredMarkerArray(data, par_.v_max.maxCoeff(), increm, name_drone_, scale, "vel", id_, par_.n_agents);
   pub_traj_safe_colored_.publish(traj_safe_colored_);
 }
 
@@ -790,14 +817,14 @@ void PantherRos::pubActualTraj()
   actual_trajID_++;
   // m.color = getColorJet(current_state.vel.norm(), 0, par_.v_max.maxCoeff());  // color(RED_NORMAL);
 
-  if (par_.color_type == "vel")
-  {
-    m.color = getColorJet(current_state.vel.norm(), 0, par_.v_max.maxCoeff());  // note that par_.v_max is per axis!
-  }
-  else
-  {
-    m.color = getColorJet(id_, 0, par_.n_agents);  // note that par_.v_max is per axis!
-  }
+  // if (par_.color_type == "vel")
+  // {
+  m.color = getColorJet(current_state.vel.norm(), 0, par_.v_max.maxCoeff());  // note that par_.v_max is per axis!
+  // }
+  // else
+  // {
+  //   m.color = getColorJet(id_, 0, par_.n_agents);  // note that par_.v_max is per axis!
+  // }
 
   m.scale.x = 0.15;
   m.scale.y = 0.0001;

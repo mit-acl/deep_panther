@@ -799,7 +799,8 @@ struct parameters
   // clang-format off
   bool            use_ff;                             //void setVar_use_ff(const std::string& value) { use_ff = string2bool(value); };
   bool            visual;                             //void setVar_visual(const std::string& value) { visual = string2bool(value); };
-  std::string     color_type;                         //void setVar_color_type(const std::string& value) { color_type = value; };
+  std::string     color_type_expert;                         //void setVar_color_type(const std::string& value) { color_type = value; };
+  std::string     color_type_student;                         //void setVar_color_type(const std::string& value) { color_type = value; };
   int             n_agents;                           //void setVar_n_agents(const std::string& value) { n_agents = std::stoi(value); };
   int             num_of_trajs_per_replan;            //void setVar_num_of_trajs_per_replan(const std::string& value) { num_of_trajs_per_replan = std::stoi(value); };
   int             num_of_initial_guesses;            //void setVar_num_of_trajs_per_replan(const std::string& value) { num_of_trajs_per_replan = std::stoi(value); };
@@ -868,6 +869,7 @@ struct parameters
   double max_side_bbox_obs;
   double max_dist2BSPoscPoint;
   bool use_expert;
+  bool use_student;
   std::string student_policy_path;
   bool static_planning;
   // clang-format on

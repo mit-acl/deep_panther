@@ -53,7 +53,7 @@ private:
   // void pubBestTrajs(const std::vector<si::solOrGuess>& best_solutions);
 
   void pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_or_guesses, ros::Publisher& publisher,
-                             std::string ns);
+                             std::string ns, std::string color_type);
 
   void terminalGoalCB(const geometry_msgs::PoseStamped& msg);
   void pubState(const mt::state& msg, const ros::Publisher pub);
@@ -111,8 +111,13 @@ private:
   ros::Publisher pub_point_A_;
 
   ros::Publisher pub_traj_safe_colored_;
-  ros::Publisher pub_best_solutions_colored_;
-  ros::Publisher pub_best_solution_colored_;
+
+  ros::Publisher pub_best_solutions_expert_;
+  ros::Publisher pub_best_solution_expert_;
+
+  ros::Publisher pub_best_solutions_student_;
+  ros::Publisher pub_best_solution_student_;
+
   ros::Publisher pub_guesses_colored_;
   ros::Publisher pub_splines_fitted_colored_;
 

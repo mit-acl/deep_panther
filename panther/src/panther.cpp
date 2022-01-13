@@ -57,7 +57,7 @@ Panther::Panther(mt::parameters par) : par_(par)
   std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
   cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
 
-  if (par_.use_expert == false)
+  if (par_.use_student == true)
   {
     pybind11::initialize_interpreter();
 
@@ -69,7 +69,7 @@ Panther::Panther(mt::parameters par) : par_(par)
 
 Panther::~Panther()
 {
-  if (par_.use_expert == false)
+  if (par_.use_student == true)
   {
     pybind11::finalize_interpreter();
   }
@@ -596,8 +596,9 @@ bool Panther::isReplanningNeeded()
   return true;
 }
 
-bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out, si::solOrGuess& best_solution,
-                     std::vector<si::solOrGuess>& best_solutions, std::vector<si::solOrGuess>& guesses,
+bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out, si::solOrGuess& best_solution_expert,
+                     std::vector<si::solOrGuess>& best_solutions_expert, si::solOrGuess& best_solution_student,
+                     std::vector<si::solOrGuess>& best_solutions_student, std::vector<si::solOrGuess>& guesses,
                      std::vector<si::solOrGuess>& splines_fitted, std::vector<Hyperplane3D>& planes, mt::log& log)
 {
   (*log_ptr_) = {};  // Reset the struct with the default values
@@ -814,26 +815,46 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
     solver_->getPlanes(planes);
 
-    best_solutions = solver_->getBestSolutions();
+    best_solutions_expert = solver_->getBestSolutions();
 
     guesses = solver_->getGuesses();
 
-    best_solution = solver_->fillTrajBestSolutionAndGetIt();
+    best_solution_expert = solver_->fillTrajBestSolutionAndGetIt();
   }
-  else  // plan using the student
+  if (par_.use_student)
   {
     std::cout << "Calling the student!" << std::endl;
     pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos);
     std::cout << "Called the student!" << std::endl;
-    best_solutions = result.cast<std::vector<si::solOrGuess>>();
+    best_solutions_student = result.cast<std::vector<si::solOrGuess>>();
 
     // Hack: for now take the first traj
-    best_solution = best_solutions[0];
+    best_solution_student = best_solutions_student[0];
     ///////////////////////////////
 
-    best_solution.fillTraj(par_.dc);  // This could also be done in the predict method of the python class
-    best_solution.printInfo();
+    best_solution_student.fillTraj(par_.dc);  // This could also be done in the predict method of the python class
+    best_solution_student.printInfo();
     // abort();
+  }
+
+  si::solOrGuess best_solution;
+
+  if (par_.use_student == true && par_.use_expert == false)
+  {
+    best_solution = best_solution_student;
+  }
+  else if (par_.use_student == false && par_.use_expert == true)
+  {
+    best_solution = best_solution_expert;
+  }
+  else if (par_.use_student == true && par_.use_expert == true)
+  {
+    best_solution = best_solution_student;
+  }
+  else
+  {
+    std::cout << red << bold << "Either use_student=true or use_expert=true" << reset << std::endl;
+    abort();
   }
 
   solutions_found_++;
