@@ -90,6 +90,7 @@ if __name__ == "__main__":
     batch_size = 8
     N_EPOCHS = 150           #WAS 50!! Num epochs for training.
     lr=1e-3
+    weight_prob=0.005
 
     if(only_collect_data==True):
         train_only_supervised=False
@@ -218,9 +219,9 @@ if __name__ == "__main__":
         printInBoldBlue("---------------- Making Learner Policy: -------------------")
         # Create learner policy
         if args.on_policy_trainer: 
-            trainer = make_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size) 
+            trainer = make_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob) 
         else: 
-            trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size)
+            trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob)
 
         printInBoldBlue("---------------- Making Expert Policy: --------------------")
         # Create expert policy 

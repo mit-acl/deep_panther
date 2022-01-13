@@ -722,8 +722,12 @@ void PantherRos::pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_o
       int increm = (int)std::max(sol_or_guess.traj.size() / par_.res_plot_traj, 1.0);  // this is to speed up rviz
 
       visualization_msgs::MarkerArray tmp;
+      verify((sol_or_guess.prob >= 0 && sol_or_guess.prob <= 1), "prob must be in [0,1]");
+
+      // double alpha = sol_or_guess.prob;
+      // saturate(sol_or_guess.prob, 0.08, 1.0);  // min_value so that it can be seen at least a little bit
       tmp = trajectory2ColoredMarkerArray(sol_or_guess.traj, par_.v_max.maxCoeff(), increm, ns + std::to_string(j),
-                                          scale, par_.color_type, id_, par_.n_agents);
+                                          scale, par_.color_type, id_, par_.n_agents, sol_or_guess.prob);
 
       // append to best_trajs
       best_trajs.markers.insert(best_trajs.markers.end(), tmp.markers.begin(), tmp.markers.end());

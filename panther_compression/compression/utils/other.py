@@ -619,7 +619,7 @@ class ActionManager():
 
 		# Define action and observation space
 
-		# action = np.array([ctrl_points_pos   ctrl_points_yaw  total time])
+		# action = np.array([ctrl_points_pos   ctrl_points_yaw  total time, prob that traj])
 		#
 		# --> where ctrlpoints_pos has the ctrlpoints that are not determined by init pos/vel/accel, and final vel/accel
 		#     i.e., len(ctrlpoints_pos)= (num_seg_pos + deg_pos - 1 + 1) - 3 - 2 = num_seg_pos + deg_pos - 5;
@@ -633,7 +633,7 @@ class ActionManager():
 		self.total_num_pos_ctrl_pts = self.num_seg + self.deg_pos
 		self.traj_size_pos_ctrl_pts = 3*(self.total_num_pos_ctrl_pts - 5);
 		self.traj_size_yaw_ctrl_pts = (self.num_seg + self.deg_yaw - 3);
-		self.traj_size = self.traj_size_pos_ctrl_pts + self.traj_size_yaw_ctrl_pts +1;
+		self.traj_size = self.traj_size_pos_ctrl_pts + self.traj_size_yaw_ctrl_pts + 1 + 1; # Last two numbers are time and prob that traj is real
 		self.action_size = self.num_traj_per_action*self.traj_size;
 		self.Npos = self.num_seg + self.deg_pos-1;
 
@@ -677,32 +677,39 @@ class ActionManager():
 
 	def normalizeAction(self, action):
 		action_normalized=np.empty(action.shape)
-		action_normalized[:,0:-1]=action[:,0:-1]/self.normalization_constant #Elementwise division
-		action_normalized[:,-1]=(2.0/self.fitter_total_time)*action[:,-1]-1 #Note that action[0,-1] is in [0, fitter_total_time]
+		action_normalized[:,0:-2]=action[:,0:-2]/self.normalization_constant #Elementwise division
+		action_normalized[:,-2]=(2.0/self.fitter_total_time)*action[:,-2]-1 #Note that action[0,-2] is in [0, fitter_total_time]
+		action_normalized[:,-1]=(2.0/1.0)*action[:,-1]-1 #Note that action[0,-1] is in [0, 1]
 
-		for index_traj in range(self.num_traj_per_action):
-			time_normalized=self.getTotalTime(action_normalized, index_traj);
-			slack=1-abs(time_normalized);
-			if(slack<0):
-				if abs(slack)<1e-5: #Can happen due to the tolerances in the optimization
-					print(f"Before= {action_normalized[0,-1]}")
-					action_normalized[index_traj,-1]=np.clip(time_normalized, -1.0, 1.0) #Saturate within limits
-					print(f"After= {action_normalized[0,-1]}")
-				else:
-					assert False, f"time_normalized={time_normalized}"
+		# for index_traj in range(self.num_traj_per_action):
+		# 	time_normalized=self.getTotalTime(action_normalized, index_traj);
+		# 	slack=1-abs(time_normalized);
+		# 	if(slack<0):
+		# 		if abs(slack)<1e-5: #Can happen due to the tolerances in the optimization
+		# 			print(f"Before= {action_normalized[0,-1]}")
+		# 			action_normalized[index_traj,-1]=np.clip(time_normalized, -1.0, 1.0) #Saturate within limits
+		# 			print(f"After= {action_normalized[0,-1]}")
+		# 		else:
+		# 			assert False, f"time_normalized={time_normalized}"
 
 
 		# assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}, last element={action_normalized[0,-1]}"
 		return action_normalized;
 
-	def getTotalTime(self,action, index_traj):
+	def getProb(self,action, index_traj):
 		return action[index_traj,-1]
+
+	def getTotalTime(self,action, index_traj):
+		return action[index_traj,-2]
 
 	def getPosCtrlPts(self, action, index_traj):
 		return action[index_traj,0:self.traj_size_pos_ctrl_pts].reshape((3,-1), order='F')
 
 	def getYawCtrlPts(self, action, index_traj):
-		return action[index_traj,self.traj_size_pos_ctrl_pts:-1].reshape((1,-1));
+		return action[index_traj,self.traj_size_pos_ctrl_pts:-2].reshape((1,-1));
+
+	def getProbTraj(self,traj):
+		return self.getProb(traj, 0)
 
 	def getTotalTimeTraj(self,traj):
 		return self.getTotalTime(traj, 0)
@@ -724,8 +731,9 @@ class ActionManager():
 	def denormalizeAction(self, action_normalized):
 		# assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}"
 		action=np.empty(action_normalized.shape)
-		action[:,0:-1]=action_normalized[:,0:-1]*self.normalization_constant #Elementwise multiplication
-		action[:,-1]=(self.fitter_total_time/2.0)*(action_normalized[:,-1]+1) #Note that action[:,-1] is in [0, fitter_total_time]
+		action[:,0:-2]=action_normalized[:,0:-2]*self.normalization_constant #Elementwise multiplication
+		action[:,-2]=(self.fitter_total_time/2.0)*(action_normalized[:,-2]+1) #Note that action[:,-2] is in [0, fitter_total_time]
+		action[:,-1]=(1.0/2.0)*(action_normalized[:,-1]+1) #Note that action[:,-1] is in [0, 1]
 		return action
 
 	def getActionSize(self):
@@ -825,6 +833,7 @@ class ActionManager():
 		w_sol_or_guess.knots_y=knots_y
 
 		w_sol_or_guess.solver_succeeded=True
+		w_sol_or_guess.prob=self.getProbTraj(f_traj);
 		w_sol_or_guess.cost=0.0 #TODO
 		w_sol_or_guess.is_guess=False #TODO
 
@@ -846,7 +855,7 @@ class ActionManager():
 
 		w_pos_ctrl_pts,_=self.f_trajAnd_w_State2_w_pos_ctrl_pts_and_knots(f_traj, w_state)
 		w_yaw_ctrl_pts,_=self.f_trajAnd_w_State2_w_yaw_ctrl_pts_and_knots(f_traj, w_state)
-		total_time=f_traj[0,-1]
+		total_time=self.getTotalTimeTraj(f_traj)
 
 
 		# print(f"f_action={f_action}")
@@ -874,6 +883,9 @@ class ActionManager():
 		assert sol_or_guess.knots_p[0]==0
 		assert sol_or_guess.knots_y[0]==0
 		traj=np.concatenate((traj, np.array([[sol_or_guess.knots_p[-1]]])), axis=1)
+
+		#Append prob of that traj
+		traj=np.concatenate((traj, np.array( [[sol_or_guess.prob]]  )), axis=1)
 
 
 		assert traj.shape==self.getTrajShape()

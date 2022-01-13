@@ -1,6 +1,6 @@
 use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
 visual: true #publish visualization stuff
-color_type: "vel" #"vel" or "plain"
+color_type: "prob" #"vel" or "time" or "prob" or "agent"
 n_agents: 16 #only used for the color in the trajectory
 num_of_trajs_per_replan: 3
 num_of_initial_guesses: 10
@@ -58,5 +58,5 @@ max_dist2obs: 20.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
 use_expert: false
-student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round0.pt #final_policy.pt   intermediate_policy_42.pt
+student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round0_log68.pt #final_policy.pt   intermediate_policy_42.pt
 static_planning: true #If true, it will always plan from the same initial condition

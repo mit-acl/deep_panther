@@ -946,11 +946,11 @@ bool SolverIpopt::optimize(bool supress_all_prints)
             << std::endl;
 
   // PRINTING STUFF
-  for (int i = 0; i < solutions_.size(); i++)
-  {
-    std::cout << bold << "\n===================================" << std::endl;
-    solutions_[i].printInfo();
-  }
+  // for (int i = 0; i < solutions_.size(); i++)
+  // {
+  //   std::cout << bold << "\n===================================" << std::endl;
+  //   solutions_[i].printInfo();
+  // }
 
   // NO SOLUTION FOUND
   if (solutions_.size() == 0)
@@ -967,13 +967,19 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   // TOO FEW SOLUTIONS: DUPLICATE SOME//TODO: any better option?
   else
   {
-    si::solOrGuess best_solution = getBestSolution();  // Copy the best solution found
+    si::solOrGuess dummy_solution = getBestSolution();  // Copy the best solution found
+    // while (solutions_.size() < par_.num_of_trajs_per_replan)
+    // {
+    //   solutions_.push_back(best_solution);
+    // }
+    // si::solOrGuess dummy_solution;  // Copy the best solution found
+    dummy_solution.solver_succeeded = false;
+    dummy_solution.prob = 0.0;
     while (solutions_.size() < par_.num_of_trajs_per_replan)
     {
-      solutions_.push_back(best_solution);
+      solutions_.push_back(dummy_solution);
     }
   }
-  std::cout << "Returning true" << std::endl;
   return true;
   //
 

@@ -54,6 +54,7 @@ struct solOrGuess
   bool solver_succeeded = false;
   double cost = std::numeric_limits<double>::max();
   bool is_guess = true;
+  double prob = 1.0;
 
   int deg_p;
   int deg_y;

@@ -8,7 +8,7 @@ from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
 from compression.utils.other import ExpertDidntSucceed, ActionManager
 
-def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size):
+def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob):
     beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
 
     am=ActionManager()
@@ -21,7 +21,8 @@ def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_
         custom_logger=custom_logger,
         policy=StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space),
         batch_size=batch_size,
-        traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts
+        traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
+        weight_prob=weight_prob
     )
 
     return dagger.DAggerTrainer(
@@ -32,7 +33,7 @@ def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_
         custom_logger=custom_logger,
     )
 
-def make_bc_trainer(tmpdir, venv, custom_logger, lr, batch_size):
+def make_bc_trainer(tmpdir, venv, custom_logger, lr, batch_size, weight_prob):
     """Will make DAgger, but with a constant beta, set to 1 
     (always 100% prob of using expert)"""
     beta_schedule=dagger.AlwaysExpertBetaSchedule()
@@ -47,7 +48,8 @@ def make_bc_trainer(tmpdir, venv, custom_logger, lr, batch_size):
         custom_logger=custom_logger,
         policy=StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space),
         batch_size=batch_size,
-        traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts
+        traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
+        weight_prob=weight_prob
     )
 
     return dagger.DAggerTrainer(

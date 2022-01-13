@@ -970,7 +970,7 @@ geometry_msgs::Vector3 vectorUniform(double a)
 
 visualization_msgs::MarkerArray trajectory2ColoredMarkerArray(const mt::trajectory& data, double max_value, int increm,
                                                               std::string ns, double scale, std::string color_type,
-                                                              int id_agent, int n_agents)
+                                                              int id_agent, int n_agents, double prob)
 {
   visualization_msgs::MarkerArray marker_array;
 
@@ -1004,10 +1004,20 @@ visualization_msgs::MarkerArray trajectory2ColoredMarkerArray(const mt::trajecto
     {
       m.color = getColorJet(i, 0, data.size());  // note that par_.v_max is per axis!
     }
-    else
+    else if (color_type == "prob")  // TODO: "time" is hand-coded
+    {
+      m.color = getColorJet(prob, 0.0, 1.0);  // note that par_.v_max is per axis!
+    }
+    else if (color_type == "agent")  // TODO: "time" is hand-coded
     {
       m.color = getColorJet(id_agent, 0, n_agents);  // note that par_.v_max is per axis!
     }
+    else
+    {
+      std::cout << "color_type CHOSEN IS NOT SUPPORTED" << std::endl;
+      abort();
+    }
+    // m.color.a = alpha;
     m.scale.x = scale;
     m.scale.y = 0.0000001;  // rviz complains if not
     m.scale.z = 0.0000001;  // rviz complains if not
