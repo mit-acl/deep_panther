@@ -88,7 +88,7 @@ def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full
                 if(expert_succeeded_at_least_once):
                     done = True
                     print("[Training] Teacher unable to provide example. Concluding trajectory.")
-                    collector.save_trajectory()
+                    # collector.save_trajectory()
                 else:
                     print("[Training] Teacher unable to provide first example. Resetting Collector and trying again.")
                     obs = collector.reset()
