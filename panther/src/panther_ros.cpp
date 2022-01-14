@@ -520,18 +520,14 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 
       if (replanned == true)
       {
-        clearMarkerArray(ma_best_solution_student_, pub_best_solution_student_);
-        clearMarkerArray(ma_best_solutions_student_, pub_best_solutions_student_);
-        clearMarkerArray(ma_best_solution_expert_, pub_best_solution_expert_);
-        clearMarkerArray(ma_best_solutions_expert_, pub_best_solutions_expert_);
-        clearMarkerArray(ma_guesses_, pub_guesses_);
-
         if (par_.use_student)
         {
           std::vector<si::solOrGuess> best_solution_student_vector;
           best_solution_student_vector.push_back(best_solution_student);
           // clang-format off
+        clearMarkerArray(ma_best_solution_student_, pub_best_solution_student_);
         ma_best_solution_student_=pubVectorOfsolOrGuess(best_solution_student_vector, pub_best_solution_student_, name_drone_ + "_best_solution_student", par_.color_type_student);
+        clearMarkerArray(ma_best_solutions_student_, pub_best_solutions_student_);
         ma_best_solutions_student_=pubVectorOfsolOrGuess(best_solutions_student, pub_best_solutions_student_, name_drone_ + "_best_solutions_student", par_.color_type_student);
           // clang-format on
         }
@@ -541,8 +537,11 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
           std::vector<si::solOrGuess> best_solution_expert_vector;
           best_solution_expert_vector.push_back(best_solution_expert);
           // clang-format off
+        clearMarkerArray(ma_best_solution_expert_, pub_best_solution_expert_);
         ma_best_solutions_expert_=pubVectorOfsolOrGuess(best_solution_expert_vector, pub_best_solution_expert_, name_drone_ + "_best_solution_expert", par_.color_type_expert);
+        clearMarkerArray(ma_best_solutions_expert_, pub_best_solutions_expert_);
         ma_best_solutions_expert_=pubVectorOfsolOrGuess(best_solutions_expert, pub_best_solutions_expert_, name_drone_ + "_best_solutions_expert", par_.color_type_expert);
+        clearMarkerArray(ma_guesses_, pub_guesses_);
         ma_guesses_=pubVectorOfsolOrGuess(guesses, pub_guesses_, name_drone_ + "_guess", par_.color_type_expert);
           // clang-format on
         }
