@@ -939,6 +939,15 @@ bool SolverIpopt::optimize(bool supress_all_prints)
 
   solutions = getOnlySucceededAndDifferent(solutions);
 
+  struct
+  {
+    bool operator()(si::solOrGuess &a, si::solOrGuess &b) const
+    {
+      return a.cost < b.cost;
+    }
+  } customLess;
+  std::sort(solutions.begin(), solutions.end(), customLess);  // sort solutions from lowest to highest cost
+
   solutions_ = solutions;
   guesses_ = guesses;
 
@@ -958,7 +967,7 @@ bool SolverIpopt::optimize(bool supress_all_prints)
     std::cout << "NOT ENOUGH SOLUTIONS SUCCESSFUL" << std::endl;
     return false;
   }
-  // TOO MANY SOLUTIONS: RETAIN ONLY SOME//TODO: any better option?
+  // TOO MANY SOLUTIONS: RETAIN the ones with lowest cost (the first ones)
   else if (solutions_.size() > par_.num_of_trajs_per_replan)
   {
     int elements_to_delete = solutions_.size() - par_.num_of_trajs_per_replan;
