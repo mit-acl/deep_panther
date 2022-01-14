@@ -52,8 +52,9 @@ private:
   void pubTraj(const std::vector<mt::state>& data);
   // void pubBestTrajs(const std::vector<si::solOrGuess>& best_solutions);
 
-  void pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_or_guesses, ros::Publisher& publisher,
-                             std::string ns, std::string color_type);
+  visualization_msgs::MarkerArray pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_or_guesses,
+                                                        ros::Publisher& publisher, std::string ns,
+                                                        std::string color_type);
 
   void terminalGoalCB(const geometry_msgs::PoseStamped& msg);
   void pubState(const mt::state& msg, const ros::Publisher pub);
@@ -74,7 +75,7 @@ private:
   visualization_msgs::MarkerArray clearArrows();
   // geometry_msgs::Vector3 vectorNull();
 
-  void clearMarkerArray(visualization_msgs::MarkerArray* tmp, ros::Publisher* publisher);
+  void clearMarkerArray(visualization_msgs::MarkerArray& tmp, ros::Publisher& publisher);
 
   void publishPoly(const vec_E<Polyhedron<3>>& poly);
   // visualization_msgs::MarkerArray Matrix2ColoredMarkerArray(Eigen::MatrixXd& X, int type);
@@ -118,8 +119,14 @@ private:
   ros::Publisher pub_best_solutions_student_;
   ros::Publisher pub_best_solution_student_;
 
-  ros::Publisher pub_guesses_colored_;
-  ros::Publisher pub_splines_fitted_colored_;
+  ros::Publisher pub_guesses_;
+  ros::Publisher pub_splines_fitted_;
+
+  visualization_msgs::MarkerArray ma_best_solution_student_;
+  visualization_msgs::MarkerArray ma_best_solutions_student_;
+  visualization_msgs::MarkerArray ma_best_solution_expert_;
+  visualization_msgs::MarkerArray ma_best_solutions_expert_;
+  visualization_msgs::MarkerArray ma_guesses_;
 
   ros::Publisher pub_text_;
   ros::Publisher pub_traj_;

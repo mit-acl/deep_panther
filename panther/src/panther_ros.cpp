@@ -231,8 +231,8 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   pub_best_solution_student_ = nh1_.advertise<visualization_msgs::MarkerArray>("best_solution_student", 1);
   pub_best_solutions_student_ = nh1_.advertise<visualization_msgs::MarkerArray>("best_solutions_student", 1);
 
-  pub_guesses_colored_ = nh1_.advertise<visualization_msgs::MarkerArray>("guesses", 1);
-  pub_splines_fitted_colored_ = nh1_.advertise<visualization_msgs::MarkerArray>("splines_fitted", 1);
+  pub_guesses_ = nh1_.advertise<visualization_msgs::MarkerArray>("guesses", 1);
+  pub_splines_fitted_ = nh1_.advertise<visualization_msgs::MarkerArray>("splines_fitted", 1);
 
   pub_traj_ = nh1_.advertise<panther_msgs::DynTraj>("/trajs", 1, true);  // The last boolean is latched or not
   pub_fov_ = nh1_.advertise<visualization_msgs::Marker>("fov", 1);
@@ -518,30 +518,39 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 
       // pubBestTrajs(best_solutions);
 
-      if (par_.use_student)
+      if (replanned == true)
       {
-        std::vector<si::solOrGuess> best_solution_student_vector;
-        best_solution_student_vector.push_back(best_solution_student);
-        // clang-format off
-        pubVectorOfsolOrGuess(best_solution_student_vector, pub_best_solution_student_, name_drone_ + "_best_solution_student", par_.color_type_student);
-        pubVectorOfsolOrGuess(best_solutions_student, pub_best_solutions_student_, name_drone_ + "_best_solutions_student", par_.color_type_student);
-        // clang-format on
-      }
+        clearMarkerArray(ma_best_solution_student_, pub_best_solution_student_);
+        clearMarkerArray(ma_best_solutions_student_, pub_best_solutions_student_);
+        clearMarkerArray(ma_best_solution_expert_, pub_best_solution_expert_);
+        clearMarkerArray(ma_best_solutions_expert_, pub_best_solutions_expert_);
+        clearMarkerArray(ma_guesses_, pub_guesses_);
 
-      if (par_.use_expert)
-      {
-        std::vector<si::solOrGuess> best_solution_expert_vector;
-        best_solution_expert_vector.push_back(best_solution_expert);
-        // clang-format off
-        pubVectorOfsolOrGuess(best_solution_expert_vector, pub_best_solution_expert_, name_drone_ + "_best_solution_expert", par_.color_type_expert);
-        pubVectorOfsolOrGuess(best_solutions_expert, pub_best_solutions_expert_, name_drone_ + "_best_solutions_expert", par_.color_type_expert);
-        pubVectorOfsolOrGuess(guesses, pub_guesses_colored_, name_drone_ + "_guess", par_.color_type_expert);
-        // clang-format on
+        if (par_.use_student)
+        {
+          std::vector<si::solOrGuess> best_solution_student_vector;
+          best_solution_student_vector.push_back(best_solution_student);
+          // clang-format off
+        ma_best_solution_student_=pubVectorOfsolOrGuess(best_solution_student_vector, pub_best_solution_student_, name_drone_ + "_best_solution_student", par_.color_type_student);
+        ma_best_solutions_student_=pubVectorOfsolOrGuess(best_solutions_student, pub_best_solutions_student_, name_drone_ + "_best_solutions_student", par_.color_type_student);
+          // clang-format on
+        }
+
+        if (par_.use_expert)
+        {
+          std::vector<si::solOrGuess> best_solution_expert_vector;
+          best_solution_expert_vector.push_back(best_solution_expert);
+          // clang-format off
+        ma_best_solutions_expert_=pubVectorOfsolOrGuess(best_solution_expert_vector, pub_best_solution_expert_, name_drone_ + "_best_solution_expert", par_.color_type_expert);
+        ma_best_solutions_expert_=pubVectorOfsolOrGuess(best_solutions_expert, pub_best_solutions_expert_, name_drone_ + "_best_solutions_expert", par_.color_type_expert);
+        ma_guesses_=pubVectorOfsolOrGuess(guesses, pub_guesses_, name_drone_ + "_guess", par_.color_type_expert);
+          // clang-format on
+        }
       }
 
       // std::cout << "best_solutions.size= " << best_solutions.size() << std::endl;
 
-      pubVectorOfsolOrGuess(splines_fitted, pub_splines_fitted_colored_, name_drone_ + "_spline_fitted", "vel");
+      pubVectorOfsolOrGuess(splines_fitted, pub_splines_fitted_, name_drone_ + "_spline_fitted", "vel");
     }
 
     // if (replanned)
@@ -695,34 +704,25 @@ void PantherRos::pubCB(const ros::TimerEvent& e)
   publishFOV();
 }
 
-void PantherRos::clearMarkerArray(visualization_msgs::MarkerArray* tmp, ros::Publisher* publisher)
+void PantherRos::clearMarkerArray(visualization_msgs::MarkerArray& tmp, ros::Publisher& publisher)
 {
-  if ((*tmp).markers.size() == 0)
+  if (tmp.markers.size() == 0)
   {
     return;
   }
-  int id_begin = (*tmp).markers[0].id;
 
-  for (int i = 0; i < (*tmp).markers.size(); i++)
+  for (int i = 0; i < tmp.markers.size(); i++)
   {
-    visualization_msgs::Marker m;
-    m.header.frame_id = "world";
-    m.header.stamp = ros::Time::now();
-    m.type = visualization_msgs::Marker::ARROW;
-    m.action = visualization_msgs::Marker::DELETE;
-    m.id = i + id_begin;
-    m.scale.x = 0.15;
-    m.scale.y = 0;
-    m.scale.z = 0;
-    (*tmp).markers[i] = m;
+    tmp.markers[i].action = visualization_msgs::Marker::DELETE;
   }
 
-  (*publisher).publish(*tmp);
-  (*tmp).markers.clear();
+  publisher.publish(tmp);
+  tmp.markers.clear();
 }
 
-void PantherRos::pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_or_guesses, ros::Publisher& publisher,
-                                       std::string ns, std::string color_type)
+visualization_msgs::MarkerArray PantherRos::pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_or_guesses,
+                                                                  ros::Publisher& publisher, std::string ns,
+                                                                  std::string color_type)
 {
   visualization_msgs::MarkerArray best_trajs;
 
@@ -765,6 +765,8 @@ void PantherRos::pubVectorOfsolOrGuess(const std::vector<si::solOrGuess>& sols_o
   }
 
   publisher.publish(best_trajs);
+
+  return best_trajs;
 }
 
 void PantherRos::pubTraj(const std::vector<mt::state>& data)
@@ -792,7 +794,7 @@ void PantherRos::pubTraj(const std::vector<mt::state>& data)
   }
 
   pub_traj_safe_.publish(traj);
-  clearMarkerArray(&traj_safe_colored_, &pub_traj_safe_colored_);
+  clearMarkerArray(traj_safe_colored_, pub_traj_safe_colored_);
 
   double scale = 0.15;
 
