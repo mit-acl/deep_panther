@@ -3,7 +3,7 @@ visual: true #publish visualization stuff
 color_type_student: "prob" #"vel" or "time" or "prob" or "agent" or "black"
 color_type_expert: "black" #"vel" or "time" or "prob" or "agent" or "black"
 n_agents: 16 #only used for the color in the trajectory
-num_of_trajs_per_replan: 3
+num_of_trajs_per_replan: 6
 num_of_initial_guesses: 10
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 goal_radius: 0.5    #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
@@ -36,7 +36,7 @@ a_star_samp_y: 3
 a_star_samp_z: 3 
 a_star_fraction_voxel_size: 0.00 #\in [0,1] The higher, the bigger the voxel size in A* is(i.e. more prunning)
 a_star_bias: 1.0 #Bias (cost=g+bias*h) in the A* search 
-res_plot_traj: 60.0  #Higher --> More resolution when plotting the trajectory 
+res_plot_traj: 30.0  #Higher --> More resolution when plotting the trajectory 
 factor_alloc: 1.0 #>=1. Used to find the total duration of a given trajectory.
 alpha_shrink: 0.9 #\in [0,1] Only used for MINVO/Bezier
 norminv_prob: 1.0 #For x% bands, set this to norminv(x). #70.0% band <--> 0.524, 80.0% band <--> 0.841, 90.0% band <--> 1.282, 97.5% band <--> 1.96 (i.e. total area is 95%)
@@ -58,7 +58,7 @@ max_dist2goal: 20.0
 max_dist2obs: 20.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
-use_expert: true
+use_expert: false
 use_student: true
-student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round0_log68.pt #final_policy.pt   intermediate_policy_42.pt
+student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round0_log43.pt #final_policy.pt   intermediate_policy_42.pt
 static_planning: true #If true, it will always plan from the same initial condition
