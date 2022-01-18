@@ -157,6 +157,14 @@ class StudentPolicy(BasePolicy):
         # self.printwithName(f"Received obs shape={observation.shape}")
         action = self.forward(obs_n, deterministic)
         # self.printwithName(f"action={action}")
+
+        #Sort each of the trajectories from highest to lowest probability
+        indexes=th.argsort(action[:,:,-1], dim=1, descending=True) #TODO: Assumming here that the last number is the probability!
+        action = action[:,indexes,:]
+        # self.printwithName(f"indexes={indexes}")     
+        # self.printwithName(f"After sorting, action={action}")
+        #############
+
         self.am.assertActionIsNormalized(action.cpu().numpy().reshape(self.am.getActionShape()), self.name)
 
         self.printwithName(f"In predict_, returning shape={action.shape}")
