@@ -2,35 +2,27 @@ import sys
 import numpy as np
 import copy
 from random import random, shuffle
-from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed, computeTotalTime
+from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed, computeTotalTime, getNumOfEnv
 from colorama import init, Fore, Back, Style
 import py_panther
 import math 
-
-######################################################################################################
-###### https://stackoverflow.com/questions/11130156/suppress-stdout-stderr-print-from-python-functions
-# from contextlib import contextmanager,redirect_stderr,redirect_stdout
-# from os import devnull
-# @contextmanager
-# def suppress_stdout_stderr():
-#     """A context manager that redirects stdout and stderr to devnull"""
-#     with open(devnull, 'w') as fnull:
-#         with redirect_stderr(fnull) as err, redirect_stdout(fnull) as out:
-#             yield (err, out)
+from gym import spaces
 
 
-# class DummyFile(object):
-#     def write(self, x): pass
-
-# @contextmanager
-# def nostdout():
-#     save_stdout = sys.stdout
-#     sys.stdout = DummyFile()
-#     yield
-#     sys.stdout = save_stdout
-######################################################################################################
+###
+from joblib import Parallel, delayed
+import multiprocessing
+##
 
 class ExpertPolicy(object):
+
+
+    #The reason to create this here (instead of in the constructor) is that C++ objects created with pybind11 cannot be pickled by default (pickled is needed when parallelizing)
+    #See https://stackoverflow.com/a/68672/6057617
+    #The reason why we create a list (instead of only one SolverIpopt) is because of the variables created here are not thread safe: https://stackoverflow.com/a/1073230/6057617
+    #Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
+    
+    my_SolversIpopt=[py_panther.SolverIpopt(getPANTHERparamsAsCppStruct()) for _ in range(getNumOfEnv())]; 
 
     def __init__(self):
         self.am=ActionManager();
@@ -39,9 +31,15 @@ class ExpertPolicy(object):
         self.action_shape=self.am.getActionShape();
         self.observation_shape=self.om.getObservationShape();
 
-        self.par=getPANTHERparamsAsCppStruct();
+        self.action_space = spaces.Box(low = -1.0, high = 1.0, shape=self.action_shape)
+        self.observation_space = spaces.Box(low = -1.0, high = 1.0, shape=self.observation_shape)
 
-        self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
+        par=getPANTHERparamsAsCppStruct()
+        self.par_v_max=par.v_max
+        self.par_a_max=par.a_max
+        self.par_factor_alloc=par.factor_alloc
+
+        # self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
 
         self.name=Style.BRIGHT+Fore.BLUE+"  [Exp]"+Style.RESET_ALL
         self.reset()
@@ -63,7 +61,10 @@ class ExpertPolicy(object):
         #From https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/policies.py#L41
         # In the case of policies, the prediction is an action.
         # In the case of critics, it is the estimated value of the observation.
-    def predict(self, obs_n, deterministic=True):
+    def predict(self, obs_n, deterministic=True, thread_index=0):
+
+        # print(f"self.observation_shape={self.observation_shape}")
+        # obs_n=obs_n.reshape((-1,*self.observation_shape)) #Not sure why this is needed
         obs_n=obs_n.reshape(self.observation_shape) #Not sure why this is needed
         assert obs_n.shape==self.observation_shape, self.name+f"ERROR: obs.shape={obs_n.shape} but self.observation_shape={self.observation_shape}"
         
@@ -86,25 +87,25 @@ class ExpertPolicy(object):
 
         # invsqrt3_vector=math.sqrt(3)*np.ones((3,1));
         # total_time=self.par.factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, self.par.v_max*invsqrt3_vector, self.par.a_max*invsqrt3_vector)
-        total_time=computeTotalTime(init_state, final_state, self.par.v_max, self.par.a_max, self.par.factor_alloc)
+        total_time=computeTotalTime(init_state, final_state, self.par_v_max, self.par_a_max, self.par_factor_alloc)
 
-        self.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
-        self.my_SolverIpopt.setFocusOnObstacle(True);
-        self.my_SolverIpopt.setObstaclesForOpt(self.om.getObstacles(obs));
+        ExpertPolicy.my_SolversIpopt[thread_index].setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
+        ExpertPolicy.my_SolversIpopt[thread_index].setFocusOnObstacle(True);
+        ExpertPolicy.my_SolversIpopt[thread_index].setObstaclesForOpt(self.om.getObstacles(obs));
 
         # with nostdout():
-        succeed=self.my_SolverIpopt.optimize(True);
+        succeed=ExpertPolicy.my_SolversIpopt[thread_index].optimize(True);
 
         
-
         if(succeed==False):
             self.printFailedOpt();
             # exit();
-            raise ExpertDidntSucceed()
+            # raise ExpertDidntSucceed()
+            return None, {"Q": 0.0} 
         else:
             self.printSucessOpt();
 
-        best_solutions=self.my_SolverIpopt.getBestSolutions();
+        best_solutions=ExpertPolicy.my_SolversIpopt[thread_index].getBestSolutions();
 
         # self.printwithName("Optimizer called, best solution= ")
         # best_solution.printInfo()
@@ -157,3 +158,25 @@ class ExpertPolicy(object):
         # action=self.am.normalizeAction(action)
 
         # action=self.am.getDummyOptimalNormalizedAction()
+    def predictSeveral(self, obs_n, deterministic=True):
+
+        def my_func(thread_index):
+            return self.predict( obs_n[thread_index,:,:], deterministic=deterministic, thread_index=thread_index)[0]
+
+        num_jobs=multiprocessing.cpu_count();
+        acts = Parallel(n_jobs=num_jobs)(map(delayed(my_func), list(range(len(obs_n))))) #, prefer="threads"
+        acts=np.stack(acts, axis=0)
+        return acts
+
+        #Other options: 
+        # import multiprocessing_on_dill as multiprocessing
+        # from pathos.multiprocessing import ProcessingPool as Pool
+
+        # https://stackoverflow.com/a/1073230/6057617
+        # pool=multiprocessing.Pool(12)
+        # results=pool.map(my_func, list(range(num_jobs)))
+
+        # pool=Pool(12)
+        # acts=pool.map(my_func, list(range(num_jobs)))
+
+        # acts=[self.predict( obs_n[i,:,:], deterministic=deterministic)[0] for i in range(len(obs_n))] #Note that len() returns the size alon the first axis

@@ -87,7 +87,7 @@ class MyEnvironment(gym.Env):
         option='a'
     else:
         option='w'
-    print("option= ", option)
+    print(f"option= {option}, name_bag={name_bag}")
     self.bag=rosbag.Bag(name_bag, option)
 
   def printwithName(self,data):
@@ -115,6 +115,10 @@ class MyEnvironment(gym.Env):
   def step(self, f_action_normalized):
 
     # self.printwithName(f"Received actionN={f_action_normalized}")
+
+    if(f_action_normalized is None):
+      #f_observationn, reward, done, info
+      return None, 0.0, False, {} #This line is added to make generate_trajectories() of rollout.py work when the expert fails 
 
     f_action_normalized=f_action_normalized.reshape(self.action_shape) 
 

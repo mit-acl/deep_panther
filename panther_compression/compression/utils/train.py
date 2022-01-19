@@ -8,6 +8,32 @@ from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
 from compression.utils.other import ExpertDidntSucceed, ActionManager
 
+def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, expert_policy):
+    beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
+
+    am=ActionManager()
+
+
+    bc_trainer = bc.BC(
+        observation_space=venv.observation_space,
+        action_space=venv.action_space,
+        optimizer_kwargs=dict(lr=lr),
+        custom_logger=custom_logger,
+        policy=StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space),
+        batch_size=batch_size,
+        traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
+        weight_prob=weight_prob
+    )
+
+    return dagger.SimpleDAggerTrainer(
+        venv=venv,
+        scratch_dir=tmpdir,
+        expert_policy=expert_policy,
+        beta_schedule=beta_schedule,
+        bc_trainer=bc_trainer,
+        custom_logger=custom_logger,
+    )
+
 def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob):
     beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
 
@@ -97,6 +123,8 @@ def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full
             else: 
                 # Executed if no exception occurs
                 obs, _, done, _ = collector.step([expert_action])#The [] were added by jtorde, 1/1/22 #act_infos
+                                                                 #Note that step() is this one: https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/vec_env/base_vec_env.py#L154
+                                                                 #since VecEnv is the superclass of VecEnvWrapper, and VecEnvWrapper is the superclass of InteractiveTrajectoryCollector  
                 expert_succeeded_at_least_once = True
 
     curr_rollout_stats=None

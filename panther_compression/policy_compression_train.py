@@ -25,8 +25,11 @@ from imitation.util import util, logger
 from imitation.algorithms import bc
 
 from compression.policies.ExpertPolicy import ExpertPolicy
-from compression.utils.train import make_dagger_trainer, make_bc_trainer, train
+from compression.utils.train import make_dagger_trainer, make_bc_trainer, train, make_simple_dagger_trainer
 from compression.utils.eval import evaluate_policy
+
+from compression.utils.other import getNumOfEnv
+
 
 from stable_baselines3.common.env_checker import check_env
 
@@ -60,13 +63,13 @@ if __name__ == "__main__":
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
 
-    parser.add_argument("--n_rounds", default=100, type=int) #was called n_iters before
+    parser.add_argument("--n_rounds", default=5000, type=int) #was called n_iters before
     parser.add_argument("--n_evals", default=1, type=int)
     parser.add_argument("--test_environment_max_steps", default=1, type=int)
     parser.add_argument("--train_environment_max_steps", default=1, type=int)
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
-    parser.add_argument("--n_traj_per_round", default=32, type=int)
+    parser.add_argument("--n_traj_per_round", default=9, type=int) #This is PER environment
     # Method changes
     parser.add_argument("--no_train", dest='train', action='store_false')
     parser.set_defaults(train=True)
@@ -81,16 +84,18 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     only_collect_data=False
-    train_only_supervised=True
-    reuse_previous_samples=True
+    train_only_supervised=False
+    reuse_previous_samples=False
 
-    record_bag=True
+    record_bag=False
     launch_tensorboard=True
     verbose_python_errors=False
     batch_size = 8
     N_EPOCHS = 150           #WAS 50!! Num epochs for training.
     lr=1e-3
     weight_prob=0.005
+    num_envs = getNumOfEnv()
+
 
     if(only_collect_data==True):
         train_only_supervised=False
@@ -102,6 +107,7 @@ if __name__ == "__main__":
 
 
     if(train_only_supervised==True):
+        num_envs=1
         demos_dir=args.policy_dir+"/2/demos/"
 
         #This places all the demos in the round-000 folder
@@ -116,6 +122,9 @@ if __name__ == "__main__":
 
         args.n_rounds=max_round+1; #It will use the demonstrations of these folders
         args.n_traj_per_round=0
+
+    if(args.train_environment_max_steps>1 and only_collect_data==True):
+        printInBoldRed("Note that DAgger will not be used (since we are only collecting data)")
 
     os.system("find "+args.policy_dir+" -type f -name '*.pt' -delete") #Delete the policies
     if(reuse_previous_samples==False):
@@ -163,9 +172,7 @@ if __name__ == "__main__":
         LOG_PATH = os.path.join(args.log_dir, str(args.seed))
         FINAL_POLICY_NAME = "final_policy.pt"
 
-        N_VEC = 1
         ENV_NAME = "my-environment-v1"
-        assert N_VEC == 1, "Online N_VEC = 1 supported (environments cannot run in parallel)."
 
         if not os.path.exists(LOG_PATH):
             os.makedirs(LOG_PATH)
@@ -187,7 +194,7 @@ if __name__ == "__main__":
         # print(f"[Train Env] Ep. Len:  {train_env.get_len_ep()} [steps].")
 
 
-        train_venv = util.make_vec_env(env_name=ENV_NAME, n_envs=N_VEC, seed=args.seed, parallel=False)
+        train_venv = util.make_vec_env(env_name=ENV_NAME, n_envs=num_envs, seed=args.seed, parallel=False)
         train_venv.seed(args.seed)
         train_venv.env_method("set_len_ep", (args.train_environment_max_steps)) 
         print("[Train Env] Ep. Len:  {} [steps].".format(train_venv.get_attr("len_episode")))
@@ -199,7 +206,7 @@ if __name__ == "__main__":
         # Create and set properties for EVALUATION environment
         # TODO: Andrea: remove venv since it is not properly used, or implement it correctly. 
         print("[Test Env] Making test environment...")
-        test_venv = util.make_vec_env(env_name=ENV_NAME, n_envs=N_VEC, seed=args.seed, parallel=False)
+        test_venv = util.make_vec_env(env_name=ENV_NAME, n_envs=num_envs, seed=args.seed, parallel=False)
         test_venv.seed(args.seed)
         test_venv.env_method("set_len_ep", (args.test_environment_max_steps)) 
         print("[Test Env] Ep. Len:  {} [steps].".format(test_venv.get_attr("len_episode")))
@@ -215,17 +222,18 @@ if __name__ == "__main__":
         print( f"All Tensorboards and logging are being written inside {tempdir_path}/.")
         custom_logger=logger.configure(tempdir_path,  format_strs=["log", "csv", "tensorboard"])  # "stdout"
 
-        
-        printInBoldBlue("---------------- Making Learner Policy: -------------------")
-        # Create learner policy
-        if args.on_policy_trainer: 
-            trainer = make_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob) 
-        else: 
-            trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob)
-
         printInBoldBlue("---------------- Making Expert Policy: --------------------")
         # Create expert policy 
         expert_policy = ExpertPolicy()
+
+        printInBoldBlue("---------------- Making Learner Policy: -------------------")
+        # Create learner policy
+        if args.on_policy_trainer: 
+            trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy) 
+        else: 
+            trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob)
+
+
 
 
 
@@ -271,29 +279,36 @@ if __name__ == "__main__":
         stats = {"training":list(), "eval_no_dist":list()}
         if args.on_policy_trainer == True:
             assert trainer.round_num == 0
-        for i in trange(args.n_rounds, desc="Round"):
 
-            #Create names for policies
-            n_training_traj = int(i*args.n_traj_per_round) # Note: we start to count from 0. e.g. policy_0 means that we used 1 
-            policy_path = os.path.join(DATA_POLICY_PATH, "intermediate_policy_round"+str(i)+".pt") # Where to save curr policy
-            log_path_student_n = LOG_PATH + "/student/" + str(n_training_traj) + "/"                                  # Where to save eval logs
-            if not os.path.exists(log_path_student_n):
-                os.makedirs(log_path_student_n)
 
-            # Train for iteration
-            if args.train:
-                print(f"[Collector] Collecting round {i+1}/{args.n_rounds}.")
-                train_stats = train(trainer=trainer, expert=expert_policy, seed=args.seed, n_traj_per_round=args.n_traj_per_round, n_epochs=N_EPOCHS, 
-                    log_path=os.path.join(log_path_student_n, "training"),  save_full_policy_path=policy_path, use_only_last_coll_ds=args.use_only_last_coll_ds, only_collect_data=only_collect_data)
+        policy_path = os.path.join(DATA_POLICY_PATH, "intermediate_policy.pt") # Where to save curr policy
+        trainer.train(n_rounds=args.n_rounds, n_traj_per_round=args.n_traj_per_round, only_collect_data=only_collect_data, bc_train_kwargs=dict(n_epochs=N_EPOCHS, save_full_policy_path=policy_path))
 
-            if args.eval:
-                # Load saved policy
-                student_policy = bc.reconstruct_policy(policy_path)
 
-                # Evaluate
-                eval_stats = evaluate_policy(student_policy, test_venv, eval_episodes=args.n_evals, log_path = log_path_student_n + "student_after_training_iteration")
-                printInBoldGreen("[Evaluation] Iter.: {}, rwrd: {}, len: {}.\n".format(i+1, eval_stats["return_mean"], eval_stats["len_mean"]))
-                del eval_stats
+        # for i in trange(args.n_rounds, desc="Round"):
+
+        #     #Create names for policies
+        #     n_training_traj = int(i*args.n_traj_per_round) # Note: we start to count from 0. e.g. policy_0 means that we used 1 
+        #     policy_path = os.path.join(DATA_POLICY_PATH, "intermediate_policy_round"+str(i)+".pt") # Where to save curr policy
+        #     log_path_student_n = LOG_PATH + "/student/" + str(n_training_traj) + "/"                                  # Where to save eval logs
+        #     if not os.path.exists(log_path_student_n):
+        #         os.makedirs(log_path_student_n)
+
+        #     # Train for iteration
+        #     if args.train:
+        #         print(f"[Collector] Collecting round {i+1}/{args.n_rounds}.")
+        #         # train_stats = train(trainer=trainer, expert=expert_policy, seed=args.seed, n_traj_per_round=args.n_traj_per_round, n_epochs=N_EPOCHS, 
+        #         #     log_path=os.path.join(log_path_student_n, "training"),  save_full_policy_path=policy_path, use_only_last_coll_ds=args.use_only_last_coll_ds, only_collect_data=only_collect_data)
+
+
+        #     if args.eval:
+        #         # Load saved policy
+        #         student_policy = bc.reconstruct_policy(policy_path)
+
+        #         # Evaluate
+        #         eval_stats = evaluate_policy(student_policy, test_venv, eval_episodes=args.n_evals, log_path = log_path_student_n + "student_after_training_iteration")
+        #         printInBoldGreen("[Evaluation] Iter.: {}, rwrd: {}, len: {}.\n".format(i+1, eval_stats["return_mean"], eval_stats["len_mean"]))
+        #         del eval_stats
 
 
         if args.train:
@@ -339,8 +354,8 @@ if __name__ == "__main__":
 
         print("Elapsed time: {}".format(time.time() - t0))
 
-    if(only_collect_data==True):
-        num_jobs=multiprocessing.cpu_count();
-        results = Parallel(n_jobs=num_jobs)(map(delayed(my_func), list(range(num_jobs)))) #multiprocessing.cpu_count()
-    else:
-        my_func(0);
+    # if(only_collect_data==True):
+    #     num_jobs=1#multiprocessing.cpu_count();
+    #     results = Parallel(n_jobs=num_jobs)(map(delayed(my_func), list(range(num_jobs)))) #multiprocessing.cpu_count()
+    # else:
+    my_func(0);

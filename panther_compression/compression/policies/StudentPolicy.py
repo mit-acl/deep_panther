@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import gym
 import torch as th
 from torch import nn
+import numpy as np
 
 from stable_baselines3.common.distributions import SquashedDiagGaussianDistribution
 from stable_baselines3.common.policies import BasePolicy
@@ -169,6 +170,14 @@ class StudentPolicy(BasePolicy):
 
         self.printwithName(f"In predict_, returning shape={action.shape}")
         return action
+
+    def predictSeveral(self, obs_n, deterministic: bool = False):
+
+        #Note that here below we call predict, not _predict
+        acts=[self.predict( obs_n[i,:], deterministic=deterministic)[0].reshape(self.am.getActionShape()) for i in range(len(obs_n))] #Note that len() returns the size along the first axis
+        acts=np.stack(acts, axis=0)
+        return acts
+
 
     # def predictAndDenormalize(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
     #     action =self._predict(observation, deterministic)

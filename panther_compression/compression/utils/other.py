@@ -6,14 +6,25 @@ import math
 from scipy.interpolate import BSpline
 import py_panther
 from colorama import init, Fore, Back, Style
-from imitation.algorithms import bc
+# from imitation.algorithms.bc import bc
 import random
 import pytest
 import time
+
+
 import numpy.matlib
+
+########
+import torch as th
+from stable_baselines3.common import utils
+########
+
+def getNumOfEnv():
+	return 3
 
 class ExpertDidntSucceed(Exception):
       pass
+
 
 class TfMatrix():
 	def __init__(self, T):
@@ -907,7 +918,8 @@ class ActionManager():
 
 class StudentCaller():
     def __init__(self, policy_path):
-        self.student_policy=bc.reconstruct_policy(policy_path)
+        # self.student_policy=bc.reconstruct_policy(policy_path)
+        self.student_policy=policy = th.load(policy_path, map_location=utils.get_device("auto")) #Same as doing bc.reconstruct_policy(policy_path) 
         self.om=ObservationManager();
         self.am=ActionManager();
 
