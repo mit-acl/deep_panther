@@ -68,10 +68,12 @@ The loss computation is done in `bc.py`, inside the function `_calculate_loss`
 
 ## To add/delete a parameter:
 You should change:
+```
 	panther.yaml
 	py_panther.cpp
 	panther_types.hpp
 	panther_ros.cpp
+```
 
 and recompile
 
