@@ -28,8 +28,6 @@ from compression.policies.ExpertPolicy import ExpertPolicy
 from compression.utils.train import make_dagger_trainer, make_bc_trainer, train, make_simple_dagger_trainer
 from compression.utils.eval import evaluate_policy
 
-from compression.utils.other import getNumOfEnv
-
 
 from stable_baselines3.common.env_checker import check_env
 
@@ -65,8 +63,8 @@ if __name__ == "__main__":
 
     parser.add_argument("--n_rounds", default=5000, type=int) #was called n_iters before
     parser.add_argument("--n_evals", default=1, type=int)
-    parser.add_argument("--test_environment_max_steps", default=1, type=int)
-    parser.add_argument("--train_environment_max_steps", default=1, type=int)
+    parser.add_argument("--test_environment_max_steps", default=10, type=int)
+    parser.add_argument("--train_environment_max_steps", default=10, type=int)
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
     parser.add_argument("--n_traj_per_round", default=9, type=int) #This is PER environment
@@ -78,7 +76,7 @@ if __name__ == "__main__":
     parser.add_argument("--no_init_and_final_eval", dest='init_and_final_eval', action='store_false')
     parser.set_defaults(init_and_final_eval=False)
     # Dagger properties
-    parser.add_argument("--rampdown_rounds", default=1e6, type=int)
+    parser.add_argument("--rampdown_rounds", default=3, type=int)
     
 
     args = parser.parse_args()
@@ -94,7 +92,7 @@ if __name__ == "__main__":
     N_EPOCHS = 150           #WAS 50!! Num epochs for training.
     lr=1e-3
     weight_prob=0.005
-    num_envs = getNumOfEnv()
+    num_envs = 3
 
 
     if(only_collect_data==True):
@@ -145,7 +143,7 @@ if __name__ == "__main__":
 
     def my_func(thread_count):
         time.sleep(thread_count) #To avoid the RuntimeError: CUDA error: out of memory
-        printInBoldBlue(f"---------------- Thread {thread_count}: -----------------------")
+        # printInBoldBlue(f"---------------- Thread {thread_count}: -----------------------")
         printInBoldBlue("---------------- Input Arguments: -----------------------")
         print("Trainer: {}.".format("DAgger" if args.on_policy_trainer ==True else "BC" ))
         print(f"seed: {args.seed}, log_dir: {args.log_dir}, n_rounds: {args.n_rounds}")
@@ -194,7 +192,7 @@ if __name__ == "__main__":
         # print(f"[Train Env] Ep. Len:  {train_env.get_len_ep()} [steps].")
 
 
-        train_venv = util.make_vec_env(env_name=ENV_NAME, n_envs=num_envs, seed=args.seed, parallel=False)
+        train_venv = util.make_vec_env(env_name=ENV_NAME, n_envs=num_envs, seed=args.seed, parallel=False)#Note that parallel applies to the environment step, not to the expert step
         train_venv.seed(args.seed)
         train_venv.env_method("set_len_ep", (args.train_environment_max_steps)) 
         print("[Train Env] Ep. Len:  {} [steps].".format(train_venv.get_attr("len_episode")))
@@ -203,18 +201,18 @@ if __name__ == "__main__":
             train_venv.env_method("startRecordBag", ("training"+str(thread_count)+".bag")) 
 
 
-        # Create and set properties for EVALUATION environment
-        # TODO: Andrea: remove venv since it is not properly used, or implement it correctly. 
-        print("[Test Env] Making test environment...")
-        test_venv = util.make_vec_env(env_name=ENV_NAME, n_envs=num_envs, seed=args.seed, parallel=False)
-        test_venv.seed(args.seed)
-        test_venv.env_method("set_len_ep", (args.test_environment_max_steps)) 
-        print("[Test Env] Ep. Len:  {} [steps].".format(test_venv.get_attr("len_episode")))
-        # test_venv = gym.make(ENV_NAME)
-        # test_venv.seed(args.seed)
-        # test_venv.action_space.seed(args.seed)
-        # test_venv.set_len_ep(args.test_environment_max_steps)
-        # print(f"[Train Env] Ep. Len:  {test_venv.get_len_ep()} [steps].")
+        if (args.init_and_final_eval or args.eval):
+            # Create and set properties for EVALUATION environment
+            print("[Test Env] Making test environment...")
+            test_venv = util.make_vec_env(env_name=ENV_NAME, n_envs=num_envs, seed=args.seed, parallel=False)#Note that parallel applies to the environment step, not to the expert step
+            test_venv.seed(args.seed)
+            test_venv.env_method("set_len_ep", (args.test_environment_max_steps)) 
+            print("[Test Env] Ep. Len:  {} [steps].".format(test_venv.get_attr("len_episode")))
+            # test_venv = gym.make(ENV_NAME)
+            # test_venv.seed(args.seed)
+            # test_venv.action_space.seed(args.seed)
+            # test_venv.set_len_ep(args.test_environment_max_steps)
+            # print(f"[Train Env] Ep. Len:  {test_venv.get_len_ep()} [steps].")
 
         # Init logging
         tempdir = tempfile.TemporaryDirectory(prefix="quickstart")
@@ -261,8 +259,6 @@ if __name__ == "__main__":
             del expert_stats
 
 
-
-
         # Train and evaluate
         printInBoldBlue("---------------- Training Learner: --------------------")
 
@@ -279,7 +275,6 @@ if __name__ == "__main__":
         stats = {"training":list(), "eval_no_dist":list()}
         if args.on_policy_trainer == True:
             assert trainer.round_num == 0
-
 
         policy_path = os.path.join(DATA_POLICY_PATH, "intermediate_policy.pt") # Where to save curr policy
         trainer.train(n_rounds=args.n_rounds, n_traj_per_round=args.n_traj_per_round, only_collect_data=only_collect_data, bc_train_kwargs=dict(n_epochs=N_EPOCHS, save_full_policy_path=policy_path))

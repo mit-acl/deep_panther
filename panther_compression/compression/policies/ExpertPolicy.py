@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import copy
 from random import random, shuffle
-from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed, computeTotalTime, getNumOfEnv
+from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed, computeTotalTime
 from colorama import init, Fore, Back, Style
 import py_panther
 import math 
@@ -19,10 +19,10 @@ class ExpertPolicy(object):
 
     #The reason to create this here (instead of in the constructor) is that C++ objects created with pybind11 cannot be pickled by default (pickled is needed when parallelizing)
     #See https://stackoverflow.com/a/68672/6057617
-    #The reason why we create a list (instead of only one SolverIpopt) is because of the variables created here are not thread safe: https://stackoverflow.com/a/1073230/6057617
+    #Note that, even though the class variables are not thread safe (see https://stackoverflow.com/a/1073230/6057617), we are using multiprocessing here, not multithreading
     #Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
     
-    my_SolversIpopt=[py_panther.SolverIpopt(getPANTHERparamsAsCppStruct()) for _ in range(getNumOfEnv())]; 
+    my_SolverIpopt=py_panther.SolverIpopt(getPANTHERparamsAsCppStruct())
 
     def __init__(self):
         self.am=ActionManager();
@@ -61,7 +61,7 @@ class ExpertPolicy(object):
         #From https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/policies.py#L41
         # In the case of policies, the prediction is an action.
         # In the case of critics, it is the estimated value of the observation.
-    def predict(self, obs_n, deterministic=True, thread_index=0):
+    def predict(self, obs_n, deterministic=True):
 
         # print(f"self.observation_shape={self.observation_shape}")
         # obs_n=obs_n.reshape((-1,*self.observation_shape)) #Not sure why this is needed
@@ -89,12 +89,12 @@ class ExpertPolicy(object):
         # total_time=self.par.factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, self.par.v_max*invsqrt3_vector, self.par.a_max*invsqrt3_vector)
         total_time=computeTotalTime(init_state, final_state, self.par_v_max, self.par_a_max, self.par_factor_alloc)
 
-        ExpertPolicy.my_SolversIpopt[thread_index].setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
-        ExpertPolicy.my_SolversIpopt[thread_index].setFocusOnObstacle(True);
-        ExpertPolicy.my_SolversIpopt[thread_index].setObstaclesForOpt(self.om.getObstacles(obs));
+        ExpertPolicy.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
+        ExpertPolicy.my_SolverIpopt.setFocusOnObstacle(True);
+        ExpertPolicy.my_SolverIpopt.setObstaclesForOpt(self.om.getObstacles(obs));
 
         # with nostdout():
-        succeed=ExpertPolicy.my_SolversIpopt[thread_index].optimize(True);
+        succeed=ExpertPolicy.my_SolverIpopt.optimize(True);
 
         
         if(succeed==False):
@@ -105,7 +105,7 @@ class ExpertPolicy(object):
         else:
             self.printSucessOpt();
 
-        best_solutions=ExpertPolicy.my_SolversIpopt[thread_index].getBestSolutions();
+        best_solutions=ExpertPolicy.my_SolverIpopt.getBestSolutions();
 
         # self.printwithName("Optimizer called, best solution= ")
         # best_solution.printInfo()
@@ -161,9 +161,9 @@ class ExpertPolicy(object):
     def predictSeveral(self, obs_n, deterministic=True):
 
         def my_func(thread_index):
-            return self.predict( obs_n[thread_index,:,:], deterministic=deterministic, thread_index=thread_index)[0]
+            return self.predict( obs_n[thread_index,:,:], deterministic=deterministic)[0]
 
-        num_jobs=multiprocessing.cpu_count();
+        num_jobs=min(multiprocessing.cpu_count(),len(obs_n)); #Note that the class variable my_SolverIpopt will be created once per job created (but only in the first call to predictSeveral I think)
         acts = Parallel(n_jobs=num_jobs)(map(delayed(my_func), list(range(len(obs_n))))) #, prefer="threads"
         acts=np.stack(acts, axis=0)
         return acts

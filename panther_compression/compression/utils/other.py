@@ -19,9 +19,6 @@ import torch as th
 from stable_baselines3.common import utils
 ########
 
-def getNumOfEnv():
-	return 3
-
 class ExpertDidntSucceed(Exception):
       pass
 
@@ -652,8 +649,8 @@ class ActionManager():
 		self.max_yawcPoint=4*math.pi;
 		self.fitter_total_time=params["fitter_total_time"];
 
-		print("self.max_dist2BSPoscPoint= ", self.max_dist2BSPoscPoint)
-		print("self.max_yawcPoint= ", self.max_yawcPoint)
+		# print("self.max_dist2BSPoscPoint= ", self.max_dist2BSPoscPoint)
+		# print("self.max_yawcPoint= ", self.max_yawcPoint)
 		self.normalization_constant_traj=np.concatenate((self.max_dist2BSPoscPoint*np.ones((1, self.traj_size_pos_ctrl_pts)), \
 													self.max_yawcPoint*np.ones((1, self.traj_size_yaw_ctrl_pts))), axis=1)
 
@@ -955,7 +952,7 @@ class StudentCaller():
         all_solOrGuess=[]
         for i in range( np.shape(action)[0]): #For each row of action
         	traj=action[i,:].reshape(1,-1);
-	        assert self.am.getTotalTimeTraj(traj)>0, "Time needs to be >0"
+	        assert self.am.getTotalTimeTraj(traj)>0, f"Time needs to be >0. Currently it is {self.am.getTotalTimeTraj(traj)}"
         	my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state);
         	all_solOrGuess.append(my_solOrGuess)
 
