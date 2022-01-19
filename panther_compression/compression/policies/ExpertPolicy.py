@@ -101,7 +101,7 @@ class ExpertPolicy(object):
             self.printFailedOpt();
             # exit();
             # raise ExpertDidntSucceed()
-            return None, {"Q": 0.0} 
+            return self.am.getNanAction(), {"Q": 0.0} 
         else:
             self.printSucessOpt();
 

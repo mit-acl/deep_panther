@@ -544,6 +544,11 @@ class ObservationManager():
 		# final_state.dyaw = 
 		return final_state
 
+	def getNanObservation(self):
+		return np.full(self.getObservationShape(), np.nan)
+
+	def isNanObservation(self, obs):
+		return np.isnan(np.sum(obs))
 
 	#Normalize in [-1,1]
 	def normalizeObservation(self, observation):
@@ -682,6 +687,12 @@ class ActionManager():
 
 	def getDummyOptimalAction(self):
 		return 0.6*np.ones(self.getActionShape())
+
+	def getNanAction(self):
+		return np.full(self.getActionShape(), np.nan)
+
+	def isNanAction(self, act):
+		return np.isnan(np.sum(act))
 
 	def normalizeAction(self, action):
 		action_normalized=np.empty(action.shape)

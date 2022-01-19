@@ -121,9 +121,9 @@ class MyEnvironment(gym.Env):
 
     # self.printwithName(f"Received actionN={f_action_normalized}")
 
-    if(f_action_normalized is None):
+    if(self.am.isNanAction(f_action_normalized)):
       #f_observationn, reward, done, info
-      return None, 0.0, False, {} #This line is added to make generate_trajectories() of rollout.py work when the expert fails 
+      return self.om.getNanObservation(), 0.0, False, {} #This line is added to make generate_trajectories() of rollout.py work when the expert fails 
 
     f_action_normalized=f_action_normalized.reshape(self.action_shape) 
 
