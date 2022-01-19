@@ -85,7 +85,7 @@ if __name__ == "__main__":
     train_only_supervised=False
     reuse_previous_samples=False
 
-    record_bag=False
+    record_bag=True
     launch_tensorboard=True
     verbose_python_errors=False
     batch_size = 8

@@ -18,6 +18,9 @@ from tf2_msgs.msg import TFMessage
 import tf.transformations as tr
 #############################################
 
+import uuid
+
+
 class MyEnvironment(gym.Env):
   """
     Custom Environment that follows gym interface
@@ -62,7 +65,7 @@ class MyEnvironment(gym.Env):
     self.par=getPANTHERparamsAsCppStruct();
     self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
     #######
-    print("Calling reset")
+    print("Creating new environment!")
 
     self.constant_obstacle_pos=None
     self.constant_gterm_pos=None
@@ -82,6 +85,8 @@ class MyEnvironment(gym.Env):
 
   def startRecordBag(self, name_bag):
     self.record_bag=True
+
+    name_bag="training_"+str(uuid.uuid1())+".bag"
 
     if(exists(name_bag)):
         option='a'
