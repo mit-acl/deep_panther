@@ -63,6 +63,9 @@ class ExpertPolicy(object):
         # In the case of critics, it is the estimated value of the observation.
     def predict(self, obs_n, deterministic=True):
 
+        if(self.om.isNanObservation(obs_n)):
+            return self.am.getNanAction(), {"Q": 0.0} 
+
         # print(f"self.observation_shape={self.observation_shape}")
         # obs_n=obs_n.reshape((-1,*self.observation_shape)) #Not sure why this is needed
         obs_n=obs_n.reshape(self.observation_shape) #Not sure why this is needed
