@@ -1,6 +1,10 @@
+For paper:
+
+In MyClampedUniform.m, see "Not impose constraint on the first vel ctrl point [to allow "infeasible" initial velocities due to planning in body frame and v constraints in each axis].
+====
 [Jan 2022] Check the Hacks
 
-[Jan 2022] in solver_ipopt.cpp, I'm copying with same solution in case no enough solutions suceeded
+
 
 
 
