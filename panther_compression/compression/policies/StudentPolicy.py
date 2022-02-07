@@ -150,7 +150,7 @@ class StudentPolicy(BasePolicy):
     def _predict(self, obs_n: th.Tensor, deterministic: bool = False) -> th.Tensor:
         self.printwithName(f"Calling student")
         # self.printwithName(f"Received obs={obs_n}")
-        obs=self.om.denormalizeObservation(obs_n.cpu().numpy().reshape(self.om.getObservationShape()))
+        # obs=self.om.denormalizeObservation(obs_n.cpu().numpy().reshape(self.om.getObservationShape()))
         # self.om.printObservation(obs)
 
         # self.printwithName(f"Received obs={observation.numpy()}")
