@@ -1,6 +1,8 @@
 For paper:
 
 In MyClampedUniform.m, see "Not impose constraint on the first vel ctrl point [to allow "infeasible" initial velocities due to planning in body frame and v constraints in each axis].
+
+This approach avoids a projection step to satisfy the initial/final conditions of the trajectory (i.e., satisfied by construction)
 ====
 [Jan 2022] Check the Hacks
 

@@ -1,7 +1,7 @@
 import yaml
 import os
 import numpy as np
-from pyquaternion import Quaternion
+import pyquaternion
 import math
 from scipy.interpolate import BSpline
 import py_panther
@@ -18,6 +18,12 @@ import numpy.matlib
 import torch as th
 from stable_baselines3.common import utils
 ########
+
+#######
+import geometry_msgs.msg
+import tf.transformations 
+# from geometry_msgs.msg import PointStamped, TransformStamped, PoseStamped, Vector3, Quaternion, Pose
+#######
 
 class ExpertDidntSucceed(Exception):
       pass
@@ -77,14 +83,14 @@ def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
 	q_x = tmp*(-b)  #x
 	q_y = tmp*(a)   #y
 	q_z = 0         #z
-	qabc=Quaternion(q_w, q_x, q_y, q_z)  #Constructor is Quaternion(w,x,y,z), see http://kieranwynn.github.io/pyquaternion/#object-initialisation
+	qabc=pyquaternion.Quaternion(q_w, q_x, q_y, q_z)  #Constructor is Quaternion(w,x,y,z), see http://kieranwynn.github.io/pyquaternion/#object-initialisation
 
 
 	q_w = math.cos(yaw/2.0);  #w
 	q_x = 0;                  #x 
 	q_y = 0;                  #y
 	q_z = math.sin(yaw/2.0);  #z
-	qpsi=Quaternion(q_w, q_x, q_y, q_z)  #Constructor is Quaternion(w,x,y,z)
+	qpsi=pyquaternion.Quaternion(q_w, q_x, q_y, q_z)  #Constructor is Quaternion(w,x,y,z)
 
 	w_q_b=qabc * qpsi
 
@@ -169,9 +175,9 @@ def getObsAndGtermToCrossPath():
 
 	# thetas=[-np.pi/4, np.pi/4]
 	# theta=random.choice(thetas)
-	theta=random.uniform(-np.pi/2, np.pi/2)
+	theta=random.uniform(-np.pi, np.pi)
 	radius_obstacle=random.uniform(1.5, 4.5)
-	radius_gterm=radius_obstacle + random.uniform(1.0, 6.0)
+	radius_gterm=radius_obstacle + random.uniform(1.0, 10.0)
 	std_deg=30
 	theta_g_term=theta + random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
 	center=np.zeros((3,1))
@@ -192,7 +198,7 @@ class GTermManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.w_gterm=np.array([[random.uniform(-4.0, 4.0)],[random.uniform(-4.0, 4.0)],[random.uniform(1.0,1.0)]]);
+		self.w_gterm=np.array([[random.uniform(-10.0, 10.0)],[random.uniform(-10.0, 10.0)],[random.uniform(1.0,1.0)]]);
 		#self.w_gterm=np.array([[5.0],[0.0],[1.0]]);
 
 	def newRandomPosFarFrom_w_Position(self, w_position):
@@ -417,8 +423,8 @@ class ObservationManager():
 		self.Ra=params["Ra"]
 		ones13=np.ones((1,3));
 		#Note that the sqrt(3) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
-		margin_v=1.0 #math.sqrt(3) #math.sqrt(3)
-		margin_a=1.0 #math.sqrt(3) #math.sqrt(3)
+		margin_v=math.sqrt(3) #math.sqrt(3)
+		margin_a=math.sqrt(3) #math.sqrt(3)
 		margin_ydot=1.0 #because the student sometimes may not satisfy that limit
 		self.normalization_constant=np.concatenate((margin_v*self.v_max.T*ones13, margin_a*self.a_max.T*ones13, margin_ydot*self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
 		for i in range(self.obsm.getNumObs()):
@@ -974,6 +980,38 @@ class StudentCaller():
 
 
         return all_solOrGuess   
+
+def TfMatrix2RosQuatAndVector3(tf_matrix):
+
+  translation_ros=geometry_msgs.msg.Vector3();
+  rotation_ros=geometry_msgs.msg.Quaternion();
+
+  translation=tf_matrix.translation();
+  translation_ros.x=translation[0];
+  translation_ros.y=translation[1];
+  translation_ros.z=translation[2];
+  # q=tr.quaternion_from_matrix(w_state.w_T_f.T)
+  quaternion=tf.transformations.quaternion_from_matrix(tf_matrix.T) #See https://github.com/ros/geometry/issues/64
+  rotation_ros.x=quaternion[0] #See order at http://docs.ros.org/en/jade/api/tf/html/python/transformations.html
+  rotation_ros.y=quaternion[1]
+  rotation_ros.z=quaternion[2]
+  rotation_ros.w=quaternion[3]
+
+  return rotation_ros, translation_ros
+
+def TfMatrix2RosPose(tf_matrix):
+
+  rotation_ros, translation_ros=TfMatrix2RosQuatAndVector3(tf_matrix);
+
+  pose_ros=geometry_msgs.msg.Pose();
+  pose_ros.position.x=translation_ros.x
+  pose_ros.position.y=translation_ros.y
+  pose_ros.position.z=translation_ros.z
+
+  pose_ros.orientation=rotation_ros
+
+  return pose_ros
+
 
 #You can check the previous function by using this Matlab script:
 # clc;

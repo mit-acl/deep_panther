@@ -67,7 +67,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_environment_max_steps", default=10, type=int)
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
-    parser.add_argument("--n_traj_per_round", default=9, type=int) #This is PER environment
+    parser.add_argument("--n_traj_per_round", default=15, type=int) #This is PER environment
     # Method changes
     parser.add_argument("--no_train", dest='train', action='store_false')
     parser.set_defaults(train=True)
@@ -88,11 +88,11 @@ if __name__ == "__main__":
     record_bag=True
     launch_tensorboard=True
     verbose_python_errors=False
-    batch_size = 8
-    N_EPOCHS = 150           #WAS 50!! Num epochs for training.
+    batch_size = 256
+    N_EPOCHS = 50           #WAS 50!! Num epochs for training.
     lr=1e-3
     weight_prob=0.005
-    num_envs = 3
+    num_envs = 16
 
 
     if(only_collect_data==True):
@@ -198,7 +198,8 @@ if __name__ == "__main__":
         print("[Train Env] Ep. Len:  {} [steps].".format(train_venv.get_attr("len_episode")))
 
         if(record_bag):
-            train_venv.env_method("startRecordBag", ("training"+str(thread_count)+".bag")) 
+            for i in range(num_envs):
+                train_venv.env_method("startRecordBag", ("training"+str(i)+".bag"), indices=[i]) 
 
 
         if (args.init_and_final_eval or args.eval):

@@ -168,7 +168,7 @@ class StudentPolicy(BasePolicy):
 
         self.am.assertActionIsNormalized(action.cpu().numpy().reshape(self.am.getActionShape()), self.name)
 
-        self.printwithName(f"In predict_, returning shape={action.shape}")
+        # self.printwithName(f"In predict_, returning shape={action.shape}")
         return action
 
     def predictSeveral(self, obs_n, deterministic: bool = False):

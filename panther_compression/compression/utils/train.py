@@ -22,6 +22,7 @@ def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr,
         policy=StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space),
         batch_size=batch_size,
         traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
+        traj_size_yaw_ctrl_pts=am.traj_size_yaw_ctrl_pts,
         weight_prob=weight_prob
     )
 
@@ -48,6 +49,7 @@ def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_
         policy=StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space),
         batch_size=batch_size,
         traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
+        traj_size_yaw_ctrl_pts=am.traj_size_yaw_ctrl_pts,
         weight_prob=weight_prob
     )
 

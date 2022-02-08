@@ -4,6 +4,7 @@ import numpy as np
 import copy
 from gym import spaces
 from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager, getPANTHERparamsAsCppStruct, computeTotalTime, getObsAndGtermToCrossPath, posAccelYaw2TfMatrix
+from compression.utils.other import TfMatrix2RosQuatAndVector3, TfMatrix2RosPose
 from colorama import init, Fore, Back, Style
 import py_panther
 ##### For rosbag logging
@@ -15,7 +16,7 @@ from os.path import exists
 from visualization_msgs.msg import Marker
 from nav_msgs.msg import Path
 from tf2_msgs.msg import TFMessage
-import tf.transformations as tr
+from geometry_msgs.msg import PointStamped
 #############################################
 
 import uuid
@@ -31,11 +32,6 @@ class MyEnvironment(gym.Env):
     super().__init__() #Equivalently, we could also write super(MyEnvironment, self).__init__()    , see 2nd paragraph of https://stackoverflow.com/a/576183
 
     self.verbose = False
-
-    # Load quadcopter simulator.
-    # self.mpc_state_size = 8
-    # self.mpc_act_size = 3
-    # self.act_size = self.mpc_act_size
 
     self.len_episode = 200     # Time steps [-]
 
@@ -71,13 +67,15 @@ class MyEnvironment(gym.Env):
     self.constant_gterm_pos=None
 
     self.record_bag=False
+    self.time_rosbag=0;
+    self.name_bag=None
 
     self.reset()
 
   def __del__(self):
-    if(self.record_bag==True):
-      self.bag.close();
-    # pass
+    # if(self.record_bag==True):
+    #   self.bag.close();
+    pass
 
   def changeConstantObstacleAndGtermPos(self, obstacle_pos, gterm_pos):
     self.constant_obstacle_pos=obstacle_pos
@@ -85,15 +83,16 @@ class MyEnvironment(gym.Env):
 
   def startRecordBag(self, name_bag):
     self.record_bag=True
+    self.name_bag=name_bag;
 
-    name_bag="training_"+str(uuid.uuid1())+".bag"
+    # name_bag="training_"+str(uuid.uuid1())+".bag"
 
-    if(exists(name_bag)):
-        option='a'
-    else:
-        option='w'
-    print(f"option= {option}, name_bag={name_bag}")
-    self.bag=rosbag.Bag(name_bag, option)
+    # if(exists(name_bag)):
+    #     option='a'
+    # else:
+    #     option='w'
+    # print(f"option= {option}, name_bag={name_bag}")
+    # self.bag=rosbag.Bag(name_bag, option)
 
   def printwithName(self,data):
     print(self.name+data)
@@ -101,6 +100,8 @@ class MyEnvironment(gym.Env):
   def printwithNameAndColor(self,data):
     print(self.name+self.color+data+Style.RESET_ALL)
 
+  # def printFailedOpt(self):
+  #     print(self.name+" Called optimizer--> "+Style.BRIGHT+Fore.RED +"Failed"+ Style.RESET_ALL)
 
   def seed(self, seed=None):
     """Set seed function in this environment and calls
@@ -141,20 +142,6 @@ class MyEnvironment(gym.Env):
     ####################################
 
 
-    ######################################
-    if(self.record_bag==True):
-
-      w_posBS_list=[]
-      w_yawBS_list=[]
-
-      for i in range( np.shape(f_action)[0]): #For each row of action   
-         f_traj=self.am.getTrajFromAction(f_action, i)
-         w_posBS, w_yawBS= self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
-         w_posBS_list.append(w_posBS)
-         w_yawBS_list.append(w_yawBS)
-
-      self.saveInBag(self.previous_f_observation, w_posBS_list, w_yawBS_list, self.w_state)
-    ######################################
 
     #Hack for now: choose always the first trajectory
     f_traj=self.am.getTrajFromAction(f_action, 0)
@@ -205,7 +192,7 @@ class MyEnvironment(gym.Env):
     dist_endtraj_2gterm=np.linalg.norm(w_posBS.getLastPos()-self.gm.get_w_GTermPos()) #From the end of the current traj to the goal
 
 
-    goal_reached=(dist_current_2gterm<4.0 and dist_endtraj_2gterm<self.par.goal_radius) 
+    goal_reached=(dist_current_2gterm<2.0 and dist_endtraj_2gterm<self.par.goal_radius) 
 
     self.printwithName(f"Timestep={self.timestep}, dist_current_2gterm={dist_current_2gterm}, w_state.w_pos={self.w_state.w_pos.T}")
 
@@ -215,17 +202,19 @@ class MyEnvironment(gym.Env):
     
     info = {}
     if(self.om.obsIsNormalized(f_observationn)==False):
-      # self.printwithName(f"f_observationn={f_observationn} is not normalized (i.e., constraints are not satisfied). Terminating")
-      # self.printwithName(f"f_observation={f_observation} is not normalized (i.e., constraints are not satisfied). Terminating")
-      # self.om.printObservation(f_observation)
+      self.printwithName(f"f_observationn={f_observationn} is not normalized (i.e., constraints are not satisfied). Terminating")
+      self.printwithName(f"f_observation={f_observation} is not normalized (i.e., constraints are not satisfied). Terminating")
+      self.om.printObservation(f_observation)
       # exit();
-      # self.printwithName(f"f_observationn is not normalized (i.e., constraints are not satisfied). Terminating")
+      self.printwithName(Style.BRIGHT+Fore.RED +"f_observationn is not normalized (i.e., constraints are not satisfied). Terminating" + Style.RESET_ALL)
       # print(f"[Env] Terminated due to constraint violation: obs: {self.x}, act: {u}, steps: {self.timestep}")
       done = True
       info["constraint_violation"] = True
     elif ( (self.timestep >= self.len_episode) or goal_reached ):
       done = True
       info["constraint_violation"] = False
+      self.printwithNameAndColor(f"Done, self.timestep={self.timestep}, goal_reached={goal_reached}")
+
     else:
       done=False
 
@@ -275,11 +264,11 @@ class MyEnvironment(gym.Env):
     self.w_state=State(p0, v0, a0, y0, ydot0)
 
     if(isinstance(self.constant_obstacle_pos, type(None)) and isinstance(self.constant_gterm_pos, type(None))):
-      prob_choose_cross=1.0;
+      prob_choose_cross=0.4;
       if np.random.uniform(0, 1) < 1 - prob_choose_cross:
         self.obsm.newRandomPos();
-        # self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos);
-        self.gm.newRandomPos();
+        self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos);
+        # self.gm.newRandomPos();
       else:
         w_pos_obstacle, w_pos_g_term = getObsAndGtermToCrossPath();
         self.obsm.setPos(w_pos_obstacle)
@@ -315,42 +304,37 @@ class MyEnvironment(gym.Env):
     raise NotImplementedError()
     return
 
-  def TfMatrix2RosQuatAndVector3(self, tf_matrix):
 
-      translation_ros=Vector3();
-      rotation_ros=Quaternion();
+  def saveInBag(self, f_action_normalized):
+      if(self.record_bag==False or np.isnan(f_action_normalized).any()):
+        return
 
-      translation=tf_matrix.translation();
-      translation_ros.x=translation[0];
-      translation_ros.y=translation[1];
-      translation_ros.z=translation[2];
-      # q=tr.quaternion_from_matrix(w_state.w_T_f.T)
-      quaternion=tr.quaternion_from_matrix(tf_matrix.T) #See https://github.com/ros/geometry/issues/64
-      rotation_ros.x=quaternion[0] #See order at http://docs.ros.org/en/jade/api/tf/html/python/transformations.html
-      rotation_ros.y=quaternion[1]
-      rotation_ros.z=quaternion[2]
-      rotation_ros.w=quaternion[3]
+      #When using multiple environments, opening bag in constructor and closing it in _del leads to unindexed bags
+      if(exists(self.name_bag)):
+          option='a'
+      else:
+          option='w'
+      self.bag=rosbag.Bag(self.name_bag, option)
+      ######################
 
-      return rotation_ros, translation_ros
+      #####
+      f_obs=self.previous_f_observation
+      w_state=self.w_state
+      ########
 
+      f_action= self.am.denormalizeAction(f_action_normalized);
 
-  def TfMatrix2RosPose(self, tf_matrix):
+      w_posBS_list=[]
+      w_yawBS_list=[]
 
-      rotation_ros, translation_ros=self.TfMatrix2RosQuatAndVector3(tf_matrix);
+      for i in range( np.shape(f_action)[0]): #For each row of action   
+         f_traj=self.am.getTrajFromAction(f_action, i)
+         w_posBS, w_yawBS= self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
+         w_posBS_list.append(w_posBS)
+         w_yawBS_list.append(w_yawBS)
 
-      pose_ros=Pose();
-      pose_ros.position.x=translation_ros.x
-      pose_ros.position.y=translation_ros.y
-      pose_ros.position.z=translation_ros.z
-
-      pose_ros.orientation=rotation_ros
-
-      return pose_ros
-
-
-  def saveInBag(self, f_obs, w_posBS_list, w_yawBS_list, w_state):
-
-      time_now=rospy.Time.from_sec(time.time());
+      time_now=rospy.Time.from_sec(self.time_rosbag)#rospy.Time.from_sec(time.time());
+      self.time_rosbag=self.time_rosbag+0.1;
 
       # with rosbag.Bag(name_file, option) as bag:
       f_v=self.om.getf_v(f_obs)
@@ -395,7 +379,7 @@ class MyEnvironment(gym.Env):
       tf_stamped.header.frame_id="world"
       tf_stamped.header.stamp=time_now
       tf_stamped.child_frame_id="f"
-      rotation_ros, translation_ros=self.TfMatrix2RosQuatAndVector3(w_state.w_T_f)
+      rotation_ros, translation_ros=TfMatrix2RosQuatAndVector3(w_state.w_T_f)
       tf_stamped.transform.translation=translation_ros
       tf_stamped.transform.rotation=rotation_ros
 
@@ -421,7 +405,7 @@ class MyEnvironment(gym.Env):
           pose_stamped.header.stamp=time_now
           tf_matrix=posAccelYaw2TfMatrix(w_posBS.getPosT(t_i),w_posBS.getAccelT(t_i),w_yawBS.getPosT(t_i))
 
-          pose_stamped.pose=self.TfMatrix2RosPose(tf_matrix)
+          pose_stamped.pose=TfMatrix2RosPose(tf_matrix)
 
           traj_msg.poses.append(pose_stamped)
 
@@ -431,6 +415,10 @@ class MyEnvironment(gym.Env):
       self.bag.write('/g', point_msg, time_now)
       self.bag.write('/obs', marker_msg, time_now)
       self.bag.write('/tf', tf_msg, time_now)
+
+      #When using multiple environments, opening bag in constructor and closing it in _del leads to unindexed bags
+      self.bag.close();
+      ########################
 
 
 
