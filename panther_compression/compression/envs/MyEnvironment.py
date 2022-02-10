@@ -51,7 +51,7 @@ class MyEnvironment(gym.Env):
 
     self.color=Style.BRIGHT+Fore.YELLOW
     
-    self.name=self.color+"  [Env]"+Style.RESET_ALL
+    self.name=""
     # print (self.params)
 
     # print("self.am.getActionShape()= ", self.am.getActionShape())
@@ -59,7 +59,7 @@ class MyEnvironment(gym.Env):
 
     ######
     self.par=getPANTHERparamsAsCppStruct();
-    self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
+    # self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
     #######
     print("Creating new environment!")
 
@@ -69,6 +69,10 @@ class MyEnvironment(gym.Env):
     self.record_bag=False
     self.time_rosbag=0;
     self.name_bag=None
+
+    self.force_done=False
+
+    self.id=0
 
     self.reset()
 
@@ -81,9 +85,13 @@ class MyEnvironment(gym.Env):
     self.constant_obstacle_pos=obstacle_pos
     self.constant_gterm_pos=gterm_pos
 
-  def startRecordBag(self, name_bag):
+  def setID(self, data):
+    self.id=data;
+    self.name=self.color+"  [Env "+str(self.id)+"]"+Style.RESET_ALL
+
+  def startRecordBag(self):
     self.record_bag=True
-    self.name_bag=name_bag;
+    self.name_bag="training"+str(self.id)+".bag";
 
     # name_bag="training_"+str(uuid.uuid1())+".bag"
 
@@ -124,7 +132,7 @@ class MyEnvironment(gym.Env):
 
     if(self.am.isNanAction(f_action_normalized)):
       #f_observationn, reward, done, info
-      return self.om.getNanObservation(), 0.0, False, {} #This line is added to make generate_trajectories() of rollout.py work when the expert fails 
+      return self.om.getNanObservation(), 0.0, True, {} #This line is added to make generate_trajectories() of rollout.py work when the expert fails 
 
     f_action_normalized=f_action_normalized.reshape(self.action_shape) 
 
@@ -196,39 +204,43 @@ class MyEnvironment(gym.Env):
 
     self.printwithName(f"Timestep={self.timestep}, dist_current_2gterm={dist_current_2gterm}, w_state.w_pos={self.w_state.w_pos.T}")
 
-    if(goal_reached):
-      self.printwithNameAndColor("Goal reached!")
+    # if(goal_reached):
+    #   self.printwithNameAndColor("Goal reached!")
 
     
     info = {}
     if(self.om.obsIsNormalized(f_observationn)==False):
-      self.printwithName(f"f_observationn={f_observationn} is not normalized (i.e., constraints are not satisfied). Terminating")
-      self.printwithName(f"f_observation={f_observation} is not normalized (i.e., constraints are not satisfied). Terminating")
-      self.om.printObservation(f_observation)
+      # self.printwithName(f"f_observationn={f_observationn} is not normalized (i.e., constraints are not satisfied). Terminating")
+      # self.printwithName(f"f_observation={f_observation} is not normalized (i.e., constraints are not satisfied). Terminating")
       # exit();
       self.printwithName(Style.BRIGHT+Fore.RED +"f_observationn is not normalized (i.e., constraints are not satisfied). Terminating" + Style.RESET_ALL)
+      # self.om.printObservation(f_observation)
+    
       # print(f"[Env] Terminated due to constraint violation: obs: {self.x}, act: {u}, steps: {self.timestep}")
       done = True
       info["constraint_violation"] = True
-    elif ( (self.timestep >= self.len_episode) or goal_reached ):
+    elif ( (self.timestep >= self.len_episode) or goal_reached or self.force_done):
       done = True
       info["constraint_violation"] = False
-      self.printwithNameAndColor(f"Done, self.timestep={self.timestep}, goal_reached={goal_reached}")
+      self.printwithNameAndColor(f"Done, self.timestep={self.timestep}, goal_reached={goal_reached}, force_done={self.force_done}")
 
     else:
       done=False
 
+    self.printwithNameAndColor(f"done={done}")
+
 
     #####################
-    init_state=self.om.getInit_f_StateFromObservation(self.previous_f_observation)
-    final_state=self.om.getFinal_f_StateFromObservation(self.previous_f_observation)
-    total_time=computeTotalTime(init_state, final_state, self.par.v_max, self.par.a_max, self.par.factor_alloc)
-    self.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
-    self.my_SolverIpopt.setFocusOnObstacle(True);
-    self.my_SolverIpopt.setObstaclesForOpt(self.om.getObstacles(self.previous_f_observation));
-    cost=self.my_SolverIpopt.computeCost(self.am.f_traj2f_ppSolOrGuess(f_traj))
-    reward=-cost;
-    # print(reward)
+    # init_state=self.om.getInit_f_StateFromObservation(self.previous_f_observation)
+    # final_state=self.om.getFinal_f_StateFromObservation(self.previous_f_observation)
+    # total_time=computeTotalTime(init_state, final_state, self.par.v_max, self.par.a_max, self.par.factor_alloc)
+    # self.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
+    # self.my_SolverIpopt.setFocusOnObstacle(True);
+    # self.my_SolverIpopt.setObstaclesForOpt(self.om.getObstacles(self.previous_f_observation));
+    # cost=self.my_SolverIpopt.computeCost(self.am.f_traj2f_ppSolOrGuess(f_traj)) #TODO: this cost does not take into accout the constraints right now
+    # reward=-cost;
+    reward=0.0;
+    # # print(reward)
     ###################
 
     # self.printwithName("THIS IS THE OBSERVATION:")
@@ -255,6 +267,7 @@ class MyEnvironment(gym.Env):
 
     self.time=0.0
     self.timestep = 0
+    self.force_done=False
 
     p0=np.array([[0.0],[0.0],[1.0]])
     v0=np.array([[0.0],[0.0],[0.0]])
@@ -264,7 +277,7 @@ class MyEnvironment(gym.Env):
     self.w_state=State(p0, v0, a0, y0, ydot0)
 
     if(isinstance(self.constant_obstacle_pos, type(None)) and isinstance(self.constant_gterm_pos, type(None))):
-      prob_choose_cross=0.4;
+      prob_choose_cross=1.0;
       if np.random.uniform(0, 1) < 1 - prob_choose_cross:
         self.obsm.newRandomPos();
         self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos);
@@ -273,7 +286,7 @@ class MyEnvironment(gym.Env):
         w_pos_obstacle, w_pos_g_term = getObsAndGtermToCrossPath();
         self.obsm.setPos(w_pos_obstacle)
         self.gm.setPos(w_pos_g_term);        
-        self.printwithNameAndColor("Using cross!")
+        # self.printwithNameAndColor("Using cross!")
 
     else:
       self.obsm.setPos(self.constant_obstacle_pos)
@@ -303,7 +316,8 @@ class MyEnvironment(gym.Env):
   def close (self):
     raise NotImplementedError()
     return
-
+  def forceDone(self):
+    self.force_done=True
 
   def saveInBag(self, f_action_normalized):
       if(self.record_bag==False or np.isnan(f_action_normalized).any()):

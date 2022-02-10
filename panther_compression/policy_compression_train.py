@@ -61,13 +61,13 @@ if __name__ == "__main__":
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
 
-    parser.add_argument("--n_rounds", default=5000, type=int) #was called n_iters before
+    parser.add_argument("--n_rounds", default=5000, type=int) 
+    parser.add_argument("--total_demos_per_round", default=256, type=int) 
+    parser.add_argument("--train_environment_max_steps", default=10, type=int)
+    parser.add_argument("--rampdown_rounds", default=1, type=int) # Dagger properties
+
     parser.add_argument("--n_evals", default=1, type=int)
     parser.add_argument("--test_environment_max_steps", default=10, type=int)
-    parser.add_argument("--train_environment_max_steps", default=10, type=int)
-    parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
-    parser.set_defaults(use_only_last_coll_ds=False)
-    parser.add_argument("--n_traj_per_round", default=15, type=int) #This is PER environment
     # Method changes
     parser.add_argument("--no_train", dest='train', action='store_false')
     parser.set_defaults(train=True)
@@ -75,8 +75,9 @@ if __name__ == "__main__":
     parser.set_defaults(eval=False)
     parser.add_argument("--no_init_and_final_eval", dest='init_and_final_eval', action='store_false')
     parser.set_defaults(init_and_final_eval=False)
-    # Dagger properties
-    parser.add_argument("--rampdown_rounds", default=3, type=int)
+
+    parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
+    parser.set_defaults(use_only_last_coll_ds=False)
     
 
     args = parser.parse_args()
@@ -91,8 +92,11 @@ if __name__ == "__main__":
     batch_size = 256
     N_EPOCHS = 50           #WAS 50!! Num epochs for training.
     lr=1e-3
-    weight_prob=0.005
+    weight_prob=1.0
     num_envs = 16
+    log_interval=200
+
+    assert args.total_demos_per_round>=batch_size #If not, round_{k+1} will train on the same dataset as round_{k} (until enough rounds are taken to generate a new batch of demos)
 
 
     if(only_collect_data==True):
@@ -101,7 +105,8 @@ if __name__ == "__main__":
 
     if(train_only_supervised==True):
         reuse_previous_samples=True
-        only_collect_data=False  
+        only_collect_data=False 
+        log_interval=15 
 
 
     if(train_only_supervised==True):
@@ -119,15 +124,16 @@ if __name__ == "__main__":
         max_round = max([int(s.replace("round-", "")) for s in os.listdir(demos_dir)])
 
         args.n_rounds=max_round+1; #It will use the demonstrations of these folders
-        args.n_traj_per_round=0
+        args.total_demos_per_round=0
 
     if(args.train_environment_max_steps>1 and only_collect_data==True):
         printInBoldRed("Note that DAgger will not be used (since we are only collecting data)")
 
     os.system("find "+args.policy_dir+" -type f -name '*.pt' -delete") #Delete the policies
+    os.system("rm -rf "+args.log_dir) #Delete the logs
+
     if(reuse_previous_samples==False):
-        os.system("rm -rf "+args.log_dir)
-        os.system("rm -rf "+args.policy_dir)
+        os.system("rm -rf "+args.policy_dir) #Delete the demos
 
     if(record_bag==True):
         os.system("rm training*.bag")
@@ -152,7 +158,7 @@ if __name__ == "__main__":
         print(f"train: {args.train}, eval: {args.eval}, init_and_final_eval: {args.init_and_final_eval}")
         print(f"DAgger rampdown_rounds: {args.rampdown_rounds}.")
 
-        print(f"Num of trajectories per round: {args.n_traj_per_round}.")
+        print(f"total_demos_per_round: {args.total_demos_per_round}.")
         print("---------------------------------------------------------")
 
 
@@ -197,9 +203,12 @@ if __name__ == "__main__":
         train_venv.env_method("set_len_ep", (args.train_environment_max_steps)) 
         print("[Train Env] Ep. Len:  {} [steps].".format(train_venv.get_attr("len_episode")))
 
+        for i in range(num_envs):
+            train_venv.env_method("setID", i, indices=[i]) 
+
         if(record_bag):
             for i in range(num_envs):
-                train_venv.env_method("startRecordBag", ("training"+str(i)+".bag"), indices=[i]) 
+                train_venv.env_method("startRecordBag", indices=[i]) 
 
 
         if (args.init_and_final_eval or args.eval):
@@ -209,6 +218,10 @@ if __name__ == "__main__":
             test_venv.seed(args.seed)
             test_venv.env_method("set_len_ep", (args.test_environment_max_steps)) 
             print("[Test Env] Ep. Len:  {} [steps].".format(test_venv.get_attr("len_episode")))
+
+            for i in range(num_envs):
+                test_venv.env_method("setID", i, indices=[i]) 
+
             # test_venv = gym.make(ENV_NAME)
             # test_venv.seed(args.seed)
             # test_venv.action_space.seed(args.seed)
@@ -278,7 +291,7 @@ if __name__ == "__main__":
             assert trainer.round_num == 0
 
         policy_path = os.path.join(DATA_POLICY_PATH, "intermediate_policy.pt") # Where to save curr policy
-        trainer.train(n_rounds=args.n_rounds, n_traj_per_round=args.n_traj_per_round, only_collect_data=only_collect_data, bc_train_kwargs=dict(n_epochs=N_EPOCHS, save_full_policy_path=policy_path))
+        trainer.train(n_rounds=args.n_rounds, total_demos_per_round=args.total_demos_per_round, only_collect_data=only_collect_data, bc_train_kwargs=dict(n_epochs=N_EPOCHS, save_full_policy_path=policy_path, log_interval=log_interval))
 
 
         # for i in trange(args.n_rounds, desc="Round"):
