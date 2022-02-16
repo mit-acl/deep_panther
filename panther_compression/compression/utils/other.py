@@ -176,7 +176,7 @@ def getObsAndGtermToCrossPath():
 	# thetas=[-np.pi/4, np.pi/4]
 	# theta=random.choice(thetas)
 	theta=random.uniform(-np.pi, np.pi)
-	radius_obstacle=random.uniform(1.5, 4.5)
+	radius_obstacle=random.uniform(0.5, 5)
 	radius_gterm=radius_obstacle + random.uniform(1.0, 10.0)
 	std_deg=30
 	theta_g_term=theta + random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
@@ -652,12 +652,20 @@ class ActionManager():
 		self.total_num_pos_ctrl_pts = self.num_seg + self.deg_pos
 		self.traj_size_pos_ctrl_pts = 3*(self.total_num_pos_ctrl_pts - 5);
 		self.traj_size_yaw_ctrl_pts = (self.num_seg + self.deg_yaw - 3);
+		self.traj_size_time = 1
+		self.traj_size_prob = 1
 		self.traj_size = self.traj_size_pos_ctrl_pts + self.traj_size_yaw_ctrl_pts + 1 + 1; # Last two numbers are time and prob that traj is real
+		
+		self.action_size_pos_ctrl_pts = self.traj_size_pos_ctrl_pts*self.num_traj_per_action
+		self.action_size_yaw_ctrl_pts = self.traj_size_yaw_ctrl_pts*self.num_traj_per_action
+		self.action_size_time = self.traj_size_time*self.num_traj_per_action 
+		self.action_size_prob = self.traj_size_prob*self.num_traj_per_action 
+
 		self.action_size = self.num_traj_per_action*self.traj_size;
 		self.Npos = self.num_seg + self.deg_pos-1;
 
 		self.max_dist2BSPoscPoint=params["max_dist2BSPoscPoint"];
-		self.max_yawcPoint=4*math.pi;
+		self.max_yawcPoint=10*math.pi;
 		self.fitter_total_time=params["fitter_total_time"];
 
 		# print("self.max_dist2BSPoscPoint= ", self.max_dist2BSPoscPoint)
@@ -767,6 +775,17 @@ class ActionManager():
 	def getActionShape(self):
 		return (self.num_traj_per_action,self.traj_size)
 
+	def getActionPosShape(self):
+		return (self.num_traj_per_action,self.traj_size_pos_ctrl_pts)
+
+	def getActionYawShape(self):
+		return (self.num_traj_per_action,self.traj_size_yaw_ctrl_pts)
+
+	def getActionTimeShape(self):
+		return (self.num_traj_per_action,self.traj_size_time)
+
+	def getActionProbShape(self):
+		return (self.num_traj_per_action,self.traj_size_prob)
 	def getTrajShape(self):
 		return (1,self.traj_size)
 

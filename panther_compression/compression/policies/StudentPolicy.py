@@ -3,7 +3,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import gym
 import torch as th
 from torch import nn
-import numpy as np
 
 from stable_baselines3.common.distributions import SquashedDiagGaussianDistribution
 from stable_baselines3.common.policies import BasePolicy
@@ -16,9 +15,7 @@ from stable_baselines3.common.torch_layers import (
 
 from compression.utils.other import ActionManager, ObservationManager
 from colorama import init, Fore, Back, Style
-# CAP the standard deviation of the actor
-LOG_STD_MAX = 2
-LOG_STD_MIN = -20
+import numpy as np
 
 
 class StudentPolicy(BasePolicy):
@@ -30,7 +27,7 @@ class StudentPolicy(BasePolicy):
     :param action_space: Action space
     :param net_arch: Network architecture
     :param features_extractor: Network to extract features (a CNN when using images, a nn.Flatten() layer otherwise)
-    :param features_dim: Number of features
+    :param obs_dim: Number of features
     :param activation_fn: Activation function
     """
 
@@ -42,6 +39,7 @@ class StudentPolicy(BasePolicy):
         net_arch: [List[int]] = [64, 64],
         features_extractor_class: Type[BaseFeaturesExtractor] = FlattenExtractor,
         features_extractor_kwargs: Optional[Dict[str, Any]] = None,
+        obs_numel: int = 2, # Size of input features
         activation_fn: Type[nn.Module] = nn.ReLU,
         optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
         optimizer_kwargs: Optional[Dict[str, Any]] = None,
@@ -67,33 +65,30 @@ class StudentPolicy(BasePolicy):
         # Save arguments to re-create object at loading
         self.net_arch = net_arch
         self.activation_fn = activation_fn
-
-
         self.name=Style.BRIGHT+Fore.WHITE+"  [Stu]"+Style.RESET_ALL
-
 
         self.om=ObservationManager();
         self.am=ActionManager();
 
-        self.features_dim=self.om.getObservationSize()
+        self.obs_numel=self.om.getObservationSize()
+        self.pos_numel=self.am.action_size_pos_ctrl_pts
+        self.yaw_numel=self.am.action_size_yaw_ctrl_pts
+        self.time_numel=self.am.action_size_time
+        self.prob_numel=self.am.action_size_prob
+        self.pos_yaw_time_numel=self.pos_numel+self.yaw_numel + self.time_numel
 
-        print("features_dim= ", self.features_dim)
+        action_numel = get_action_dim(self.action_space)
 
-        action_dim = get_action_dim(self.action_space)
-        latent_pi_net = create_mlp(self.features_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
-        self.latent_pi = nn.Sequential(*latent_pi_net)
-        last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
+        mlp = create_mlp(self.obs_numel, self.pos_yaw_time_numel, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
+        mlp.append(nn.Tanh())
 
+        self.my_nn_obs2posyawtime = nn.Sequential(*mlp) #https://pytorch.org/docs/stable/generated/torch.nn.Sequential.html
 
+        mlp = create_mlp(self.pos_numel + self.obs_numel, self.prob_numel, net_arch, activation_fn)
+        mlp.append(nn.Tanh())
 
-        print(f"self.net_arch={self.net_arch}") #This is a list containing the number of neurons in each layer (excluding input and output)
-        #features_dim is the number of inputs (i.e., the number of input layers)
-        print(f"last_layer_dim={last_layer_dim}") 
-        print(f"action_dim={action_dim}") 
+        self.my_nn_pos2prob = nn.Sequential(*mlp)
 
-        self.action_dist = SquashedDiagGaussianDistribution(action_dim)
-        self.mu = nn.Linear(last_layer_dim, action_dim)
-        self.log_std = nn.Linear(last_layer_dim, action_dim)
 
     def _get_data(self) -> Dict[str, Any]:
         data = super()._get_data()
@@ -101,7 +96,7 @@ class StudentPolicy(BasePolicy):
         data.update(
             dict(
                 net_arch=self.net_arch,
-                features_dim=self.features_dim,
+                obs_numel=self.obs_numel,
                 activation_fn=self.activation_fn,
                 features_extractor=self.features_extractor,
             )
@@ -111,41 +106,58 @@ class StudentPolicy(BasePolicy):
     def printwithName(self,data):
         print(self.name+data)
 
+    def forward(self, obs: th.Tensor, deterministic: bool = False) -> th.Tensor:
 
-    def get_action_dist_params(self, obs_n: th.Tensor) -> Tuple[th.Tensor, th.Tensor, Dict[str, th.Tensor]]:
-        """
-        Get the parameters for the action distribution.
+        features = self.extract_features(obs)
 
-        :param obs_n:
-        :return:
-            Mean, standard deviation and optional keyword arguments.
-        """
-        features = self.extract_features(obs_n)
-        latent_pi = self.latent_pi(features)
-        mean_actions = self.mu(latent_pi)
+        pos_yaw_time = self.my_nn_obs2posyawtime(features)
 
-        log_std = self.log_std(latent_pi)
-        log_std = th.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
-        return mean_actions.float(), log_std, {}
+        # print(f"pos_yaw_time.shape={pos_yaw_time.shape}")
+        # print(f"self.pos_numel={self.pos_numel}")
+        # print(f"self.yaw_numel={self.yaw_numel}")
+        # print(f"self.am.traj_size={self.am.traj_size}")
+        # print(f"self.am.traj_size_yaw_ctrl_pts={self.am.traj_size_yaw_ctrl_pts}")
+        # print(f"self.am.getActionYawShape()={self.am.getActionYawShape()}")
 
-    def forward(self, obs_n: th.Tensor, deterministic: bool = False) -> th.Tensor:
-        mean_actions, log_std, kwargs = self.get_action_dist_params(obs_n)
-        # Note: the action is squashed
-        output=self.action_dist.actions_from_params(mean_actions, log_std, deterministic=deterministic, **kwargs);
+        pos= pos_yaw_time[:,0:self.pos_numel]
+        yaw= pos_yaw_time[:,self.pos_numel:self.pos_numel+self.yaw_numel]
+        time= pos_yaw_time[:,self.pos_numel+self.yaw_numel:]
+
+        prob = self.my_nn_pos2prob(th.cat((features,pos), dim=1))
+
+        first_dim = list(pos_yaw_time.shape)[0]
+
+        # print(f"shape of yaw is {yaw.shape}")
+        # print(f"shape of time is {time.shape}")
+        # print(f"tmp is {(first_dim,) + self.am.getActionYawShape()}")
+
+        pos_reshaped = th.reshape(pos, (first_dim,) + self.am.getActionPosShape())
+        yaw_reshaped = th.reshape(yaw, (first_dim,) + self.am.getActionYawShape())
+        time_reshaped = th.reshape(time, (first_dim,) + self.am.getActionTimeShape())
+        prob_reshaped = th.reshape(prob, (first_dim,) + self.am.getActionProbShape())
+
+        # print(f"pos_reshaped={pos_reshaped.shape}")
+        # print(f"yaw_reshaped={yaw_reshaped.shape}")
+        # print(f"prob_reshaped={prob_reshaped.shape}")
+
+        output= th.cat((pos_reshaped, yaw_reshaped, time_reshaped, prob_reshaped), dim=2)
+
+        # print(f"output={output.shape}")
+        # print(f"self.am.getActionShape()={self.am.getActionShape()}")
 
 
-        # self.printwithName(f"In forward, output before reshaping={output.shape}")
-        before_shape=list(output.shape)
-        #Note that before_shape[i,:,:] containes one action i
-        output=th.reshape(output, (before_shape[0],) + self.am.getActionShape())
-        # self.printwithName(f"In forward, returning shape={output.shape}")
+        # first_dim = list(pos_yaw.shape)[0]
+        # output= th.reshape(output, (first_dim,) + self.am.getActionShape())
+
+        # output = th.tanh(self.my_nn_obs2posyaw(features))
+
+        # # self.printwithName(f"In forward, output before reshaping={output.shape}")
         
-        return output
+        # #Note that before_shape[i,:,:] containes one action i
+        # output=th.reshape(output, (before_shape[0],) + self.am.getActionShape())
+        # self.printwithName(f"In forward, returning shape={output.shape}")
 
-    # def action_log_prob(self, obs: th.Tensor) -> Tuple[th.Tensor, th.Tensor]:
-    #     mean_actions, log_std, kwargs = self.get_action_dist_params(obs)
-    #     # return action and associated log prob
-    #     return self.action_dist.log_prob_from_params(mean_actions, log_std, **kwargs)
+        return output #self.action_dist.actions_from_params(mean_actions, log_std, deterministic=deterministic, **kwargs)
 
     def _predict(self, obs_n: th.Tensor, deterministic: bool = False) -> th.Tensor:
         self.printwithName(f"Calling student")
@@ -160,8 +172,8 @@ class StudentPolicy(BasePolicy):
         # self.printwithName(f"action={action}")
 
         #Sort each of the trajectories from highest to lowest probability
-        indexes=th.argsort(action[:,:,-1], dim=1, descending=True) #TODO: Assumming here that the last number is the probability!
-        action = action[:,indexes,:]
+        # indexes=th.argsort(action[:,:,-1], dim=1, descending=True) #TODO: Assumming here that the last number is the probability!
+        # action = action[:,indexes,:]
         # self.printwithName(f"indexes={indexes}")     
         # self.printwithName(f"After sorting, action={action}")
         #############
@@ -177,9 +189,3 @@ class StudentPolicy(BasePolicy):
         acts=[self.predict( obs_n[i,:], deterministic=deterministic)[0].reshape(self.am.getActionShape()) for i in range(len(obs_n))] #Note that len() returns the size along the first axis
         acts=np.stack(acts, axis=0)
         return acts
-
-
-    # def predictAndDenormalize(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
-    #     action =self._predict(observation, deterministic)
-    #     return self.am.denormalizeAction(action)
-        
