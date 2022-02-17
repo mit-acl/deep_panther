@@ -83,16 +83,16 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     only_collect_data=False
-    train_only_supervised=False
+    train_only_supervised=True
     reuse_previous_samples=False
 
     record_bag=True
     launch_tensorboard=True
     verbose_python_errors=False
     batch_size = 256
-    N_EPOCHS = 50           #WAS 50!! Num epochs for training.
+    N_EPOCHS = 250           #WAS 50!! Num epochs for training.
     lr=1e-3
-    weight_prob=1.0
+    weight_prob=0.005
     num_envs = 16
     log_interval=200
 
@@ -291,13 +291,13 @@ if __name__ == "__main__":
             assert trainer.round_num == 0
 
         policy_path = os.path.join(DATA_POLICY_PATH, "intermediate_policy.pt") # Where to save curr policy
-        trainer.train(n_rounds=args.n_rounds, total_demos_per_round=args.total_demos_per_round, only_collect_data=only_collect_data, bc_train_kwargs=dict(n_epochs=N_EPOCHS, save_full_policy_path=policy_path, log_interval=log_interval))
+        trainer.train(n_rounds=args.n_rounds, total_demos_per_round=args.total_demos_per_round, only_collect_data=only_collect_data, bc_train_kwargs=dict(n_epochs=N_EPOCHS, save_full_policy_path=policy_path))
 
 
         # for i in trange(args.n_rounds, desc="Round"):
 
         #     #Create names for policies
-        #     n_training_traj = int(i*args.n_traj_per_round) # Note: we start to count from 0. e.g. policy_0 means that we used 1 
+        #     n_training_traj = int(i*args.total_demos_per_round) # Note: we start to count from 0. e.g. policy_0 means that we used 1 
         #     policy_path = os.path.join(DATA_POLICY_PATH, "intermediate_policy_round"+str(i)+".pt") # Where to save curr policy
         #     log_path_student_n = LOG_PATH + "/student/" + str(n_training_traj) + "/"                                  # Where to save eval logs
         #     if not os.path.exists(log_path_student_n):
@@ -306,7 +306,7 @@ if __name__ == "__main__":
         #     # Train for iteration
         #     if args.train:
         #         print(f"[Collector] Collecting round {i+1}/{args.n_rounds}.")
-        #         # train_stats = train(trainer=trainer, expert=expert_policy, seed=args.seed, n_traj_per_round=args.n_traj_per_round, n_epochs=N_EPOCHS, 
+        #         # train_stats = train(trainer=trainer, expert=expert_policy, seed=args.seed, total_demos_per_round=args.total_demos_per_round, n_epochs=N_EPOCHS, 
         #         #     log_path=os.path.join(log_path_student_n, "training"),  save_full_policy_path=policy_path, use_only_last_coll_ds=args.use_only_last_coll_ds, only_collect_data=only_collect_data)
 
 

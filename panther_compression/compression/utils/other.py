@@ -423,8 +423,8 @@ class ObservationManager():
 		self.Ra=params["Ra"]
 		ones13=np.ones((1,3));
 		#Note that the sqrt(3) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
-		margin_v=math.sqrt(3) #math.sqrt(3)
-		margin_a=math.sqrt(3) #math.sqrt(3)
+		margin_v=1.0 #math.sqrt(3) #math.sqrt(3)
+		margin_a=1.0 #math.sqrt(3) #math.sqrt(3)
 		margin_ydot=1.0 #because the student sometimes may not satisfy that limit
 		self.normalization_constant=np.concatenate((margin_v*self.v_max.T*ones13, margin_a*self.a_max.T*ones13, margin_ydot*self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
 		for i in range(self.obsm.getNumObs()):

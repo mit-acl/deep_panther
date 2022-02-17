@@ -546,7 +546,7 @@ class DynCorridor:
 
 def startNode(total_num_obs, gazebo):
     c = DynCorridor(total_num_obs,gazebo)
-    rospy.Timer(rospy.Duration(30.0), c.pubTF) #was 0.01
+    rospy.Timer(rospy.Duration(3.0), c.pubTF) #was 0.01
     c.pubTF(None)
     rospy.spin()
 
