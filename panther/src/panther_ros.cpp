@@ -748,7 +748,7 @@ visualization_msgs::MarkerArray PantherRos::pubVectorOfsolOrGuess(const std::vec
       int increm = (int)std::max(sol_or_guess.traj.size() / par_.res_plot_traj, 1.0);  // this is to speed up rviz
 
       visualization_msgs::MarkerArray tmp;
-      verify((sol_or_guess.prob >= 0 && sol_or_guess.prob <= 1), "prob must be in [0,1]");
+      // verify((sol_or_guess.prob >= 0 && sol_or_guess.prob <= 1), "prob must be in [0,1]");
 
       // double alpha = sol_or_guess.prob;
       // saturate(sol_or_guess.prob, 0.08, 1.0);  // min_value so that it can be seen at least a little bit

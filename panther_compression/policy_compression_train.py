@@ -92,7 +92,7 @@ if __name__ == "__main__":
     batch_size = 256
     N_EPOCHS = 250           #WAS 50!! Num epochs for training.
     lr=1e-3
-    weight_prob=0.005
+    weight_prob=1.0
     num_envs = 16
     log_interval=200
 

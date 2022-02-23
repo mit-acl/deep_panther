@@ -657,6 +657,7 @@ class ActionManager():
 		self.Npos = self.num_seg + self.deg_pos-1;
 
 		self.max_dist2BSPoscPoint=params["max_dist2BSPoscPoint"];
+		self.max_dist2BSPoscPointSquared=self.max_dist2BSPoscPoint**2;
 		self.max_yawcPoint=4*math.pi;
 		self.fitter_total_time=params["fitter_total_time"];
 
@@ -704,7 +705,9 @@ class ActionManager():
 		action_normalized=np.empty(action.shape)
 		action_normalized[:,0:-2]=action[:,0:-2]/self.normalization_constant #Elementwise division
 		action_normalized[:,-2]=(2.0/self.fitter_total_time)*action[:,-2]-1 #Note that action[0,-2] is in [0, fitter_total_time]
-		action_normalized[:,-1]=(2.0/1.0)*action[:,-1]-1 #Note that action[0,-1] is in [0, 1]
+		# action_normalized[:,-1]=(2.0/1.0)*action[:,-1]-1 #Note that action[0,-1] is in [0, 1]
+		# action_normalized[:,-1]=action[:,-1]/self.max_dist2BSPoscPointSquared
+		action_normalized[:,-1]=(2.0/self.max_dist2BSPoscPointSquared)*action[:,-1]-1 #Note that action[0,-1] is in [0, max_dist2BSPoscPointSquared]
 
 		# for index_traj in range(self.num_traj_per_action):
 		# 	time_normalized=self.getTotalTime(action_normalized, index_traj);
@@ -758,7 +761,10 @@ class ActionManager():
 		action=np.empty(action_normalized.shape)
 		action[:,0:-2]=action_normalized[:,0:-2]*self.normalization_constant #Elementwise multiplication
 		action[:,-2]=(self.fitter_total_time/2.0)*(action_normalized[:,-2]+1) #Note that action[:,-2] is in [0, fitter_total_time]
-		action[:,-1]=(1.0/2.0)*(action_normalized[:,-1]+1) #Note that action[:,-1] is in [0, 1]
+		# action[:,-1]=(1.0/2.0)*(action_normalized[:,-1]+1) #Note that action[:,-1] is in [0, 1]
+		action[:,-1]=(self.max_dist2BSPoscPointSquared/2.0)*(action_normalized[:,-1]+1) #Note that action[:,-1] is in [0, 1]
+		# action[:,-1]=action[:,-1]*self.max_dist2BSPoscPointSquared
+
 		return action
 
 	def getActionSize(self):
