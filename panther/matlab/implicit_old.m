@@ -57,7 +57,7 @@ for i=1:size(g,1)
     end
 end
 
-%Now I have all_g<=opti_bg
+%Now I have all_g<=all_uper
 
 %Obtain A and b
 % A_tmp=jacobian(opti_g, variables); %     opti.lbg() <= A_tmp*variables <= opti.ubg()
