@@ -170,25 +170,25 @@ function [const_p]=addDynLimConstraints(const_p, sp, basis, v_max_n, a_max_n, j_
 
 end
 
-function result=containsSymCasadi(expression)
-    result=(numel(symvar(expression))>0);
-end
-
-function result=isPlusInfCasadi(expression)
-    if(containsSymCasadi(expression)) %if it has symbolic variables
-        result=false;
-        return;
-    end
-    result=(convertMX2Matlab(expression)==inf);
-end
-
-function result=isMinusInfCasadi(expression)
-    if(containsSymCasadi(expression)) %if it has symbolic variables
-        result=false;
-        return;
-    end
-    result=(convertMX2Matlab(expression)==-inf);
-end
+% function result=containsSymCasadi(expression)
+%     result=(numel(symvar(expression))>0);
+% end
+% 
+% function result=isPlusInfCasadi(expression)
+%     if(containsSymCasadi(expression)) %if it has symbolic variables
+%         result=false;
+%         return;
+%     end
+%     result=(convertMX2Matlab(expression)==inf);
+% end
+% 
+% function result=isMinusInfCasadi(expression)
+%     if(containsSymCasadi(expression)) %if it has symbolic variables
+%         result=false;
+%         return;
+%     end
+%     result=(convertMX2Matlab(expression)==-inf);
+% end
 
 
 % sp.updateCPsWithSolution(variables_SX)
