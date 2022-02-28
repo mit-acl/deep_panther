@@ -428,7 +428,12 @@ total_cost=c_pos_smooth*pos_smooth_cost+...
 
 
 %First option: Hard constraints
-[const_p,const_y]=addDynLimConstraints(const_p,const_y, sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n);
+const_p_dyn_limits={};
+const_y_dyn_limits={};
+[const_p_dyn_limits,const_y_dyn_limits]=addDynLimConstraints(const_p_dyn_limits, const_y_dyn_limits, sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n);
+
+const_p=[const_p const_p_dyn_limits];
+const_y=[const_y const_y_dyn_limits];
 
 %Second option: Soft constraints:
 % total_cost=total_cost+c_dyn_lim*getCostDynLimSoftConstraints(sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n);
@@ -520,6 +525,13 @@ tmp2=[ y0_value(1)*ones(1,sy.p-1)   linspace(y0_value(1),yf_value(1), sy.N+1-2*(
 
 
 
+alpha_value = 3.53467;
+tmp1=[0, 0, 0, 1.64678, 2.85231, 4.05784, 5.70462, 5.70462, 5.70462; 
+      0, 0, 0, -0.378827, -1.05089, -1.71629, -2.08373, -2.08373, -2.08373; 
+      0, 0, 0, 5.62017e-05, 0.00192903, 0.00290378, 0.00011499, 0.00011499, 0.00011499];
+tmp2=[0, 0, 0.281832, 0.888652, 1.82877, 2.19427, 2.34944, 2.34944];
+
+
 
 % all_obstacle_bbox_inflated_value= ones(size(all_obstacle_bbox_inflated));
 
@@ -598,6 +610,59 @@ compute_cost(names_value{:})
 compute_cost=compute_cost.expand();
 compute_cost.save('./casadi_generated_files/compute_cost.casadi') %The file generated is quite big
 
+
+%%%%%%%%%
+%%
+
+% opti.subject_to([const_p, const_y]);
+
+opti_tmp=opti.copy;
+opti_tmp.subject_to(); %Clear constraints
+opti_tmp.subject_to([const_p_dyn_limits, const_y_dyn_limits]);
+
+g=opti_tmp.g();
+lower=opti_tmp.lbg();
+upper=opti_tmp.ubg();
+
+% The constraints are   lower<=g<=upper
+
+all_g=[];
+all_upper=[];
+
+for i=1:size(g,1)
+    if(isPlusInfCasadi(upper(i))==false)
+%         upper(i)
+        all_upper=[all_upper; upper(i)];
+        all_g=[all_g; g(i)];
+    end
+    if(isMinusInfCasadi(lower(i))==false)
+        all_upper=[all_upper; -lower(i)];
+        all_g=[all_g; -g(i)];
+    end
+end
+
+% The constraints are now all_g<=all_upper
+
+slack_constraints=all_g-all_upper; %If it's <=0 --> constraint is satisfied
+
+violation=[];%max()
+for i=1:size(slack_constraints,1)
+    violation=[violation; max(0, slack_constraints(i))];
+end
+
+compute_dyn_limits_constraints_violation = casadi.Function('compute_dyn_limits_constraints_violation', par_and_init_guess_exprs ,{violation},...
+                                                           par_and_init_guess_names ,{'violation'});
+tmp=compute_dyn_limits_constraints_violation(names_value{:})
+compute_dyn_limits_constraints_violation=compute_dyn_limits_constraints_violation.expand();
+compute_dyn_limits_constraints_violation.save('./casadi_generated_files/compute_dyn_limits_constraints_violation.casadi') 
+
+
+
+%%
+
+
+
+%%%%%%%%%
 
 %%%%%
 
