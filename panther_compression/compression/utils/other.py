@@ -972,6 +972,8 @@ class StudentCaller():
 		self.om=ObservationManager();
 		self.am=ActionManager();
 		self.cc=CostComputer();
+		self.index_smallest_augmented_cost = 0
+
 
 	def predict(self, w_init_ppstate, w_ppobstacles, w_gterm): #pp stands for py_panther
 
@@ -1003,13 +1005,20 @@ class StudentCaller():
 		# print("action=", action)   
 
 		all_solOrGuess=[]
+		smallest_augmented_cost = float('inf')
+		self.index_smallest_augmented_cost = 0
 		for i in range( np.shape(action)[0]): #For each row of action
 			traj=action[i,:].reshape(1,-1);
 			traj_n=action_normalized[i,:].reshape(1,-1);
 			assert self.am.getTotalTimeTraj(traj)>0, f"Time needs to be >0. Currently it is {self.am.getTotalTimeTraj(traj)}"
 			my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state);
-			my_solOrGuess.augmented_cost = self.cc.computeAugmentedCost(f_observation_n, traj_n)
+			augmented_cost = self.cc.computeAugmentedCost(f_observation_n, traj_n)
+			my_solOrGuess.augmented_cost = augmented_cost
 			all_solOrGuess.append(my_solOrGuess)
+
+			if(augmented_cost < smallest_augmented_cost):
+				smallest_augmented_cost = augmented_cost
+				self.index_smallest_augmented_cost = i
 
 		# w_pos_ctrl_pts,_ = self.am.actionAndState2_w_pos_ctrl_pts_and_knots(action,w_init_state)
 		# print("w_pos_ctrl_pts=", w_pos_ctrl_pts)
@@ -1018,6 +1027,10 @@ class StudentCaller():
 
 
 		return all_solOrGuess   
+
+	def getIndexTrajWithSmallestAugmentedCost(self):
+		return self.index_smallest_augmented_cost
+
 
 def TfMatrix2RosQuatAndVector3(tf_matrix):
 
@@ -1172,6 +1185,19 @@ class CostComputer():
 		print(f"cost={cost}, violation1={violation1}, violation2={violation2}")
 
 		return cost + violation1 + violation2
+
+	def getIndexTrajWithSmallestAugmentedCost(self, f_obs_n, f_action_n):
+		smallest_augmented_cost = float('inf')
+		index_smallest_augmented_cost = 0
+		for i in range(f_action.shape[0]):
+			f_traj_n = self.am.getTrajFromAction(f_action_n, i)
+			augmented_cost=self.computeAugmentedCost(f_obs_n, f_traj_n)
+			self.printwithNameAndColor(f"augmented cost traj_{i}={augmented_cost}")
+			if(augmented_cost < smallest_augmented_cost):
+				smallest_augmented_cost = augmented_cost
+				index_smallest_augmented_cost = i
+		return index_smallest_augmented_cost
+
 
 #You can check the previous function by using this Matlab script:
 # clc;

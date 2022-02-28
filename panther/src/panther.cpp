@@ -829,7 +829,17 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
     best_solutions_student = result.cast<std::vector<si::solOrGuess>>();
 
     // Hack: for now take the first traj
-    best_solution_student = best_solutions_student[0];
+    pybind11::object tmp = student_caller_ptr_->attr("getIndexTrajWithSmallestAugmentedCost")();
+    int index_smallest_augmented_cost = tmp.cast<int>();
+
+    for (auto z : best_solutions_student)
+    {
+      std::cout << "cost= " << z.augmented_cost << std::endl;
+    }
+
+    best_solution_student = best_solutions_student[index_smallest_augmented_cost];
+
+    std::cout << "Chosen cost=" << best_solution_student.augmented_cost << std::endl;
     ///////////////////////////////
 
     best_solution_student.fillTraj(par_.dc);  // This could also be done in the predict method of the python class

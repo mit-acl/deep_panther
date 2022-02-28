@@ -129,21 +129,21 @@ class MyEnvironment(gym.Env):
     # self.printwithName(f"Ep. len updated to {self.len_episode } [steps].")
     self.reset()
 
-  def step(self, f_action_normalized):
+  def step(self, f_action_n):
 
-    # self.printwithName(f"Received actionN={f_action_normalized}")
+    # self.printwithName(f"Received actionN={f_action_n}")
 
-    if(self.am.isNanAction(f_action_normalized)):
+    if(self.am.isNanAction(f_action_n)):
       #f_observationn, reward, done, info
       return self.om.getNanObservation(), 0.0, True, {} #This line is added to make generate_trajectories() of rollout.py work when the expert fails 
 
-    f_action_normalized=f_action_normalized.reshape(self.action_shape) 
+    f_action_n=f_action_n.reshape(self.action_shape) 
 
-    self.am.assertAction(f_action_normalized)
-    self.am.assertActionIsNormalized(f_action_normalized)
+    self.am.assertAction(f_action_n)
+    self.am.assertActionIsNormalized(f_action_n)
 
-    # self.printwithName(f"Received actionN={f_action_normalized}")
-    f_action= self.am.denormalizeAction(f_action_normalized);
+    # self.printwithName(f"Received actionN={f_action_n}")
+    f_action= self.am.denormalizeAction(f_action_n);
     # self.printwithName(f"Received action size={action.shape}")
 
     # self.printwithName(f"Timestep={self.timestep}")
@@ -157,20 +157,11 @@ class MyEnvironment(gym.Env):
     #Hack for now: choose always the first trajectory
 
     #Choose the trajectory with smallest cost:
-    smallest_augmented_cost = float('inf')
-    index_smallest_augmented_cost = 0
-    for i in range(f_action.shape[0]):
-      f_traj_n = self.am.getTrajFromAction(f_action_normalized, i)
-      augmented_cost=self.cost_computer.computeAugmentedCost(self.previous_f_observationn, f_traj_n)
-      self.printwithNameAndColor(f"augmented cost traj_{i}={augmented_cost}")
-      if(augmented_cost < smallest_augmented_cost):
-        smallest_augmented_cost = augmented_cost
-        index_smallest_augmented_cost = i
-
+    index_smallest_augmented_cost=self.getIndexTrajWithSmallestAugmentedCost(self.previous_f_obs_n, f_action_n)
 
     self.printwithNameAndColor(f"Choosing traj_{index_smallest_augmented_cost}")
     f_traj=self.am.getTrajFromAction(f_action, index_smallest_augmented_cost)
-    f_traj_n=self.am.getTrajFromAction(f_action_normalized, index_smallest_augmented_cost)
+    f_traj_n=self.am.getTrajFromAction(f_action_n, index_smallest_augmented_cost)
     w_posBS, w_yawBS= self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
 
     ####################################
@@ -256,9 +247,9 @@ class MyEnvironment(gym.Env):
     # self.my_SolverIpopt.setFocusOnObstacle(True);
     # self.my_SolverIpopt.setObstaclesForOpt(self.om.getObstacles(self.previous_f_observation));
     # cost=self.my_SolverIpopt.computeCost(self.am.f_traj2f_ppSolOrGuess(f_traj)) #TODO: this cost does not take into accout the constraints right now
-    # cost=self.cost_computer.computeCost(self.previous_f_observationn, f_traj_n)
-    # constraints_violation=self.cost_computer.computeConstraintsViolation(self.previous_f_observationn, f_traj_n)
-    # augmented_cost=self.cost_computer.computeAugmentedCost(self.previous_f_observationn, f_traj_n)
+    # cost=self.cost_computer.computeCost(self.previous_f_obs_n, f_traj_n)
+    # constraints_violation=self.cost_computer.computeConstraintsViolation(self.previous_f_obs_n, f_traj_n)
+    # augmented_cost=self.cost_computer.computeAugmentedCost(self.previous_f_obs_n, f_traj_n)
     # self.printwithNameAndColor(f"augmented cost={augmented_cost}")
 
     # print(f"constraints_violation={constraints_violation}")
@@ -283,7 +274,7 @@ class MyEnvironment(gym.Env):
     # self.printwithName(f"returning obs size={observation.shape}")
 
     self.previous_f_observation=f_observation
-    self.previous_f_observationn=f_observationn
+    self.previous_f_obs_n=f_observationn
 
     return f_observationn, reward, done, info
 
@@ -329,7 +320,7 @@ class MyEnvironment(gym.Env):
     # self.om.printObservation(f_observation)
 
     self.previous_f_observation=self.om.denormalizeObservation(f_observationn)
-    self.previous_f_observationn=f_observationn
+    self.previous_f_obs_n=f_observationn
     # assert observation.shape == self.observation_shape
     # self.printwithName(f"returning obs={observation}")
     return f_observationn
@@ -345,8 +336,8 @@ class MyEnvironment(gym.Env):
   def forceDone(self):
     self.force_done=True
 
-  def saveInBag(self, f_action_normalized):
-      if(self.record_bag==False or np.isnan(f_action_normalized).any()):
+  def saveInBag(self, f_action_n):
+      if(self.record_bag==False or np.isnan(f_action_n).any()):
         return
 
       #When using multiple environments, opening bag in constructor and closing it in _del leads to unindexed bags
@@ -362,7 +353,7 @@ class MyEnvironment(gym.Env):
       w_state=self.w_state
       ########
 
-      f_action= self.am.denormalizeAction(f_action_normalized);
+      f_action= self.am.denormalizeAction(f_action_n);
 
       w_posBS_list=[]
       w_yawBS_list=[]
