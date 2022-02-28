@@ -158,6 +158,8 @@ SolverIpopt::SolverIpopt(const mt::parameters &par)
   // cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
   cf_visibility_ = casadi::Function::load(folder + "visibility.casadi");
   cf_compute_cost_ = casadi::Function::load(folder + "compute_cost.casadi");
+  cf_compute_dyn_limits_constraints_violation_ = casadi::Function::load(folder + "compute_dyn_limits_constraints_"
+                                                                                 "violation.casadi");
 
   b_Tmatrixcasadi_c_ = casadi::DM(4, 4);
 
@@ -488,9 +490,9 @@ si::solOrGuess SolverIpopt::getBestSolution()
   int argmin = -1;
   for (int i = 0; i < solutions_.size(); i++)
   {
-    if (solutions_[i].solver_succeeded && (solutions_[i].cost < min_cost))
+    if (solutions_[i].solver_succeeded && (solutions_[i].augmented_cost < min_cost))
     {
-      min_cost = solutions_[i].cost;
+      min_cost = solutions_[i].augmented_cost;
       argmin = i;
     }
   }
@@ -534,22 +536,51 @@ std::vector<si::solOrGuess> SolverIpopt::getGuesses()
   return guesses_;
 }
 
-double SolverIpopt::computeCost(si::solOrGuess guess)
+double SolverIpopt::computeCost(si::solOrGuess sol_or_guess)
 {
   std::map<std::string, casadi::DM> map_arguments = getMapConstantArguments();
 
-  casadi::DM matrix_qp_guess = stdVectorEigen3d2CasadiMatrix(guess.qp);
-  casadi::DM matrix_qy_guess = stdVectorDouble2CasadiRowVector(guess.qy);
+  casadi::DM matrix_qp = stdVectorEigen3d2CasadiMatrix(sol_or_guess.qp);
+  casadi::DM matrix_qy = stdVectorDouble2CasadiRowVector(sol_or_guess.qy);
 
-  map_arguments["alpha"] = guess.getTotalTime();  // Initial guess for alpha
-  map_arguments["pCPs"] = matrix_qp_guess;        // matrix_qp_guess;
-  map_arguments["yCPs"] = matrix_qy_guess;        // matrix_qy_guess;
+  map_arguments["alpha"] = sol_or_guess.getTotalTime();
+  map_arguments["pCPs"] = matrix_qp;
+  map_arguments["yCPs"] = matrix_qy;
   // map_arguments["all_nd"] = all_nd;                                 // Only appears in the constraints
 
   std::map<std::string, casadi::DM> result = cf_compute_cost_(map_arguments);
 
   double cost = double(result["total_cost"]);
   return cost;
+}
+
+double SolverIpopt::computeDynLimitsConstraintsViolation(si::solOrGuess sol_or_guess)
+{
+  std::map<std::string, casadi::DM> map_arguments = getMapConstantArguments();
+
+  casadi::DM matrix_qp = stdVectorEigen3d2CasadiMatrix(sol_or_guess.qp);
+  casadi::DM matrix_qy = stdVectorDouble2CasadiRowVector(sol_or_guess.qy);
+
+  map_arguments["alpha"] = sol_or_guess.getTotalTime();
+  map_arguments["pCPs"] = matrix_qp;
+  map_arguments["yCPs"] = matrix_qy;
+  // map_arguments["all_nd"] = all_nd;  //Does not appear in the dyn. limits constraints
+
+  // std::cout << "[alpha]" << map_arguments["alpha"] << std::endl;
+  // std::cout << "[pCPs]" << map_arguments["pCPs"] << std::endl;
+  // std::cout << "[yCPs]" << map_arguments["yCPs"] << std::endl;
+
+  std::map<std::string, casadi::DM> result = cf_compute_dyn_limits_constraints_violation_(map_arguments);
+
+  // std::cout << "violation=\n" << result["violation"] << std::endl;
+
+  std::vector<double> dyn_limits_constraints_violation = casadiMatrix2StdVectorDouble(result["violation"]);
+
+  double violation = std::accumulate(
+      dyn_limits_constraints_violation.begin(), dyn_limits_constraints_violation.end(),
+      decltype(dyn_limits_constraints_violation)::value_type(0));  // https://stackoverflow.com/a/3221813/6057617
+
+  return violation;
 }
 
 std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
@@ -629,6 +660,12 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   std::cout << "final_state= " << std::endl;
   final_state_.printHorizontal();
 
+  std::cout << "obstacles = " << std::endl;
+  for (auto &tmp : obstacles_for_opt_)
+  {
+    tmp.printInfo();
+  }
+
   std::vector<os::solution> p_guesses;
 
   // reset some stuff
@@ -659,6 +696,8 @@ bool SolverIpopt::optimize(bool supress_all_prints)
 
   double alpha_guess = (t_final_guess_ - t_init_);
   map_arguments["alpha"] = alpha_guess;  // Initial guess for alpha
+
+  std::cout << "alpha_guess= " << alpha_guess << std::endl;
 
   /////////////////////////////////////////// SOLVE AN OPIMIZATION FOR EACH OF THE GUESSES FOUND
 
@@ -792,7 +831,8 @@ bool SolverIpopt::optimize(bool supress_all_prints)
 
     si::solOrGuess solution;
     solution.is_guess = false;
-    solution.cost = double(result["total_cost"]);
+    solution.augmented_cost =
+        double(result["total_cost"]);  // Note that there are no constraints violations --> cost = augmented cost
 
     // hack (TODO): sometimes the total time is very small (and final position is very close to initial position)
     if (double(result["alpha"]) < 1e-4)
@@ -885,10 +925,11 @@ bool SolverIpopt::optimize(bool supress_all_prints)
 
       // ////////////////
       // double total_cost = computeCost(solution);
-      // verify(fabs(total_cost - solution.cost) < 1e-7, "The two costs differ");
+      // verify(fabs(total_cost - solution.augmented_cost) < 1e-7, "The two costs differ");
       // std::cout << red << bold << std::setprecision(10) << "Total cost with function= " << total_cost << reset
       //           << std::endl;
-      // std::cout << red << bold << std::setprecision(10) << "Total cost = " << solution.cost << reset << std::endl;
+      // std::cout << red << bold << std::setprecision(10) << "Total cost = " << solution.augmented_cost << reset <<
+      // std::endl;
       // ////////////////
     }
     else
@@ -943,7 +984,7 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   {
     bool operator()(si::solOrGuess &a, si::solOrGuess &b) const
     {
-      return a.cost < b.cost;
+      return a.augmented_cost < b.augmented_cost;
     }
   } customLess;
   std::sort(solutions.begin(), solutions.end(), customLess);  // sort solutions from lowest to highest cost
@@ -983,12 +1024,21 @@ bool SolverIpopt::optimize(bool supress_all_prints)
     // }
     // si::solOrGuess dummy_solution;  // Copy the best solution found
     dummy_solution.solver_succeeded = false;
-    dummy_solution.prob = 0.0;
+    dummy_solution.is_repeated = true;
     while (solutions_.size() < par_.num_of_trajs_per_replan)
     {
       solutions_.push_back(dummy_solution);
     }
   }
+
+  // Debugging
+  // si::solOrGuess tmp = getBestSolution();  // Copy the best solution found
+  // std::cout << "Best solution found= " << std::endl;
+  // tmp.printInfo();
+  // double violation = computeDynLimitsConstraintsViolation(tmp);
+  // verify(violation < 1e-7, "violation cannot exist in a feasible solution");
+  ///////////////////////////////////////
+
   return true;
   //
 

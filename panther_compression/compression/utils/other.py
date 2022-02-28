@@ -26,7 +26,7 @@ import tf.transformations
 #######
 
 class ExpertDidntSucceed(Exception):
-      pass
+	  pass
 
 
 class TfMatrix():
@@ -155,20 +155,20 @@ def convertPPObstacle2Obstacle(ppobstacle): #pp stands for py_panther
 	return obstacle
 
 def convertPPObstacles2Obstacles(ppobstacles): #pp stands for py_panther
-    obstacles=[]
-    for ppobstacle in ppobstacles:
-        obstacles.append(convertPPObstacle2Obstacle(ppobstacle))
-    return obstacles
+	obstacles=[]
+	for ppobstacle in ppobstacles:
+		obstacles.append(convertPPObstacle2Obstacle(ppobstacle))
+	return obstacles
 
 def convertPPState2State(ppstate):
 
-    p=ppstate.pos.reshape(3,1)
-    v=ppstate.vel.reshape(3,1)
-    a=ppstate.accel.reshape(3,1)
-    yaw=np.array([[ppstate.yaw]])
-    dyaw=np.array([[ppstate.dyaw]])
+	p=ppstate.pos.reshape(3,1)
+	v=ppstate.vel.reshape(3,1)
+	a=ppstate.accel.reshape(3,1)
+	yaw=np.array([[ppstate.yaw]])
+	dyaw=np.array([[ppstate.dyaw]])
 
-    return State(p, v, a, yaw, dyaw)
+	return State(p, v, a, yaw, dyaw)
 
 
 def getObsAndGtermToCrossPath():
@@ -328,6 +328,10 @@ class MyClampedUniformBSpline():
 
 		assert dim==ctrl_pts.shape[0]
 
+		deg=int(deg)
+		dim=int(dim)
+		num_seg=int(num_seg)
+
 		self.pos_bs=[]; #BSpline of all the coordinates
 		if(deg>=1):
 			self.vel_bs=[]; #BSpline of all the coordinates
@@ -423,8 +427,8 @@ class ObservationManager():
 		self.Ra=params["Ra"]
 		ones13=np.ones((1,3));
 		#Note that the sqrt(3) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
-		margin_v=1.0 #math.sqrt(3) #math.sqrt(3)
-		margin_a=1.0 #math.sqrt(3) #math.sqrt(3)
+		margin_v=math.sqrt(3) #math.sqrt(3)
+		margin_a=math.sqrt(3) #math.sqrt(3)
 		margin_ydot=1.0 #because the student sometimes may not satisfy that limit
 		self.normalization_constant=np.concatenate((margin_v*self.v_max.T*ones13, margin_a*self.a_max.T*ones13, margin_ydot*self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
 		for i in range(self.obsm.getNumObs()):
@@ -618,9 +622,9 @@ class ObservationManager():
 		return observation;
 
 	def getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self, w_state, w_gterm_pos, w_obstacles):
-	    f_observation=self.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_state, w_gterm_pos, w_obstacles)
-	    f_observationn=self.normalizeObservation(f_observation) #Observation normalized
-	    return f_observationn
+		f_observation=self.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_state, w_gterm_pos, w_obstacles)
+		f_observationn=self.normalizeObservation(f_observation) #Observation normalized
+		return f_observationn
 
 
 def numpy3XmatrixToListOf3dVectors(data):
@@ -628,6 +632,22 @@ def numpy3XmatrixToListOf3dVectors(data):
 	for i in range(data.shape[1]):
 		data_list.append(data[:,i])
 	return data_list
+
+def listOf3dVectors2numpy3Xmatrix(data_list):
+	data_matrix=np.empty((3, len(data_list)))
+	for i in range(len(data_list)):
+		data_matrix[:,i]=data_list[i].reshape(3,)
+	return data_matrix
+
+def getZeroState():
+	p0=np.array([[0.0],[0.0],[0.0]])
+	v0=np.array([[0.0],[0.0],[0.0]])
+	a0=np.array([[0.0],[0.0],[0.0]])
+	y0=np.array([[0.0]])
+	ydot0=np.array([[0.0]])
+	zero_state= State(p0, v0, a0, y0, ydot0)
+
+	return zero_state
 
 class ActionManager():
 	def __init__(self):
@@ -652,7 +672,8 @@ class ActionManager():
 		self.total_num_pos_ctrl_pts = self.num_seg + self.deg_pos
 		self.traj_size_pos_ctrl_pts = 3*(self.total_num_pos_ctrl_pts - 5);
 		self.traj_size_yaw_ctrl_pts = (self.num_seg + self.deg_yaw - 3);
-		self.traj_size = self.traj_size_pos_ctrl_pts + self.traj_size_yaw_ctrl_pts + 1 + 1; # Last two numbers are time and prob that traj is real
+		# self.traj_size = self.traj_size_pos_ctrl_pts + self.traj_size_yaw_ctrl_pts + 1 + 1; # Last two numbers are time and prob that traj is real
+		self.traj_size = self.traj_size_pos_ctrl_pts + self.traj_size_yaw_ctrl_pts + 1; # Last number is time
 		self.action_size = self.num_traj_per_action*self.traj_size;
 		self.Npos = self.num_seg + self.deg_pos-1;
 
@@ -702,9 +723,9 @@ class ActionManager():
 
 	def normalizeAction(self, action):
 		action_normalized=np.empty(action.shape)
-		action_normalized[:,0:-2]=action[:,0:-2]/self.normalization_constant #Elementwise division
-		action_normalized[:,-2]=(2.0/self.fitter_total_time)*action[:,-2]-1 #Note that action[0,-2] is in [0, fitter_total_time]
-		action_normalized[:,-1]=(2.0/1.0)*action[:,-1]-1 #Note that action[0,-1] is in [0, 1]
+		action_normalized[:,0:-1]=action[:,0:-1]/self.normalization_constant #Elementwise division
+		action_normalized[:,-1]=(2.0/self.fitter_total_time)*action[:,-1]-1 #Note that action[0,-1] is in [0, fitter_total_time]
+		# action_normalized[:,-1]=(2.0/1.0)*action[:,-1]-1 #Note that action[0,-1] is in [0, 1]
 
 		# for index_traj in range(self.num_traj_per_action):
 		# 	time_normalized=self.getTotalTime(action_normalized, index_traj);
@@ -721,20 +742,20 @@ class ActionManager():
 		# assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}, last element={action_normalized[0,-1]}"
 		return action_normalized;
 
-	def getProb(self,action, index_traj):
-		return action[index_traj,-1]
+	# def getProb(self,action, index_traj):
+	# 	return action[index_traj,-1]
 
 	def getTotalTime(self,action, index_traj):
-		return action[index_traj,-2]
+		return action[index_traj,-1]
 
 	def getPosCtrlPts(self, action, index_traj):
 		return action[index_traj,0:self.traj_size_pos_ctrl_pts].reshape((3,-1), order='F')
 
 	def getYawCtrlPts(self, action, index_traj):
-		return action[index_traj,self.traj_size_pos_ctrl_pts:-2].reshape((1,-1));
+		return action[index_traj,self.traj_size_pos_ctrl_pts:-1].reshape((1,-1));
 
-	def getProbTraj(self,traj):
-		return self.getProb(traj, 0)
+	# def getProbTraj(self,traj):
+	# 	return self.getProb(traj, 0)
 
 	def getTotalTimeTraj(self,traj):
 		return self.getTotalTime(traj, 0)
@@ -756,10 +777,17 @@ class ActionManager():
 	def denormalizeAction(self, action_normalized):
 		# assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}"
 		action=np.empty(action_normalized.shape)
-		action[:,0:-2]=action_normalized[:,0:-2]*self.normalization_constant #Elementwise multiplication
-		action[:,-2]=(self.fitter_total_time/2.0)*(action_normalized[:,-2]+1) #Note that action[:,-2] is in [0, fitter_total_time]
-		action[:,-1]=(1.0/2.0)*(action_normalized[:,-1]+1) #Note that action[:,-1] is in [0, 1]
+		action[:,0:-1]=action_normalized[:,0:-1]*self.normalization_constant #Elementwise multiplication
+		action[:,-1]=(self.fitter_total_time/2.0)*(action_normalized[:,-1]+1) #Note that action[:,-2] is in [0, fitter_total_time]
+		# action[:,-1]=(1.0/2.0)*(action_normalized[:,-1]+1) #Note that action[:,-1] is in [0, 1]
 		return action
+
+	def denormalizeTraj(self, traj_normalized):
+		#TODO: this could be done more efficiently
+		dummy_action_normalized=np.matlib.repmat(traj_normalized, self.num_traj_per_action, 1)
+		dummy_action=self.denormalizeAction(dummy_action_normalized)
+		traj=dummy_action[0,:].reshape(traj_normalized.shape)
+		return traj
 
 	def getActionSize(self):
 		return self.action_size
@@ -858,8 +886,8 @@ class ActionManager():
 		w_sol_or_guess.knots_y=knots_y
 
 		w_sol_or_guess.solver_succeeded=True
-		w_sol_or_guess.prob=self.getProbTraj(f_traj);
-		w_sol_or_guess.cost=0.0 #TODO
+		# w_sol_or_guess.prob=self.getProbTraj(f_traj);
+		w_sol_or_guess.augmented_cost=0.0 #TODO
 		w_sol_or_guess.is_guess=False #TODO
 
 		w_sol_or_guess.deg_p=self.deg_pos #TODO
@@ -891,6 +919,13 @@ class ActionManager():
 		
 		return w_posBS, w_yawBS
 
+	def f_traj2f_BS(self, f_traj):
+
+		#We can use f_trajAnd_w_State2wBS by simply feeding a "zero" state
+		w_zero_state= getZeroState()
+		f_posBS, f_yawBS = self.f_trajAnd_w_State2wBS(f_traj, w_zero_state)
+		return f_posBS, f_yawBS
+
 	def solOrGuess2traj(self, sol_or_guess):
 		traj=np.array([[]]);
 
@@ -910,7 +945,7 @@ class ActionManager():
 		traj=np.concatenate((traj, np.array([[sol_or_guess.knots_p[-1]]])), axis=1)
 
 		#Append prob of that traj
-		traj=np.concatenate((traj, np.array( [[sol_or_guess.prob]]  )), axis=1)
+		# traj=np.concatenate((traj, np.array( [[sol_or_guess.prob]]  )), axis=1)
 
 
 		assert traj.shape==self.getTrajShape()
@@ -931,55 +966,58 @@ class ActionManager():
 
 
 class StudentCaller():
-    def __init__(self, policy_path):
-        # self.student_policy=bc.reconstruct_policy(policy_path)
-        self.student_policy=policy = th.load(policy_path, map_location=utils.get_device("auto")) #Same as doing bc.reconstruct_policy(policy_path) 
-        self.om=ObservationManager();
-        self.am=ActionManager();
+	def __init__(self, policy_path):
+		# self.student_policy=bc.reconstruct_policy(policy_path)
+		self.student_policy=policy = th.load(policy_path, map_location=utils.get_device("auto")) #Same as doing bc.reconstruct_policy(policy_path) 
+		self.om=ObservationManager();
+		self.am=ActionManager();
+		self.cc=CostComputer();
 
-    def predict(self, w_init_ppstate, w_ppobstacles, w_gterm): #pp stands for py_panther
-
-
-        w_init_state=convertPPState2State(w_init_ppstate)
-
-        w_gterm=w_gterm.reshape(3,1)
-
-        w_obstacles=convertPPObstacles2Obstacles(w_ppobstacles)
-
-        #Construct observation
-        observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_init_state, w_gterm, w_obstacles)
-        observation_normalized=self.om.normalizeObservation(observation)
-
-        print(f"Going to call student with this raw sobservation={observation}")
-        print(f"Which is...")
-        self.om.printObservation(observation)
-
-        start = time.time()
-        action_normalized,info = self.student_policy.predict(observation_normalized, deterministic=True) 
-        end = time.time()
-        print(f"Calling the student took {(end - start)*(1e3)} ms")
-
-        action_normalized=action_normalized.reshape(self.am.getActionShape())
-
-        action=self.am.denormalizeAction(action_normalized)
-
-        # print("action.shape= ", action.shape)
-        # print("action=", action)   
-
-        all_solOrGuess=[]
-        for i in range( np.shape(action)[0]): #For each row of action
-        	traj=action[i,:].reshape(1,-1);
-	        assert self.am.getTotalTimeTraj(traj)>0, f"Time needs to be >0. Currently it is {self.am.getTotalTimeTraj(traj)}"
-        	my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state);
-        	all_solOrGuess.append(my_solOrGuess)
-
-        # w_pos_ctrl_pts,_ = self.am.actionAndState2_w_pos_ctrl_pts_and_knots(action,w_init_state)
-        # print("w_pos_ctrl_pts=", w_pos_ctrl_pts)
-        # my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state);
-        # py_panther.solOrGuessl
+	def predict(self, w_init_ppstate, w_ppobstacles, w_gterm): #pp stands for py_panther
 
 
-        return all_solOrGuess   
+		w_init_state=convertPPState2State(w_init_ppstate)
+
+		w_gterm=w_gterm.reshape(3,1)
+
+		w_obstacles=convertPPObstacles2Obstacles(w_ppobstacles)
+
+		#Construct observation
+		f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_init_state, w_gterm, w_obstacles)
+		f_observation_n=self.om.normalizeObservation(f_observation)
+
+		print(f"Going to call student with this raw sobservation={f_observation}")
+		print(f"Which is...")
+		self.om.printObservation(f_observation)
+
+		start = time.time()
+		action_normalized,info = self.student_policy.predict(f_observation_n, deterministic=True) 
+		end = time.time()
+		print(f"Calling the student took {(end - start)*(1e3)} ms")
+
+		action_normalized=action_normalized.reshape(self.am.getActionShape())
+
+		action=self.am.denormalizeAction(action_normalized)
+
+		# print("action.shape= ", action.shape)
+		# print("action=", action)   
+
+		all_solOrGuess=[]
+		for i in range( np.shape(action)[0]): #For each row of action
+			traj=action[i,:].reshape(1,-1);
+			traj_n=action_normalized[i,:].reshape(1,-1);
+			assert self.am.getTotalTimeTraj(traj)>0, f"Time needs to be >0. Currently it is {self.am.getTotalTimeTraj(traj)}"
+			my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state);
+			my_solOrGuess.augmented_cost = self.cc.computeAugmentedCost(f_observation_n, traj_n)
+			all_solOrGuess.append(my_solOrGuess)
+
+		# w_pos_ctrl_pts,_ = self.am.actionAndState2_w_pos_ctrl_pts_and_knots(action,w_init_state)
+		# print("w_pos_ctrl_pts=", w_pos_ctrl_pts)
+		# my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state);
+		# py_panther.solOrGuessl
+
+
+		return all_solOrGuess   
 
 def TfMatrix2RosQuatAndVector3(tf_matrix):
 
@@ -1012,6 +1050,128 @@ def TfMatrix2RosPose(tf_matrix):
 
   return pose_ros
 
+
+class CostComputer():
+	def __init__(self):
+		self.par=getPANTHERparamsAsCppStruct();
+		self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
+		self.am=ActionManager();
+		self.om=ObservationManager();
+		obsm=ObstaclesManager();
+		self.num_obstacles=obsm.getNumObs()
+
+		
+
+	def setUpSolverIpoptAndGetppSolOrGuess(self, f_obs_n, f_traj_n):
+
+		#Denormalize observation and action
+		f_obs = self.om.denormalizeObservation(f_obs_n);
+		f_traj = self.am.denormalizeTraj(f_traj_n);
+
+		#Set up SolverIpopt
+		# print("\n========================")
+		init_state=self.om.getInit_f_StateFromObservation(f_obs)
+		final_state=self.om.getFinal_f_StateFromObservation(f_obs)
+		total_time=computeTotalTime(init_state, final_state, self.par.v_max, self.par.a_max, self.par.factor_alloc)
+		# print(f"init_state=")
+		# init_state.printHorizontal();
+		# print(f"final_state=")
+		# final_state.printHorizontal();
+		# print(f"total_time={total_time}")
+		self.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
+		self.my_SolverIpopt.setFocusOnObstacle(True);
+		obstacles=self.om.getObstacles(f_obs)
+
+		# print(f"obstacles=")
+
+		# for obs in obstacles:
+		# 	obs.printInfo()
+
+		self.my_SolverIpopt.setObstaclesForOpt(obstacles);
+
+		f_ppSolOrGuess=self.am.f_traj2f_ppSolOrGuess(f_traj)
+
+		return f_ppSolOrGuess;		
+
+
+	def computeObstAvoidanceConstraintsViolation(self, f_obs_n, f_traj_n):
+
+		#Denormalize observation and action
+		f_obs = self.om.denormalizeObservation(f_obs_n);
+		f_traj = self.am.denormalizeTraj(f_traj_n);
+
+		total_time=self.am.getTotalTimeTraj(f_traj)
+
+		f_posBS, f_yawBS = self.am.f_traj2f_BS(f_traj)
+
+		violation=0
+		for i in range(self.num_obstacles):
+			f_posObs_ctrl_pts=listOf3dVectors2numpy3Xmatrix(self.om.getCtrlPtsObstacleI(f_obs, i))
+			bbox=self.om.getBboxInflatedObstacleI(f_obs, i)
+			# print(f"f_posObs_ctrl_pts={f_posObs_ctrl_pts}")
+			# print(f"f_posBS.ctrl_pts={f_posBS.ctrl_pts}")
+
+			f_posObstBS = MyClampedUniformBSpline(0.0, self.par.fitter_total_time, self.par.fitter_deg_pos, 3, self.par.fitter_num_seg, f_posObs_ctrl_pts) 
+
+			# print("\n============")
+
+
+			for t in np.linspace(start=0.0, stop=total_time, num=50).tolist():
+
+				obs = f_posObstBS.getPosT(t);
+				drone = f_posBS.getPosT(t);
+
+				obs_drone = drone - obs #position of the drone wrt the obstacle
+
+				if(abs(obs_drone[0,0])>=bbox[0,0]/2 or abs(obs_drone[1,0])>=bbox[1,0]/2 or abs(obs_drone[2,0])>=bbox[2,0]/2):
+					#drone is not in collision with the bbox
+					violation+=0	
+				else:	
+
+					# print(f"obs={obs}")
+					# print(f"drone={drone}")
+					# print(f"obs_drone={obs_drone}")
+					# print(f"bbox={bbox}")
+
+					#np.linalg.norm(obs_drone, ord=np.inf)>)
+
+					for i in range(3):
+						obs_dronecoord=obs_drone[i,0]
+						tmp = bbox[i,0]/2
+						violation+= min(abs(tmp - obs_dronecoord), abs(obs_dronecoord - (-tmp)) )
+
+					# print("THERE IS VIOLATION in obs avoid")
+					# exit()
+
+		return violation
+
+	def computeDynLimitsConstraintsViolation(self, f_obs_n, f_traj_n):
+
+		f_ppSolOrGuess=self.setUpSolverIpoptAndGetppSolOrGuess(f_obs_n, f_traj_n)
+		violation=self.my_SolverIpopt.computeDynLimitsConstraintsViolation(f_ppSolOrGuess) 
+
+		# #Debugging (when called using the traj from the expert)
+		# if(violation>1e-5):
+		# 	print("THERE IS VIOLATION in dyn lim")
+		# 	exit()
+
+		return violation   
+
+	def computeCost(self, f_obs_n, f_traj_n): 
+		
+		f_ppSolOrGuess=self.setUpSolverIpoptAndGetppSolOrGuess(f_obs_n, f_traj_n)
+		tmp=self.my_SolverIpopt.computeCost(f_ppSolOrGuess) 
+
+		return tmp   
+
+	def computeAugmentedCost(self, f_obs_n, f_traj_n):
+		cost=self.computeCost(f_obs_n, f_traj_n)
+		violation1=self.computeObstAvoidanceConstraintsViolation(f_obs_n, f_traj_n)
+		violation2=self.computeDynLimitsConstraintsViolation(f_obs_n, f_traj_n)
+
+		print(f"cost={cost}, violation1={violation1}, violation2={violation2}")
+
+		return cost + violation1 + violation2
 
 #You can check the previous function by using this Matlab script:
 # clc;

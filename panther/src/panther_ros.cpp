@@ -727,6 +727,8 @@ visualization_msgs::MarkerArray PantherRos::pubVectorOfsolOrGuess(const std::vec
 
   int j = 0;
 
+  // std::cout << "sols_or_guesses.size()= " << sols_or_guesses.size() << std::endl;
+
   for (auto sol_or_guess : sols_or_guesses)
   {
     // empty
@@ -748,12 +750,17 @@ visualization_msgs::MarkerArray PantherRos::pubVectorOfsolOrGuess(const std::vec
       int increm = (int)std::max(sol_or_guess.traj.size() / par_.res_plot_traj, 1.0);  // this is to speed up rviz
 
       visualization_msgs::MarkerArray tmp;
-      verify((sol_or_guess.prob >= 0 && sol_or_guess.prob <= 1), "prob must be in [0,1]");
+      // verify((sol_or_guess.prob >= 0 && sol_or_guess.prob <= 1), "prob must be in [0,1]");
 
       // double alpha = sol_or_guess.prob;
       // saturate(sol_or_guess.prob, 0.08, 1.0);  // min_value so that it can be seen at least a little bit
-      tmp = trajectory2ColoredMarkerArray(sol_or_guess.traj, par_.v_max.maxCoeff(), increm, ns + std::to_string(j),
-                                          scale, color_type, id_, par_.n_agents, sol_or_guess.prob);
+
+      double max_value = par_.v_max.maxCoeff();
+
+      tmp = trajectory2ColoredMarkerArray(sol_or_guess.traj, max_value, increm, ns + std::to_string(j), scale,
+                                          color_type, id_, par_.n_agents, sol_or_guess.augmented_cost);
+
+      // std::cout << "sol_or_guess.augmented_cost=" << sol_or_guess.augmented_cost << std::endl;
 
       // append to best_trajs
       best_trajs.markers.insert(best_trajs.markers.end(), tmp.markers.begin(), tmp.markers.end());

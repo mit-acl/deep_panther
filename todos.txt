@@ -6,7 +6,9 @@ This approach avoids a projection step to satisfy the initial/final conditions o
 
 
 ====
-bc.py (when computing the distance matrices)
+- bc.py (when computing the distance matrices)
+- other.py (Action Manager)
+- bc.py (when checking whether or not to delete a row)
 
 
 Si, after training, la mayoria de las trajectories collide con el obstacle --> Make sure that the duplicate trajectories are deleted in bc.py 

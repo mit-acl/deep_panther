@@ -978,7 +978,7 @@ geometry_msgs::Vector3 vectorUniform(double a)
 
 visualization_msgs::MarkerArray trajectory2ColoredMarkerArray(const mt::trajectory& data, double max_value, int increm,
                                                               std::string ns, double scale, std::string color_type,
-                                                              int id_agent, int n_agents, double prob)
+                                                              int id_agent, int n_agents, double augmented_cost)
 {
   visualization_msgs::MarkerArray marker_array;
 
@@ -1012,9 +1012,9 @@ visualization_msgs::MarkerArray trajectory2ColoredMarkerArray(const mt::trajecto
     {
       m.color = getColorJet(i, 0, data.size());  // note that par_.v_max is per axis!
     }
-    else if (color_type == "prob")  // TODO: "time" is hand-coded
+    else if (color_type == "augmented_cost")  // TODO: "time" is hand-coded
     {
-      m.color = getColorJet(prob, 0.0, 1.0);  // note that par_.v_max is per axis!
+      m.color = getColorJet(augmented_cost, 0.0, 1.0);  // note that par_.v_max is per axis!
     }
     else if (color_type == "agent")  // TODO: "time" is hand-coded
     {

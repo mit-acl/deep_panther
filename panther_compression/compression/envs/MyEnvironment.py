@@ -5,6 +5,7 @@ import copy
 from gym import spaces
 from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager, getPANTHERparamsAsCppStruct, computeTotalTime, getObsAndGtermToCrossPath, posAccelYaw2TfMatrix
 from compression.utils.other import TfMatrix2RosQuatAndVector3, TfMatrix2RosPose
+from compression.utils.other import CostComputer
 from colorama import init, Fore, Back, Style
 import py_panther
 ##### For rosbag logging
@@ -39,6 +40,8 @@ class MyEnvironment(gym.Env):
     self.om=ObservationManager();
     self.obsm=ObstaclesManager();
     self.gm=GTermManager();
+
+    self.cost_computer=CostComputer()
 
     self.action_shape=self.am.getActionShape();
     self.observation_shape=self.om.getObservationShape();
@@ -152,7 +155,22 @@ class MyEnvironment(gym.Env):
 
 
     #Hack for now: choose always the first trajectory
-    f_traj=self.am.getTrajFromAction(f_action, 0)
+
+    #Choose the trajectory with smallest cost:
+    smallest_augmented_cost = float('inf')
+    index_smallest_augmented_cost = 0
+    for i in range(f_action.shape[0]):
+      f_traj_n = self.am.getTrajFromAction(f_action_normalized, i)
+      augmented_cost=self.cost_computer.computeAugmentedCost(self.previous_f_observationn, f_traj_n)
+      self.printwithNameAndColor(f"augmented cost traj_{i}={augmented_cost}")
+      if(augmented_cost < smallest_augmented_cost):
+        smallest_augmented_cost = augmented_cost
+        index_smallest_augmented_cost = i
+
+
+    self.printwithNameAndColor(f"Choosing traj_{index_smallest_augmented_cost}")
+    f_traj=self.am.getTrajFromAction(f_action, index_smallest_augmented_cost)
+    f_traj_n=self.am.getTrajFromAction(f_action_normalized, index_smallest_augmented_cost)
     w_posBS, w_yawBS= self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
 
     ####################################
@@ -238,8 +256,14 @@ class MyEnvironment(gym.Env):
     # self.my_SolverIpopt.setFocusOnObstacle(True);
     # self.my_SolverIpopt.setObstaclesForOpt(self.om.getObstacles(self.previous_f_observation));
     # cost=self.my_SolverIpopt.computeCost(self.am.f_traj2f_ppSolOrGuess(f_traj)) #TODO: this cost does not take into accout the constraints right now
-    # reward=-cost;
-    reward=0.0;
+    # cost=self.cost_computer.computeCost(self.previous_f_observationn, f_traj_n)
+    # constraints_violation=self.cost_computer.computeConstraintsViolation(self.previous_f_observationn, f_traj_n)
+    # augmented_cost=self.cost_computer.computeAugmentedCost(self.previous_f_observationn, f_traj_n)
+    # self.printwithNameAndColor(f"augmented cost={augmented_cost}")
+
+    # print(f"constraints_violation={constraints_violation}")
+    reward=-augmented_cost;
+    # reward=0.0;
     # # print(reward)
     ###################
 
@@ -259,6 +283,7 @@ class MyEnvironment(gym.Env):
     # self.printwithName(f"returning obs size={observation.shape}")
 
     self.previous_f_observation=f_observation
+    self.previous_f_observationn=f_observationn
 
     return f_observationn, reward, done, info
 
@@ -304,6 +329,7 @@ class MyEnvironment(gym.Env):
     # self.om.printObservation(f_observation)
 
     self.previous_f_observation=self.om.denormalizeObservation(f_observationn)
+    self.previous_f_observationn=f_observationn
     # assert observation.shape == self.observation_shape
     # self.printwithName(f"returning obs={observation}")
     return f_observationn

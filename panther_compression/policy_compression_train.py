@@ -63,11 +63,11 @@ if __name__ == "__main__":
 
     parser.add_argument("--n_rounds", default=5000, type=int) 
     parser.add_argument("--total_demos_per_round", default=256, type=int) 
-    parser.add_argument("--train_environment_max_steps", default=10, type=int)
+    parser.add_argument("--train_environment_max_steps", default=1, type=int)
     parser.add_argument("--rampdown_rounds", default=1, type=int) # Dagger properties
 
     parser.add_argument("--n_evals", default=1, type=int)
-    parser.add_argument("--test_environment_max_steps", default=10, type=int)
+    parser.add_argument("--test_environment_max_steps", default=1, type=int)
     # Method changes
     parser.add_argument("--no_train", dest='train', action='store_false')
     parser.set_defaults(train=True)
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     only_collect_data=False
-    train_only_supervised=True
+    train_only_supervised=False
     reuse_previous_samples=False
 
     record_bag=True

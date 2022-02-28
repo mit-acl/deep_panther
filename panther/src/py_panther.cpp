@@ -36,8 +36,8 @@ PYBIND11_MODULE(py_panther, m)
       .def_readwrite("knots_p", &si::solOrGuess::knots_p)
       .def_readwrite("knots_y", &si::solOrGuess::knots_y)
       .def_readwrite("solver_succeeded", &si::solOrGuess::solver_succeeded)
-      .def_readwrite("prob", &si::solOrGuess::prob)
-      .def_readwrite("cost", &si::solOrGuess::cost)
+      .def_readwrite("is_repeated", &si::solOrGuess::is_repeated)
+      .def_readwrite("augmented_cost", &si::solOrGuess::augmented_cost)
       .def_readwrite("is_guess", &si::solOrGuess::is_guess)
       .def_readwrite("deg_p", &si::solOrGuess::deg_p)
       .def_readwrite("deg_y", &si::solOrGuess::deg_y)
@@ -49,6 +49,7 @@ PYBIND11_MODULE(py_panther, m)
       .def(py::init<>())  /////////////////////////
       .def_readwrite("ctrl_pts", &mt::obstacleForOpt::ctrl_pts)
       .def_readwrite("bbox_inflated", &mt::obstacleForOpt::bbox_inflated)
+      .def("printInfo", &mt::obstacleForOpt::printInfo)
       .def("__repr__", [](const mt::obstacleForOpt &a) { return "<py_panther.obstacleForOpt>"; });
 
   py::class_<mt::parameters>(m, "parameters")
@@ -143,6 +144,7 @@ PYBIND11_MODULE(py_panther, m)
       .def("getBestSolution", &SolverIpopt::getBestSolution)
       .def("getGuesses", &SolverIpopt::getGuesses)
       .def("computeCost", &SolverIpopt::computeCost)
+      .def("computeDynLimitsConstraintsViolation", &SolverIpopt::computeDynLimitsConstraintsViolation)
       .def_readwrite("par_", &SolverIpopt::par_)
       .def("__repr__", [](const SolverIpopt &a) { return "<py_panther.SolverIpopt>"; });
 }

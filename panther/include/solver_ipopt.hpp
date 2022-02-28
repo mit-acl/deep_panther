@@ -52,9 +52,10 @@ struct solOrGuess
   Eigen::RowVectorXd knots_y;
 
   bool solver_succeeded = false;
-  double cost = std::numeric_limits<double>::max();
+  double augmented_cost = std::numeric_limits<double>::max();
   bool is_guess = true;
-  double prob = 1.0;
+  // double prob = 1.0;
+  bool is_repeated = false;
 
   int deg_p;
   int deg_y;
@@ -91,7 +92,7 @@ struct solOrGuess
 
     if (is_guess == false && solver_succeeded == true)
     {
-      std::cout << blue << std::setprecision(5) << "Cost= " << cost << reset << std::endl;
+      std::cout << blue << std::setprecision(5) << "Augmented cost= " << augmented_cost << reset << std::endl;
     }
   }
 
@@ -179,6 +180,7 @@ public:
 
   si::solOrGuess fillTrajBestSolutionAndGetIt();
   double computeCost(si::solOrGuess guess);
+  double computeDynLimitsConstraintsViolation(si::solOrGuess guess);
 
 protected:
 private:
@@ -305,6 +307,7 @@ private:
   casadi::Function cf_fit_yaw_;
   casadi::Function cf_visibility_;
   casadi::Function cf_compute_cost_;
+  casadi::Function cf_compute_dyn_limits_constraints_violation_;
 
   casadi::DM b_Tmatrixcasadi_c_;
   struct data
