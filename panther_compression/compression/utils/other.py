@@ -481,6 +481,14 @@ class ObservationManager():
 
 		print("----------------------")
 
+	def get_f_StateFromf_obs(self,f_obs):
+		pos=np.zeros((3,1))
+		vel=self.getf_v(f_obs)
+		accel=self.getf_a(f_obs)
+		yaw=np.zeros((1,1))
+		yaw_dot=self.getyaw_dot(f_obs)
+		state=State(pos, vel, accel, yaw, yaw_dot)
+		return state
 
 
 	def getIndexStartObstacleI(self,i):
@@ -928,11 +936,10 @@ class ActionManager():
 		
 		return w_posBS, w_yawBS
 
-	def f_traj2f_BS(self, f_traj):
-
-		#We can use f_trajAnd_w_State2wBS by simply feeding a "zero" state
-		w_zero_state= getZeroState()
-		f_posBS, f_yawBS = self.f_trajAnd_w_State2wBS(f_traj, w_zero_state)
+	def f_trajAnd_f_State2fBS(self, f_traj, f_state):
+		assert np.linalg.norm(f_state.w_pos)<1e-7, "The pos should be zero"
+		assert np.linalg.norm(f_state.w_yaw)<1e-7, "The yaw should be zero"
+		f_posBS, f_yawBS = self.f_trajAnd_w_State2wBS(f_traj, f_state)
 		return f_posBS, f_yawBS
 
 	def solOrGuess2traj(self, sol_or_guess):
@@ -1112,13 +1119,8 @@ class CostComputer():
 		self.my_SolverIpopt.setObstaclesForOpt(obstacles);
 
 		###############################
-		pos=np.zeros((3,1))
-		vel=self.om.getf_v(f_obs)
-		accel=self.om.getf_a(f_obs)
-		yaw=np.zeros((1,1))
-		yaw_dot=self.om.getyaw_dot(f_obs)
-		state=State(pos, vel, accel, yaw, yaw_dot)
-		f_ppSolOrGuess=self.am.f_trajAnd_f_State2f_ppSolOrGuess(f_traj, state)
+		f_state=self.om.get_f_StateFromf_obs(f_obs)
+		f_ppSolOrGuess=self.am.f_trajAnd_f_State2f_ppSolOrGuess(f_traj, f_state)
 		###############################
 
 		return f_ppSolOrGuess;		
@@ -1132,7 +1134,8 @@ class CostComputer():
 
 		total_time=self.am.getTotalTimeTraj(f_traj)
 
-		f_posBS, f_yawBS = self.am.f_traj2f_BS(f_traj)
+		f_state = self.om.get_f_StateFromf_obs(f_obs)
+		f_posBS, f_yawBS = self.am.f_trajAnd_f_State2fBS(f_traj, f_state)
 
 		violation=0
 		for i in range(self.num_obstacles):
