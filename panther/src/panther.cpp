@@ -828,7 +828,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
     std::cout << "Called the student!" << std::endl;
     best_solutions_student = result.cast<std::vector<si::solOrGuess>>();
 
-    // Hack: for now take the first traj
     pybind11::object tmp = student_caller_ptr_->attr("getIndexBestTraj")();
     int index_smallest_augmented_cost = tmp.cast<int>();
 
