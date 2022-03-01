@@ -157,7 +157,7 @@ class MyEnvironment(gym.Env):
     #Hack for now: choose always the first trajectory
 
     #Choose the trajectory with smallest cost:
-    index_smallest_augmented_cost=self.getIndexTrajWithSmallestAugmentedCost(self.previous_f_obs_n, f_action_n)
+    index_smallest_augmented_cost=self.cost_computer.getIndexTrajWithSmallestAugmentedCost(self.previous_f_obs_n, f_action_n)
 
     self.printwithNameAndColor(f"Choosing traj_{index_smallest_augmented_cost}")
     f_traj=self.am.getTrajFromAction(f_action, index_smallest_augmented_cost)
@@ -253,8 +253,8 @@ class MyEnvironment(gym.Env):
     # self.printwithNameAndColor(f"augmented cost={augmented_cost}")
 
     # print(f"constraints_violation={constraints_violation}")
-    reward=-augmented_cost;
-    # reward=0.0;
+    # reward=-augmented_cost;
+    reward=0.0;
     # # print(reward)
     ###################
 

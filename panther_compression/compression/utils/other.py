@@ -1189,10 +1189,10 @@ class CostComputer():
 	def getIndexTrajWithSmallestAugmentedCost(self, f_obs_n, f_action_n):
 		smallest_augmented_cost = float('inf')
 		index_smallest_augmented_cost = 0
-		for i in range(f_action.shape[0]):
+		for i in range(f_action_n.shape[0]):
 			f_traj_n = self.am.getTrajFromAction(f_action_n, i)
 			augmented_cost=self.computeAugmentedCost(f_obs_n, f_traj_n)
-			self.printwithNameAndColor(f"augmented cost traj_{i}={augmented_cost}")
+			# self.printwithNameAndColor(f"augmented cost traj_{i}={augmented_cost}")
 			if(augmented_cost < smallest_augmented_cost):
 				smallest_augmented_cost = augmented_cost
 				index_smallest_augmented_cost = i
