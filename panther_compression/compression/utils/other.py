@@ -895,9 +895,18 @@ class ActionManager():
 
 		return w_sol_or_guess
 
-	def f_traj2f_ppSolOrGuess(self, f_traj): #pp stands for py_panther
-		zero_state=State(np.zeros((3,1)), np.zeros((3,1)), np.zeros((3,1)), np.zeros((1,1)), np.zeros((1,1)))
-		return self.f_trajAnd_w_State2w_ppSolOrGuess(f_traj, zero_state)
+	def f_trajAnd_f_State2f_ppSolOrGuess(self, f_traj, f_state):
+		assert np.linalg.norm(f_state.w_pos)<1e-7, "The pos should be zero"
+		assert np.linalg.norm(f_state.w_yaw)<1e-7, "The yaw should be zero"
+		return self.f_trajAnd_w_State2w_ppSolOrGuess(f_traj, f_state)
+
+# 	def f_obs_f_traj_2f_ppSolOrGuess(self, f_traj): #pp stands for py_panther
+# 		zero_state=State(np.zeros((3,1)), np.zeros((3,1)), np.zeros((3,1)), np.zeros((1,1)), np.zeros((1,1)))
+# class State():
+# 	def __init__(self, w_pos, w_vel, w_accel, w_yaw, yaw_dot):
+# 		pos=np.zeros(3,1)
+# 		vel=np.zeros(3,1)
+# 		return self.f_trajAnd_w_State2w_ppSolOrGuess(f_traj, zero_state)
 
 
 	def getTrajFromAction(self, action, index_traj):
@@ -1102,7 +1111,15 @@ class CostComputer():
 
 		self.my_SolverIpopt.setObstaclesForOpt(obstacles);
 
-		f_ppSolOrGuess=self.am.f_traj2f_ppSolOrGuess(f_traj)
+		###############################
+		pos=np.zeros((3,1))
+		vel=self.om.getf_v(f_obs)
+		accel=self.om.getf_a(f_obs)
+		yaw=np.zeros((1,1))
+		yaw_dot=self.om.getyaw_dot(f_obs)
+		state=State(pos, vel, accel, yaw, yaw_dot)
+		f_ppSolOrGuess=self.am.f_trajAnd_f_State2f_ppSolOrGuess(f_traj, state)
+		###############################
 
 		return f_ppSolOrGuess;		
 
