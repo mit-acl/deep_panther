@@ -154,8 +154,6 @@ class MyEnvironment(gym.Env):
 
 
 
-    #Hack for now: choose always the first trajectory
-
     #Choose the trajectory with smallest cost:
     index_smallest_augmented_cost=self.cost_computer.getIndexTrajWithSmallestAugmentedCost(self.previous_f_obs_n, f_action_n)
 

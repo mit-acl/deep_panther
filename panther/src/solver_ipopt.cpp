@@ -1032,11 +1032,17 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   }
 
   // Debugging
+  // print_supresser.end();
   // si::solOrGuess tmp = getBestSolution();  // Copy the best solution found
   // std::cout << "Best solution found= " << std::endl;
   // tmp.printInfo();
+  // std::cout << "===================================" << std::endl;
+  // std::cout << "Augmented cost best solution = " << tmp.augmented_cost << std::endl;
   // double violation = computeDynLimitsConstraintsViolation(tmp);
-  // verify(violation < 1e-7, "violation cannot exist in a feasible solution");
+  // std::cout << "violation= " << violation << std::endl;
+  // verify(violation < 1e-5, "violation cannot exist in a feasible solution");
+  // std::cout << "-----------------------------------" << std::endl;
+
   ///////////////////////////////////////
 
   return true;
