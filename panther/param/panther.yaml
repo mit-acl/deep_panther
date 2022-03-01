@@ -10,10 +10,10 @@ goal_radius: 0.5    #(m) Drone has arrived to the goal when distance_to_goal<GOA
 drone_radius: 0.1  #(m) Used for collision checking
 Ra: 7.0           # [m] Radius of my planning sphere (planning horizon)
 impose_FOV_in_trajCB: false
-pause_time_when_replanning: true
+pause_time_when_replanning: false
 replanning_trigger_time_student: 0.01 #[seconds] 
 replanning_trigger_time_expert: 0.5 #[seconds] 
-replanning_lookahead_time: 0.01 #[seconds] 
+replanning_lookahead_time: 0.1 #[seconds] 
 max_runtime_octopus_search: 0.1 #[seconds] 
 fov_x_deg: 70 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Horizontal FOV
 fov_y_deg: 70 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Vertical FOV
@@ -60,5 +60,5 @@ max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
 use_expert: false
 use_student: true
-student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round29_log28.pt #final_policy.pt   intermediate_policy_42.pt
-static_planning: true #If true, it will always plan from the same initial condition
+student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round14_log4.pt #final_policy.pt   intermediate_policy_42.pt
+static_planning: false #If true, it will always plan from the same initial condition
