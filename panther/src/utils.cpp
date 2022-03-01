@@ -1046,7 +1046,7 @@ visualization_msgs::MarkerArray trajectory2ColoredMarkerArray(const mt::trajecto
       }
       else
       {
-        m.color = getColorInterpBetween2Colors(cost, min_cost, max_cost, color(YELLOW_NORMAL), color(GREEN_NORMAL));
+        m.color = getColorInterpBetween2Colors(cost, min_cost, max_cost, color(GREEN_NORMAL), color(YELLOW_NORMAL));
       }
     }
     else if (color_type == "agent")  // TODO: "time" is hand-coded

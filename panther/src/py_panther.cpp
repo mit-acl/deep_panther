@@ -44,6 +44,7 @@ PYBIND11_MODULE(py_panther, m)
       .def_readwrite("deg_p", &si::solOrGuess::deg_p)
       .def_readwrite("deg_y", &si::solOrGuess::deg_y)
       .def("printInfo", &si::solOrGuess::printInfo)
+      .def("isInCollision", &si::solOrGuess::isInCollision)
       .def("fillTraj", &si::solOrGuess::fillTraj)  //, pybind11::arg("dc")
       .def("__repr__", [](const si::solOrGuess &a) { return "<py_panther.solOrGuess>"; });
 

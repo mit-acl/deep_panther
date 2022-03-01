@@ -990,7 +990,9 @@ class StudentCaller():
 		self.om=ObservationManager();
 		self.am=ActionManager();
 		self.cc=CostComputer();
-		self.index_smallest_augmented_cost = 0
+		# self.index_smallest_augmented_cost = 0
+		self.index_best_safe_traj = None
+		self.index_best_unsafe_traj = None
 
 
 	def predict(self, w_init_ppstate, w_ppobstacles, w_gterm): #pp stands for py_panther
@@ -1023,8 +1025,11 @@ class StudentCaller():
 		# print("action=", action)   
 
 		all_solOrGuess=[]
-		smallest_augmented_cost = float('inf')
-		self.index_smallest_augmented_cost = 0
+		smallest_augmented_safe_cost = float('inf')
+		smallest_augmented_unsafe_cost = float('inf')
+		# self.index_smallest_augmented_cost = 0
+		self.index_best_safe_traj = None
+		self.index_best_unsafe_traj = None
 		for i in range( np.shape(action)[0]): #For each row of action
 			traj=action[i,:].reshape(1,-1);
 			traj_n=action_normalized[i,:].reshape(1,-1);
@@ -1039,9 +1044,20 @@ class StudentCaller():
 
 			all_solOrGuess.append(my_solOrGuess)
 
-			if(augmented_cost < smallest_augmented_cost):
-				smallest_augmented_cost = augmented_cost
-				self.index_smallest_augmented_cost = i
+			# if(augmented_cost < smallest_augmented_cost):
+			# 	smallest_augmented_cost = augmented_cost
+			# 	self.index_smallest_augmented_cost = i
+
+			print(f"Traj {i} has augmented_cost= {augmented_cost}, collides={my_solOrGuess.isInCollision()}")
+
+			if(my_solOrGuess.isInCollision()==False):
+				if(augmented_cost < smallest_augmented_safe_cost):
+					smallest_augmented_safe_cost = augmented_cost
+					self.index_best_safe_traj = i
+			else:
+				if(augmented_cost < smallest_augmented_unsafe_cost):
+					smallest_augmented_unsafe_cost = augmented_cost
+					self.index_best_unsafe_traj = i
 
 		# w_pos_ctrl_pts,_ = self.am.actionAndState2_w_pos_ctrl_pts_and_knots(action,w_init_state)
 		# print("w_pos_ctrl_pts=", w_pos_ctrl_pts)
@@ -1051,8 +1067,17 @@ class StudentCaller():
 
 		return all_solOrGuess   
 
-	def getIndexTrajWithSmallestAugmentedCost(self):
-		return self.index_smallest_augmented_cost
+	def getIndexBestTraj(self):
+		if(self.index_best_safe_traj is not None):
+			print(f"Choosing traj {self.index_best_safe_traj} ")
+			return self.index_best_safe_traj
+		elif(self.index_best_unsafe_traj is not None):
+			print(f"Choosing traj {self.index_best_unsafe_traj} ")
+
+			return self.index_best_unsafe_traj
+		else:
+			print("This should never happen!!")
+			exit();
 
 
 def TfMatrix2RosQuatAndVector3(tf_matrix):

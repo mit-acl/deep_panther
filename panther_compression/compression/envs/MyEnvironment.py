@@ -155,7 +155,7 @@ class MyEnvironment(gym.Env):
 
 
     #Choose the trajectory with smallest cost:
-    index_smallest_augmented_cost=self.cost_computer.getIndexTrajWithSmallestAugmentedCost(self.previous_f_obs_n, f_action_n)
+    index_smallest_augmented_cost=self.cost_computer.getIndexBestTraj(self.previous_f_obs_n, f_action_n)
 
     self.printwithNameAndColor(f"Choosing traj_{index_smallest_augmented_cost}")
     f_traj=self.am.getTrajFromAction(f_action, index_smallest_augmented_cost)
