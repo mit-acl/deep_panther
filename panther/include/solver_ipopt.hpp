@@ -52,7 +52,10 @@ struct solOrGuess
   Eigen::RowVectorXd knots_y;
 
   bool solver_succeeded = false;
-  double augmented_cost = std::numeric_limits<double>::max();
+  // double cost = std::numeric_limits<double>::max();
+  double cost;
+  double obst_avoidance_violation = 0.0;
+  double dyn_lim_violation = 0.0;
   bool is_guess = true;
   // double prob = 1.0;
   bool is_repeated = false;
@@ -61,6 +64,11 @@ struct solOrGuess
   int deg_y;
 
   mt::trajectory traj;
+
+  bool isInCollision()
+  {
+    return (obst_avoidance_violation > 1e-5);
+  }
 
   void printInfo()  // avoid  naming it print() [for compatibility with pybind11]
   {
@@ -92,7 +100,10 @@ struct solOrGuess
 
     if (is_guess == false && solver_succeeded == true)
     {
-      std::cout << blue << std::setprecision(5) << "Augmented cost= " << augmented_cost << reset << std::endl;
+      std::cout << blue << std::setprecision(5) << "Cost= " << cost << reset << std::endl;
+      std::cout << blue << std::setprecision(5) << "obst_avoidance_violation= " << obst_avoidance_violation << reset
+                << std::endl;
+      std::cout << blue << std::setprecision(5) << "dyn_lim_violation= " << dyn_lim_violation << reset << std::endl;
     }
   }
 

@@ -656,6 +656,31 @@ geometry_msgs::Pose identityGeometryMsgsPose()
   return pose;
 }
 
+std_msgs::ColorRGBA getColorInterpBetween2Colors(double v, double vmin, double vmax, std_msgs::ColorRGBA min_color,
+                                                 std_msgs::ColorRGBA max_color)
+{
+  double dv;
+
+  if (v < vmin)
+    v = vmin;
+  if (v > vmax)
+    v = vmax;
+  dv = vmax - vmin;
+
+  double fraction_max_color = (v - vmin) / dv;
+
+  // std_msgs::ColorRGBA first = color(YELLOW_NORMAL);
+  // std_msgs::ColorRGBA last = color(GREEN_NORMAL);
+
+  std_msgs::ColorRGBA c;
+  c.r = (max_color.r - min_color.r) * fraction_max_color + min_color.r;
+  c.g = (max_color.g - min_color.g) * fraction_max_color + min_color.g;
+  c.b = (max_color.b - min_color.b) * fraction_max_color + min_color.b;
+  c.a = 1;
+
+  return c;
+}
+
 std_msgs::ColorRGBA getColorJet(double v, double vmin, double vmax)
 {
   std_msgs::ColorRGBA c;
@@ -978,7 +1003,8 @@ geometry_msgs::Vector3 vectorUniform(double a)
 
 visualization_msgs::MarkerArray trajectory2ColoredMarkerArray(const mt::trajectory& data, double max_value, int increm,
                                                               std::string ns, double scale, std::string color_type,
-                                                              int id_agent, int n_agents, double augmented_cost)
+                                                              int id_agent, int n_agents, double min_cost,
+                                                              double max_cost, double cost, bool collides)
 {
   visualization_msgs::MarkerArray marker_array;
 
@@ -1010,15 +1036,22 @@ visualization_msgs::MarkerArray trajectory2ColoredMarkerArray(const mt::trajecto
     }
     else if (color_type == "time")  // TODO: "time" is hand-coded
     {
-      m.color = getColorJet(i, 0, data.size());  // note that par_.v_max is per axis!
+      m.color = getColorJet(i, 0, data.size());
     }
-    else if (color_type == "augmented_cost")  // TODO: "time" is hand-coded
+    else if (color_type == "cost")  // TODO: "time" is hand-coded
     {
-      m.color = getColorJet(augmented_cost, 0.0, 1.0);  // note that par_.v_max is per axis!
+      if (collides)
+      {
+        m.color = color(RED_NORMAL);
+      }
+      else
+      {
+        m.color = getColorInterpBetween2Colors(cost, min_cost, max_cost, color(YELLOW_NORMAL), color(GREEN_NORMAL));
+      }
     }
     else if (color_type == "agent")  // TODO: "time" is hand-coded
     {
-      m.color = getColorJet(id_agent, 0, n_agents);  // note that par_.v_max is per axis!
+      m.color = getColorJet(id_agent, 0, n_agents);
     }
     else if (color_type == "black")  // TODO: "time" is hand-coded
     {

@@ -490,9 +490,9 @@ si::solOrGuess SolverIpopt::getBestSolution()
   int argmin = -1;
   for (int i = 0; i < solutions_.size(); i++)
   {
-    if (solutions_[i].solver_succeeded && (solutions_[i].augmented_cost < min_cost))
+    if (solutions_[i].solver_succeeded && (solutions_[i].cost < min_cost))
     {
-      min_cost = solutions_[i].augmented_cost;
+      min_cost = solutions_[i].cost;
       argmin = i;
     }
   }
@@ -831,8 +831,9 @@ bool SolverIpopt::optimize(bool supress_all_prints)
 
     si::solOrGuess solution;
     solution.is_guess = false;
-    solution.augmented_cost =
-        double(result["total_cost"]);  // Note that there are no constraints violations --> cost = augmented cost
+    solution.cost = double(result["total_cost"]);
+    solution.dyn_lim_violation = 0.0;         // Because it's feasible
+    solution.obst_avoidance_violation = 0.0;  // Because it's feasible
 
     // hack (TODO): sometimes the total time is very small (and final position is very close to initial position)
     if (double(result["alpha"]) < 1e-4)
@@ -925,10 +926,10 @@ bool SolverIpopt::optimize(bool supress_all_prints)
 
       // ////////////////
       // double total_cost = computeCost(solution);
-      // verify(fabs(total_cost - solution.augmented_cost) < 1e-7, "The two costs differ");
+      // verify(fabs(total_cost - solution.cost) < 1e-7, "The two costs differ");
       // std::cout << red << bold << std::setprecision(10) << "Total cost with function= " << total_cost << reset
       //           << std::endl;
-      // std::cout << red << bold << std::setprecision(10) << "Total cost = " << solution.augmented_cost << reset <<
+      // std::cout << red << bold << std::setprecision(10) << "Total cost = " << solution.cost << reset <<
       // std::endl;
       // ////////////////
     }
@@ -984,7 +985,7 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   {
     bool operator()(si::solOrGuess &a, si::solOrGuess &b) const
     {
-      return a.augmented_cost < b.augmented_cost;
+      return a.cost < b.cost;
     }
   } customLess;
   std::sort(solutions.begin(), solutions.end(), customLess);  // sort solutions from lowest to highest cost
@@ -1037,7 +1038,7 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   // std::cout << "Best solution found= " << std::endl;
   // tmp.printInfo();
   // std::cout << "===================================" << std::endl;
-  // std::cout << "Augmented cost best solution = " << tmp.augmented_cost << std::endl;
+  // std::cout << "Augmented cost best solution = " << tmp.cost << std::endl;
   // double violation = computeDynLimitsConstraintsViolation(tmp);
   // std::cout << "violation= " << violation << std::endl;
   // verify(violation < 1e-5, "violation cannot exist in a feasible solution");

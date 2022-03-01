@@ -1,7 +1,7 @@
 use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
 visual: true #publish visualization stuff
-color_type_student: "augmented_cost" #"vel" or "time" or "augmented_cost" or "agent" or "black"
-color_type_expert: "black" #"vel" or "time" or "augmented_cost" or "agent" or "black"
+color_type_student: "cost" #"vel" or "time" or "cost" or "agent" or "black"
+color_type_expert: "black" #"vel" or "time" or "cost" or "agent" or "black"
 n_agents: 16 #only used for the color in the trajectory
 num_of_trajs_per_replan: 6
 num_of_initial_guesses: 10

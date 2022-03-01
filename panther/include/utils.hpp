@@ -136,6 +136,8 @@ void printStateVector(std::vector<mt::state>& data);
 
 std_msgs::ColorRGBA getColorJet(double v, double vmin, double vmax);
 
+std_msgs::ColorRGBA getColorInterpBetween2Colors(double v, double vmin, double vmax, std_msgs::ColorRGBA min_color,
+                                                 std_msgs::ColorRGBA max_color);
 std_msgs::ColorRGBA color(int id);
 
 void quaternion2Euler(tf2::Quaternion q, double& roll, double& pitch, double& yaw);
@@ -201,6 +203,8 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& v)
 
 visualization_msgs::MarkerArray trajectory2ColoredMarkerArray(const mt::trajectory& data, double max_value, int increm,
                                                               std::string ns, double scale, std::string color_type,
-                                                              int id_agent, int n_agents, double prob = 1);
+                                                              int id_agent, int n_agents, double min_cost = 0.0,
+                                                              double max_cost = 0.0, double cost = 0.0,
+                                                              bool collides = false);
 
 #endif

@@ -729,6 +729,17 @@ visualization_msgs::MarkerArray PantherRos::pubVectorOfsolOrGuess(const std::vec
 
   // std::cout << "sols_or_guesses.size()= " << sols_or_guesses.size() << std::endl;
 
+  double min_cost = std::numeric_limits<double>::max();
+  double max_cost = -std::numeric_limits<double>::max();
+  for (auto tmp : sols_or_guesses)
+  {
+    if (tmp.isInCollision() == false)
+    {
+      min_cost = std::min(min_cost, tmp.cost);
+      max_cost = std::max(max_cost, tmp.cost);
+    }
+  }
+
   for (auto sol_or_guess : sols_or_guesses)
   {
     // empty
@@ -757,8 +768,14 @@ visualization_msgs::MarkerArray PantherRos::pubVectorOfsolOrGuess(const std::vec
 
       double max_value = par_.v_max.maxCoeff();
 
+      // std::cout << "sol_or_guess.isInCollision()= " << sol_or_guess.isInCollision() << std::endl;
+      // std::cout << "min_cost= " << min_cost << std::endl;
+      // std::cout << "max_cost= " << max_cost << std::endl;
+      // std::cout << "sol_or_guess.cost= " << sol_or_guess.cost << std::endl;
+
       tmp = trajectory2ColoredMarkerArray(sol_or_guess.traj, max_value, increm, ns + std::to_string(j), scale,
-                                          color_type, id_, par_.n_agents, sol_or_guess.augmented_cost);
+                                          color_type, id_, par_.n_agents, min_cost, max_cost, sol_or_guess.cost,
+                                          sol_or_guess.isInCollision());
 
       // std::cout << "sol_or_guess.augmented_cost=" << sol_or_guess.augmented_cost << std::endl;
 

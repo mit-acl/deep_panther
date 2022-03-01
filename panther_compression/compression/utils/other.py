@@ -895,7 +895,9 @@ class ActionManager():
 
 		w_sol_or_guess.solver_succeeded=True
 		# w_sol_or_guess.prob=self.getProbTraj(f_traj);
-		w_sol_or_guess.augmented_cost=0.0 #TODO
+		w_sol_or_guess.cost=0.0 #TODO
+		w_sol_or_guess.obst_avoidance_violation=0.0 #TODO
+		w_sol_or_guess.dyn_lim_violation=0.0 #TODO
 		w_sol_or_guess.is_guess=False #TODO
 
 		w_sol_or_guess.deg_p=self.deg_pos #TODO
@@ -1028,8 +1030,13 @@ class StudentCaller():
 			traj_n=action_normalized[i,:].reshape(1,-1);
 			assert self.am.getTotalTimeTraj(traj)>0, f"Time needs to be >0. Currently it is {self.am.getTotalTimeTraj(traj)}"
 			my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state);
-			augmented_cost = self.cc.computeAugmentedCost(f_observation_n, traj_n)
-			my_solOrGuess.augmented_cost = augmented_cost
+
+			cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.cc.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_observation_n, traj_n)
+
+			my_solOrGuess.cost = cost
+			my_solOrGuess.obst_avoidance_violation = obst_avoidance_violation
+			my_solOrGuess.dyn_lim_violation = dyn_lim_violation
+
 			all_solOrGuess.append(my_solOrGuess)
 
 			if(augmented_cost < smallest_augmented_cost):
@@ -1148,7 +1155,7 @@ class CostComputer():
 
 			# print("\n============")
 
-
+			#TODO: move num to a parameter
 			for t in np.linspace(start=0.0, stop=total_time, num=50).tolist():
 
 				obs = f_posObstBS.getPosT(t);
@@ -1156,17 +1163,7 @@ class CostComputer():
 
 				obs_drone = drone - obs #position of the drone wrt the obstacle
 
-				if(abs(obs_drone[0,0])>=bbox[0,0]/2 or abs(obs_drone[1,0])>=bbox[1,0]/2 or abs(obs_drone[2,0])>=bbox[2,0]/2):
-					#drone is not in collision with the bbox
-					violation+=0	
-				else:	
-
-					# print(f"obs={obs}")
-					# print(f"drone={drone}")
-					# print(f"obs_drone={obs_drone}")
-					# print(f"bbox={bbox}")
-
-					#np.linalg.norm(obs_drone, ord=np.inf)>)
+				if(abs(obs_drone[0,0])<=bbox[0,0]/2 and abs(obs_drone[1,0])<=bbox[1,0]/2 and abs(obs_drone[2,0])<=bbox[2,0]/2):
 
 					for i in range(3):
 						obs_dronecoord=obs_drone[i,0]
@@ -1190,6 +1187,14 @@ class CostComputer():
 
 		return violation   
 
+	def computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(self, f_obs_n, f_traj_n):
+		cost =  self.computeCost(f_obs_n, f_traj_n)
+		obst_avoidance_violation = self.computeObstAvoidanceConstraintsViolation(f_obs_n, f_traj_n)
+		dyn_lim_violation = self.computeDynLimitsConstraintsViolation(f_obs_n, f_traj_n)
+		augmented_cost = self.computeAugmentedCost(cost, obst_avoidance_violation, dyn_lim_violation)
+
+		return cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost
+
 	def computeCost(self, f_obs_n, f_traj_n): 
 		
 		f_ppSolOrGuess=self.setUpSolverIpoptAndGetppSolOrGuess(f_obs_n, f_traj_n)
@@ -1197,21 +1202,26 @@ class CostComputer():
 
 		return tmp   
 
-	def computeAugmentedCost(self, f_obs_n, f_traj_n):
-		cost=self.computeCost(f_obs_n, f_traj_n)
-		violation1=self.computeObstAvoidanceConstraintsViolation(f_obs_n, f_traj_n)
-		violation2=self.computeDynLimitsConstraintsViolation(f_obs_n, f_traj_n)
+	# def computeAugmentedCost(self, f_obs_n, f_traj_n):
+	# 	cost=self.computeCost(f_obs_n, f_traj_n)
+	# 	obst_avoidance_violation=self.computeObstAvoidanceConstraintsViolation(f_obs_n, f_traj_n)
+	# 	dyn_lim_violation=self.computeDynLimitsConstraintsViolation(f_obs_n, f_traj_n)
 
-		print(f"cost={cost}, violation1={violation1}, violation2={violation2}")
+	# 	print(f"cost={cost}, obst_avoidance_violation={obst_avoidance_violation}, dyn_lim_violation={dyn_lim_violation}")
 
-		return cost + violation1 + violation2
+	# 	return cost + obst_avoidance_violation + dyn_lim_violation
+
+	def computeAugmentedCost(self, cost, obst_avoidance_violation, dyn_lim_violation):
+		return cost + obst_avoidance_violation + dyn_lim_violation
 
 	def getIndexTrajWithSmallestAugmentedCost(self, f_obs_n, f_action_n):
 		smallest_augmented_cost = float('inf')
 		index_smallest_augmented_cost = 0
 		for i in range(f_action_n.shape[0]):
 			f_traj_n = self.am.getTrajFromAction(f_action_n, i)
-			augmented_cost=self.computeAugmentedCost(f_obs_n, f_traj_n)
+
+			_, _, _, augmented_cost = self.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_observation_n, traj_n)
+
 			# self.printwithNameAndColor(f"augmented cost traj_{i}={augmented_cost}")
 			if(augmented_cost < smallest_augmented_cost):
 				smallest_augmented_cost = augmented_cost
