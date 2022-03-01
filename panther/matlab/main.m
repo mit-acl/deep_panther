@@ -1119,12 +1119,12 @@ end
 % 
 % end
 
-function [const_p,const_y]=addDynLimConstraints(const_p,const_y, sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n)
+function [const_p_dyn_limits,const_y_dyn_limits]=addDynLimConstraints(const_p_dyn_limits,const_y_dyn_limits, sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n)
 
-    const_p=[const_p sp.getMaxVelConstraints(basis, v_max_n)];      %Max vel constraints (position)
-    const_p=[const_p sp.getMaxAccelConstraints(basis, a_max_n)];    %Max accel constraints (position)
-    const_p=[const_p sp.getMaxJerkConstraints(basis, j_max_n)];     %Max jerk constraints (position)
-    const_y=[const_y sy.getMaxVelConstraints(basis, ydot_max_n)];   %Max vel constraints (yaw)
+    const_p_dyn_limits=[const_p_dyn_limits sp.getMaxVelConstraints(basis, v_max_n)];      %Max vel constraints (position)
+    const_p_dyn_limits=[const_p_dyn_limits sp.getMaxAccelConstraints(basis, a_max_n)];    %Max accel constraints (position)
+    const_p_dyn_limits=[const_p_dyn_limits sp.getMaxJerkConstraints(basis, j_max_n)];     %Max jerk constraints (position)
+    const_y_dyn_limits=[const_y_dyn_limits sy.getMaxVelConstraints(basis, ydot_max_n)];   %Max vel constraints (yaw)
 
 end
 
