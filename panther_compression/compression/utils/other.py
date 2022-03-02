@@ -344,6 +344,12 @@ class MyClampedUniformBSpline():
 		self.dim=dim;
 		self.knots=generateKnotsForClampedUniformBspline(t0, tf, deg, num_seg)
 
+		###Debugging
+		if (abs(tf-t0)<1e-5):
+			print(f"t0={t0}, tf={tf}, deg={deg}, num_seg={num_seg}")
+			print(f"self.knots={self.knots}")
+		#######
+
 		self.ctrl_pts=ctrl_pts;
 		for i in range(dim):
 			self.pos_bs.append( BSpline(self.knots, self.ctrl_pts[i,:], self.deg) )
@@ -991,8 +997,10 @@ class StudentCaller():
 		self.am=ActionManager();
 		self.cc=CostComputer();
 		# self.index_smallest_augmented_cost = 0
-		self.index_best_safe_traj = None
-		self.index_best_unsafe_traj = None
+		# self.index_best_safe_traj = None
+		# self.index_best_unsafe_traj = None
+
+		self.costs_and_violations_of_action = None# CostsAndViolationsOfAction
 
 
 	def predict(self, w_init_ppstate, w_ppobstacles, w_gterm): #pp stands for py_panther
@@ -1005,15 +1013,15 @@ class StudentCaller():
 		w_obstacles=convertPPObstacles2Obstacles(w_ppobstacles)
 
 		#Construct observation
-		f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_init_state, w_gterm, w_obstacles)
-		f_observation_n=self.om.normalizeObservation(f_observation)
+		f_obs=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_init_state, w_gterm, w_obstacles)
+		f_obs_n=self.om.normalizeObservation(f_obs)
 
-		print(f"Going to call student with this raw sobservation={f_observation}")
+		print(f"Going to call student with this raw sobservation={f_obs}")
 		print(f"Which is...")
-		self.om.printObservation(f_observation)
+		self.om.printObservation(f_obs)
 
 		start = time.time()
-		action_normalized,info = self.student_policy.predict(f_observation_n, deterministic=True) 
+		action_normalized,info = self.student_policy.predict(f_obs_n, deterministic=True) 
 		end = time.time()
 		print(f"Calling the student took {(end - start)*(1e3)} ms")
 
@@ -1025,59 +1033,27 @@ class StudentCaller():
 		# print("action=", action)   
 
 		all_solOrGuess=[]
-		smallest_augmented_safe_cost = float('inf')
-		smallest_augmented_unsafe_cost = float('inf')
-		# self.index_smallest_augmented_cost = 0
+
+		self.costs_and_violations_of_action=self.cc.getCostsAndViolationsOfActionFromObsnAndActionn(f_obs_n, action_normalized)
+
 		self.index_best_safe_traj = None
 		self.index_best_unsafe_traj = None
 		for i in range( np.shape(action)[0]): #For each row of action
 			traj=action[i,:].reshape(1,-1);
-			traj_n=action_normalized[i,:].reshape(1,-1);
-			assert self.am.getTotalTimeTraj(traj)>0, f"Time needs to be >0. Currently it is {self.am.getTotalTimeTraj(traj)}"
+
 			my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state);
 
-			cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.cc.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_observation_n, traj_n)
-
-			my_solOrGuess.cost = cost
-			my_solOrGuess.obst_avoidance_violation = obst_avoidance_violation
-			my_solOrGuess.dyn_lim_violation = dyn_lim_violation
+			my_solOrGuess.cost = self.costs_and_violations_of_action.costs[i]
+			my_solOrGuess.obst_avoidance_violation = self.costs_and_violations_of_action.obst_avoidance_violations[i]
+			my_solOrGuess.dyn_lim_violation = self.costs_and_violations_of_action.dyn_lim_violations[i]
 
 			all_solOrGuess.append(my_solOrGuess)
-
-			# if(augmented_cost < smallest_augmented_cost):
-			# 	smallest_augmented_cost = augmented_cost
-			# 	self.index_smallest_augmented_cost = i
-
-			print(f"Traj {i} has augmented_cost= {augmented_cost}, collides={my_solOrGuess.isInCollision()}")
-
-			if(my_solOrGuess.isInCollision()==False):
-				if(augmented_cost < smallest_augmented_safe_cost):
-					smallest_augmented_safe_cost = augmented_cost
-					self.index_best_safe_traj = i
-			else:
-				if(augmented_cost < smallest_augmented_unsafe_cost):
-					smallest_augmented_unsafe_cost = augmented_cost
-					self.index_best_unsafe_traj = i
-
-		# w_pos_ctrl_pts,_ = self.am.actionAndState2_w_pos_ctrl_pts_and_knots(action,w_init_state)
-		# print("w_pos_ctrl_pts=", w_pos_ctrl_pts)
-		# my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state);
-		# py_panther.solOrGuessl
 
 
 		return all_solOrGuess   
 
 	def getIndexBestTraj(self):
-		if(self.index_best_safe_traj is not None):
-			print(f"Choosing traj {self.index_best_safe_traj} ")
-			return self.index_best_safe_traj
-		elif(self.index_best_unsafe_traj is not None):
-			print(f"Choosing traj {self.index_best_unsafe_traj} ")
-
-			return self.index_best_unsafe_traj
-		else:
-			print("This should never happen!!")
-			exit();
+		return self.costs_and_violations_of_action.index_best_traj
 
 
 def TfMatrix2RosQuatAndVector3(tf_matrix):
@@ -1111,6 +1087,13 @@ def TfMatrix2RosPose(tf_matrix):
 
   return pose_ros
 
+
+class CostsAndViolationsOfAction():
+	def __init__(self, costs, obst_avoidance_violations, dyn_lim_violations, index_best_traj):
+		self.costs=costs
+		self.obst_avoidance_violations=obst_avoidance_violations
+		self.dyn_lim_violations=dyn_lim_violations
+		self.index_best_traj=index_best_traj
 
 class CostComputer():
 	def __init__(self):
@@ -1165,6 +1148,13 @@ class CostComputer():
 		f_traj = self.am.denormalizeTraj(f_traj_n);
 
 		total_time=self.am.getTotalTimeTraj(f_traj)
+
+		###Debugging
+		if(total_time<1e-5):
+			print(f"total_time={total_time}")
+			print(f"f_traj_n={f_traj_n}")
+			print(f"f_traj={f_traj}")
+		######
 
 		f_state = self.om.get_f_StateFromf_obs(f_obs)
 		f_posBS, f_yawBS = self.am.f_trajAnd_f_State2fBS(f_traj, f_state)
@@ -1239,19 +1229,72 @@ class CostComputer():
 	def computeAugmentedCost(self, cost, obst_avoidance_violation, dyn_lim_violation):
 		return cost + obst_avoidance_violation + dyn_lim_violation
 
-	def getIndexTrajWithSmallestAugmentedCost(self, f_obs_n, f_action_n):
-		smallest_augmented_cost = float('inf')
-		index_smallest_augmented_cost = 0
-		for i in range(f_action_n.shape[0]):
-			f_traj_n = self.am.getTrajFromAction(f_action_n, i)
+	def getIndexBestTraj(self, f_obs_n, f_action_n):
+		tmp=self.getCostsAndViolationsOfActionFromObsnAndActionn(f_obs_n, f_action_n)
+		return tmp.index_best_traj
+		# smallest_augmented_cost = float('inf')
+		# index_smallest_augmented_cost = 0
+		# for i in range(f_action_n.shape[0]):
+		# 	f_traj_n = self.am.getTrajFromAction(f_action_n, i)
 
-			_, _, _, augmented_cost = self.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_observation_n, traj_n)
+		# 	_, _, _, augmented_cost = self.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_observation_n, traj_n)
 
-			# self.printwithNameAndColor(f"augmented cost traj_{i}={augmented_cost}")
-			if(augmented_cost < smallest_augmented_cost):
-				smallest_augmented_cost = augmented_cost
-				index_smallest_augmented_cost = i
-		return index_smallest_augmented_cost
+		# 	# self.printwithNameAndColor(f"augmented cost traj_{i}={augmented_cost}")
+		# 	if(augmented_cost < smallest_augmented_cost):
+		# 		smallest_augmented_cost = augmented_cost
+		# 		index_smallest_augmented_cost = i
+		# return index_smallest_augmented_cost
+
+	def getCostsAndViolationsOfActionFromObsnAndActionn(self, f_obs_n, f_action_n):
+
+		costs=[]
+		obst_avoidance_violations=[]
+		dyn_lim_violations=[]
+
+
+		smallest_augmented_safe_cost = float('inf')
+		smallest_augmented_unsafe_cost = float('inf')
+		index_best_safe_traj = None
+		index_best_unsafe_traj = None
+
+
+		for i in range( np.shape(f_action_n)[0]): #For each row of action
+			traj_n=f_action_n[i,:].reshape(1,-1);
+
+			cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_obs_n, traj_n)
+
+			costs.append(cost)
+			obst_avoidance_violations.append(obst_avoidance_violation)
+			dyn_lim_violations.append(dyn_lim_violation)
+
+			is_in_collision = (obst_avoidance_violation>1e-5)
+
+			if(is_in_collision==False):
+				if(augmented_cost < smallest_augmented_safe_cost):
+					smallest_augmented_safe_cost = augmented_cost
+					index_best_safe_traj = i
+			else:
+				if(augmented_cost < smallest_augmented_unsafe_cost):
+					smallest_augmented_unsafe_cost = augmented_cost
+					index_best_unsafe_traj = i
+
+		if(index_best_safe_traj is not None):
+			# print(f"Choosing traj {index_best_safe_traj} ")
+			index_best_traj = index_best_safe_traj
+
+		elif(index_best_unsafe_traj is not None):
+			# print(f"Choosing traj {index_best_unsafe_traj} ")
+			index_best_traj= index_best_unsafe_traj
+		else:
+			print("This should never happen!!")
+			exit();		
+
+		result=CostsAndViolationsOfAction(costs=costs, obst_avoidance_violations=obst_avoidance_violations, dyn_lim_violations=dyn_lim_violations, index_best_traj=index_best_traj)
+
+
+		return result;
+
+
 
 
 #You can check the previous function by using this Matlab script:

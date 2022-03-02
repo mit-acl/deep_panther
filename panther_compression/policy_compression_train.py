@@ -84,7 +84,7 @@ if __name__ == "__main__":
     
     only_collect_data=False
     train_only_supervised=False
-    reuse_previous_samples=True
+    reuse_previous_samples=False
 
     record_bag=True
     launch_tensorboard=True
