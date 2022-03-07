@@ -6,7 +6,7 @@ num_seg: 6
 num_max_of_obst: 1
 sampler_num_samples: 24
 fitter_num_samples: 100
-fitter_total_time: 10
+fitter_total_time: 10 #[seconds] 
 fitter_num_seg: 7
 fitter_deg_pos: 3
 num_of_yaw_per_layer: 40

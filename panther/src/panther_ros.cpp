@@ -131,7 +131,6 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "c_final_yaw", par_.c_final_yaw);
   safeGetParam(nh1_, "c_total_time", par_.c_total_time);
   safeGetParam(nh1_, "print_graph_yaw_info", par_.print_graph_yaw_info);
-  safeGetParam(nh1_, "fitter_total_time", par_.fitter_total_time);
   safeGetParam(nh1_, "z_goal_when_using_rviz", par_.z_goal_when_using_rviz);
   safeGetParam(nh1_, "mode", par_.mode);
   // b_T_c (see above)
@@ -142,6 +141,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "deg_yaw", par_.deg_yaw);
   safeGetParam(nh1_, "num_of_yaw_per_layer", par_.num_of_yaw_per_layer);
   safeGetParam(nh1_, "fitter_num_samples", par_.fitter_num_samples);
+  safeGetParam(nh1_, "fitter_total_time", par_.fitter_total_time);
   safeGetParam(nh1_, "fitter_num_seg", par_.fitter_num_seg);
   safeGetParam(nh1_, "fitter_deg_pos", par_.fitter_deg_pos);
   safeGetParam(nh1_, "sampler_num_samples", par_.sampler_num_samples);

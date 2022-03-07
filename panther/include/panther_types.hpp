@@ -860,7 +860,6 @@ struct parameters
   double          c_final_yaw;                        //void setVar_c_final_yaw(const std::string& value) { c_final_yaw = std::stod(value); };
   double          c_total_time;                       //void setVar_c_total_time(const std::string& value) { c_total_time = std::stod(value); };
   bool            print_graph_yaw_info;               //void setVar_print_graph_yaw_info(const std::string& value) { print_graph_yaw_info = string2bool(value); };
-  double          fitter_total_time;                  //void setVar_fitter_total_time(const std::string& value) { fitter_total_time = std::stod(value); };
   double          z_goal_when_using_rviz;                  
   std::string     mode;                               //void setVar_mode(const std::string& value) { mode = value; };
   Eigen::Matrix4d b_T_c;                              //Computed inside C++
@@ -870,6 +869,7 @@ struct parameters
   int             deg_pos;                            //From Casadi                    //void setVar_deg_pos(const std::string& value) { deg_pos = std::stoi(value); };
   int             deg_yaw;                            //From Casadi                   //void setVar_deg_yaw(const std::string& value) { deg_yaw = std::stoi(value); };
   int             num_of_yaw_per_layer;               //From Casadi               //void setVar_num_of_yaw_per_layer(const std::string& value) { num_of_yaw_per_layer = std::stoi(value); };
+  double          fitter_total_time;                  //void setVar_fitter_total_time(const std::string& value) { fitter_total_time = std::stod(value); };
   int             fitter_num_samples;                 //From Casadi               //void setVar_fitter_num_samples(const std::string& value) { fitter_num_samples = std::stoi(value); }; 
   double          fitter_num_seg;                     //From Casadi               //void setVar_fitter_num_seg(const std::string& value) { fitter_num_seg = std::stod(value); };  
   double          fitter_deg_pos;                     //From Casadi               //void setVar_fitter_deg_pos(const std::string& value) { fitter_deg_pos = std::stod(value); };   

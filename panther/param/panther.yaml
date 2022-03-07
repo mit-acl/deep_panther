@@ -51,7 +51,6 @@ c_final_pos: 100.0           #weight for the optimization
 c_final_yaw: 0.0              #weight for the optimization
 c_total_time: 80             #weight for the optimization
 print_graph_yaw_info: false
-fitter_total_time: 5.0 #[seconds] 
 z_goal_when_using_rviz: 1.0 #[meters] 
 mode: panther #  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther), ysweep (noPA but with sweep in yaw) 
 max_dist2goal: 20.0
