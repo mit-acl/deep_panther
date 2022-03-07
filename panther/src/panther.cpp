@@ -50,12 +50,13 @@ Panther::Panther(mt::parameters par) : par_(par)
 
   log_ptr_ = std::shared_ptr<mt::log>(new mt::log);
 
-  solver_ = new SolverIpopt(par_);  //, log_ptr_
+  solver_ = new SolverIpopt(par_);                //, log_ptr_
+  fitter_ = new Fitter(par_.fitter_num_samples);  //, log_ptr_
 
   separator_solver_ = new separator::Separator();
 
-  std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
-  cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
+  // std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
+  // cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
 
   if (par_.use_student == true)
   {
@@ -327,25 +328,17 @@ std::vector<mt::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
     mt::obstacleForOpt obstacle_for_opt;
 
     // Take future samples of the trajectory
-    casadi::DM samples_casadi(3, par_.fitter_num_samples);
+    std::vector<Eigen::Vector3d> samples;
 
     for (int k = 0; k < par_.fitter_num_samples; k++)
     {
       double tk = t_start + k * delta;
       Eigen::Vector3d pos_k = evalMeanDynTrajCompiled(trajs_[i], tk);
 
-      // std::cout << "k= " << k << std::endl;
-
-      samples_casadi(0, k) = pos_k.x();
-      samples_casadi(1, k) = pos_k.y();
-      samples_casadi(2, k) = pos_k.z();
+      samples.push_back(pos_k);
     }
 
-    // Fit a spline to those samples
-    std::map<std::string, casadi::DM> map_arg;
-    map_arg["samples"] = samples_casadi;
-    std::map<std::string, casadi::DM> result = cf_fit3d_(map_arg);
-    obstacle_for_opt.ctrl_pts = casadiMatrix2StdVectorEigen3d(result["result"]);
+    obstacle_for_opt.ctrl_pts = fitter_->fit(samples);
 
     Eigen::Vector3d bbox_inflated = trajs_[i].bbox + 2 * par_.drone_radius * Eigen::Vector3d::Ones();
 

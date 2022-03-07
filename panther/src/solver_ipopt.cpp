@@ -96,6 +96,31 @@ casadi::DM eigen3d2CasadiMatrix(const Eigen::Vector3d &data)
   return casadi_matrix;
 }
 
+///////////////////////
+
+Fitter::Fitter(const int fitter_num_samples)
+{
+  std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
+  cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
+  fitter_num_samples_ = fitter_num_samples;
+}
+
+std::vector<Eigen::Vector3d> Fitter::fit(std::vector<Eigen::Vector3d> &samples)
+{
+  verify(samples.size() == fitter_num_samples_, "The number of samples needs to be equal to "
+                                                "fitter_num_samples");
+
+  // Fit a spline to those samples
+  std::map<std::string, casadi::DM> map_arg;
+  map_arg["samples"] = stdVectorEigen3d2CasadiMatrix(samples);
+  std::map<std::string, casadi::DM> result = cf_fit3d_(map_arg);
+  std::vector<Eigen::Vector3d> ctrl_pts = casadiMatrix2StdVectorEigen3d(result["result"]);
+
+  return ctrl_pts;
+}
+
+///////////////////////
+
 SolverIpopt::SolverIpopt(const mt::parameters &par)
 {
   par_ = par;

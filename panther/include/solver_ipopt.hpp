@@ -162,9 +162,24 @@ struct novale
       std::cout << value_i << ", " << std::endl;
     }
   }
-};  // namespace si
+};
 
 }  // namespace si
+
+class Fitter
+{
+public:
+  Fitter(const int fitter_num_samples);
+
+  ~Fitter();
+
+  std::vector<Eigen::Vector3d> fit(std::vector<Eigen::Vector3d> &samples);
+
+protected:
+private:
+  casadi::Function cf_fit3d_;
+  int fitter_num_samples_;
+};
 
 class SolverIpopt
 {

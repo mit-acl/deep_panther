@@ -130,8 +130,7 @@ private:
   std::mutex mtx_G_term;
   std::mutex mtx_t_;
 
-  casadi::Function cf_fit3d_;
-
+  // casadi::Function cf_fit3d_;
   mt::state stateA_;  // It's the initial condition for the solver
 
   mt::state state_;
@@ -153,9 +152,8 @@ private:
 
   double av_improvement_nlopt_ = 0.0;
 
-  // SolverNlopt* solver_;  // pointer to the optimization solver
-  // SolverGurobi* solver_;  // pointer to the optimization solver
   SolverIpopt* solver_;  // pointer to the optimization solver
+  Fitter* fitter_;
 
   Eigen::Matrix<double, 2, 2> A_basis_deg1_rest_;
   Eigen::Matrix<double, 2, 2> A_basis_deg1_rest_inverse_;
