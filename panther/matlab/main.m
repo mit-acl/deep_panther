@@ -949,7 +949,7 @@ f.save('./casadi_generated_files/fit_yaw.casadi')
 %%%%%%%    FUNCTION TO FIT A SPLINE TO POSITION SAMPLES     %%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%all_pos should be sampled uniformly, including first and last point
+%samples should be sampled uniformly, including first and last point
 %The total number of samples is num_samples
 
 %If you find the error "evaluation failed" --> increase num_samples or
