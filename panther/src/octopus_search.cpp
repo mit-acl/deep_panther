@@ -1289,19 +1289,19 @@ exitloop:
 
   std::cout << "nodesptr_cg_and_cng_.size()=" << nodesptr_cg_and_cng_.size() << std::endl;
 
-  if (nodesptr_cg_and_cng_.size() != num_of_solutions_needed)
-  {
-    std::cout << red << bold
-              << "Not enough paths found. Increase time allowed for Oct. Search or decrease num_of_solutions_needed"
-              << reset << std::endl;
+  // if (nodesptr_cg_and_cng_.size() != num_of_solutions_needed)
+  // {
+  //   std::cout << red << bold
+  //             << "Not enough paths found. Increase time allowed for Oct. Search or decrease num_of_solutions_needed"
+  //             << reset << std::endl;
 
-    std::cout << "Found " << nodesptr_cg_and_cng_.size()
-              << "trajs, but num_of_solutions_needed=" << num_of_solutions_needed << std::endl;
+  //   std::cout << "Found " << nodesptr_cg_and_cng_.size()
+  //             << "trajs, but num_of_solutions_needed=" << num_of_solutions_needed << std::endl;
 
-    std::cout << "Returning false" << std::endl;
-    return false;
-    // abort();
-  }
+  //   std::cout << "Returning false" << std::endl;
+  //   return false;
+  //   // abort();
+  // }
 
   // // And then fill with incomplete paths
   // for (int i = 0; (nodesptr_cg_and_cng_.size() < num_of_solutions_needed) &&  //////////
@@ -1318,7 +1318,6 @@ exitloop:
   // }
 
   ////
-  std::cout << "nodesptr_cg_and_cng_.size()==" << nodesptr_cg_and_cng_.size() << std::endl;
 
   solutions.clear();
 
@@ -1349,6 +1348,12 @@ exitloop:
 
   if (solutions.size() == 0)
   {
+    std::cout << red << bold
+              << "Zero paths found. Increase time allowed for Oct. Search or decrease num_of_solutions_needed" << reset
+              << std::endl;
+
+    std::cout << "Returning false" << std::endl;
+
     return false;
   }
   else

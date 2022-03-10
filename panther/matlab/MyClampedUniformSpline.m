@@ -634,8 +634,8 @@ classdef MyClampedUniformSpline < handle
             for j=1:obj.num_seg
                 cps=obj.getCPs_XX_Vel_ofInterval(basis, j);
                 for u=1:size(cps,2)
-                    if(j==1 && u==1)
-                        continue   %Not impose constraint on the first vel ctrl point [to allow "infeasible" initial velocities due to planning in body frame and v constraints in each axis].
+                    if(j==1 && (u==1 || u==2))
+                        continue   %Not impose constraint on the first vel ctrl points [to allow "infeasible" initial velocities due to planning in body frame and v constraints in each axis].
                     end
 %                     constraints{end+1}=(cps{u}'*cps{u})<=(v_max_scaled^2);
 %                     total_squared=0;
@@ -654,8 +654,8 @@ classdef MyClampedUniformSpline < handle
             for j=1:obj.num_seg
                 cps=obj.getCPs_XX_Accel_ofInterval(basis,j);
                 for u=1:size(cps,2)
-                    if(j==1 && u==1)
-                        continue   %Not impose constraint on the first accel ctrl point [to allow "infeasible" initial accelerations due to planning in body frame and a constraints in each axis].
+                    if(j==1 && (u==1 || u==2))
+                        continue   %Not impose constraint on the first accel ctrl points [to allow "infeasible" initial accelerations due to planning in body frame and a constraints in each axis].
                     end
 %                     constraints{end+1}=(cps{u}'*cps{u})<=(a_max_scaled^2);
 %                     total_squared=0;

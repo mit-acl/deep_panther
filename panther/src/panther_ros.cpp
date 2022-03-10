@@ -70,7 +70,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "color_type_student", par_.color_type_student);
   safeGetParam(nh1_, "n_agents", par_.n_agents);
   safeGetParam(nh1_, "num_of_trajs_per_replan", par_.num_of_trajs_per_replan);
-  safeGetParam(nh1_, "num_of_initial_guesses", par_.num_of_initial_guesses);
+  safeGetParam(nh1_, "max_num_of_initial_guesses", par_.max_num_of_initial_guesses);
   safeGetParam(nh1_, "dc", par_.dc);
   safeGetParam(nh1_, "goal_radius", par_.goal_radius);
   safeGetParam(nh1_, "drone_radius", par_.drone_radius);
@@ -174,8 +174,8 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   // CHECK parameters
   std::cout << bold << "Parameters obtained, checking them..." << reset << std::endl;
 
-  verify((par_.num_of_trajs_per_replan <= par_.num_of_initial_guesses), "par_.num_of_trajs_per_replan<=par_.num_of_"
-                                                                        "initial_guesses must hold");
+  verify((par_.num_of_trajs_per_replan <= par_.max_num_of_initial_guesses), "par_.num_of_trajs_per_replan<=par_.max_"
+                                                                            "num_of_initial_guesses must hold");
 
   verify((par_.c_smooth_yaw_search >= 0), "par_.c_smooth_yaw_search>=0 must hold");
   verify((par_.use_expert == true || par_.use_student == true), "(use_expert == true || use_student == true) must "

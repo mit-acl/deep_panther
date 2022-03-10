@@ -9,6 +9,8 @@ import glob
 import os
 import rospy
 import os.path
+# from visualization_msgs.msg import MarkerArray
+
 
 if (len(sys.argv) <=1):
     print ("Usage is one of these: | python this_file.py name_of_bag.bag ")
@@ -49,6 +51,11 @@ for name_bag in name_bags:
                 for i in range(len(msg.transforms)):
                     msg.transforms[i].header.stamp=t_corrected
                 outbag.write(topic, msg, t_corrected) #msg.transforms[0].header.stamp
+            elif topic == "/obs": #MarkerArray
+                for i in range(len(msg.markers)):
+                    msg.markers[i].header.stamp=t_corrected
+                outbag.write(topic, msg, t_corrected)
+
             else:
                 msg.header.stamp=t_corrected
                 outbag.write(topic, msg, t_corrected)

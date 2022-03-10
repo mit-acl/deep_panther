@@ -813,7 +813,7 @@ struct parameters
   std::string     color_type_student;                         //void setVar_color_type(const std::string& value) { color_type = value; };
   int             n_agents;                           //void setVar_n_agents(const std::string& value) { n_agents = std::stoi(value); };
   int             num_of_trajs_per_replan;            //void setVar_num_of_trajs_per_replan(const std::string& value) { num_of_trajs_per_replan = std::stoi(value); };
-  int             num_of_initial_guesses;            //void setVar_num_of_trajs_per_replan(const std::string& value) { num_of_trajs_per_replan = std::stoi(value); };
+  int             max_num_of_initial_guesses;            //void setVar_num_of_trajs_per_replan(const std::string& value) { num_of_trajs_per_replan = std::stoi(value); };
   double          dc;                                 //void setVar_dc(const std::string& value) { dc = std::stod(value); };
   double          goal_radius;                        //void setVar_goal_radius(const std::string& value) { goal_radius = std::stod(value); };
   double          drone_radius;                       //void setVar_drone_radius(const std::string& value) { drone_radius = std::stod(value); };//

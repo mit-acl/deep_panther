@@ -6,6 +6,8 @@ from gym import spaces
 from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager, getPANTHERparamsAsCppStruct, computeTotalTime, getObsAndGtermToCrossPath, posAccelYaw2TfMatrix
 from compression.utils.other import TfMatrix2RosQuatAndVector3, TfMatrix2RosPose
 from compression.utils.other import CostComputer
+from compression.utils.other import MyClampedUniformBSpline
+from compression.utils.other import listOf3dVectors2numpy3Xmatrix
 from colorama import init, Fore, Back, Style
 import py_panther
 ##### For rosbag logging
@@ -14,7 +16,7 @@ from geometry_msgs.msg import PointStamped, TransformStamped, PoseStamped, Vecto
 import time
 import rospy
 from os.path import exists
-from visualization_msgs.msg import Marker
+from visualization_msgs.msg import Marker, MarkerArray
 from nav_msgs.msg import Path
 from tf2_msgs.msg import TFMessage
 from geometry_msgs.msg import PointStamped
@@ -198,7 +200,8 @@ class MyEnvironment(gym.Env):
     ####### CONSTRUCT OBS        #######
     ####################################
 
-    w_obstacles=self.obsm.getFutureWPosObstacles(self.time)
+    # w_obstacles=self.obsm.getFutureWPosStaticObstacles()
+    w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
     f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), w_obstacles);
     f_observationn=self.om.normalizeObservation(f_observation);
 
@@ -309,7 +312,8 @@ class MyEnvironment(gym.Env):
 
     
     # observation = self.om.getRandomNormalizedObservation()
-    w_obstacles=self.obsm.getFutureWPosObstacles(self.time)
+    # w_obstacles=self.obsm.getFutureWPosStaticObstacles()
+    w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
     # print("w_obstacles[0].ctrl_pts=", w_obstacles[0].ctrl_pts)
     f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), w_obstacles);
     f_observationn=self.om.normalizeObservation(f_observation);
@@ -379,29 +383,46 @@ class MyEnvironment(gym.Env):
       point_msg.point.y=f_g[1,0]
       point_msg.point.z=f_g[2,0]
 
-      marker_msg=Marker();
-      marker_msg.header.frame_id = "f";
-      marker_msg.header.stamp = time_now;
-      marker_msg.ns = "ns";
-      marker_msg.id = 0;
-      marker_msg.type = marker_msg.CUBE;
-      marker_msg.action = marker_msg.ADD;
-      marker_msg.pose.position.x = obstacles[0].ctrl_pts[0][0];
-      marker_msg.pose.position.y = obstacles[0].ctrl_pts[0][1];
-      marker_msg.pose.position.z = obstacles[0].ctrl_pts[0][2];
-      marker_msg.pose.orientation.x = 0.0;
-      marker_msg.pose.orientation.y = 0.0;
-      marker_msg.pose.orientation.z = 0.0;
-      marker_msg.pose.orientation.w = 1.0;
-      marker_msg.scale.x = obstacles[0].bbox_inflated[0];
-      marker_msg.scale.y = obstacles[0].bbox_inflated[1];
-      marker_msg.scale.z = obstacles[0].bbox_inflated[2];
-      marker_msg.color.a = 1.0; 
-      marker_msg.color.r = 0.0;
-      marker_msg.color.g = 1.0;
-      marker_msg.color.b = 0.0;
+      marker_array_msg=MarkerArray()
 
-      obstacles[0].ctrl_pts[0][1]
+      for i in range(len(obstacles)):
+
+        t0=self.time
+        tf=self.time+self.par.fitter_total_time
+
+        bspline_obs_i=MyClampedUniformBSpline(t0=t0, tf=tf, deg=self.par.deg_pos, \
+                                        dim=3, num_seg=self.par.num_seg, ctrl_pts=listOf3dVectors2numpy3Xmatrix(obstacles[i].ctrl_pts) )
+
+        id_sample=0
+        num_samples=40
+        for t_interm in np.linspace(t0, tf, num=num_samples).tolist():
+
+          marker_msg=Marker();
+          marker_msg.header.frame_id = "f";
+          marker_msg.header.stamp = time_now;
+          marker_msg.ns = "ns";
+          marker_msg.id = id_sample;
+          marker_msg.type = marker_msg.CUBE;
+          marker_msg.action = marker_msg.ADD;
+          pos=bspline_obs_i.getPosT(t_interm)
+          marker_msg.pose.position.x = pos[0];
+          marker_msg.pose.position.y = pos[1];
+          marker_msg.pose.position.z = pos[2];
+          marker_msg.pose.orientation.x = 0.0;
+          marker_msg.pose.orientation.y = 0.0;
+          marker_msg.pose.orientation.z = 0.0;
+          marker_msg.pose.orientation.w = 1.0;
+          marker_msg.scale.x = obstacles[0].bbox_inflated[0];
+          marker_msg.scale.y = obstacles[0].bbox_inflated[1];
+          marker_msg.scale.z = obstacles[0].bbox_inflated[2];
+          marker_msg.color.a = 1.0*(num_samples-id_sample)/num_samples; 
+          marker_msg.color.r = 0.0;
+          marker_msg.color.g = 1.0;
+          marker_msg.color.b = 0.0;
+
+          marker_array_msg.markers.append(marker_msg)
+
+          id_sample=id_sample+1
 
 
       tf_stamped=TransformStamped();
@@ -442,7 +463,7 @@ class MyEnvironment(gym.Env):
 
 
       self.bag.write('/g', point_msg, time_now)
-      self.bag.write('/obs', marker_msg, time_now)
+      self.bag.write('/obs', marker_array_msg, time_now)
       self.bag.write('/tf', tf_msg, time_now)
 
       #When using multiple environments, opening bag in constructor and closing it in _del leads to unindexed bags

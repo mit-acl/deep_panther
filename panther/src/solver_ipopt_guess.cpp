@@ -92,7 +92,7 @@ bool SolverIpopt::generateAStarGuess(std::vector<os::solution>& p_guesses)
   octopusSolver_ptr_->setVisual(false);
 
   // log_ptr_->tim_guess_pos.tic();
-  bool success = octopusSolver_ptr_->run(p_guesses, par_.num_of_initial_guesses);
+  bool success = octopusSolver_ptr_->run(p_guesses, par_.max_num_of_initial_guesses);
   // log_ptr_->tim_guess_pos.toc();
 
   return success;

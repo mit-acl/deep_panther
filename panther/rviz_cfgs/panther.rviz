@@ -166,7 +166,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/fov
       Name: FOV
       Namespaces:
-        marker_fov: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -270,7 +270,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/best_solution_expert
       Name: BestSolutionExp
       Namespaces:
-        SQ01s_best_solution_expert0: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -278,9 +278,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/best_solutions_expert
       Name: BestSolutionsExp
       Namespaces:
-        SQ01s_best_solutions_expert0: true
-        SQ01s_best_solutions_expert1: true
-        SQ01s_best_solutions_expert2: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -288,7 +286,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/best_solution_student
       Name: BestSolutionStu
       Namespaces:
-        SQ01s_best_solution_student0: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -296,9 +294,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/best_solutions_student
       Name: BestSolutionsStu
       Namespaces:
-        SQ01s_best_solutions_student0: true
-        SQ01s_best_solutions_student1: true
-        SQ01s_best_solutions_student2: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -342,13 +338,13 @@ Visualization Manager:
       Queue Size: 100
       Value: false
     - Class: rviz/MarkerArray
-      Enabled: false
+      Enabled: true
       Marker Topic: /SQ01s/panther/splines_fitted
       Name: SplinesFitted
       Namespaces:
         {}
       Queue Size: 100
-      Value: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 46; 52; 54
@@ -377,7 +373,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 23.1805362701416
+      Distance: 21.385353088378906
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -385,17 +381,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 1.6267004013061523
-        Y: -0.3223552703857422
+        X: -0.3567180633544922
+        Y: 1.8611061573028564
         Z: -1.0671928066585679e-05
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7197969555854797
+      Pitch: 0.6747970581054688
       Target Frame: <Fixed Frame>
-      Yaw: 3.2499797344207764
+      Yaw: 3.699984550476074
     Saved: ~
 Window Geometry:
   DepthImage:

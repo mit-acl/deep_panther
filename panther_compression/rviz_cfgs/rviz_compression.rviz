@@ -7,7 +7,6 @@ Panels:
         - /Global Options1
         - /Status1
         - /PointStamped1
-        - /Marker1
         - /TF1
       Splitter Ratio: 0.5
     Tree Height: 719
@@ -62,17 +61,9 @@ Visualization Manager:
       History Length: 1
       Name: PointStamped
       Queue Size: 10
-      Radius: 0.20000000298023224
+      Radius: 0.800000011920929
       Topic: /g
       Unreliable: false
-      Value: true
-    - Class: rviz/Marker
-      Enabled: true
-      Marker Topic: /obs
-      Name: Marker
-      Namespaces:
-        ns: true
-      Queue Size: 100
       Value: true
     - Class: rviz/TF
       Enabled: true
@@ -239,6 +230,14 @@ Visualization Manager:
       Topic: /path5
       Unreliable: false
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /obs
+      Name: Obstacles
+      Namespaces:
+        ns: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -267,7 +266,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 5.937182426452637
+      Distance: 18.7609806060791
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -275,17 +274,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.07391303032636642
-        Y: 0.7198053598403931
-        Z: 1.2143093347549438
+        X: 2.415095329284668
+        Y: 2.346494674682617
+        Z: 4.61213493347168
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.25979751348495483
+      Pitch: 0.7597979307174683
       Target Frame: <Fixed Frame>
-      Yaw: 2.089000940322876
+      Yaw: 4.614010334014893
     Saved: ~
 Window Geometry:
   Displays:

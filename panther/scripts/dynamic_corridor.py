@@ -225,18 +225,16 @@ class DynCorridor:
             # x_string=str(random.uniform(2.5, 2.5))
             # y_string=str(random.uniform(0.0, 0.0))
             # z_string=str(random.uniform(1.0, 1.0))  
+            # theta=random.uniform(-np.pi/2, np.pi/2)
+            # radius_obstacle=random.uniform(1.5, 4.5)
+            # center=np.zeros((3,1))
 
+            # w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
+            # x_string=str(w_pos_obstacle[0,0])
+            # y_string=str(w_pos_obstacle[1,0])
+            # z_string=str(w_pos_obstacle[2,0]) 
 
-            theta=random.uniform(-np.pi/2, np.pi/2)
-            radius_obstacle=random.uniform(1.5, 4.5)
-            center=np.zeros((3,1))
-
-            w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
-            x_string=str(w_pos_obstacle[0,0])
-            y_string=str(w_pos_obstacle[1,0])
-            z_string=str(w_pos_obstacle[2,0]) 
-
-            self.all_dyn_traj[i].s_mean=[x_string, y_string, z_string]
+            # self.all_dyn_traj[i].s_mean=[x_string, y_string, z_string]
             # #End of hack
 
             x = eval(self.all_dyn_traj[i].s_mean[0])
@@ -546,7 +544,7 @@ class DynCorridor:
 
 def startNode(total_num_obs, gazebo):
     c = DynCorridor(total_num_obs,gazebo)
-    rospy.Timer(rospy.Duration(20.0), c.pubTF) #was 0.01
+    rospy.Timer(rospy.Duration(0.01), c.pubTF) #was 0.01
     c.pubTF(None)
     rospy.spin()
 

@@ -65,7 +65,7 @@ PYBIND11_MODULE(py_panther, m)
 .def_readwrite("color_type_student", &mt::parameters::color_type_student)                      
 .def_readwrite("n_agents", &mt::parameters::n_agents)                        
 .def_readwrite("num_of_trajs_per_replan", &mt::parameters::num_of_trajs_per_replan)         
-.def_readwrite("num_of_initial_guesses", &mt::parameters::num_of_initial_guesses)         
+.def_readwrite("max_num_of_initial_guesses", &mt::parameters::max_num_of_initial_guesses)         
 .def_readwrite("dc", &mt::parameters::dc)                              
 .def_readwrite("goal_radius", &mt::parameters::goal_radius)                     
 .def_readwrite("drone_radius", &mt::parameters::drone_radius)                    
@@ -148,6 +148,12 @@ PYBIND11_MODULE(py_panther, m)
       .def("getGuesses", &SolverIpopt::getGuesses)
       .def("computeCost", &SolverIpopt::computeCost)
       .def("computeDynLimitsConstraintsViolation", &SolverIpopt::computeDynLimitsConstraintsViolation)
+      .def("getInfoLastOpt", &SolverIpopt::getInfoLastOpt)
       .def_readwrite("par_", &SolverIpopt::par_)
       .def("__repr__", [](const SolverIpopt &a) { return "<py_panther.SolverIpopt>"; });
+
+  py::class_<Fitter>(m, "Fitter")
+      .def(py::init<int>())  /////////////////////////
+      .def("fit", &Fitter::fit)
+      .def("__repr__", [](const Fitter &a) { return "<py_panther.Fitter>"; });
 }

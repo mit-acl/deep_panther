@@ -208,6 +208,8 @@ public:
   double computeCost(si::solOrGuess guess);
   double computeDynLimitsConstraintsViolation(si::solOrGuess guess);
 
+  std::string getInfoLastOpt();
+
 protected:
 private:
   bool isInCollision(mt::state state, double t);
@@ -374,6 +376,8 @@ private:
   casadi::DM eigen2casadi(const Eigen::Vector3d &a);
 
   bool focus_on_obstacle_;
+
+  std::string info_last_opt_ = "";
 
   // std::vector<os::solution> p_guesses_;
 

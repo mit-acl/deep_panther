@@ -48,11 +48,11 @@ class ExpertPolicy(object):
         
         print(self.name+data)
 
-    def printFailedOpt(self):
-        print(self.name+" Called optimizer--> "+Style.BRIGHT+Fore.RED +"Failed"+ Style.RESET_ALL)
+    def printFailedOpt(self, info):
+        print(self.name+" Called optimizer--> "+Style.BRIGHT+Fore.RED +"Failed"+ Style.RESET_ALL+". "+ info)
 
-    def printSucessOpt(self):
-        print(self.name+" Called optimizer--> "+Style.BRIGHT+Fore.GREEN +"Success"+ Style.RESET_ALL)
+    def printSucessOpt(self, info):
+        print(self.name+" Called optimizer--> "+Style.BRIGHT+Fore.GREEN +"Success"+ Style.RESET_ALL+". "+ info)
 
 
     def reset(self):
@@ -98,15 +98,16 @@ class ExpertPolicy(object):
 
         # with nostdout():
         succeed=ExpertPolicy.my_SolverIpopt.optimize(True);
+        info=ExpertPolicy.my_SolverIpopt.getInfoLastOpt();
 
         
         if(succeed==False):
-            self.printFailedOpt();
+            self.printFailedOpt(info);
             # exit();
             # raise ExpertDidntSucceed()
             return self.am.getNanAction(), {"Q": 0.0} 
         else:
-            self.printSucessOpt();
+            self.printSucessOpt(info);
 
         best_solutions=ExpertPolicy.my_SolverIpopt.getBestSolutions();
 

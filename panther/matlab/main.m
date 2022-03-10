@@ -35,7 +35,7 @@ num_max_of_obst=1; %This is the maximum num of the obstacles
 fitter.deg_pos=3;
 fitter.num_seg=7;
 fitter.dim_pos=3;
-fitter.num_samples=100;
+fitter.num_samples=20;
 fitter_num_of_cps= fitter.num_seg + fitter.deg_pos;
 for i=1:num_max_of_obst
     fitter.ctrl_pts{i}=opti.parameter(fitter.dim_pos,fitter_num_of_cps); %This comes from C++
@@ -43,7 +43,7 @@ for i=1:num_max_of_obst
     fitter.bs_casadi{i}=MyCasadiClampedUniformSpline(0,1,fitter.deg_pos,fitter.dim_pos,fitter.num_seg,fitter.ctrl_pts{i}, false);
 end
 fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti);
-fitter.total_time=10.0; %Time from (time at point d) to end of the fitted spline
+fitter.total_time=6.0; %Time from (time at point d) to end of the fitted spline
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -575,9 +575,9 @@ par_and_init_guess= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV
 
 opts = struct;
 opts.expand=true; %When this option is true, it goes WAY faster!
-opts.print_time=true;
+opts.print_time=0;
 opts.ipopt.print_level=print_level; 
-opts.ipopt.max_iter=1000;
+opts.ipopt.max_iter=500;
 %opts.ipopt.print_frequency_iter=1e10;%1e10 %Big if you don't want to print all the iteratons
 opts.ipopt.linear_solver=linear_solver_name;
 opts.jit=jit;%If true, when I call solve(), Matlab will automatically generate a .c file, convert it to a .mex and then solve the problem using that compiled code
@@ -701,7 +701,7 @@ full(sol.yCPs)
 cprintf('Green','Total time trajec=%.2f s (alpha=%.2f) \n', full(sol.alpha*(tf_n-t0_n)), full(sol.alpha)    )
 
 
-[t_proc_total, t_wall_total]= timeInfo(my_func);
+% [t_proc_total, t_wall_total]= timeInfo(my_func); %ONLY WORKS IF print_time=1
 
 
 %Write param file with the characteristics of the casadi function generated
@@ -1082,7 +1082,7 @@ function result=isPureParamOrVariable(expression)
     result=expression.is_valid_input();
 end
 
-
+%ONLY WORKS IF print_time=1
 function [t_proc_total, t_wall_total]= timeInfo(my_func)
     tmp=get_stats(my_func);
     
@@ -1121,10 +1121,10 @@ end
 
 function [const_p_dyn_limits,const_y_dyn_limits]=addDynLimConstraints(const_p_dyn_limits,const_y_dyn_limits, sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n)
 
-    const_p_dyn_limits=[const_p_dyn_limits sp.getMaxVelConstraints(basis, v_max_n)];      %Max vel constraints (position)
-    const_p_dyn_limits=[const_p_dyn_limits sp.getMaxAccelConstraints(basis, a_max_n)];    %Max accel constraints (position)
-    const_p_dyn_limits=[const_p_dyn_limits sp.getMaxJerkConstraints(basis, j_max_n)];     %Max jerk constraints (position)
-    const_y_dyn_limits=[const_y_dyn_limits sy.getMaxVelConstraints(basis, ydot_max_n)];   %Max vel constraints (yaw)
+     const_p_dyn_limits=[const_p_dyn_limits sp.getMaxVelConstraints(basis, v_max_n)];      %Max vel constraints (position)
+     const_p_dyn_limits=[const_p_dyn_limits sp.getMaxAccelConstraints(basis, a_max_n)];    %Max accel constraints (position)
+     const_p_dyn_limits=[const_p_dyn_limits sp.getMaxJerkConstraints(basis, j_max_n)];     %Max jerk constraints (position)
+     const_y_dyn_limits=[const_y_dyn_limits sy.getMaxVelConstraints(basis, ydot_max_n)];   %Max vel constraints (yaw)
 
 end
 

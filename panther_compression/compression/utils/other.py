@@ -177,7 +177,7 @@ def getObsAndGtermToCrossPath():
 	# theta=random.choice(thetas)
 	theta=random.uniform(-np.pi, np.pi)
 	radius_obstacle=random.uniform(1.5, 4.5)
-	radius_gterm=radius_obstacle + random.uniform(1.0, 10.0)
+	radius_gterm=radius_obstacle + random.uniform(2.0, 10.0)
 	std_deg=30
 	theta_g_term=theta + random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
 	center=np.zeros((3,1))
@@ -215,16 +215,28 @@ class GTermManager():
 
 
 class ObstaclesManager():
+
+    #The reason to create this here (instead of in the constructor) is that C++ objects created with pybind11 cannot be pickled by default (pickled is needed when parallelizing)
+    #See https://stackoverflow.com/a/68672/6057617
+    #Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
+    #Note that pickle is needed when saving the Student Policy (which has a ObservationManager, which has a ObstaclesManager, which has a Fitter )
+	params=readPANTHERparams()
+	fitter = py_panther.Fitter(params["fitter_num_samples"]);
+
 	def __init__(self):
 		self.num_obs=1;
 		self.params=readPANTHERparams();
 		# self.fitter_total_time=params["fitter_total_time"];
 		self.fitter_num_seg=self.params["fitter_num_seg"];
 		self.fitter_deg_pos=self.params["fitter_deg_pos"];
+		self.fitter_total_time=self.params["fitter_total_time"];
+		self.fitter_num_samples=self.params["fitter_num_samples"];
+		# self.fitter = py_panther.Fitter(self.fitter_num_samples);
 		self.newRandomPos();
 
 	def newRandomPos(self):
 		self.random_pos=np.array([[random.uniform(-4.0, 4.0)],[random.uniform(-4.0, 4.0)],[random.uniform(1.0,1.0)]]);
+		self.random_offset=random.uniform(0.0, 10*math.pi)
 		#self.random_pos=np.array([[2.5],[1.0],[1.0]]);
 
 	def setPos(self, pos):
@@ -240,7 +252,7 @@ class ObstaclesManager():
 		#Size of the ctrl_pts + bbox
 		return self.num_obs*(3*self.getCPsPerObstacle() + 3) 
 
-	def getFutureWPosObstacles(self,t):
+	def getFutureWPosStaticObstacles(self):
 		w_obs=[];
 		for i in range(self.num_obs):
 			w_ctrl_pts_ob=np.array([[],[],[]]);
@@ -252,6 +264,51 @@ class ObstaclesManager():
 			bbox_inflated=np.array([[0.8],[0.8], [0.8]])+2*self.params["drone_radius"]*np.ones((3,1));
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 		return w_obs;
+
+	def getFutureWPosDynamicObstacles(self,t):
+		w_obs=[];
+		# trefoil=Trefoil(pos=self.random_pos, scale_x=1.0, scale_y=1.0, scale_z=1.0, offset=0.0, slower=1.5);
+		# novale=np.array([[4.0],[4.0],[1.0]]);
+		trefoil=Trefoil(pos=self.random_pos, scale_x=2.5, scale_y=2.5, scale_z=1.0, offset=self.random_offset, slower=1.5);
+		for i in range(self.num_obs):
+
+			samples=[]
+			for t_interm in np.linspace(t, t + self.fitter_total_time, num=self.fitter_num_samples):#.tolist():
+				samples.append(trefoil.getPosT(t_interm))
+
+			w_ctrl_pts_ob_list=ObstaclesManager.fitter.fit(samples)
+
+			w_ctrl_pts_ob=listOf3dVectors2numpy3Xmatrix(w_ctrl_pts_ob_list)
+
+			bbox_inflated=np.array([[0.8],[0.8], [0.8]])+2*self.params["drone_radius"]*np.ones((3,1));
+			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
+		return w_obs;
+
+class Trefoil():
+	def __init__(self, pos, scale_x, scale_y, scale_z, offset, slower):
+		self.x=pos[0,0];
+		self.y=pos[1,0];
+		self.z=pos[2,0];
+		self.scale_x=scale_x
+		self.scale_y=scale_y
+		self.scale_z=scale_z
+		self.offset=offset;
+		self.slower=slower;
+
+	def getPosT(self,t):
+		#slower=1.0; #The higher, the slower the obstacles move" 
+		tt=t/self.slower;
+
+		x_trefoil=(self.scale_x/6.0)*(math.sin(tt+self.offset) + 2*math.sin(2*tt+self.offset)) + self.x
+		y_trefoil=(self.scale_y/5.0)*(math.cos(tt+self.offset) - 2*math.cos(2*tt+self.offset)) + self.y
+		z_trefoil=(self.scale_z/2.0)*(-math.sin(3*tt+self.offset)) + self.z
+
+		# x_trefoil=self.x
+		# y_trefoil=self.y
+		# z_trefoil=self.z
+
+		return np.array([[x_trefoil], [y_trefoil], [z_trefoil]])
+
 
 
 
@@ -741,16 +798,16 @@ class ActionManager():
 		action_normalized[:,-1]=(2.0/self.fitter_total_time)*action[:,-1]-1 #Note that action[0,-1] is in [0, fitter_total_time]
 		# action_normalized[:,-1]=(2.0/1.0)*action[:,-1]-1 #Note that action[0,-1] is in [0, 1]
 
-		# for index_traj in range(self.num_traj_per_action):
-		# 	time_normalized=self.getTotalTime(action_normalized, index_traj);
-		# 	slack=1-abs(time_normalized);
-		# 	if(slack<0):
-		# 		if abs(slack)<1e-5: #Can happen due to the tolerances in the optimization
-		# 			print(f"Before= {action_normalized[0,-1]}")
-		# 			action_normalized[index_traj,-1]=np.clip(time_normalized, -1.0, 1.0) #Saturate within limits
-		# 			print(f"After= {action_normalized[0,-1]}")
-		# 		else:
-		# 			assert False, f"time_normalized={time_normalized}"
+		for index_traj in range(self.num_traj_per_action):
+			time_normalized=self.getTotalTime(action_normalized, index_traj);
+			slack=1-abs(time_normalized);
+			if(slack<0):
+				if abs(slack)<1e-5: #Can happen due to the tolerances in the optimization
+					# print(f"Before= {action_normalized[0,-1]}")
+					action_normalized[index_traj,-1]=np.clip(time_normalized, -1.0, 1.0) #Saturate within limits
+					# print(f"After= {action_normalized[0,-1]}")
+				else:
+					assert False, f"time_normalized={time_normalized}"
 
 
 		# assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}, last element={action_normalized[0,-1]}"

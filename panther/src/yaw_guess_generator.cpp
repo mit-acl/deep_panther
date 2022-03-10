@@ -266,18 +266,19 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
       }
 
       std::cout << green << "=====================================================" << reset << std::endl;
-    }
-    std::cout << "Shortest path: ";
-    for (int i = 0; i < vector_shortest_path.numel(); i++)
-    {
-      std::cout << yellow << vector_shortest_path(i);
-      if (i != (vector_shortest_path.numel() - 1))
+
+      std::cout << "Shortest path: ";
+      for (int i = 0; i < vector_shortest_path.numel(); i++)
       {
-        std::cout << " --> ";
+        std::cout << yellow << vector_shortest_path(i);
+        if (i != (vector_shortest_path.numel() - 1))
+        {
+          std::cout << " --> ";
+        }
+        std::cout << reset;
       }
-      std::cout << reset;
+      std::cout << std::endl;
     }
-    std::cout << std::endl;
     // cout << endl << "\nTotal cost: " << d[fg.get_goal_found()] << endl;
 
     ///////////////////////////////////////////////////////////////

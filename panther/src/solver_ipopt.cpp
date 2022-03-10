@@ -105,6 +105,10 @@ Fitter::Fitter(const int fitter_num_samples)
   fitter_num_samples_ = fitter_num_samples;
 }
 
+Fitter::~Fitter()
+{
+}
+
 std::vector<Eigen::Vector3d> Fitter::fit(std::vector<Eigen::Vector3d> &samples)
 {
   verify(samples.size() == fitter_num_samples_, "The number of samples needs to be equal to "
@@ -303,14 +307,15 @@ bool SolverIpopt::isInCollision(mt::state state, double t)
     Eigen::Array<double, 3, 1> distance = (state_obs.pos - state.pos).array().abs();
     Eigen::Vector3d delta = obstacle_i.bbox_inflated / 2.0;
 
-    std::cout << "state_obs.pos= " << state_obs.pos.transpose() << std::endl;
-    std::cout << "state.pos= " << state.pos.transpose() << std::endl;
-    std::cout << "distance= " << distance.transpose() << std::endl;
-    std::cout << "delta= " << delta.transpose() << std::endl;
     // std::cout << "obstacle_i.bbox_inflated= " << obstacle_i.bbox_inflated.transpose() << std::endl;
 
     if ((distance < delta.array()).all())
     {
+      std::cout << "state_obs.pos= " << state_obs.pos.transpose() << std::endl;
+      std::cout << "state.pos= " << state.pos.transpose() << std::endl;
+      std::cout << "distance= " << distance.transpose() << std::endl;
+      std::cout << "delta= " << delta.transpose() << std::endl;
+
       return true;
     }
   }
@@ -672,6 +677,8 @@ std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
 
 bool SolverIpopt::optimize(bool supress_all_prints)
 {
+  info_last_opt_ = "";
+
   PrintSupresser print_supresser;
   if (supress_all_prints)
   {
@@ -691,6 +698,11 @@ bool SolverIpopt::optimize(bool supress_all_prints)
     tmp.printInfo();
   }
 
+  std::cout << "v_max= " << par_.v_max.transpose() << std::endl;
+  std::cout << "a_max= " << par_.a_max.transpose() << std::endl;
+  std::cout << "j_max= " << par_.j_max.transpose() << std::endl;
+  std::cout << "ydot_max= " << par_.ydot_max << std::endl;
+
   std::vector<os::solution> p_guesses;
 
   // reset some stuff
@@ -699,18 +711,24 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   bool guess_found = generateAStarGuess(p_guesses);  // I obtain p_guesses
   if (guess_found == false)
   {
-    std::cout << bold << red << "Necessary guesses for pos haven't been found" << reset << std::endl;
+    info_last_opt_ = "OS: " + std::to_string(p_guesses.size());
+
+    std::cout << bold << red << "No guess for pos found" << reset << std::endl;
+
     return false;
   }
 
   int max_num_of_planes = par_.num_max_of_obst * par_.num_seg;
   if ((p_guesses[0].n.size() > max_num_of_planes))
   {
-    std::cout << red << bold << "the casadi function does not support so many planes" << reset << std::endl;
+    info_last_opt_ = "The casadi function does not support so many planes";
+
+    std::cout << red << bold << info_last_opt_ << reset << std::endl;
     std::cout << red << bold << "you have " << num_of_obst_ << "*" << par_.num_seg << "=" << p_guesses[0].n.size()
               << " planes" << std::endl;
     std::cout << red << bold << "and max is  " << par_.num_max_of_obst << "*" << par_.num_seg << "="
               << max_num_of_planes << " planes" << std::endl;
+
     return false;
   }
 
@@ -728,6 +746,7 @@ bool SolverIpopt::optimize(bool supress_all_prints)
 
   std::vector<si::solOrGuess> solutions;
   std::vector<si::solOrGuess> guesses;
+  std::vector<std::string> opt_statuses;
 
   // #pragma omp parallel for
   for (auto p_guess : p_guesses)
@@ -769,6 +788,16 @@ bool SolverIpopt::optimize(bool supress_all_prints)
     guess.knots_p = constructKnotsClampedUniformSpline(t_init_, t_final_guess_, sp_.p, sp_.num_seg);
     guess.knots_y = constructKnotsClampedUniformSpline(t_init_, t_final_guess_, sy_.p, sy_.num_seg);
 
+    // Debugging
+    // std::cout << "t_init_= " << t_init_ << std::endl;
+    // std::cout << "t_final_guess_= " << t_final_guess_ << std::endl;
+    // std::cout << "guess.getTotalTime()= " << guess.getTotalTime() << std::endl;
+    // double violation = computeDynLimitsConstraintsViolation(guess);
+    // std::cout << "violation of the guess= " << violation << std::endl;
+    // guess.printInfo();
+    // verify(violation < 1e-5, "violation cannot exist in a feasible solution");
+    // End of debugging
+
     // for(std::map<std::string, casadi::DM>::const_iterator it = map_arguments.begin();
     //     it != map_arguments.end(); ++it)
     // {
@@ -784,7 +813,7 @@ bool SolverIpopt::optimize(bool supress_all_prints)
     {
       map_arguments["c_yaw_smooth"] = par_.c_yaw_smooth;
       map_arguments["c_fov"] = par_.c_fov;
-      std::cout << bold << green << "Optimizing for YAW and POSITION!" << reset << std::endl;
+      // std::cout << bold << green << "Optimizing for YAW and POSITION!" << reset << std::endl;
 
       // printMap(map_arguments);
 
@@ -871,6 +900,7 @@ bool SolverIpopt::optimize(bool supress_all_prints)
 
     // std::vector<Eigen::Vector3d> qp;  // Solution found (Control points for position)
     // std::vector<double> qy;           // Solution found (Control points for yaw)
+    opt_statuses.push_back(optimstatus);
     std::cout << "optimstatus= " << optimstatus << std::endl;
 
     bool success_opt;
@@ -937,7 +967,10 @@ bool SolverIpopt::optimize(bool supress_all_prints)
       }
       else
       {
+        print_supresser.end();
         std::cout << "Mode not implemented yet. Aborting" << std::endl;
+        print_supresser.start();
+
         abort();
       }
 
@@ -965,7 +998,10 @@ bool SolverIpopt::optimize(bool supress_all_prints)
 
       if (isInCollision(initial_state_, t_init_))
       {
+        print_supresser.end();
         std::cout << bold << red << "The initial state was in collision." << reset << std::endl;
+        print_supresser.start();
+
         abort();
       }
 
@@ -1028,10 +1064,29 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   //   solutions_[i].printInfo();
   // }
 
+  info_last_opt_ =
+      "OS: " + std::to_string(p_guesses.size()) + ", Ipopt: " + std::to_string(solutions_.size()) + " --> ";
+  for (auto &opt_status : opt_statuses)
+  {
+    std::string tmp = opt_status;
+    if (opt_status == "Solve_Succeeded")
+    {
+      tmp = "S";
+    }
+
+    if (opt_status == "Infeasible_Problem_Detected")
+    {
+      tmp = "I";
+    }
+
+    info_last_opt_ = info_last_opt_ + "|" + tmp;
+  }
+
   // NO SOLUTION FOUND
   if (solutions_.size() == 0)
   {
-    std::cout << "NOT ENOUGH SOLUTIONS SUCCESSFUL" << std::endl;
+    std::cout << "Ipopt found zero solutions" << std::endl;
+
     return false;
   }
   // TOO MANY SOLUTIONS: RETAIN the ones with lowest cost (the first ones)
@@ -1114,6 +1169,11 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   // {
   //   return false;
   // }
+}
+
+std::string SolverIpopt::getInfoLastOpt()
+{
+  return info_last_opt_;
 }
 
 std::vector<si::solOrGuess> SolverIpopt::getOnlySucceeded(std::vector<si::solOrGuess> solutions)
