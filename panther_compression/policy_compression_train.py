@@ -186,6 +186,12 @@ if __name__ == "__main__":
         np.random.seed(args.seed+thread_count)
         random.seed(args.seed+thread_count)
 
+        ## Use the system time
+        # torch.manual_seed(int(t0*1e6))
+        # np.random.seed(None)
+        # random.seed(None) #If None, it will use the system time
+
+
         # Create and set properties for TRAINING environment:
         printInBoldBlue("---------------- Making Environments: -------------------")
         print("[Train Env] Making training environment...")
