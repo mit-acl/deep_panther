@@ -294,9 +294,11 @@ class MyEnvironment(gym.Env):
     self.w_state=State(p0, v0, a0, y0, ydot0)
 
     if(isinstance(self.constant_obstacle_pos, type(None)) and isinstance(self.constant_gterm_pos, type(None))):
+
+      self.obsm.newRandomPos();
+
       prob_choose_cross=1.0;
       if np.random.uniform(0, 1) < 1 - prob_choose_cross:
-        self.obsm.newRandomPos();
         self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos);
         # self.gm.newRandomPos();
       else:
