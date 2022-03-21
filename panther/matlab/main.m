@@ -23,6 +23,9 @@ optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
 optimize_d_planes=true;     %Optimize the scalar "d" of the planes
 optimize_time_alloc=true;
 
+soft_dynamic_limits_constraints=false;
+soft_obstacle_avoid_constraint=false;
+
 make_plots=false;
 
 
@@ -284,6 +287,8 @@ if(optimize_time_alloc)
     const_p{end+1}= total_time<=fitter.total_time; %Samples for visibility/obs_avoidance are only taken for t<fitter.total_time
 end
 
+const_p_obs_avoid={}
+
 % epsilon=1;
 for j=1:(sp.num_seg)
 
@@ -303,7 +308,7 @@ for j=1:(sp.num_seg)
           for i=1:num_max_of_obst
             vertexes_ij=obst{i}.vertexes{j};
             for kk=1:size(vertexes_ij,2)
-                const_p{end+1}= n{ip}'*vertexes_ij(:,kk) + d{ip} >= 1; 
+                const_p_obs_avoid{end+1}= n{ip}'*vertexes_ij(:,kk) + d{ip} >= 1; 
             end
           end
       
@@ -312,7 +317,7 @@ for j=1:(sp.num_seg)
       
       %and the control points on the other side
       for kk=1:size(Q,2)
-        const_p{end+1}= n{ip}'*Q{kk} + d{ip} <= -1;
+        const_p_obs_avoid{end+1}= n{ip}'*Q{kk} + d{ip} <= -1;
       end
     end  
  
@@ -328,11 +333,11 @@ for j=1:(sp.num_seg)
 %         const_p{end+1}= x_lim(1)<=tmp(1) ;
 %         const_p{end+1}= x_lim(2)>=tmp(1) ;
 %         
-        const_p{end+1}= y_lim(1)<=t_obs(2) ;
-        const_p{end+1}= y_lim(2)>=t_obs(2) ;
-
-        const_p{end+1}= z_lim(1)<=t_obs(3) ; 
-        const_p{end+1}= z_lim(2)>=t_obs(3) ;
+%         const_p{end+1}= y_lim(1)<=t_obs(2) ;
+%         const_p{end+1}= y_lim(2)>=t_obs(2) ;
+% 
+%         const_p{end+1}= z_lim(1)<=t_obs(3) ; 
+%         const_p{end+1}= z_lim(2)>=t_obs(3) ;
     end
 end
 
@@ -432,13 +437,35 @@ const_p_dyn_limits={};
 const_y_dyn_limits={};
 [const_p_dyn_limits,const_y_dyn_limits]=addDynLimConstraints(const_p_dyn_limits, const_y_dyn_limits, sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n);
 
-const_p=[const_p const_p_dyn_limits];
-const_y=[const_y const_y_dyn_limits];
 
-%Second option: Soft constraints:
+%%
+opti_tmp=opti.copy;
+opti_tmp.subject_to(); %Clear constraints
+opti_tmp.subject_to([const_p_dyn_limits, const_y_dyn_limits]);
+
+violation_dyn_limits=getViolationConstraints(opti_tmp);
+
+opti_tmp=opti.copy;
+opti_tmp.subject_to(); %Clear constraints
+opti_tmp.subject_to([const_p_obs_avoid]);
+violation_obs_avoid=getViolationConstraints(opti_tmp);
+
+if(soft_dynamic_limits_constraints==true)
+    total_cost = total_cost + (1/numel(violation_dyn_limits))*sum(violation_dyn_limits.^2);
+else
+    const_p=[const_p, const_p_dyn_limits];
+    const_y=[const_y, const_y_dyn_limits];
+end
+
+
+if(soft_obstacle_avoid_constraint==true)
+    total_cost = total_cost + 100*(1/numel(violation_obs_avoid))*sum(violation_obs_avoid.^2);
+else
+    const_p=[const_p, const_p_obs_avoid];
+end
+
+
 % total_cost=total_cost+c_dyn_lim*getCostDynLimSoftConstraints(sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n);
-
-
 
 opti.minimize(simplify(total_cost));
        
@@ -615,46 +642,12 @@ compute_cost.save('./casadi_generated_files/compute_cost.casadi') %The file gene
 %%
 
 % opti.subject_to([const_p, const_y]);
-
-opti_tmp=opti.copy;
-opti_tmp.subject_to(); %Clear constraints
-opti_tmp.subject_to([const_p_dyn_limits, const_y_dyn_limits]);
-
-g=opti_tmp.g();
-lower=opti_tmp.lbg();
-upper=opti_tmp.ubg();
-
-% The constraints are   lower<=g<=upper
-
-all_g=[];
-all_upper=[];
-
-for i=1:size(g,1)
-    if(isPlusInfCasadi(upper(i))==false)
-%         upper(i)
-        all_upper=[all_upper; upper(i)];
-        all_g=[all_g; g(i)];
-    end
-    if(isMinusInfCasadi(lower(i))==false)
-        all_upper=[all_upper; -lower(i)];
-        all_g=[all_g; -g(i)];
-    end
-end
-
-% The constraints are now all_g<=all_upper
-
-slack_constraints=all_g-all_upper; %If it's <=0 --> constraint is satisfied
-
-violation=[];%max()
-for i=1:size(slack_constraints,1)
-    violation=[violation; max(0, slack_constraints(i))];
-end
-
-compute_dyn_limits_constraints_violation = casadi.Function('compute_dyn_limits_constraints_violation', par_and_init_guess_exprs ,{violation},...
+compute_dyn_limits_constraints_violation = casadi.Function('compute_dyn_limits_constraints_violation', par_and_init_guess_exprs ,{violation_dyn_limits},...
                                                            par_and_init_guess_names ,{'violation'});
-tmp=compute_dyn_limits_constraints_violation(names_value{:})
+tmp=compute_dyn_limits_constraints_violation(names_value{:});
 compute_dyn_limits_constraints_violation=compute_dyn_limits_constraints_violation.expand();
-compute_dyn_limits_constraints_violation.save('./casadi_generated_files/compute_dyn_limits_constraints_violation.casadi') 
+compute_dyn_limits_constraints_violation.save('./casadi_generated_files/compute_dyn_limits_constraints_violation.casadi'); 
+
 
 
 
