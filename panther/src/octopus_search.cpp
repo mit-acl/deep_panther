@@ -1065,6 +1065,61 @@ exit:
   return (!satisfies_LP);
 }
 
+bool OctopusSearch::generateStraightLineGuess(std::vector<os::solution>& p_guesses)
+{
+  os::solution p_guess;
+
+  // std::cout << "Using StraightLineGuess" << std::endl;
+
+  p_guess.qp.push_back(q0_);  // Not a decision variable
+  p_guess.qp.push_back(q1_);  // Not a decision variable
+  p_guess.qp.push_back(q2_);  // Not a decision variable
+
+  for (int i = 1; i < (N_ - 2 - 2); i++)
+  {
+    Eigen::Vector3d q_i = q2_ + i * (goal_ - q2_) / (N_ - 2 - 2);
+    p_guess.qp.push_back(q_i);
+  }
+
+  p_guess.qp.push_back(goal_);  // three last cps are the same because of the vel/accel final conditions
+  p_guess.qp.push_back(goal_);
+  p_guess.qp.push_back(goal_);
+  // Now qp_guess_ should have (N_+1) elements
+  // saturateQ(p_guess.qp);  // make sure is inside the bounds specified
+
+  //////////////////////
+
+  for (int obst_index = 0; obst_index < num_of_obst_; obst_index++)
+  {
+    for (int i = 0; i < num_of_segments_; i++)
+    {
+      std::vector<Eigen::Vector3d> last4Cps(4);
+
+      Eigen::Matrix<double, 3, 4> Qbs;  // b-spline
+      Eigen::Matrix<double, 3, 4> Qmv;  // minvo. each column contains a MINVO control point
+      Qbs.col(0) = p_guess.qp[i];
+      Qbs.col(1) = p_guess.qp[i + 1];
+      Qbs.col(2) = p_guess.qp[i + 2];
+      Qbs.col(3) = p_guess.qp[i + 3];
+
+      Qmv = transformBSpline2otherBasis(Qbs, i);
+
+      Eigen::Vector3d n_i;
+      double d_i;
+
+      bool satisfies_LP = separator_solver_->solveModel(n_i, d_i, hulls_[obst_index][i], Qmv);
+
+      p_guess.n.push_back(n_i);
+      p_guess.d.push_back(d_i);
+    }
+  }
+
+  p_guesses.clear();
+  p_guesses.push_back(p_guess);
+
+  return true;
+}
+
 bool OctopusSearch::run(std::vector<os::solution>& solutions, int max_num_of_solutions_needed)
 {
   /////////// reset some stuff
@@ -1149,6 +1204,11 @@ bool OctopusSearch::run(std::vector<os::solution>& solutions, int max_num_of_sol
     // {
     //   already_exist = (already_exist) && (map_open_list_[Eigen::Vector3i(ix, iy, iz)] == true);
     // }
+
+    // if (already_exist)
+    // {
+    //   std::cout << "   " << current_ptr->qi.transpose() << " already_exist!" << std::endl;
+    // }
     // already_exist = false;
     if (already_exist || (*current_ptr).qi.x() > x_max_ || (*current_ptr).qi.x() < x_min_ ||  /// Outside the limits
         (*current_ptr).qi.y() > y_max_ || (*current_ptr).qi.y() < y_min_ ||                   /// Outside the limits
@@ -1191,6 +1251,8 @@ bool OctopusSearch::run(std::vector<os::solution>& solutions, int max_num_of_sol
     }
     if (intervalIsNotZero == false)  // constraintxL>constraint_xU (or with other axes)
     {
+      std::cout << "   " << current_ptr->qi.transpose() << " Interval is zero!" << std::endl;
+
       continue;
     }
 
@@ -1202,7 +1264,7 @@ bool OctopusSearch::run(std::vector<os::solution>& solutions, int max_num_of_sol
 
     if (collides)
     {
-      // std::cout << "collides!" << std::endl;
+      // std::cout << "   " << current_ptr->qi.transpose() << " collides!" << std::endl;
       continue;
     }
     else
@@ -1254,6 +1316,9 @@ bool OctopusSearch::run(std::vector<os::solution>& solutions, int max_num_of_sol
 
       continue;  // complete path but that does not reach the goal
     }
+
+    // std::cout << "Expanding from " << current_ptr->qi.transpose() << std::endl;
+
     expandAndAddToQueue(*current_ptr, constraint_xL, constraint_xU, constraint_yL, constraint_yU, constraint_zL,
                         constraint_zU);
   }
@@ -1352,6 +1417,12 @@ exitloop:
   if (solutions.size() == 0)
   {
     std::cout << red << bold << "Zero paths found. Increase time allowed for Oct. Search" << reset << std::endl;
+    // std::cout << green << bold << "Using straight line guess" << reset << std::endl;
+
+    // generateStraightLineGuess(solutions);
+    // return true;
+
+    // abort();
 
     std::cout << "Returning false" << std::endl;
 
@@ -1359,7 +1430,9 @@ exitloop:
   }
   else
   {
-    best_solution_ = solutions[0];
+    best_solution_ = solutions[0];  // TODO
+
+    // best_solution_.print();
 
     return true;
   }

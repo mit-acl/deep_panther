@@ -129,6 +129,8 @@ public:
 
   void setBBoxSearch(double x, double y, double z);
 
+  bool generateStraightLineGuess(std::vector<os::solution>& p_guesses);
+
   void setVisual(bool visual);
 
   void setXYZMinMaxAndRa(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max, double Ra);

@@ -264,7 +264,7 @@ private:
 
   void generateRandomGuess();
   bool generateAStarGuess(std::vector<os::solution> &p_guesses);
-  void generateStraightLineGuess();
+  // bool generateStraightLineGuess(std::vector<os::solution> &p_guesses);
 
   void printStd(const std::vector<Eigen::Vector3d> &v);
   void printStd(const std::vector<double> &v);
