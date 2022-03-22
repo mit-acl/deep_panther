@@ -176,8 +176,8 @@ def getObsAndGtermToCrossPath():
 	# thetas=[-np.pi/4, np.pi/4]
 	# theta=random.choice(thetas)
 	theta=random.uniform(-np.pi, np.pi)
-	radius_obstacle=random.uniform(1.5, 4.5)
-	radius_gterm=radius_obstacle + random.uniform(2.0, 10.0)
+	radius_obstacle=random.uniform(0.0, 5.5)
+	radius_gterm=random.uniform(0.0, 10.0) #radius_obstacle + random.uniform(2.0, 10.0)
 	std_deg=30
 	theta_g_term=theta + random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
 	center=np.zeros((3,1))
@@ -269,7 +269,9 @@ class ObstaclesManager():
 		w_obs=[];
 		# trefoil=Trefoil(pos=self.random_pos, scale_x=1.0, scale_y=1.0, scale_z=1.0, offset=0.0, slower=1.5);
 		# novale=np.array([[4.0],[4.0],[1.0]]);
-		trefoil=Trefoil(pos=self.random_pos, scale_x=2.5, scale_y=2.5, scale_z=1.0, offset=self.random_offset, slower=1.5);
+		# print(f"Using offset={self.random_offset}")
+		# print(f"Using random_pos={self.random_pos}")
+		trefoil=Trefoil(pos=self.random_pos, scale_x=2.0, scale_y=2.0, scale_z=2.0, offset=self.random_offset, slower=1.5);
 		for i in range(self.num_obs):
 
 			samples=[]
