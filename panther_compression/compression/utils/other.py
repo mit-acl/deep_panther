@@ -237,6 +237,7 @@ class ObstaclesManager():
 	def newRandomPos(self):
 		self.random_pos=np.array([[random.uniform(-4.0, 4.0)],[random.uniform(-4.0, 4.0)],[random.uniform(1.0,1.0)]]);
 		self.random_offset=random.uniform(0.0, 10*math.pi)
+		self.random_scale=np.array([[random.uniform(0.5, 4.0)],[random.uniform(0.5, 4.0)],[random.uniform(0.5, 4.0)]]);
 		#self.random_pos=np.array([[2.5],[1.0],[1.0]]);
 
 	def setPos(self, pos):
@@ -270,8 +271,8 @@ class ObstaclesManager():
 		# trefoil=Trefoil(pos=self.random_pos, scale_x=1.0, scale_y=1.0, scale_z=1.0, offset=0.0, slower=1.5);
 		# novale=np.array([[4.0],[4.0],[1.0]]);
 		# print(f"Using offset={self.random_offset}")
-		# print(f"Using random_pos={self.random_pos}")
-		trefoil=Trefoil(pos=self.random_pos, scale_x=2.0, scale_y=2.0, scale_z=2.0, offset=self.random_offset, slower=1.5);
+		# print(f"Using random_scale={self.random_scale}")
+		trefoil=Trefoil(pos=self.random_pos, scale=self.random_scale, offset=self.random_offset, slower=1.5);
 		for i in range(self.num_obs):
 
 			samples=[]
@@ -287,13 +288,13 @@ class ObstaclesManager():
 		return w_obs;
 
 class Trefoil():
-	def __init__(self, pos, scale_x, scale_y, scale_z, offset, slower):
+	def __init__(self, pos, scale, offset, slower):
 		self.x=pos[0,0];
 		self.y=pos[1,0];
 		self.z=pos[2,0];
-		self.scale_x=scale_x
-		self.scale_y=scale_y
-		self.scale_z=scale_z
+		self.scale_x=scale[0,0]
+		self.scale_y=scale[1,0]
+		self.scale_z=scale[2,0]
 		self.offset=offset;
 		self.slower=slower;
 
