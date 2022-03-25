@@ -182,13 +182,15 @@ SolverIpopt::SolverIpopt(const mt::parameters &par)
   myfile >> index_instruction_;
   cf_op_ = casadi::Function::load(folder + "op.casadi");
   // cf_op_force_final_pos_ = casadi::Function::load(folder + "op_force_final_pos.casadi");
-  cf_fixed_pos_op_ = casadi::Function::load(folder + "op_fixed_pos.casadi");
+  // cf_fixed_pos_op_ = casadi::Function::load(folder + "op_fixed_pos.casadi"); //Not used for now
   cf_fit_yaw_ = casadi::Function::load(folder + "fit_yaw.casadi");
   // cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
   cf_visibility_ = casadi::Function::load(folder + "visibility.casadi");
   cf_compute_cost_ = casadi::Function::load(folder + "compute_cost.casadi");
   cf_compute_dyn_limits_constraints_violation_ = casadi::Function::load(folder + "compute_dyn_limits_constraints_"
                                                                                  "violation.casadi");
+
+  // std::cout << bold << "__________" << reset << std::endl;
 
   b_Tmatrixcasadi_c_ = casadi::DM(4, 4);
 
