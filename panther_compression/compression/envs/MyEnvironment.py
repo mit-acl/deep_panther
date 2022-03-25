@@ -390,13 +390,13 @@ class MyEnvironment(gym.Env):
       for i in range(len(obstacles)):
 
         t0=self.time
-        tf=self.time+self.par.fitter_total_time
+        tf=self.time + np.max(f_action[:,-1]) #self.am.getTotalTime()#self.par.fitter_total_time
 
         bspline_obs_i=MyClampedUniformBSpline(t0=t0, tf=tf, deg=self.par.deg_pos, \
                                         dim=3, num_seg=self.par.num_seg, ctrl_pts=listOf3dVectors2numpy3Xmatrix(obstacles[i].ctrl_pts) )
 
         id_sample=0
-        num_samples=40
+        num_samples=20
         for t_interm in np.linspace(t0, tf, num=num_samples).tolist():
 
           marker_msg=Marker();
