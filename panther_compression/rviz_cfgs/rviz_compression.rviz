@@ -61,7 +61,7 @@ Visualization Manager:
       History Length: 1
       Name: PointStamped
       Queue Size: 10
-      Radius: 0.800000011920929
+      Radius: 0.4000000059604645
       Topic: /g
       Unreliable: false
       Value: true
@@ -266,7 +266,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 18.7609806060791
+      Distance: 9.330692291259766
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -274,17 +274,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 2.415095329284668
-        Y: 2.346494674682617
-        Z: 4.61213493347168
+        X: -0.6982950568199158
+        Y: -1.157544493675232
+        Z: 2.266719102859497
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7597979307174683
+      Pitch: 0.15479803085327148
       Target Frame: <Fixed Frame>
-      Yaw: 4.614010334014893
+      Yaw: 4.317178726196289
     Saved: ~
 Window Geometry:
   Displays:
