@@ -111,6 +111,11 @@ class ExpertPolicy(object):
 
         best_solutions=ExpertPolicy.my_SolverIpopt.getBestSolutions();
 
+        # for tmp in best_solutions:
+        #     print("YAW ctrl pts= ", tmp.qy)
+        #     print("Total time= ", tmp.getTotalTime())
+
+
         # self.printwithName("Optimizer called, best solution= ")
         # best_solution.printInfo()
         # ###HACK
@@ -133,6 +138,9 @@ class ExpertPolicy(object):
 
         action=self.am.solsOrGuesses2action(best_solutions)
 
+        # for i in range(action.shape[0]):
+        #     print(self.am.getYawCtrlPts(action, i))
+        #
         action_normalized=self.am.normalizeAction(action)
 
         # self.printwithName("===================================================")
