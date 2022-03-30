@@ -157,4 +157,9 @@ PYBIND11_MODULE(py_panther, m)
       .def(py::init<int>())  /////////////////////////
       .def("fit", &Fitter::fit)
       .def("__repr__", [](const Fitter &a) { return "<py_panther.Fitter>"; });
+
+  py::class_<ClosedFormYawSolver>(m, "ClosedFormYawSolver")
+      .def(py::init<>())  /////////////////////////
+      .def("getyCPsfrompCPSUsingClosedForm", &ClosedFormYawSolver::getyCPsfrompCPSUsingClosedForm)
+      .def("__repr__", [](const Fitter &a) { return "<py_panther.ClosedFormYawSolver>"; });
 }

@@ -181,6 +181,22 @@ private:
   int fitter_num_samples_;
 };
 
+class ClosedFormYawSolver
+{
+public:
+  ClosedFormYawSolver();
+
+  ~ClosedFormYawSolver();
+
+  std::vector<double> getyCPsfrompCPSUsingClosedForm(std::vector<Eigen::Vector3d> &pCPs, double total_time,
+                                                     const std::vector<Eigen::Vector3d> &pCPs_feature, const double y0,
+                                                     const double ydot0, const double ydotf);
+
+protected:
+private:
+  casadi::Function cf_;
+};
+
 class SolverIpopt
 {
 public:

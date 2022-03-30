@@ -123,6 +123,54 @@ std::vector<Eigen::Vector3d> Fitter::fit(std::vector<Eigen::Vector3d> &samples)
   return ctrl_pts;
 }
 
+ClosedFormYawSolver::ClosedFormYawSolver()
+{
+  std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
+  cf_ = casadi::Function::load(folder + "get_optimal_yaw_for_fixed_pos.casadi");
+}
+
+ClosedFormYawSolver::~ClosedFormYawSolver()
+{
+}
+
+std::vector<double> ClosedFormYawSolver::getyCPsfrompCPSUsingClosedForm(
+    std::vector<Eigen::Vector3d> &pCPs, double total_time, const std::vector<Eigen::Vector3d> &pCPs_feature,
+    const double y0, const double ydot0, const double ydotf)
+{
+  std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
+  cf_ = casadi::Function::load(folder + "get_optimal_yaw_for_fixed_pos.casadi");
+
+  // Fit a spline to those samples
+  std::map<std::string, casadi::DM> map_arg;
+  map_arg["pCPs"] = stdVectorEigen3d2CasadiMatrix(pCPs);
+  map_arg["pCPs_feature"] = stdVectorEigen3d2CasadiMatrix(pCPs_feature);
+  map_arg["alpha"] = total_time;
+  map_arg["y0"] = y0;
+  map_arg["ydot0"] = ydot0;
+  map_arg["ydotf"] = ydotf;
+
+  for (std::map<std::string, casadi::DM>::const_iterator it = map_arg.begin(); it != map_arg.end(); ++it)
+  {
+    std::cout << it->first << " " << it->second << "\n";
+  }
+
+  std::map<std::string, casadi::DM> result = cf_(map_arg);
+
+  std::vector<double> yCps = casadiMatrix2StdVectorDouble(result["solution"]);
+
+  return yCps;
+
+  // std::cout << "Solution = " << std::endl;
+
+  // for (auto &x : sol_or_guess.qy)
+  // {
+  //   std::cout << " " << x;
+  // }
+  // std::cout << std::endl;
+
+  // return ctrl_pts;
+}
+
 ///////////////////////
 
 SolverIpopt::SolverIpopt(const mt::parameters &par)
