@@ -401,6 +401,8 @@ for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
     %Penalty associated with the constraint
     %Note that that is_in_FOV_tmp \in [-2,2]
 %     fov_cost_j=max(0,f)^3;  %This will try to put the obstacle in the FOV 
+    %N=30;
+    %fov_cost_j=log(1+exp(f*N))/N; %This is a smooth approximation of max(0,f), see https://math.stackexchange.com/a/517741/564801
     fov_cost_j=f^3;           %This will try to put the obstacle in the center of the FOV
     
     simpson_constant=(h/3.0)*getSimpsonCoeff(simpson_index,sampler.num_samples);
@@ -960,7 +962,8 @@ end
 
 lagrangian = cost_function;
 
-variables=[fitter.bs.getCPsAsMatrix() ]; 
+fitter_bs_CPs=fitter.bs.getCPsAsMatrix();
+variables=[fitter_bs_CPs ]; 
 
 kkt_eqs=jacobian(lagrangian, variables)'; %I want kkt=[0 0 ... 0]'
 
@@ -1000,6 +1003,139 @@ scatter3(samples_value(1,:), samples_value(2,:), samples_value(3,:))
 
 f.save('./casadi_generated_files/fit3d.casadi') 
 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%% OBTAIN CLOSED-FORM SOLUTION FOR YAW GIVEN POSITION %%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+sp=MyClampedUniformSpline(t0_n,tf_n,deg_pos, dim_pos, num_seg, opti); %spline position.
+% sy=MyClampedUniformSpline(t0_n,tf_n,deg_yaw, dim_yaw, num_seg, opti); %spline yaw.
+
+n_samples=50;
+
+all_t_n=linspace(t0_n,tf_n,n_samples);
+
+
+all_w_fevar=MX.sym('all_w_fevar',3,n_samples);
+
+i_star=1; %For now focus on the first obstacle
+
+all_yaw=[];
+dataPoints={};
+i=1;
+for t=all_t_n
+    
+    pos=sp.getPosT(t);
+    pos_feature=fitter.bs_casadi{i_star}.getPosT(t*alpha/(fitter.total_time    ));
+
+    a_n = sp.getAccelT(t);
+    a = a_n/(alpha^2);
+
+    ee=pos_feature-pos;
+    xi=a+[0 0 9.81]';
+
+    r0_star=(ee*norm(xi)^2 - (ee'*xi)*xi);
+    r0_star=r0_star/norm(r0_star);
+    
+    tmp=pos+r0_star;
+
+    qabc=qabcFromAccel(a, 9.81);
+    Rabc=toRotMat(qabc);
+    w_Tabc_b0y=[Rabc pos; 0 0 0 1]; %The frame "b0y" stands for "body zero yaw", and has yaw=0
+    
+    b0y_r0star=invPose(w_Tabc_b0y)*[tmp;1]; %express the vector in the frame "b0y" 
+    b0y_r0star=b0y_r0star(1:3); 
+%     assert(abs(b0y_r0star(3))<0.0001)
+    
+    dataPoints{end+1}=b0y_r0star(1:2)';
+    all_yaw=[all_yaw atan2(b0y_r0star(2),b0y_r0star(1))]; %compute the yaw angle 
+    
+    i=i+1;
+end
+
+tmp=[y0 all_yaw]; %We append y0 to make sure that the first element of all_yaw_corrected is not more than 2pi from y0
+tmp_corrected=shiftToEnsureNoMoreThan2Pi(tmp);
+all_yaw_corrected=tmp_corrected(2:end); 
+% all_yaw_corrected=shiftToEnsureNoMoreThan2Pi(all_yaw); 
+
+sy=MyClampedUniformSpline(t0_n,tf_n,deg_yaw, dim_yaw, num_seg, opti); 
+
+cost_function=0;
+for i=1:numel(all_t_n)
+    cost_function = cost_function + (sy.getPosT(all_t_n(i))-all_yaw_corrected(i))^2; 
+end
+
+lambda1=MX.sym('lambda1',1,1);
+lambda2=MX.sym('lambda2',1,1);
+lambda3=MX.sym('lambda3',1,1);
+
+%Note that y0 \equiv all_yaw(1)
+c1= sy.getPosT(t0_n) - y0; %==0
+c2= sy.getVelT(t0_n) - ydot0_n; %==0
+c3= sy.getVelT(tf_n) - ydotf_n; %==0
+
+lagrangian = cost_function  +  lambda1*c1 + lambda2*c2 + lambda3*c3;
+
+variables=[sy.getCPsAsMatrix() lambda1 lambda2  lambda3];
+
+kkt_eqs=jacobian(lagrangian, variables)'; %I want kkt=[0 0 ... 0]'
+
+%Obtain A and b
+b=-casadi.substitute(kkt_eqs, variables, zeros(size(variables))); %Note the - sign
+A=jacobian(kkt_eqs, variables);
+
+%solution=A\b;  %Option 1
+solution=solve(A,b, 'symbolicqr'); %Option 2, allows for expand(), see https://groups.google.com/g/casadi-users/c/kOYv6lvNgEI/m/UiAYsdJEBAAJ
+
+pCPs=sp.getCPsAsMatrix();
+% pCPs_feature=fitter.ctrl_pts{i_star}.CPoints; 
+pCPs_feature=fitter.bs_casadi{i_star}.CPoints;
+% yCPs=sy.getCPsAsMatrix();
+
+f= Function('f', {pCPs, pCPs_feature, alpha, y0,ydot0, ydotf }, {solution(1:end-3),all_yaw_corrected}, ...
+                 {'pCPs', 'pCPs_feature', 'alpha', 'y0','ydot0', 'ydotf'}, {'solution','all_yaw_corrected'} );
+
+f=f.expand(); %
+
+f.save('./casadi_generated_files/get_optimal_yaw_for_fixed_pos.casadi') 
+
+% pCPs_value=[   -4.0000   -4.0000   8    5    3   2     -4 -4 -4;
+%          -2         0         0   -5   -7   -8   -9 -9 -9;
+%          0         2         -2    7    0.0052    3    0.0052 0.0052 0.0052];
+
+
+pCPs_value=[[0, 0, 0, 0.601408, 2.57406, 4.70471, 5.96806, 5.96806, 5.96806];
+ [0, 0, 0, -0.0954786, -0.261755, -0.312647, -0.270762, -0.270762, -0.270762]; 
+ [1, 1, 1, 1.14378, 1.07827, 1.01892, 1.0935, 1.0935, 1.0935]];
+% pCPs_feature_value=([1 -2 3]').*ones(3,fitter.bs.num_cpoints);
+
+pCPs_feature_value=[[4.21462, 4.00643, 3.40667, 2.8736, 3.28795, 4.29628, 4.95785, 4.71115, 4.19066, 3.9898]; 
+ [0.298978, 0.559347, 0.845803, 0.313731, -0.44788, -0.481992, 0.313604, 1.05783, 0.922028, 0.696952]; 
+ [-0.167948, -0.601469, -0.582628, 1.6641, 1.48017, -0.797825, -0.310188, 1.86143, 1.43191, 0.92248]];
+
+alpha_value=5.93368;
+y0_value=6.08049;
+ydot0_value=-0.103688;
+ydotf_value=0.0;
+
+
+disp("Calling function")
+tic
+result=f('pCPs', pCPs_value, 'pCPs_feature', pCPs_feature_value, 'alpha', alpha_value, ...
+        'y0', y0_value,'ydot0', ydot0_value, 'ydotf', ydotf_value);
+toc
+disp("Function called")
+
+sy.updateCPsWithSolution(full(result.solution)')
+figure
+sy.plotPos();
+subplot(1,1,1); hold on;
+% plot(all_t_n,full(result.all_yaw),'o')
+plot(all_t_n,full(result.all_yaw_corrected),'o')
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Functions
 
