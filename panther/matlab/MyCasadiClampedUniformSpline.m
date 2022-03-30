@@ -60,9 +60,8 @@ classdef MyCasadiClampedUniformSpline < handle
                 t_init=(j-1)*obj.delta_t;
 
                 interval=[0,1];
-                A=computeMatrixForAnyBSpline(deg,deg+j,obj.knots,interval);
+                A=double(computeMatrixForAnyBSpline(deg,deg+j,obj.knots,interval));
                 V=obj.CPoints(:, j:(j+deg));
-
                 
 
                 if(j<obj.num_seg)
