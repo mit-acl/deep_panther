@@ -23,6 +23,7 @@ def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr,
         batch_size=batch_size,
         traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
         traj_size_yaw_ctrl_pts=am.traj_size_yaw_ctrl_pts,
+        use_closed_form_yaw_student=am.use_closed_form_yaw_student,
         weight_prob=weight_prob
     )
 
@@ -50,6 +51,7 @@ def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_
         batch_size=batch_size,
         traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
         traj_size_yaw_ctrl_pts=am.traj_size_yaw_ctrl_pts,
+        use_closed_form_yaw_student=am.use_closed_form_yaw_student,
         weight_prob=weight_prob
     )
 
@@ -77,6 +79,7 @@ def make_bc_trainer(tmpdir, venv, custom_logger, lr, batch_size, weight_prob):
         policy=StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space),
         batch_size=batch_size,
         traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
+        use_closed_form_yaw_student=am.use_closed_form_yaw_student,
         weight_prob=weight_prob
     )
 
