@@ -882,6 +882,7 @@ struct parameters
   bool use_student;
   std::string student_policy_path;
   bool static_planning;
+  bool use_closed_form_yaw_student;
   // clang-format on
 };
 

@@ -153,6 +153,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "use_student", par_.use_student);
   safeGetParam(nh1_, "student_policy_path", par_.student_policy_path);
   safeGetParam(nh1_, "static_planning", par_.static_planning);
+  safeGetParam(nh1_, "use_closed_form_yaw_student", par_.use_closed_form_yaw_student);
 
   bool perfect_prediction;  // use_ground_truth_prediction
   safeGetParam(nh1_, "perfect_prediction", perfect_prediction);

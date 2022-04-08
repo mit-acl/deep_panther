@@ -8,6 +8,7 @@ from compression.utils.other import TfMatrix2RosQuatAndVector3, TfMatrix2RosPose
 from compression.utils.other import CostComputer
 from compression.utils.other import MyClampedUniformBSpline
 from compression.utils.other import listOf3dVectors2numpy3Xmatrix
+from compression.utils.other import ClosedFormYawSubstituter
 from colorama import init, Fore, Back, Style
 import py_panther
 ##### For rosbag logging
@@ -42,6 +43,8 @@ class MyEnvironment(gym.Env):
     self.om=ObservationManager();
     self.obsm=ObstaclesManager();
     self.gm=GTermManager();
+    self.cfys=ClosedFormYawSubstituter();
+
 
     self.cost_computer=CostComputer()
 
@@ -144,6 +147,13 @@ class MyEnvironment(gym.Env):
     self.am.assertAction(f_action_n)
     self.am.assertActionIsNormalized(f_action_n)
 
+
+    #################################
+    #### USE CLOSED FORM FOR YAW #####
+    if(self.par.use_closed_form_yaw_student==True):
+      f_action_n=self.cfys.substituteWithClosedFormYaw(f_action_n, self.w_state, self.w_obstacles) #f_action_n, w_init_state, w_obstacles
+    ##################################
+
     # self.printwithName(f"Received actionN={f_action_n}")
     f_action= self.am.denormalizeAction(f_action_n);
     # self.printwithName(f"Received action size={action.shape}")
@@ -201,8 +211,8 @@ class MyEnvironment(gym.Env):
     ####################################
 
     # w_obstacles=self.obsm.getFutureWPosStaticObstacles()
-    w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
-    f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), w_obstacles);
+    self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
+    f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles);
     f_observationn=self.om.normalizeObservation(f_observation);
 
 
@@ -315,9 +325,9 @@ class MyEnvironment(gym.Env):
     
     # observation = self.om.getRandomNormalizedObservation()
     # w_obstacles=self.obsm.getFutureWPosStaticObstacles()
-    w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
+    self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
     # print("w_obstacles[0].ctrl_pts=", w_obstacles[0].ctrl_pts)
-    f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), w_obstacles);
+    f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles);
     f_observationn=self.om.normalizeObservation(f_observation);
 
     # self.printwithName("THIS IS THE OBSERVATION:")

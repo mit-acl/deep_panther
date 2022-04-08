@@ -729,6 +729,7 @@ class ActionManager():
 		self.deg_pos=params["deg_pos"];
 		self.deg_yaw=params["deg_yaw"];
 		self.num_seg=params["num_seg"];
+		self.use_closed_form_yaw_student=params["use_closed_form_yaw_student"];
 
 		# Define action and observation space
 
@@ -1047,6 +1048,38 @@ class ActionManager():
 		return action
 
 
+class ClosedFormYawSubstituter():
+	def __init__(self):
+		self.cy=py_panther.ClosedFormYawSolver();
+		self.am=ActionManager();
+
+
+
+	def substituteWithClosedFormYaw(self, f_action_n, w_init_state, w_obstacles):
+
+		# print("In substituteWithClosedFormYaw")
+
+		f_action=self.am.denormalizeAction(f_action_n)
+
+		#Compute w_ppobstacles
+
+		#####
+		for i in range( np.shape(f_action)[0]): #For each row of action
+			traj=f_action[i,:].reshape(1,-1);
+
+			my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state);
+
+			my_solOrGuess.qy=self.cy.getyCPsfrompCPSUsingClosedForm(my_solOrGuess.qp, my_solOrGuess.getTotalTime(), numpy3XmatrixToListOf3dVectors(w_obstacles[0].ctrl_pts),   w_init_state.w_yaw,   w_init_state.yaw_dot, 0.0)
+
+			tmp=np.array(my_solOrGuess.qy[2:-1])
+			f_action[i,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts]=tmp  - w_init_state.w_yaw*np.ones(tmp.shape)#+ my_solOrGuess.qy[0]
+			
+			# all_solOrGuess.append(my_solOrGuess)
+
+		f_action_n=self.am.normalizeAction(f_action) #Needed because we have modified action in the previous loop
+
+		return f_action_n
+
 
 
 class StudentCaller():
@@ -1056,6 +1089,8 @@ class StudentCaller():
 		self.om=ObservationManager();
 		self.am=ActionManager();
 		self.cc=CostComputer();
+		self.cfys=ClosedFormYawSubstituter();
+
 		# self.index_smallest_augmented_cost = 0
 		# self.index_best_safe_traj = None
 		# self.index_best_unsafe_traj = None
@@ -1083,9 +1118,15 @@ class StudentCaller():
 		start = time.time()
 		action_normalized,info = self.student_policy.predict(f_obs_n, deterministic=True) 
 		end = time.time()
-		print(f"Calling the student took {(end - start)*(1e3)} ms")
+		print(f"Calling the NN took {(end - start)*(1e3)} ms")
 
 		action_normalized=action_normalized.reshape(self.am.getActionShape())
+
+		#################################
+		#### USE CLOSED FORM FOR YAW #####
+		if(self.am.use_closed_form_yaw_student==True):
+			action_normalized=self.cfys.substituteWithClosedFormYaw(action_normalized, w_init_state, w_obstacles) #f_action_n, w_init_state, w_obstacles
+		##################################
 
 		action=self.am.denormalizeAction(action_normalized)
 

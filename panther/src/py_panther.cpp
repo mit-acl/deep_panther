@@ -135,6 +135,7 @@ PYBIND11_MODULE(py_panther, m)
 .def_readwrite("use_student", &mt::parameters::use_student)
 .def_readwrite("student_policy_path", &mt::parameters::student_policy_path)
 .def_readwrite("static_planning", &mt::parameters::static_planning)
+.def_readwrite("use_closed_form_yaw_student", &mt::parameters::use_closed_form_yaw_student)
       // clang-format on
       .def("__repr__", [](const mt::parameters &a) { return "<py_panther.parameters>"; });
 

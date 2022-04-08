@@ -59,5 +59,6 @@ max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
 use_expert: false
 use_student: true
-student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round19_log11.pt #final_policy.pt   intermediate_policy_42.pt
+student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round16_log0.pt #final_policy.pt   intermediate_policy_42.pt
 static_planning: false #If true, it will always plan from the same initial condition
+use_closed_form_yaw_student: false #If false, the NN will predict this closed form for the yaw angle

@@ -80,6 +80,13 @@ class StudentPolicy(BasePolicy):
         print("features_dim= ", self.features_dim)
 
         action_dim = get_action_dim(self.action_space)
+
+        ###
+        if(self.am.use_closed_form_yaw_student==True):
+            action_dim = action_dim - self.am.traj_size_yaw_ctrl_pts*self.am.num_traj_per_action
+
+        ####
+
         latent_pi_net = create_mlp(self.features_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
         self.latent_pi = nn.Sequential(*latent_pi_net)
         last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
@@ -136,6 +143,14 @@ class StudentPolicy(BasePolicy):
 
         # self.printwithName(f"In forward, output before reshaping={output.shape}")
         before_shape=list(output.shape)
+
+        ###
+        if(self.am.use_closed_form_yaw_student==True):
+            dummy_yaw=th.zeros(output.shape[0], self.am.traj_size_yaw_ctrl_pts*self.am.num_traj_per_action)
+            output=th.cat((output[:,0:-1], dummy_yaw, output[:,-1:]),1)
+        ###
+
+
         #Note that before_shape[i,:,:] containes one action i
         output=th.reshape(output, (before_shape[0],) + self.am.getActionShape())
         # self.printwithName(f"In forward, returning shape={output.shape}")
