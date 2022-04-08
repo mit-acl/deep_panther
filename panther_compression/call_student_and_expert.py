@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     action_student = student_policy.predict(obs_n, deterministic=True)
     action_student=action_student[0]
-    action_student=action_student.reshape(1,-1)
+    # action_student=action_student.reshape(1,-1)
 
     expert_policy=ExpertPolicy();
 
