@@ -111,7 +111,17 @@ class ExpertPolicy(object):
 
         best_solutions=ExpertPolicy.my_SolverIpopt.getBestSolutions();
 
+
+        ##############################################################
+        # if(self.am.use_closed_form_yaw_student==True):
+        #     #Set the yaw elements to zero
+        #     for i in range(len(best_solutions)):
+        #         best_solutions[i].qy=[0] * len(best_solutions[i].qy)
+        ###############################################################
+
         # for tmp in best_solutions:
+        #     tmp.printInfo();
+
         #     print("YAW ctrl pts= ", tmp.qy)
         #     print("Total time= ", tmp.getTotalTime())
 
