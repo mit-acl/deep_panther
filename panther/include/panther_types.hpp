@@ -61,11 +61,9 @@ struct log
   PANTHER_timers::Timer tim_guess_yaw_fit_poly;      //
   PANTHER_timers::Timer tim_total_replan;            //
 
-  double pos_smooth_cost = 0.0;
-  double fov_cost = 0.0;
-  double yaw_smooth_cost = 0.0;
-  double final_pos_cost = 0.0;
-  double final_yaw_cost = 0.0;
+  double cost = 0.0;
+  double obst_avoidance_violation = 0.0;
+  double dyn_lim_violation = 0.0;
 
   Eigen::Vector3d tracking_now_pos;
   Eigen::Vector3d tracking_now_vel;

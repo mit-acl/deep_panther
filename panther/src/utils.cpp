@@ -23,11 +23,9 @@ panther_msgs::Log log2LogMsg(mt::log log)
   log_msg.ms_guess_yaw_fit_poly = log.tim_guess_yaw_fit_poly.getMsSaved();
   log_msg.ms_total_replan = log.tim_total_replan.getMsSaved();
 
-  log_msg.pos_smooth_cost = log.pos_smooth_cost;
-  log_msg.yaw_smooth_cost = log.yaw_smooth_cost;
-  log_msg.fov_cost = log.fov_cost;
-  log_msg.final_pos_cost = log.final_pos_cost;
-  log_msg.final_yaw_cost = log.final_yaw_cost;
+  log_msg.cost = log.cost;
+  log_msg.obst_avoidance_violation = log.obst_avoidance_violation;
+  log_msg.dyn_lim_violation = log.dyn_lim_violation;
 
   log_msg.tracking_now_pos.x = log.tracking_now_pos.x();
   log_msg.tracking_now_pos.y = log.tracking_now_pos.y();

@@ -912,6 +912,10 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
   planner_initialized_ = true;
 
+  log_ptr_->cost = best_solution.cost;
+  log_ptr_->obst_avoidance_violation = best_solution.obst_avoidance_violation;
+  log_ptr_->dyn_lim_violation = best_solution.dyn_lim_violation;
+
   logAndTimeReplan("Success", true, log);
   return true;
 }
