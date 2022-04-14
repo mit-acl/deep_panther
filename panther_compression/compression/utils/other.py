@@ -25,6 +25,12 @@ import tf.transformations
 # from geometry_msgs.msg import PointStamped, TransformStamped, PoseStamped, Vector3, Quaternion, Pose
 #######
 
+###
+from joblib import Parallel, delayed
+import multiprocessing
+##
+
+
 class ExpertDidntSucceed(Exception):
 	  pass
 
@@ -185,9 +191,9 @@ def getObsAndGtermToCrossPath():
 	w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
 	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[1.0]])
 
-	#Hack 
-	# w_pos_obstacle=np.array([[2.5],[0.0],[1.0]]);
-	# w_pos_g_term=w_pos_obstacle + np.array([[random.uniform(1.0, 8.0)],[random.uniform(-2.0, 2.0)],[0.0]]);
+	#Hack to force position of the obstacle and gterm
+	w_pos_obstacle=np.array([[2.5],[0.0],[1.0]]);
+	w_pos_g_term= np.array([[4.0],[random.uniform(-1.5, 1.5)],[random.uniform(-1.5, 1.5)]]);
 	###########
 
 	return w_pos_obstacle, w_pos_g_term
@@ -278,6 +284,9 @@ class ObstaclesManager():
 			samples=[]
 			for t_interm in np.linspace(t, t + self.fitter_total_time, num=self.fitter_num_samples):#.tolist():
 				samples.append(trefoil.getPosT(t_interm))
+				###HACK TO GENERATE A STATIC OBSTACLE
+				samples[-1] = np.array([[2.5],[0.0],[1.0]])
+				####################################
 
 			w_ctrl_pts_ob_list=ObstaclesManager.fitter.fit(samples)
 
@@ -384,7 +393,7 @@ def generateKnotsForClampedUniformBspline(t0, tf, deg, num_seg):
 	return 	result
 
 class MyClampedUniformBSpline():
-	def __init__(self,t0, tf, deg, dim, num_seg, ctrl_pts):
+	def __init__(self,t0, tf, deg, dim, num_seg, ctrl_pts, no_deriv=False):
 
 		assert dim==ctrl_pts.shape[0]
 
@@ -413,12 +422,13 @@ class MyClampedUniformBSpline():
 		self.ctrl_pts=ctrl_pts;
 		for i in range(dim):
 			self.pos_bs.append( BSpline(self.knots, self.ctrl_pts[i,:], self.deg) )
-			if(deg>=1):
-				self.vel_bs.append( self.pos_bs[i].derivative(1) ); #BSpline of all the coordinates
-			if(deg>=2):
-				self.accel_bs.append( self.pos_bs[i].derivative(2) ); #BSpline of all the coordinates
-			if(deg>=3):
-				self.jerk_bs.append( self.pos_bs[i].derivative(3) ); #BSpline of all the coordinates
+			if(no_deriv==False):
+				if(deg>=1):
+					self.vel_bs.append( self.pos_bs[i].derivative(1) ); #BSpline of all the coordinates
+				if(deg>=2):
+					self.accel_bs.append( self.pos_bs[i].derivative(2) ); #BSpline of all the coordinates
+				if(deg>=3):
+					self.jerk_bs.append( self.pos_bs[i].derivative(3) ); #BSpline of all the coordinates
 
 	def getPosT(self,t):
 		result=np.empty((self.dim,1))
@@ -753,7 +763,7 @@ class ActionManager():
 		self.Npos = self.num_seg + self.deg_pos-1;
 
 		self.max_dist2BSPoscPoint=params["max_dist2BSPoscPoint"];
-		self.max_yawcPoint=4*math.pi;
+		self.max_yawcPoint=4e3*math.pi;
 		self.fitter_total_time=params["fitter_total_time"];
 
 		# print("self.max_dist2BSPoscPoint= ", self.max_dist2BSPoscPoint)
@@ -989,7 +999,7 @@ class ActionManager():
 	def getTrajFromAction(self, action, index_traj):
 		return action[index_traj,:].reshape(1,-1)
 
-	def f_trajAnd_w_State2wBS(self, f_traj, w_state):
+	def f_trajAnd_w_State2wBS(self, f_traj, w_state, no_deriv=False):
 
 
 		w_pos_ctrl_pts,_=self.f_trajAnd_w_State2_w_pos_ctrl_pts_and_knots(f_traj, w_state)
@@ -999,16 +1009,16 @@ class ActionManager():
 
 		# print(f"f_action={f_action}")
 		# print(f"total_time={total_time}")
-		w_posBS = MyClampedUniformBSpline(0.0, total_time, self.deg_pos, 3, self.num_seg, w_pos_ctrl_pts) #def __init__():[BSpline(knots_pos, w_pos_ctrl_pts[0,:], self.deg_pos)
+		w_posBS = MyClampedUniformBSpline(0.0, total_time, self.deg_pos, 3, self.num_seg, w_pos_ctrl_pts, no_deriv) #def __init__():[BSpline(knots_pos, w_pos_ctrl_pts[0,:], self.deg_pos)
 
-		w_yawBS = MyClampedUniformBSpline(0.0, total_time, self.deg_yaw, 1, self.num_seg, w_yaw_ctrl_pts)
+		w_yawBS = MyClampedUniformBSpline(0.0, total_time, self.deg_yaw, 1, self.num_seg, w_yaw_ctrl_pts, no_deriv)
 		
 		return w_posBS, w_yawBS
 
-	def f_trajAnd_f_State2fBS(self, f_traj, f_state):
+	def f_trajAnd_f_State2fBS(self, f_traj, f_state, no_deriv=False):
 		assert np.linalg.norm(f_state.w_pos)<1e-7, "The pos should be zero"
 		assert np.linalg.norm(f_state.w_yaw)<1e-7, "The yaw should be zero"
-		f_posBS, f_yawBS = self.f_trajAnd_w_State2wBS(f_traj, f_state)
+		f_posBS, f_yawBS = self.f_trajAnd_w_State2wBS(f_traj, f_state, no_deriv)
 		return f_posBS, f_yawBS
 
 	def solOrGuess2traj(self, sol_or_guess):
@@ -1111,14 +1121,12 @@ class StudentCaller():
 		f_obs=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_init_state, w_gterm, w_obstacles)
 		f_obs_n=self.om.normalizeObservation(f_obs)
 
-		print(f"Going to call student with this raw sobservation={f_obs}")
-		print(f"Which is...")
-		self.om.printObservation(f_obs)
+		# print(f"Going to call student with this raw sobservation={f_obs}")
+		# print(f"Which is...")
+		# self.om.printObservation(f_obs)
 
 		start = time.time()
 		action_normalized,info = self.student_policy.predict(f_obs_n, deterministic=True) 
-		end = time.time()
-		print(f"Calling the NN took {(end - start)*(1e3)} ms")
 
 		action_normalized=action_normalized.reshape(self.am.getActionShape())
 
@@ -1127,6 +1135,8 @@ class StudentCaller():
 		if(self.am.use_closed_form_yaw_student==True):
 			action_normalized=self.cfys.substituteWithClosedFormYaw(action_normalized, w_init_state, w_obstacles) #f_action_n, w_init_state, w_obstacles
 		##################################
+		end = time.time()
+		print(f" Calling the NN + Closed form yaw took {(end - start)*(1e3)} ms")
 
 		action=self.am.denormalizeAction(action_normalized)
 
@@ -1197,46 +1207,56 @@ class CostsAndViolationsOfAction():
 		self.index_best_traj=index_best_traj
 
 class CostComputer():
+
+    #The reason to create this here (instead of in the constructor) is that C++ objects created with pybind11 cannot be pickled by default (pickled is needed when parallelizing)
+    #See https://stackoverflow.com/a/68672/6057617
+    #Note that, even though the class variables are not thread safe (see https://stackoverflow.com/a/1073230/6057617), we are using multiprocessing here, not multithreading
+    #Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
+
+	my_SolverIpopt=py_panther.SolverIpopt(getPANTHERparamsAsCppStruct());
+	am=ActionManager();
+	om=ObservationManager();
+	par=getPANTHERparamsAsCppStruct();
+	obsm=ObstaclesManager();
+
+
 	def __init__(self):
-		self.par=getPANTHERparamsAsCppStruct();
-		self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
-		self.am=ActionManager();
-		self.om=ObservationManager();
-		obsm=ObstaclesManager();
-		self.num_obstacles=obsm.getNumObs()
+		# self.par=getPANTHERparamsAsCppStruct();
+
+		self.num_obstacles=CostComputer.obsm.getNumObs()
 
 		
 
 	def setUpSolverIpoptAndGetppSolOrGuess(self, f_obs_n, f_traj_n):
 
 		#Denormalize observation and action
-		f_obs = self.om.denormalizeObservation(f_obs_n);
-		f_traj = self.am.denormalizeTraj(f_traj_n);
+		f_obs = CostComputer.om.denormalizeObservation(f_obs_n);
+		f_traj = CostComputer.am.denormalizeTraj(f_traj_n);
 
 		#Set up SolverIpopt
 		# print("\n========================")
-		init_state=self.om.getInit_f_StateFromObservation(f_obs)
-		final_state=self.om.getFinal_f_StateFromObservation(f_obs)
-		total_time=computeTotalTime(init_state, final_state, self.par.v_max, self.par.a_max, self.par.factor_alloc)
+		init_state=CostComputer.om.getInit_f_StateFromObservation(f_obs)
+		final_state=CostComputer.om.getFinal_f_StateFromObservation(f_obs)
+		total_time=computeTotalTime(init_state, final_state, CostComputer.par.v_max, CostComputer.par.a_max, CostComputer.par.factor_alloc)
 		# print(f"init_state=")
 		# init_state.printHorizontal();
 		# print(f"final_state=")
 		# final_state.printHorizontal();
 		# print(f"total_time={total_time}")
-		self.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
-		self.my_SolverIpopt.setFocusOnObstacle(True);
-		obstacles=self.om.getObstacles(f_obs)
+		CostComputer.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
+		CostComputer.my_SolverIpopt.setFocusOnObstacle(True);
+		obstacles=CostComputer.om.getObstacles(f_obs)
 
 		# print(f"obstacles=")
 
 		# for obs in obstacles:
 		# 	obs.printInfo()
 
-		self.my_SolverIpopt.setObstaclesForOpt(obstacles);
+		CostComputer.my_SolverIpopt.setObstaclesForOpt(obstacles);
 
 		###############################
-		f_state=self.om.get_f_StateFromf_obs(f_obs)
-		f_ppSolOrGuess=self.am.f_trajAnd_f_State2f_ppSolOrGuess(f_traj, f_state)
+		f_state=CostComputer.om.get_f_StateFromf_obs(f_obs)
+		f_ppSolOrGuess=CostComputer.am.f_trajAnd_f_State2f_ppSolOrGuess(f_traj, f_state)
 		###############################
 
 		return f_ppSolOrGuess;		
@@ -1245,10 +1265,10 @@ class CostComputer():
 	def computeObstAvoidanceConstraintsViolation(self, f_obs_n, f_traj_n):
 
 		#Denormalize observation and action
-		f_obs = self.om.denormalizeObservation(f_obs_n);
-		f_traj = self.am.denormalizeTraj(f_traj_n);
+		f_obs = CostComputer.om.denormalizeObservation(f_obs_n);
+		f_traj = CostComputer.am.denormalizeTraj(f_traj_n);
 
-		total_time=self.am.getTotalTimeTraj(f_traj)
+		total_time=CostComputer.am.getTotalTimeTraj(f_traj)
 
 		###Debugging
 		if(total_time<1e-5):
@@ -1257,22 +1277,30 @@ class CostComputer():
 			print(f"f_traj={f_traj}")
 		######
 
-		f_state = self.om.get_f_StateFromf_obs(f_obs)
-		f_posBS, f_yawBS = self.am.f_trajAnd_f_State2fBS(f_traj, f_state)
+		f_state = CostComputer.om.get_f_StateFromf_obs(f_obs)
+		f_posBS, f_yawBS = CostComputer.am.f_trajAnd_f_State2fBS(f_traj, f_state, no_deriv=True)
 
 		violation=0
+
+
 		for i in range(self.num_obstacles):
-			f_posObs_ctrl_pts=listOf3dVectors2numpy3Xmatrix(self.om.getCtrlPtsObstacleI(f_obs, i))
-			bbox=self.om.getBboxInflatedObstacleI(f_obs, i)
+			f_posObs_ctrl_pts=listOf3dVectors2numpy3Xmatrix(CostComputer.om.getCtrlPtsObstacleI(f_obs, i))
+			bbox=CostComputer.om.getBboxInflatedObstacleI(f_obs, i)
 			# print(f"f_posObs_ctrl_pts={f_posObs_ctrl_pts}")
 			# print(f"f_posBS.ctrl_pts={f_posBS.ctrl_pts}")
 
-			f_posObstBS = MyClampedUniformBSpline(0.0, self.par.fitter_total_time, self.par.fitter_deg_pos, 3, self.par.fitter_num_seg, f_posObs_ctrl_pts) 
+			# start=time.time();
+
+			f_posObstBS = MyClampedUniformBSpline(0.0, CostComputer.par.fitter_total_time, CostComputer.par.fitter_deg_pos, 3, CostComputer.par.fitter_num_seg, f_posObs_ctrl_pts, True) 
+
+			# print(f" compute MyClampedUniformBSpline creation took {(time.time() - start)*(1e3)} ms")
+
 
 			# print("\n============")
+			# start=time.time();
 
 			#TODO: move num to a parameter
-			for t in np.linspace(start=0.0, stop=total_time, num=50).tolist():
+			for t in np.linspace(start=0.0, stop=total_time, num=10).tolist():
 
 				obs = f_posObstBS.getPosT(t);
 				drone = f_posBS.getPosT(t);
@@ -1294,7 +1322,7 @@ class CostComputer():
 	def computeDynLimitsConstraintsViolation(self, f_obs_n, f_traj_n):
 
 		f_ppSolOrGuess=self.setUpSolverIpoptAndGetppSolOrGuess(f_obs_n, f_traj_n)
-		violation=self.my_SolverIpopt.computeDynLimitsConstraintsViolation(f_ppSolOrGuess) 
+		violation=CostComputer.my_SolverIpopt.computeDynLimitsConstraintsViolation(f_ppSolOrGuess) 
 
 		# #Debugging (when called using the traj from the expert)
 		# if(violation>1e-5):
@@ -1304,17 +1332,36 @@ class CostComputer():
 		return violation   
 
 	def computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(self, f_obs_n, f_traj_n):
+
+		# start1=time.time();
+
+		# start=time.time();
 		cost =  self.computeCost(f_obs_n, f_traj_n)
+		# print(f"--- computeCost took {(time.time() - start)*(1e3)} ms")
+		
+		# start=time.time();
 		obst_avoidance_violation = self.computeObstAvoidanceConstraintsViolation(f_obs_n, f_traj_n)
+		# print(f"--- computeObstAvoidanceConstraintsViolation took {(time.time() - start)*(1e3)} ms")
+
+
+		# start=time.time();
 		dyn_lim_violation = self.computeDynLimitsConstraintsViolation(f_obs_n, f_traj_n)
+		# print(f"--- computeDynLimitsConstraintsViolation took {(time.time() - start)*(1e3)} ms")
+
+		# start=time.time();
 		augmented_cost = self.computeAugmentedCost(cost, obst_avoidance_violation, dyn_lim_violation)
+		# print(f" computeAugmentedCost took {(time.time() - start)*(1e3)} ms")
+
+		
+		# print(f" compute ALL COSTS {(time.time() - start1)*(1e3)} ms")
+
 
 		return cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost
 
 	def computeCost(self, f_obs_n, f_traj_n): 
 		
 		f_ppSolOrGuess=self.setUpSolverIpoptAndGetppSolOrGuess(f_obs_n, f_traj_n)
-		tmp=self.my_SolverIpopt.computeCost(f_ppSolOrGuess) 
+		tmp=CostComputer.my_SolverIpopt.computeCost(f_ppSolOrGuess) 
 
 		return tmp   
 
@@ -1346,11 +1393,15 @@ class CostComputer():
 		# 		index_smallest_augmented_cost = i
 		# return index_smallest_augmented_cost
 
+
 	def getCostsAndViolationsOfActionFromObsnAndActionn(self, f_obs_n, f_action_n):
 
 		costs=[]
 		obst_avoidance_violations=[]
 		dyn_lim_violations=[]
+		augmented_costs=[];
+
+		alls=[];
 
 
 		smallest_augmented_safe_cost = float('inf')
@@ -1359,24 +1410,49 @@ class CostComputer():
 		index_best_unsafe_traj = None
 
 
-		for i in range( np.shape(f_action_n)[0]): #For each row of action
-			traj_n=f_action_n[i,:].reshape(1,-1);
-
+		######### PARALLEL OPTION
+		# start=time.time();
+		def my_func(thread_index):
+			traj_n=f_action_n[thread_index,:].reshape(1,-1);
 			cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_obs_n, traj_n)
+			return [cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost] 
 
-			costs.append(cost)
-			obst_avoidance_violations.append(obst_avoidance_violation)
-			dyn_lim_violations.append(dyn_lim_violation)
+		num_of_trajs=np.shape(f_action_n)[0]
+		num_jobs=multiprocessing.cpu_count()#min(multiprocessing.cpu_count(),num_of_trajs); #Note that the class variable my_SolverIpopt will be created once per job created (but only in the first call to predictSeveral I think)
+		alls = Parallel(n_jobs=num_jobs)(map(delayed(my_func), list(range(num_of_trajs)))) #, prefer="threads"
 
-			is_in_collision = (obst_avoidance_violation>1e-5)
+		for i in range( np.shape(f_action_n)[0]): #For each row of action
+			costs.append(alls[i][0])
+			obst_avoidance_violations.append(alls[i][1])
+			dyn_lim_violations.append(alls[i][2])
+			augmented_costs.append(alls[i][3])
+
+		# print(f" computeParallel took {(time.time() - start)*(1e3)} ms")
+		##########################
+
+		# start=time.time();
+
+
+		for i in range( np.shape(f_action_n)[0]): #For each row of action
+
+			######### NON-PARALLEL OPTION
+			# traj_n=f_action_n[i,:].reshape(1,-1);
+			# cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_obs_n, traj_n)
+			# costs.append(cost)
+			# obst_avoidance_violations.append(obst_avoidance_violation)
+			# dyn_lim_violations.append(dyn_lim_violation)
+			# augmented_costs.append(augmented_cost)
+			##############################
+
+			is_in_collision = (obst_avoidance_violations[i]>1e-5)
 
 			if(is_in_collision==False):
-				if(augmented_cost < smallest_augmented_safe_cost):
-					smallest_augmented_safe_cost = augmented_cost
+				if(augmented_costs[i] < smallest_augmented_safe_cost):
+					smallest_augmented_safe_cost = augmented_costs[i]
 					index_best_safe_traj = i
 			else:
-				if(augmented_cost < smallest_augmented_unsafe_cost):
-					smallest_augmented_unsafe_cost = augmented_cost
+				if(augmented_costs[i] < smallest_augmented_unsafe_cost):
+					smallest_augmented_unsafe_cost = augmented_costs[i]
 					index_best_unsafe_traj = i
 
 		if(index_best_safe_traj is not None):
@@ -1389,6 +1465,9 @@ class CostComputer():
 		else:
 			print("This should never happen!!")
 			exit();		
+
+		# print(f" computeNOTParallel took {(time.time() - start)*(1e3)} ms")
+
 
 		result=CostsAndViolationsOfAction(costs=costs, obst_avoidance_violations=obst_avoidance_violations, dyn_lim_violations=dyn_lim_violations, index_best_traj=index_best_traj)
 

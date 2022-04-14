@@ -65,6 +65,34 @@ Panther::Panther(mt::parameters par) : par_(par)
     student_caller_ptr_ = new pybind11::object;
     *student_caller_ptr_ =
         pybind11::module::import("compression.utils.other").attr("StudentCaller")(par_.student_policy_path);
+
+    ///// TODO: For whatever reason, the first ~5 calls to the student are very slow. It is due to the
+    // because of having declared the variables just after class CostComputer(): (see python file), and not inside
+    // init()
+    // For now, let's just put those calls here
+    for (int i = 1; i < 10; i++)
+    {
+      std::cout << "Calling the student!" << std::endl;
+      mt::state A;
+      mt::state G_term;
+      G_term.pos = Eigen::Vector3d(10, 0.0, 0.0);
+      std::vector<mt::obstacleForOpt> obstacles_for_opt;
+
+      mt::obstacleForOpt tmp;
+      tmp.bbox_inflated = Eigen::Vector3d(1.0, 1.0, 1.0);
+
+      std::vector<Eigen::Vector3d> samples;
+      for (int k = 0; k < par_.fitter_num_samples; k++)
+      {
+        samples.push_back(10 * Eigen::Vector3d::Ones());
+      }
+
+      tmp.ctrl_pts = fitter_->fit(samples);
+      obstacles_for_opt.push_back(tmp);
+
+      pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos);
+      std::cout << "Called the student!" << std::endl;
+    }
   }
 }
 
@@ -506,6 +534,8 @@ void Panther::doStuffTermGoal()
   // std::cout << bold << red << "[FA] Received Term Goal=" << G_term_.pos.transpose() << reset << std::endl;
   // std::cout << bold << red << "[FA] Received Proj Goal=" << G_.pos.transpose() << reset << std::endl;
 
+  is_new_g_term_ = true;
+
   mtx_state.unlock();
   mtx_G_term.unlock();
   mtx_planner_status_.unlock();
@@ -548,6 +578,11 @@ bool Panther::isReplanningNeeded()
   if (initializedStateAndTermGoal() == false)
   {
     return false;  // Note that log is not modified --> will keep its default values
+  }
+
+  if (par_.static_planning == true)
+  {
+    return true;
   }
 
   //////////////////////////////////////////////////////////////////////////
@@ -594,6 +629,15 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
                      std::vector<si::solOrGuess>& best_solutions_student, std::vector<si::solOrGuess>& guesses,
                      std::vector<si::solOrGuess>& splines_fitted, std::vector<Hyperplane3D>& planes, mt::log& log)
 {
+  //////////
+  bool this_replan_uses_new_gterm = false;
+  if (is_new_g_term_ == true)
+  {
+    this_replan_uses_new_gterm = true;
+  }
+  is_new_g_term_ = false;
+  //////////
+
   (*log_ptr_) = {};  // Reset the struct with the default values
 
   mtx_G_term.lock();
@@ -816,6 +860,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   }
   if (par_.use_student)
   {
+    log_ptr_->tim_initial_setup.toc();
     std::cout << "Calling the student!" << std::endl;
     pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos);
     std::cout << "Called the student!" << std::endl;
@@ -826,7 +871,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
     // for (auto z : best_solutions_student)
     // {
-    //   std::cout << "cost= " << z.augmented_cost << std::endl;
+    //   std::cout << "cost= " << z.cost << std::endl;
     // }
 
     best_solution_student = best_solutions_student[index_smallest_augmented_cost];
@@ -917,6 +962,15 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   log_ptr_->dyn_lim_violation = best_solution.dyn_lim_violation;
 
   logAndTimeReplan("Success", true, log);
+
+  if (this_replan_uses_new_gterm == true && par_.static_planning == true)
+  {
+    std::cout << std::setprecision(8)
+              << "CostTimeResults: [Cost, obst_avoidance_violation, dyn_lim_violation, total_time_ms]= "
+              << best_solution.cost << " " << best_solution.obst_avoidance_violation << " "
+              << best_solution.dyn_lim_violation << " " << log_ptr_->tim_total_replan.getMsSaved() << std::endl;
+  }
+
   return true;
 }
 

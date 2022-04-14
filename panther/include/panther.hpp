@@ -171,6 +171,7 @@ private:
   mt::state last_state_tracked_;
 
   bool need_to_do_stuff_term_goal_ = false;
+  bool is_new_g_term_ = false;
 };
 
 #endif

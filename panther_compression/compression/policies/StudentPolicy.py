@@ -146,7 +146,7 @@ class StudentPolicy(BasePolicy):
 
         ###
         if(self.am.use_closed_form_yaw_student==True):
-            dummy_yaw=th.zeros(output.shape[0], self.am.traj_size_yaw_ctrl_pts*self.am.num_traj_per_action)
+            dummy_yaw=th.zeros(output.shape[0], self.am.traj_size_yaw_ctrl_pts*self.am.num_traj_per_action, device=obs_n.device)
             output=th.cat((output[:,0:-1], dummy_yaw, output[:,-1:]),1)
         ###
 
