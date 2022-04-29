@@ -146,13 +146,16 @@ class StudentPolicy(BasePolicy):
 
         ###
         if(self.am.use_closed_form_yaw_student==True):
-            dummy_yaw=th.zeros(output.shape[0], self.am.traj_size_yaw_ctrl_pts*self.am.num_traj_per_action, device=obs_n.device)
-            output=th.cat((output[:,0:-1], dummy_yaw, output[:,-1:]),1)
-        ###
+            tmp=(before_shape[0],) + (self.am.num_traj_per_action, self.am.traj_size_pos_ctrl_pts + 1)
+
+            output=th.reshape(output, tmp)
+
+            dummy_yaw=th.zeros(output.shape[0], self.am.num_traj_per_action, self.am.traj_size_yaw_ctrl_pts, device=obs_n.device)
+            output=th.cat((output[:,:,0:-1], dummy_yaw, output[:,:,-1:]),2)
+        else:
+            output=th.reshape(output, (before_shape[0],) + self.am.getActionShape())
 
 
-        #Note that before_shape[i,:,:] containes one action i
-        output=th.reshape(output, (before_shape[0],) + self.am.getActionShape())
         # self.printwithName(f"In forward, returning shape={output.shape}")
         
         return output
