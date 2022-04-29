@@ -83,8 +83,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     only_collect_data=False
-    train_only_supervised=False
+    train_only_supervised=True
     reuse_previous_samples=False
+
+    use_Hungarian=True
 
     record_bag=True
     launch_tensorboard=True
@@ -107,6 +109,7 @@ if __name__ == "__main__":
         reuse_previous_samples=True
         only_collect_data=False 
         log_interval=15 
+        num_envs=1
 
 
     if(train_only_supervised==True):
@@ -247,9 +250,9 @@ if __name__ == "__main__":
         printInBoldBlue("---------------- Making Learner Policy: -------------------")
         # Create learner policy
         if args.on_policy_trainer: 
-            trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy) 
+            trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy, use_Hungarian=use_Hungarian) 
         else: 
-            trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob)
+            trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, use_Hungarian=use_Hungarian)
 
 
 

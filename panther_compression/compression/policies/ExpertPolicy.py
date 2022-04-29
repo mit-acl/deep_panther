@@ -21,7 +21,6 @@ class ExpertPolicy(object):
     #See https://stackoverflow.com/a/68672/6057617
     #Note that, even though the class variables are not thread safe (see https://stackoverflow.com/a/1073230/6057617), we are using multiprocessing here, not multithreading
     #Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
-    
     my_SolverIpopt=py_panther.SolverIpopt(getPANTHERparamsAsCppStruct())
 
     def __init__(self):
@@ -38,6 +37,7 @@ class ExpertPolicy(object):
         self.par_v_max=par.v_max
         self.par_a_max=par.a_max
         self.par_factor_alloc=par.factor_alloc
+        self.drone_extra_radius_for_NN=par.drone_extra_radius_for_NN
 
         # self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
 
@@ -94,7 +94,11 @@ class ExpertPolicy(object):
 
         ExpertPolicy.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
         ExpertPolicy.my_SolverIpopt.setFocusOnObstacle(True);
-        ExpertPolicy.my_SolverIpopt.setObstaclesForOpt(self.om.getObstacles(obs));
+        obstacles=self.om.getObstacles(obs)
+        ####
+        for i in range(len(obstacles)):
+            obstacles[i].bbox_inflated = obstacles[i].bbox_inflated  +  self.drone_extra_radius_for_NN*np.ones_like(obstacles[i].bbox_inflated)
+        ExpertPolicy.my_SolverIpopt.setObstaclesForOpt(obstacles);
 
         # with nostdout():
         succeed=ExpertPolicy.my_SolverIpopt.optimize(True);

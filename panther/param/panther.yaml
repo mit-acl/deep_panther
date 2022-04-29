@@ -8,6 +8,7 @@ max_num_of_initial_guesses: 10
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 goal_radius: 0.5    #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
 drone_radius: 0.0  #(m) Used for collision checking
+drone_extra_radius_for_NN: 0.0  #(m) Used for collision checking
 Ra: 7.0           # [m] Radius of my planning sphere (planning horizon)
 impose_FOV_in_trajCB: false
 pause_time_when_replanning: false
@@ -59,6 +60,6 @@ max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
 use_expert: false
 use_student: true
-student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round23_log28.pt #final_policy.pt   intermediate_policy_42.pt
+student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round0_log74.pt #final_policy.pt   intermediate_policy_42.pt
 static_planning: true #If true, it will always plan from the same initial condition
 use_closed_form_yaw_student: true #If false, the NN will predict this closed form for the yaw angle

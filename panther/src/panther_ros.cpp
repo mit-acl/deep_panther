@@ -74,6 +74,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "dc", par_.dc);
   safeGetParam(nh1_, "goal_radius", par_.goal_radius);
   safeGetParam(nh1_, "drone_radius", par_.drone_radius);
+  safeGetParam(nh1_, "drone_extra_radius_for_NN", par_.drone_extra_radius_for_NN);
   safeGetParam(nh1_, "Ra", par_.Ra);
   safeGetParam(nh1_, "impose_FOV_in_trajCB", par_.impose_FOV_in_trajCB);
   safeGetParam(nh1_, "pause_time_when_replanning", par_.pause_time_when_replanning);

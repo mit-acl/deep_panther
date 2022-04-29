@@ -8,7 +8,7 @@ from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
 from compression.utils.other import ExpertDidntSucceed, ActionManager
 
-def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, expert_policy):
+def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, expert_policy, use_Hungarian=True):
     beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
 
     am=ActionManager()
@@ -24,6 +24,7 @@ def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr,
         traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
         traj_size_yaw_ctrl_pts=am.traj_size_yaw_ctrl_pts,
         use_closed_form_yaw_student=am.use_closed_form_yaw_student,
+        use_Hungarian=use_Hungarian,
         weight_prob=weight_prob
     )
 
@@ -52,6 +53,7 @@ def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_
         traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
         traj_size_yaw_ctrl_pts=am.traj_size_yaw_ctrl_pts,
         use_closed_form_yaw_student=am.use_closed_form_yaw_student,
+        use_Hungarian=use_Hungarian,
         weight_prob=weight_prob
     )
 
@@ -80,6 +82,7 @@ def make_bc_trainer(tmpdir, venv, custom_logger, lr, batch_size, weight_prob):
         batch_size=batch_size,
         traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
         use_closed_form_yaw_student=am.use_closed_form_yaw_student,
+        use_Hungarian=use_Hungarian,
         weight_prob=weight_prob
     )
 

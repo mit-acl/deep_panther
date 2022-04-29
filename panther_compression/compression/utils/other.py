@@ -193,7 +193,12 @@ def getObsAndGtermToCrossPath():
 
 	#Hack to force position of the obstacle and gterm
 	w_pos_obstacle=np.array([[2.5],[0.0],[1.0]]);
-	w_pos_g_term= np.array([[4.0],[random.uniform(-1.5, 1.5)],[random.uniform(-1.5, 1.5)]]);
+	# w_pos_g_term= np.array([[4.0],[random.uniform(-1.5, 1.5)],[random.uniform(-1.5, 1.5)]]);
+	# w_pos_g_term= w_pos_obstacle + np.array([[random.uniform(1.0, 4.5)],[random.uniform(-3.5, 3.5)],[random.uniform(-3.5, 3.5)]]);
+	radius_gterm = np.linalg.norm(w_pos_obstacle) +random.uniform(0.0, 5.0) 
+	std_deg=15
+	theta_g_term = random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
+	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[1.0]])
 	###########
 
 	return w_pos_obstacle, w_pos_g_term
@@ -798,7 +803,16 @@ class ActionManager():
 		return self.normalizeAction(action)
 
 	def getDummyOptimalAction(self):
-		return 0.6*np.ones(self.getActionShape())
+		# return 0.6*np.ones(self.getActionShape())
+
+		dummy=np.ones((self.num_traj_per_action,self.traj_size))
+
+		for i in range((dummy.shape[0])):
+			for j in range(0,self.traj_size_pos_ctrl_pts,3):
+				dummy[i,j]=i+j/10
+
+		return dummy
+
 
 	def getNanAction(self):
 		return np.full(self.getActionShape(), np.nan)
