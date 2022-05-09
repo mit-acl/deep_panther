@@ -201,6 +201,20 @@ def getObsAndGtermToCrossPath():
 	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[1.0]])
 	###########
 
+
+	#Taken from the commit that worked
+	theta=random.uniform(-np.pi/2, np.pi/2)
+	radius_obstacle=random.uniform(1.5, 4.5)
+	radius_gterm=radius_obstacle + random.uniform(1.0, 6.0)
+	std_deg=10#30
+	theta_g_term=theta + random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
+	center=np.zeros((3,1))
+
+	w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
+	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[1.0]])
+	########
+
+
 	return w_pos_obstacle, w_pos_g_term
 
 
@@ -283,15 +297,17 @@ class ObstaclesManager():
 		# novale=np.array([[4.0],[4.0],[1.0]]);
 		# print(f"Using offset={self.random_offset}")
 		# print(f"Using random_scale={self.random_scale}")
+
+		###HACK TO GENERATE A STATIC OBSTACLE
+		self.random_scale=np.zeros((3,1))
+		####################################
+
 		trefoil=Trefoil(pos=self.random_pos, scale=self.random_scale, offset=self.random_offset, slower=1.5);
 		for i in range(self.num_obs):
 
 			samples=[]
 			for t_interm in np.linspace(t, t + self.fitter_total_time, num=self.fitter_num_samples):#.tolist():
 				samples.append(trefoil.getPosT(t_interm))
-				###HACK TO GENERATE A STATIC OBSTACLE
-				samples[-1] = np.array([[2.5],[0.0],[1.0]])
-				####################################
 
 			w_ctrl_pts_ob_list=ObstaclesManager.fitter.fit(samples)
 

@@ -8,7 +8,7 @@ from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
 from compression.utils.other import ExpertDidntSucceed, ActionManager
 
-def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, expert_policy, use_Hungarian=True):
+def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, expert_policy, use_Hungarian=True, only_test_loss=False, epsilon_WTA=0.05):
     beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
 
     am=ActionManager()
@@ -25,7 +25,9 @@ def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr,
         traj_size_yaw_ctrl_pts=am.traj_size_yaw_ctrl_pts,
         use_closed_form_yaw_student=am.use_closed_form_yaw_student,
         use_Hungarian=use_Hungarian,
-        weight_prob=weight_prob
+        weight_prob=weight_prob,
+        only_test_loss=only_test_loss,
+        epsilon_WTA=epsilon_WTA
     )
 
     return dagger.SimpleDAggerTrainer(
@@ -37,7 +39,7 @@ def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr,
         custom_logger=custom_logger,
     )
 
-def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob):
+def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, only_test_loss=False, epsilon_WTA=0.05):
     beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
 
     am=ActionManager()
@@ -54,7 +56,9 @@ def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_
         traj_size_yaw_ctrl_pts=am.traj_size_yaw_ctrl_pts,
         use_closed_form_yaw_student=am.use_closed_form_yaw_student,
         use_Hungarian=use_Hungarian,
-        weight_prob=weight_prob
+        weight_prob=weight_prob,
+        only_test_loss=only_test_loss,
+        epsilon_WTA=epsilon_WTA
     )
 
     return dagger.DAggerTrainer(
@@ -65,7 +69,7 @@ def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_
         custom_logger=custom_logger,
     )
 
-def make_bc_trainer(tmpdir, venv, custom_logger, lr, batch_size, weight_prob):
+def make_bc_trainer(tmpdir, venv, custom_logger, lr, batch_size, weight_prob, only_test_loss=False, epsilon_WTA=0.05):
     """Will make DAgger, but with a constant beta, set to 1 
     (always 100% prob of using expert)"""
     beta_schedule=dagger.AlwaysExpertBetaSchedule()
@@ -83,7 +87,9 @@ def make_bc_trainer(tmpdir, venv, custom_logger, lr, batch_size, weight_prob):
         traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
         use_closed_form_yaw_student=am.use_closed_form_yaw_student,
         use_Hungarian=use_Hungarian,
-        weight_prob=weight_prob
+        weight_prob=weight_prob,
+        only_test_loss=only_test_loss,
+        epsilon_WTA=epsilon_WTA
     )
 
     return dagger.DAggerTrainer(
@@ -95,67 +101,67 @@ def make_bc_trainer(tmpdir, venv, custom_logger, lr, batch_size, weight_prob):
     )
 
 #Trainer is the student
-def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full_policy_path, use_only_last_coll_ds, only_collect_data):
-    # assert n_traj_per_round > 0, "n_traj_per_round needs to be at least one!"
-    assert n_epochs > 0, "Number of training epochs must be >= 0!"
+# def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full_policy_path, use_only_last_coll_ds, only_collect_data):
+#     # assert n_traj_per_round > 0, "n_traj_per_round needs to be at least one!"
+#     assert n_epochs > 0, "Number of training epochs must be >= 0!"
     
-    collector = trainer.get_trajectory_collector()
-    # if not augm_sampling: 
-    #     # Nominal trajectory collector
-    #     collector = trainer.get_trajectory_collector()
-    # else:  
-    #     # Augmented collector
-    #     collector= trainer.get_augmented_trajectory_collector(
-    #                     n_extra_samples=expert.get_num_extra_samples(),
-    #                     get_extra_samples_callback=expert.get_extra_states_actions)
+#     collector = trainer.get_trajectory_collector()
+#     # if not augm_sampling: 
+#     #     # Nominal trajectory collector
+#     #     collector = trainer.get_trajectory_collector()
+#     # else:  
+#     #     # Augmented collector
+#     #     collector= trainer.get_augmented_trajectory_collector(
+#     #                     n_extra_samples=expert.get_num_extra_samples(),
+#     #                     get_extra_samples_callback=expert.get_extra_states_actions)
     
 
-    for _ in range(n_traj_per_round):
-        expert_succeeded_at_least_once=False;
+#     for _ in range(n_traj_per_round):
+#         expert_succeeded_at_least_once=False;
 
-        obs = collector.reset()
-        done = False
-        while not done:
-            try: # Teacher may fail
-                expert_action, act_infos = expert.predict(obs[None], deterministic=True)# Why OBS[None]??
-            except ExpertDidntSucceed as e:
-                # print("[Training] The following exception occurred: {}".format(e))
-                # print(f"[Training] Latest observation: {obs[None]}")
-                if(expert_succeeded_at_least_once):
-                    done = True
-                    print("[Training] Teacher unable to provide example. Concluding trajectory.")
-                    # collector.save_trajectory()
-                else:
-                    print("[Training] Teacher unable to provide first example. Resetting Collector and trying again.")
-                    obs = collector.reset()
-            else: 
-                # Executed if no exception occurs
-                obs, _, done, _ = collector.step([expert_action])#The [] were added by jtorde, 1/1/22 #act_infos
-                                                                 #Note that step() is this one: https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/vec_env/base_vec_env.py#L154
-                                                                 #since VecEnv is the superclass of VecEnvWrapper, and VecEnvWrapper is the superclass of InteractiveTrajectoryCollector  
-                expert_succeeded_at_least_once = True
+#         obs = collector.reset()
+#         done = False
+#         while not done:
+#             try: # Teacher may fail
+#                 expert_action, act_infos = expert.predict(obs[None], deterministic=True)# Why OBS[None]??
+#             except ExpertDidntSucceed as e:
+#                 # print("[Training] The following exception occurred: {}".format(e))
+#                 # print(f"[Training] Latest observation: {obs[None]}")
+#                 if(expert_succeeded_at_least_once):
+#                     done = True
+#                     print("[Training] Teacher unable to provide example. Concluding trajectory.")
+#                     # collector.save_trajectory()
+#                 else:
+#                     print("[Training] Teacher unable to provide first example. Resetting Collector and trying again.")
+#                     obs = collector.reset()
+#             else: 
+#                 # Executed if no exception occurs
+#                 obs, _, done, _ = collector.step([expert_action])#The [] were added by jtorde, 1/1/22 #act_infos
+#                                                                  #Note that step() is this one: https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/vec_env/base_vec_env.py#L154
+#                                                                  #since VecEnv is the superclass of VecEnvWrapper, and VecEnvWrapper is the superclass of InteractiveTrajectoryCollector  
+#                 expert_succeeded_at_least_once = True
 
-    curr_rollout_stats=None
-    if(only_collect_data==False):
-        # Add the collected rollout to the dataset and trains the classifier.
-        #next_round_num = trainer.extend_and_update(n_epochs=n_epochs)
-        next_round_num = trainer.extend_and_update(dict(n_epochs=n_epochs, save_full_policy_path=save_full_policy_path))#use_only_last_coll_ds=use_only_last_coll_ds
+#     curr_rollout_stats=None
+#     if(only_collect_data==False):
+#         # Add the collected rollout to the dataset and trains the classifier.
+#         #next_round_num = trainer.extend_and_update(n_epochs=n_epochs)
+#         next_round_num = trainer.extend_and_update(dict(n_epochs=n_epochs, save_full_policy_path=save_full_policy_path, ))#use_only_last_coll_ds=use_only_last_coll_ds
 
-        # Use the round number to figure out stats of the trajectories we just collected.
-        curr_rollout_stats, descriptors = rollout_stats(trainer.load_demos_at_round(next_round_num-1, augmented_demos=False))
-        print("[Training] reward: {}, len: {}.".format(curr_rollout_stats["return_mean"], curr_rollout_stats["len_mean"]))
+#         # Use the round number to figure out stats of the trajectories we just collected.
+#         curr_rollout_stats, descriptors = rollout_stats(trainer.load_demos_at_round(next_round_num-1, augmented_demos=False))
+#         print("[Training] reward: {}, len: {}.".format(curr_rollout_stats["return_mean"], curr_rollout_stats["len_mean"]))
 
-        # Store the policy obtained at this round
-        trainer.save_policy(save_full_policy_path)
-        print(f"[Training] Training completed. Policy saved to: {save_full_policy_path}.")
+#         # Store the policy obtained at this round
+#         trainer.save_policy(save_full_policy_path)
+#         print(f"[Training] Training completed. Policy saved to: {save_full_policy_path}.")
 
-        # Save training logs
-        descriptors["success"] = compute_success(trainer.load_demos_at_round(next_round_num-1, augmented_demos=False), trainer.venv)
-        logs = pd.DataFrame(descriptors)
-        logs = logs.assign(disturbance = False) # TODO: Andrea: change this flag if disturbance is set to true in training environment
-        # (maybe read flag from training environment itself)
-        # save logs 
-        if log_path is not None:
-            logs.to_pickle(log_path+".pkl")
+#         # Save training logs
+#         descriptors["success"] = compute_success(trainer.load_demos_at_round(next_round_num-1, augmented_demos=False), trainer.venv)
+#         logs = pd.DataFrame(descriptors)
+#         logs = logs.assign(disturbance = False) # TODO: Andrea: change this flag if disturbance is set to true in training environment
+#         # (maybe read flag from training environment itself)
+#         # save logs 
+#         if log_path is not None:
+#             logs.to_pickle(log_path+".pkl")
     
-    return curr_rollout_stats
+#     return curr_rollout_stats

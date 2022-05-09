@@ -25,7 +25,7 @@ from imitation.util import util, logger
 from imitation.algorithms import bc
 
 from compression.policies.ExpertPolicy import ExpertPolicy
-from compression.utils.train import make_dagger_trainer, make_bc_trainer, train, make_simple_dagger_trainer
+from compression.utils.train import make_dagger_trainer, make_bc_trainer, make_simple_dagger_trainer
 from compression.utils.eval import evaluate_policy
 
 
@@ -47,6 +47,18 @@ def printInBoldRed(data_string):
     print(Style.BRIGHT+Fore.RED+data_string+Style.RESET_ALL)
 def printInBoldGreen(data_string):
     print(Style.BRIGHT+Fore.GREEN+data_string+Style.RESET_ALL)
+
+
+#See https://stackoverflow.com/a/43357954/6057617
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 if __name__ == "__main__":
@@ -78,15 +90,26 @@ if __name__ == "__main__":
 
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
+
+
+    parser.add_argument("--only_test_loss", type=str2bool, default=False)
+    parser.add_argument("--use_Hungarian", type=str2bool, default=True) 
+
+    parser.add_argument("--epsilon_WTA", type=float, default=0.05)
     
 
     args = parser.parse_args()
+
+    printInBoldRed(f"only_test_loss={args.only_test_loss}")
+    printInBoldRed(f"use_Hungarian={args.use_Hungarian}")
+    printInBoldRed(f"epsilon_WTA={args.epsilon_WTA}")
+
+    # print(f"only_test_loss={args.only_test_loss}")
+    # exit();
     
     only_collect_data=False
     train_only_supervised=True
     reuse_previous_samples=False
-
-    use_Hungarian=True
 
     record_bag=True
     launch_tensorboard=True
@@ -129,11 +152,21 @@ if __name__ == "__main__":
         args.n_rounds=max_round+1; #It will use the demonstrations of these folders
         args.total_demos_per_round=0
 
+    if(args.only_test_loss):
+        batch_size=1
+        N_EPOCHS=1
+        log_interval=1
+
     if(args.train_environment_max_steps>1 and only_collect_data==True):
         printInBoldRed("Note that DAgger will not be used (since we are only collecting data)")
 
-    os.system("find "+args.policy_dir+" -type f -name '*.pt' -delete") #Delete the policies
+    if(args.only_test_loss==False):
+        os.system("find "+args.policy_dir+" -type f -name '*.pt' -delete") #Delete the policies
     os.system("rm -rf "+args.log_dir) #Delete the logs
+
+
+
+    print(f"reuse_previous_samples={reuse_previous_samples}")
 
     if(reuse_previous_samples==False):
         os.system("rm -rf "+args.policy_dir) #Delete the demos
@@ -145,6 +178,8 @@ if __name__ == "__main__":
         mode='Plain'
     else:
         mode='Verbose'
+
+    # exit()
 
     ################## Coloring of the python errors, https://stackoverflow.com/a/52797444/6057617
     sys.excepthook = ultratb.FormattedTB(mode=mode, color_scheme='Linux', call_pdb=False)
@@ -250,9 +285,9 @@ if __name__ == "__main__":
         printInBoldBlue("---------------- Making Learner Policy: -------------------")
         # Create learner policy
         if args.on_policy_trainer: 
-            trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy, use_Hungarian=use_Hungarian) 
+            trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy, use_Hungarian=args.use_Hungarian, only_test_loss=args.only_test_loss, epsilon_WTA=args.epsilon_WTA) 
         else: 
-            trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, use_Hungarian=use_Hungarian)
+            trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, use_Hungarian=args.use_Hungarian, only_test_loss=args.only_test_loss, epsilon_WTA=args.epsilon_WTA)
 
 
 
