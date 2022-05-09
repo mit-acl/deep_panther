@@ -7,7 +7,7 @@ close all;  clear all; clc;
 
 set(0,'defaulttextInterpreter','latex');
 set(groot, 'defaultAxesTickLabelInterpreter','latex'); set(groot, 'defaultLegendInterpreter','latex');
-
+ set(0, 'DefaultFigureRenderer', 'painters'); %or opengl
 % addpath(genpath('./../../../manint/manopt'));
 % addpath(genpath('./../../../manint/methods'));
 
@@ -17,7 +17,7 @@ addpath(genpath('./../../submodules/minvo/src/solutions'));
 addpath(genpath('./more_utils'));
 addpath(genpath('./hopf_visualization'));
 
-set(0,'DefaultFigureWindowStyle','docked') %'normal' 'docked'
+set(0,'DefaultFigureWindowStyle','normal') %'normal' 'docked'
 set(0,'defaultfigurecolor',[1 1 1])
 opti = casadi.Opti();
 
@@ -111,9 +111,12 @@ for t=all_t
     colors=getColors(all_values);
    
 
-h=colormapline(all_projs(1,:),all_projs(2,:),all_projs(3,:),colors); axis equal;
+%%% Comment the following two lines if you don't wanna plot the solution
+h=colormapline(all_projs(1,:),all_projs(2,:),all_projs(3,:),colors); 
 set(h,'linewidth',4,'linestyle','--')
-    
+
+axis equal;
+
 index_t=index_t+1;
 end
 
@@ -122,7 +125,7 @@ p1=[w_fevar(1:2);0];
 p2=w_fevar;
 plot3([ p1(1) p2(1)], [p1(2) p2(2)], [p1(3) p2(3)],'--');
 
-view([-59.11,21.95]); xlabel('\textbf{x}','fontsize',14); ylabel('\textbf{y}','fontsize',14); zlabel('\textbf{z}','fontsize',14)
+view([-59.11,21.95]); xlabel('x','fontsize',14); ylabel('y','fontsize',14); zlabel('z','fontsize',14)
 % plot([w_fevar(1:2);0],w_fevar,'--' )
 
 camlight
@@ -144,7 +147,9 @@ for t=all_t
 %     r2=cross(r3,r0_star);
     
     tmp=pos+r0_star;
-     arrow3dWithColor(pos',tmp',30,'cylinder',[0.2,0.1],'b');
+    
+%%% Comment the following line if you don't wanna plot the solution
+      arrow3dWithColor(pos',tmp',30,'cylinder',[0.2,0.1],'b');
 
     qabc=qabcFromAccel(a, 9.81);
     Rabc=toRotMat(qabc);
@@ -167,20 +172,22 @@ for t=all_t
     
 end
 
+set(gcf,'Position',[2561         612         808         570])
+
 dataPoints=dataPoints';
 
-
+%%
 clc;
 figure; hold on;
 [r,theta] = meshgrid(ones(1,numel(all_t)),all_psi);
 r=r'; theta=theta'; %Every row of the matrices r, theta, all_t_grid corresponds to a slice of the cilinder (i.e. a circunference)
                     %Every column of the matrices .................corresponds to a longitudinal line of the cylinder
 all_t_grid=repmat(all_t',1,size(r,2));
-surf(all_t_grid,r.*cos(theta),r.*sin(theta),all_circles_all_values); xlabel('\textbf{t}','fontsize',14); axis equal
+surf(all_t_grid,r.*cos(theta),r.*sin(theta),all_circles_all_values); xlabel('t','fontsize',14); axis equal
 % colormap jet; 
 colorbar; shading interp; % caxis([20 50])
 curve=[all_t;cell2mat(dataPoints)'];
-plot3(curve(1,:), curve(2,:), curve(3,:),'r','LineWidth',3)
+plot3(curve(1,:), curve(2,:), curve(3,:),'r','LineWidth',3); axis off;
 
 
 figure; hold on;
@@ -190,9 +197,10 @@ surf(all_t_grid,theta-4*pi,all_circles_all_values-8);
 yline(0,'--'); yline(2*pi,'--'); yline(-2*pi,'--')
 % colormap jet;
 colorbar; shading interp; % caxis([20 50])
-xlabel('\textbf{t}','fontsize',14); ylabel('$\psi(t)$')
+xlabel('t','fontsize',14); ylabel('$\psi(t)$')
+xlim([0,8.5]);
 
-% angles_datapoints=shiftToEnsureNoMoreThan2Pi(angles_datapoints);
+angles_datapoints=shiftToEnsureNoMoreThan2Pi(angles_datapoints);
 
 plot(all_t,angles_datapoints,'-r','LineWidth',3);
 
@@ -203,6 +211,10 @@ function colors=getColors(all_values)
     all_values=  ceil((n-1)*all_values + 1); %normalize \in [1,n]
     colors=my_map(all_values',:);
 end
+
+
+%exportAsPdf(gcf,'closed_form_yaw_3dWithPos');
+% exportAsPdf(gcf,'closed_form_yaw_planar');
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
