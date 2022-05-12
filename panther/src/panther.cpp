@@ -879,6 +879,12 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
     // std::cout << "Chosen cost=" << best_solution_student.augmented_cost << std::endl;
     ///////////////////////////////
 
+    if (best_solution_student.isInCollision())
+    {
+      std::cout << red << bold << "All the trajectories found by the student are in collision" << reset << std::endl;
+      return false;
+    }
+
     best_solution_student.fillTraj(par_.dc);  // This could also be done in the predict method of the python class
     best_solution_student.printInfo();
     // abort();
