@@ -61,6 +61,6 @@ max_dist2BSPoscPoint: 10.0
 use_expert: true
 use_student: true
 # student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/final_policy.pt #final_policy.pt   intermediate_policy_42.pt
-student_policy_path: /home/jtorde/Dropbox (MIT)/Research/Planning_project/Deep_PANTHER/comparisons/results_experiment/Hung_True_epsilonWTA_0.05.pt #final_policy.pt   intermediate_policy_42.pt
+student_policy_path: /home/jtorde/Dropbox (MIT)/Research/Planning_project/Deep_PANTHER/comparisons/results_experiment/Hung_True_epsilonRWTA_0.05.pt #final_policy.pt   intermediate_policy_42.pt
 static_planning: true #If true, it will always plan from the same initial condition
 use_closed_form_yaw_student: true #If false, the NN will predict this closed form for the yaw angle
