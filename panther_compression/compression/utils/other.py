@@ -192,26 +192,26 @@ def getObsAndGtermToCrossPath():
 	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[1.0]])
 
 	#Hack to force position of the obstacle and gterm
-	w_pos_obstacle=np.array([[2.5],[0.0],[1.0]]);
-	# w_pos_g_term= np.array([[4.0],[random.uniform(-1.5, 1.5)],[random.uniform(-1.5, 1.5)]]);
-	# w_pos_g_term= w_pos_obstacle + np.array([[random.uniform(1.0, 4.5)],[random.uniform(-3.5, 3.5)],[random.uniform(-3.5, 3.5)]]);
-	radius_gterm = np.linalg.norm(w_pos_obstacle) +random.uniform(0.0, 5.0) 
-	std_deg=15
-	theta_g_term = random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
-	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[1.0]])
-	###########
+	# w_pos_obstacle=np.array([[2.5],[0.0],[1.0]]);
+	# # w_pos_g_term= np.array([[4.0],[random.uniform(-1.5, 1.5)],[random.uniform(-1.5, 1.5)]]);
+	# # w_pos_g_term= w_pos_obstacle + np.array([[random.uniform(1.0, 4.5)],[random.uniform(-3.5, 3.5)],[random.uniform(-3.5, 3.5)]]);
+	# radius_gterm = np.linalg.norm(w_pos_obstacle) +random.uniform(0.0, 5.0) 
+	# std_deg=15
+	# theta_g_term = random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
+	# w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[1.0]])
+	# ###########
 
 
-	#Taken from the commit that worked
-	theta=random.uniform(-np.pi/2, np.pi/2)
-	radius_obstacle=random.uniform(1.5, 4.5)
-	radius_gterm=radius_obstacle + random.uniform(1.0, 6.0)
-	std_deg=10#30
-	theta_g_term=theta + random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
-	center=np.zeros((3,1))
+	# #Taken from the commit that worked
+	# theta=random.uniform(-np.pi/2, np.pi/2)
+	# radius_obstacle=random.uniform(1.5, 4.5)
+	# radius_gterm=radius_obstacle + random.uniform(1.0, 6.0)
+	# std_deg=10#30
+	# theta_g_term=theta + random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
+	# center=np.zeros((3,1))
 
-	w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
-	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[1.0]])
+	# w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
+	# w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[1.0]])
 	########
 
 
@@ -299,7 +299,7 @@ class ObstaclesManager():
 		# print(f"Using random_scale={self.random_scale}")
 
 		###HACK TO GENERATE A STATIC OBSTACLE
-		self.random_scale=np.zeros((3,1))
+		# self.random_scale=np.zeros((3,1))
 		####################################
 
 		trefoil=Trefoil(pos=self.random_pos, scale=self.random_scale, offset=self.random_offset, slower=1.5);
@@ -1187,6 +1187,7 @@ class StudentCaller():
 			my_solOrGuess.cost = self.costs_and_violations_of_action.costs[i]
 			my_solOrGuess.obst_avoidance_violation = self.costs_and_violations_of_action.obst_avoidance_violations[i]
 			my_solOrGuess.dyn_lim_violation = self.costs_and_violations_of_action.dyn_lim_violations[i]
+			my_solOrGuess.aug_cost = self.cc.computeAugmentedCost(my_solOrGuess.cost, my_solOrGuess.obst_avoidance_violation, my_solOrGuess.dyn_lim_violation)
 
 			all_solOrGuess.append(my_solOrGuess)
 
@@ -1405,7 +1406,7 @@ class CostComputer():
 	# 	return cost + obst_avoidance_violation + dyn_lim_violation
 
 	def computeAugmentedCost(self, cost, obst_avoidance_violation, dyn_lim_violation):
-		return cost + obst_avoidance_violation + dyn_lim_violation
+		return cost + CostComputer.par.lambda_obst_avoidance_violation*obst_avoidance_violation + CostComputer.par.lambda_dyn_lim_violation*dyn_lim_violation
 
 	def getIndexBestTraj(self, f_obs_n, f_action_n):
 		tmp=self.getCostsAndViolationsOfActionFromObsnAndActionn(f_obs_n, f_action_n)

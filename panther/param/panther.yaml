@@ -1,7 +1,7 @@
 use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
 visual: true #publish visualization stuff
-color_type_student: "cost" #"vel" or "time" or "cost" or "agent" or "black"
-color_type_expert: "black" #"vel" or "time" or "cost" or "agent" or "black"
+color_type_student: "vel" #"vel" or "time" or "aug_cost" or "agent" or "black"
+color_type_expert: "black" #"vel" or "time" or "aug_cost" or "agent" or "black"
 n_agents: 16 #only used for the color in the trajectory
 num_of_trajs_per_replan: 6
 max_num_of_initial_guesses: 10
@@ -37,7 +37,7 @@ a_star_samp_y: 3
 a_star_samp_z: 3 
 a_star_fraction_voxel_size: 0.00 #\in [0,1] The higher, the bigger the voxel size in A* is(i.e. more prunning)
 a_star_bias: 1.0 #Bias (cost=g+bias*h) in the A* search 
-res_plot_traj: 30.0  #Higher --> More resolution when plotting the trajectory 
+res_plot_traj: 90.0  #Higher --> More resolution when plotting the trajectory 
 factor_alloc: 1.0 #>=1. Used to find the total duration of a given trajectory.
 alpha_shrink: 0.9 #\in [0,1] Only used for MINVO/Bezier
 norminv_prob: 1.0 #For x% bands, set this to norminv(x). #70.0% band <--> 0.524, 80.0% band <--> 0.841, 90.0% band <--> 1.282, 97.5% band <--> 1.96 (i.e. total area is 95%)
@@ -47,10 +47,10 @@ c_visibility_yaw_search: 1.0  #weight for the yaw search
 c_maxydot_yaw_search: 0.0     #weight for the yaw search
 c_pos_smooth: 0.0003           #weight for the optimization
 c_yaw_smooth: 0.00            #weight for the optimization
-c_fov: 6.0                 #weight for the optimization
-c_final_pos: 100.0           #weight for the optimization
+c_fov: 30.0                 #weight for the optimization
+c_final_pos: 500.0           #weight for the optimization
 c_final_yaw: 0.0              #weight for the optimization
-c_total_time: 80             #weight for the optimization
+c_total_time: 10             #weight for the optimization
 print_graph_yaw_info: false
 z_goal_when_using_rviz: 1.0 #[meters] 
 mode: panther #  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther), ysweep (noPA but with sweep in yaw) 
@@ -60,7 +60,9 @@ max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
 use_expert: false
 use_student: true
-# student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/final_policy.pt #final_policy.pt   intermediate_policy_42.pt
-student_policy_path: /home/jtorde/Dropbox (MIT)/Research/Planning_project/Deep_PANTHER/comparisons/results_experiment/Hung_True_epsilonRWTA_0.05.pt #final_policy.pt   intermediate_policy_42.pt
-static_planning: true #If true, it will always plan from the same initial condition
+student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round17_log18.pt #final_policy.pt   intermediate_policy_42.pt
+# student_policy_path: /home/jtorde/Dropbox (MIT)/Research/Planning_project/Deep_PANTHER/comparisons/results_experiment/Hung_True_epsilonWTA_0.05.pt #final_policy.pt   intermediate_policy_42.pt
+static_planning: false #If true, it will always plan from the same initial condition
 use_closed_form_yaw_student: true #If false, the NN will predict this closed form for the yaw angle
+lambda_obst_avoidance_violation: 1.0 #To compute the augmented cost
+lambda_dyn_lim_violation: 1.0 #To compute the augmented cost
