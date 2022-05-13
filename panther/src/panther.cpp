@@ -712,6 +712,10 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   std::vector<mt::obstacleForOpt> obstacles_for_opt =
       getObstaclesForOpt(t_start, t_start + par_.fitter_total_time, splines_fitted);
 
+  int n_safe_trajs_expert = 0;
+  int n_safe_trajs_student = 0;
+  int n_safe_trajs = 0;
+
   // si::solOrGuess best_solution;
   if (par_.use_expert)
   {
@@ -854,6 +858,9 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
     best_solutions_expert = solver_->getBestSolutions();
 
+    n_safe_trajs_expert =
+        best_solutions_expert.size();  // Note that all the trajectories produced by the expert are safe
+
     guesses = solver_->getGuesses();
 
     best_solution_expert = solver_->fillTrajBestSolutionAndGetIt();
@@ -869,10 +876,13 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
     pybind11::object tmp = student_caller_ptr_->attr("getIndexBestTraj")();
     int index_smallest_augmented_cost = tmp.cast<int>();
 
-    // for (auto z : best_solutions_student)
-    // {
-    //   std::cout << "cost= " << z.cost << std::endl;
-    // }
+    for (auto z : best_solutions_student)
+    {
+      if (z.isInCollision() == false)
+      {
+        n_safe_trajs_student += 1;
+      }
+    }
 
     best_solution_student = best_solutions_student[index_smallest_augmented_cost];
 
@@ -895,14 +905,17 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   if (par_.use_student == true && par_.use_expert == false)
   {
     best_solution = best_solution_student;
+    n_safe_trajs = n_safe_trajs_student;
   }
   else if (par_.use_student == false && par_.use_expert == true)
   {
     best_solution = best_solution_expert;
+    n_safe_trajs = n_safe_trajs_expert;
   }
   else if (par_.use_student == true && par_.use_expert == true)
   {
     best_solution = best_solution_student;
+    n_safe_trajs = n_safe_trajs_student;
   }
   else
   {
@@ -972,9 +985,10 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   if (this_replan_uses_new_gterm == true && par_.static_planning == true)
   {
     std::cout << std::setprecision(8)
-              << "CostTimeResults: [Cost, obst_avoidance_violation, dyn_lim_violation, total_time_ms]= "
+              << "CostTimeResults: [Cost, obst_avoidance_violation, dyn_lim_violation, total_time_ms, n_safe_trajs]= "
               << best_solution.cost << " " << best_solution.obst_avoidance_violation << " "
-              << best_solution.dyn_lim_violation << " " << log_ptr_->tim_total_replan.getMsSaved() << std::endl;
+              << best_solution.dyn_lim_violation << " " << log_ptr_->tim_total_replan.getMsSaved() << " "
+              << n_safe_trajs << std::endl;
   }
 
   return true;
