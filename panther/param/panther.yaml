@@ -37,7 +37,7 @@ a_star_samp_y: 3
 a_star_samp_z: 3 
 a_star_fraction_voxel_size: 0.00 #\in [0,1] The higher, the bigger the voxel size in A* is(i.e. more prunning)
 a_star_bias: 1.0 #Bias (cost=g+bias*h) in the A* search 
-res_plot_traj: 90.0  #Higher --> More resolution when plotting the trajectory 
+res_plot_traj: 30.0  #Higher --> More resolution when plotting the trajectory 
 factor_alloc: 1.0 #>=1. Used to find the total duration of a given trajectory.
 alpha_shrink: 0.9 #\in [0,1] Only used for MINVO/Bezier
 norminv_prob: 1.0 #For x% bands, set this to norminv(x). #70.0% band <--> 0.524, 80.0% band <--> 0.841, 90.0% band <--> 1.282, 97.5% band <--> 1.96 (i.e. total area is 95%)
