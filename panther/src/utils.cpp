@@ -681,6 +681,8 @@ std_msgs::ColorRGBA getColorInterpBetween2Colors(double v, double vmin, double v
 
 std_msgs::ColorRGBA getColorJet(double v, double vmin, double vmax)
 {
+  vmax = std::max(vmax, 1.0001 * vmin);  // Ensure vmax>vmin
+
   std_msgs::ColorRGBA c;
   c.r = 1;
   c.g = 1;
@@ -1001,8 +1003,8 @@ geometry_msgs::Vector3 vectorUniform(double a)
 
 visualization_msgs::MarkerArray trajectory2ColoredMarkerArray(const mt::trajectory& data, double max_value, int increm,
                                                               std::string ns, double scale, std::string color_type,
-                                                              int id_agent, int n_agents, double min_cost,
-                                                              double max_cost, double cost, bool collides)
+                                                              int id_agent, int n_agents, double min_aug_cost,
+                                                              double max_aug_cost, double aug_cost, bool collides)
 {
   visualization_msgs::MarkerArray marker_array;
 
@@ -1036,16 +1038,9 @@ visualization_msgs::MarkerArray trajectory2ColoredMarkerArray(const mt::trajecto
     {
       m.color = getColorJet(i, 0, data.size());
     }
-    else if (color_type == "cost")  // TODO: "time" is hand-coded
+    else if (color_type == "aug_cost")  // TODO: "time" is hand-coded
     {
-      if (collides)
-      {
-        m.color = color(RED_NORMAL);
-      }
-      else
-      {
-        m.color = getColorInterpBetween2Colors(cost, min_cost, max_cost, color(GREEN_NORMAL), color(YELLOW_NORMAL));
-      }
+      m.color = getColorJet(aug_cost, min_aug_cost, max_aug_cost);
     }
     else if (color_type == "agent")  // TODO: "time" is hand-coded
     {
@@ -1060,6 +1055,12 @@ visualization_msgs::MarkerArray trajectory2ColoredMarkerArray(const mt::trajecto
       std::cout << "color_type CHOSEN IS NOT SUPPORTED" << std::endl;
       abort();
     }
+
+    if (collides)
+    {
+      m.color.a = 0.0;  // Make it invisible
+    }
+
     // m.color.a = alpha;
     m.scale.x = scale;
     m.scale.y = 0.0000001;  // rviz complains if not

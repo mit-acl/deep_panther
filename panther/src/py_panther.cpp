@@ -40,6 +40,7 @@ PYBIND11_MODULE(py_panther, m)
       .def_readwrite("cost", &si::solOrGuess::cost)
       .def_readwrite("obst_avoidance_violation", &si::solOrGuess::obst_avoidance_violation)
       .def_readwrite("dyn_lim_violation", &si::solOrGuess::dyn_lim_violation)
+      .def_readwrite("aug_cost", &si::solOrGuess::aug_cost)
       .def_readwrite("is_guess", &si::solOrGuess::is_guess)
       .def_readwrite("deg_p", &si::solOrGuess::deg_p)
       .def_readwrite("deg_y", &si::solOrGuess::deg_y)
@@ -137,6 +138,8 @@ PYBIND11_MODULE(py_panther, m)
 .def_readwrite("student_policy_path", &mt::parameters::student_policy_path)
 .def_readwrite("static_planning", &mt::parameters::static_planning)
 .def_readwrite("use_closed_form_yaw_student", &mt::parameters::use_closed_form_yaw_student)
+.def_readwrite("lambda_obst_avoidance_violation", &mt::parameters::lambda_obst_avoidance_violation)
+.def_readwrite("lambda_dyn_lim_violation", &mt::parameters::lambda_dyn_lim_violation)
       // clang-format on
       .def("__repr__", [](const mt::parameters &a) { return "<py_panther.parameters>"; });
 

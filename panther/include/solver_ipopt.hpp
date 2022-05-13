@@ -56,6 +56,7 @@ struct solOrGuess
   double cost;
   double obst_avoidance_violation = 0.0;
   double dyn_lim_violation = 0.0;
+  double aug_cost = 0.0;
   bool is_guess = true;
   // double prob = 1.0;
   bool is_repeated = false;

@@ -155,6 +155,8 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "student_policy_path", par_.student_policy_path);
   safeGetParam(nh1_, "static_planning", par_.static_planning);
   safeGetParam(nh1_, "use_closed_form_yaw_student", par_.use_closed_form_yaw_student);
+  safeGetParam(nh1_, "lambda_obst_avoidance_violation", par_.lambda_obst_avoidance_violation);
+  safeGetParam(nh1_, "lambda_dyn_lim_violation", par_.lambda_dyn_lim_violation);
 
   bool perfect_prediction;  // use_ground_truth_prediction
   safeGetParam(nh1_, "perfect_prediction", perfect_prediction);
@@ -527,8 +529,8 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
           std::vector<si::solOrGuess> best_solution_student_vector;
           best_solution_student_vector.push_back(best_solution_student);
           // clang-format off
-        clearMarkerArray(ma_best_solution_student_, pub_best_solution_student_);
-        ma_best_solution_student_=pubVectorOfsolOrGuess(best_solution_student_vector, pub_best_solution_student_, name_drone_ + "_best_solution_student", par_.color_type_student);
+        // clearMarkerArray(ma_best_solution_student_, pub_best_solution_student_);
+        // ma_best_solution_student_=pubVectorOfsolOrGuess(best_solution_student_vector, pub_best_solution_student_, name_drone_ + "_best_solution_student", par_.color_type_student);
         clearMarkerArray(ma_best_solutions_student_, pub_best_solutions_student_);
         ma_best_solutions_student_=pubVectorOfsolOrGuess(best_solutions_student, pub_best_solutions_student_, name_drone_ + "_best_solutions_student", par_.color_type_student);
           // clang-format on
@@ -551,7 +553,7 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 
       // std::cout << "best_solutions.size= " << best_solutions.size() << std::endl;
 
-      pubVectorOfsolOrGuess(splines_fitted, pub_splines_fitted_, name_drone_ + "_spline_fitted", "vel");
+      // pubVectorOfsolOrGuess(splines_fitted, pub_splines_fitted_, name_drone_ + "_spline_fitted", "vel");
     }
 
     // if (replanned)
@@ -737,8 +739,8 @@ visualization_msgs::MarkerArray PantherRos::pubVectorOfsolOrGuess(const std::vec
   {
     if (tmp.isInCollision() == false)
     {
-      min_cost = std::min(min_cost, tmp.cost);
-      max_cost = std::max(max_cost, tmp.cost);
+      min_cost = std::min(min_cost, tmp.aug_cost);
+      max_cost = std::max(max_cost, tmp.aug_cost);
     }
   }
 
@@ -776,7 +778,7 @@ visualization_msgs::MarkerArray PantherRos::pubVectorOfsolOrGuess(const std::vec
       // std::cout << "sol_or_guess.cost= " << sol_or_guess.cost << std::endl;
 
       tmp = trajectory2ColoredMarkerArray(sol_or_guess.traj, max_value, increm, ns + std::to_string(j), scale,
-                                          color_type, id_, par_.n_agents, min_cost, max_cost, sol_or_guess.cost,
+                                          color_type, id_, par_.n_agents, min_cost, max_cost, sol_or_guess.aug_cost,
                                           sol_or_guess.isInCollision());
 
       // std::cout << "sol_or_guess.augmented_cost=" << sol_or_guess.augmented_cost << std::endl;
