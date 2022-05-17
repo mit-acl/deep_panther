@@ -99,6 +99,8 @@ private:
 
   void doStuffTermGoal();
 
+  void printInfo(si::solOrGuess& best_solution, int n_safe_trajs);
+
   mt::parameters par_;
 
   double t_;  // variable where the expressions of the trajs of the dyn obs are evaluated

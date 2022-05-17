@@ -47,10 +47,10 @@ c_visibility_yaw_search: 1.0  #weight for the yaw search
 c_maxydot_yaw_search: 0.0     #weight for the yaw search
 c_pos_smooth: 0.0003           #weight for the optimization
 c_yaw_smooth: 0.00            #weight for the optimization
-c_fov: 30.0                 #weight for the optimization
-c_final_pos: 500.0           #weight for the optimization
+c_fov: 6.0                 #weight for the optimization
+c_final_pos: 100.0           #weight for the optimization
 c_final_yaw: 0.0              #weight for the optimization
-c_total_time: 10             #weight for the optimization
+c_total_time: 80             #weight for the optimization
 print_graph_yaw_info: false
 z_goal_when_using_rviz: 1.0 #[meters] 
 mode: panther #  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther), ysweep (noPA but with sweep in yaw) 
@@ -58,11 +58,9 @@ max_dist2goal: 20.0
 max_dist2obs: 20.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
-use_expert: false
-use_student: true
-student_policy_path: /home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round17_log18.pt #final_policy.pt   intermediate_policy_42.pt
-# student_policy_path: /home/jtorde/Dropbox (MIT)/Research/Planning_project/Deep_PANTHER/comparisons/results_experiment/Hung_True_epsilonWTA_0.05.pt #final_policy.pt   intermediate_policy_42.pt
-static_planning: false #If true, it will always plan from the same initial condition
+use_expert: true
+use_student: false
+static_planning: true #If true, it will always plan from the same initial condition
 use_closed_form_yaw_student: true #If false, the NN will predict this closed form for the yaw angle
 lambda_obst_avoidance_violation: 1.0 #To compute the augmented cost
 lambda_dyn_lim_violation: 1.0 #To compute the augmented cost

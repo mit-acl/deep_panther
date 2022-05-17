@@ -892,6 +892,12 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
     if (best_solution_student.isInCollision())
     {
       std::cout << red << bold << "All the trajectories found by the student are in collision" << reset << std::endl;
+
+      if (this_replan_uses_new_gterm == true && par_.static_planning == true)
+      {
+        printInfo(best_solution_student, n_safe_trajs_student);
+      }
+
       return false;
     }
 
@@ -984,14 +990,19 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
   if (this_replan_uses_new_gterm == true && par_.static_planning == true)
   {
-    std::cout << std::setprecision(8)
-              << "CostTimeResults: [Cost, obst_avoidance_violation, dyn_lim_violation, total_time_ms, n_safe_trajs]= "
-              << best_solution.cost << " " << best_solution.obst_avoidance_violation << " "
-              << best_solution.dyn_lim_violation << " " << log_ptr_->tim_total_replan.getMsSaved() << " "
-              << n_safe_trajs << std::endl;
+    printInfo(best_solution, n_safe_trajs);
   }
 
   return true;
+}
+
+void Panther::printInfo(si::solOrGuess& best_solution, int n_safe_trajs)
+{
+  std::cout << std::setprecision(8)
+            << "CostTimeResults: [Cost, obst_avoidance_violation, dyn_lim_violation, total_time_ms, n_safe_trajs]= "
+            << best_solution.cost << " " << best_solution.obst_avoidance_violation << " "
+            << best_solution.dyn_lim_violation << " " << log_ptr_->tim_total_replan.elapsedSoFarMs() << " "
+            << n_safe_trajs << std::endl;
 }
 
 void Panther::logAndTimeReplan(const std::string& info, const bool& success, mt::log& log)

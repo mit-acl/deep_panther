@@ -9,6 +9,8 @@
   <arg name="gzclient" default="false"/>
  <!--  <arg name="mode" default="panther" />  --><!--  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther) ysweep (noPA but with sweep in yaw) -->
   <arg name="num_of_obs" default="1" /> 
+  <arg name="student_policy_path" default="/home/jtorde/Dropbox (MIT)/Research/Planning_project/Deep_PANTHER/comparisons/results_experiment/Hung_False_epsilonRWTA_0.15.pt" /> 
+  <!-- <arg name="student_policy_path" default="/home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round17_log18.pt" />  -->
 
 
   <!-- ///////////////////////////////////////////////// -->
@@ -102,6 +104,7 @@
       <rosparam file="$(find panther)/matlab/casadi_generated_files/params_casadi.yaml" command="load"/>
       <param name="gui_mission" value="$(arg gui_mission)" /> 
       <param name="perfect_prediction" value="$(arg perfect_prediction)" /> 
+      <param name="student_policy_path" value="$(arg student_policy_path)" /> 
      <!--  <param name="mode" value="$(arg mode)" />  --><!-- noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther) -->
 
         <!-- Subscriptions -->
