@@ -74,8 +74,8 @@ if __name__ == "__main__":
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
 
     parser.add_argument("--n_rounds", default=5000, type=int) 
-    parser.add_argument("--total_demos_per_round", default=256*5, type=int) 
-    parser.add_argument("--train_environment_max_steps", default=10, type=int)
+    parser.add_argument("--total_demos_per_round", default=256, type=int) 
+    parser.add_argument("--train_environment_max_steps", default=1, type=int)
     parser.add_argument("--rampdown_rounds", default=1, type=int) # Dagger properties
 
     parser.add_argument("--n_evals", default=1, type=int)
@@ -108,13 +108,13 @@ if __name__ == "__main__":
     # exit();
     
     only_collect_data=False
-    train_only_supervised=False
+    train_only_supervised=True
     reuse_previous_samples=False
 
     record_bag=True
     launch_tensorboard=True
     verbose_python_errors=False
-    batch_size = 256*5
+    batch_size = 256
     N_EPOCHS = 250           #WAS 50!! Num epochs for training.
     lr=1e-3
     weight_prob=0.005
