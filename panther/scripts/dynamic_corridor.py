@@ -32,6 +32,7 @@ import copy
 import sys
 import glob
 import rospkg
+import argparse
 
 def getColorJet(v, vmin, vmax): 
 
@@ -69,6 +70,8 @@ def getColorJet(v, vmin, vmax):
 
 class DynCorridor:
 
+   
+
     def getTrajectoryPosMeshBBox(self, i):
         delta_beginning=2.0;
         delta=(self.x_max-self.x_min-delta_beginning)/(self.total_num_obs);
@@ -80,8 +83,21 @@ class DynCorridor:
         s=self.scale
         if(self.getType(i)=="dynamic"):
             mesh=random.choice(self.available_meshes_dynamic);
-            bbox=self.bbox_dynamic;
-            [x_string, y_string, z_string] = self.trefoil(x,y,z, self.scale[0],self.scale[1],self.scale[2], offset, slower)
+            bbox=self.bbox_dynamic; 
+            if(self.type_of_obst_traj=="trefoil"):
+                [x_string, y_string, z_string] = self.trefoil(x,y,z, self.scale[0],self.scale[1],self.scale[2], offset, slower)
+            elif(self.type_of_obst_traj=="eightCurve"):
+                [x_string, y_string, z_string] = self.eightCurve(x,y,z, self.scale[0],self.scale[1],self.scale[2], offset, slower)
+            elif(self.type_of_obst_traj=="square"):
+                [x_string, y_string, z_string] = self.square(x,y,z, self.scale[0],self.scale[1],self.scale[2], offset, slower)
+            elif(self.type_of_obst_traj=="epitrochoid"):
+                [x_string, y_string, z_string] = self.epitrochoid(x,y,z, self.scale[0],self.scale[1],self.scale[2], offset, slower)
+            elif(self.type_of_obst_traj=="static"):
+                [x_string, y_string, z_string] = self.static(2.5,0.0,1.0)    
+            else:
+                print("*******  TRAJECTORY ["+ self.type_of_obst_traj+"] "+" NOT SUPPORTED   ***********")
+                exit();         
+
         else:
             mesh=random.choice(self.available_meshes_static);
             bbox=self.bbox_static_vert;
@@ -95,7 +111,7 @@ class DynCorridor:
         else:
             return "static"
 
-    def __init__(self, total_num_obs,gazebo):
+    def __init__(self, total_num_obs,gazebo, type_of_obst_traj):
         self.state=State()
 
         name = rospy.get_namespace()
@@ -121,6 +137,8 @@ class DynCorridor:
         self.percentage_vert=0.0;
         self.name_obs="obs_"
         self.max_vel_obstacles=-10.0;
+
+        self.type_of_obst_traj=type_of_obst_traj #eightCurve, static, square, epitrochoid
    
         #HACK
         # self.num_of_dyn_objects=1;
@@ -219,10 +237,10 @@ class DynCorridor:
             marker=self.marker_array.markers[i];
  
             # #Hack to produce a static obstacle
-            x_string='2.5'
-            y_string='0'
-            z_string='1'
-            self.all_dyn_traj[i].s_mean=[x_string, y_string, z_string]
+            # x_string='2.5'
+            # y_string='0'
+            # z_string='1'
+            # self.all_dyn_traj[i].s_mean=[x_string, y_string, z_string]
             # #End of hack
 
             x = eval(self.all_dyn_traj[i].s_mean[0])
@@ -481,6 +499,48 @@ class DynCorridor:
 
         return [x_string, y_string, z_string]
 
+    def eightCurve(self,x,y,z,scale_x, scale_y, scale_z,offset,slower): #The xy projection is an https://mathworld.wolfram.com/v.html
+
+        tt='(t+'+str(offset)+')'+'/' + str(slower);
+        cost='cos('+tt+')';
+        sint='sin('+tt+')';
+
+        x_string=str(scale_x)+'*'+sint + '+' + str(x);
+        y_string=str(scale_y)+'*'+sint+'*'+cost + '+' + str(y);
+        z_string=str(scale_z)+'*'+sint+'*'+sint+'*'+cost + '+' + str(z);
+
+        return [x_string, y_string, z_string]
+
+    
+    def epitrochoid(self,x,y,z,scale_x, scale_y, scale_z, offset, slower):
+
+        #slower=1.0; #The higher, the slower the obstacles move" 
+        tt='(t+'+str(offset)+')'+'/' + str(slower);
+        cost='cos('+tt+')';
+        sint='sin('+tt+')';
+
+        a=1.0;
+        b=0.4;
+        h=4.0;
+
+        aplusb='('+str(a)+'+'+str(b)+')';
+        adivbplus1='('+str(a)+'/'+str(b)+'+1)';
+
+
+
+        x_string= str(scale_x/7)+'*'+'(' + aplusb + '*' + cost + '-' + str(h) + '*cos(' + adivbplus1 + '*'+tt +'))+' + str(x);     #str(scale_x/6.0)+'*(sin('+tt +str(offset)+') + 2 * sin(2 * '+tt +str(offset)+'))' +'+' + str(x); #'2*sin(t)' 
+        y_string= str(scale_y/7)+'*'+'(' + aplusb + '*' + sint + '-' + str(h) + '*sin(' + adivbplus1 + '*'+tt +'))+' + str(y)
+        z_string= str(scale_z)+'*'+'(' +  sint + '*' + cost  +')+' + str(z)
+
+        # x_string='3';
+        # y_string='0';
+        # z_string='1';
+
+        return [x_string, y_string, z_string]
+
+
+
+
     def spawnGazeboObstacle(self, i):
 
             rospack = rospkg.RosPack();
@@ -529,32 +589,40 @@ class DynCorridor:
             # os.remove(path_file)
 
              
-
-def startNode(total_num_obs, gazebo):
-    c = DynCorridor(total_num_obs,gazebo)
-    rospy.Timer(rospy.Duration(0.01), c.pubTF) #was 0.01
-    c.pubTF(None)
-    rospy.spin()
+#https://stackoverflow.com/a/43357954/6057617
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 if __name__ == '__main__':
 
-    # TODO: use https://docs.python.org/3.3/library/argparse.html
-    print("********************************")
+    # Create the parser
+    parser = argparse.ArgumentParser()
+    # Add an argument
+    parser.add_argument('--num_of_obs', type=int, required=True)
+    parser.add_argument('--gazebo', type=str2bool, required=True)
+    parser.add_argument('--type_of_obst_traj', type=str, required=True)
+    # Parse the argument
     print(sys.argv)
-    if(len(sys.argv)<=1):
-        # print("Usage: python dynamic_corridor.py [Num_of_obstacles]")
-        total_num_obs=45; 
-    else:
-        total_num_obs=int(sys.argv[1])
+    print("*************************************")
+    args = parser.parse_args(sys.argv[1:7]) #See https://discourse.ros.org/t/getting-python-argparse-to-work-with-a-launch-file-or-python-node/10606
 
-
-    gazebo=((sys.argv[2]=='True') or (sys.argv[2]=='true'))
+    
 
     # total_num_obs=140
     ns = rospy.get_namespace()
     try:
         rospy.init_node('dynamic_obstacles')
-        startNode(total_num_obs,gazebo)
+        c = DynCorridor(args.num_of_obs, args.gazebo, args.type_of_obst_traj)
+        rospy.Timer(rospy.Duration(0.01), c.pubTF) #was 0.01
+        c.pubTF(None)
+        rospy.spin()
     except rospy.ROSInterruptException:
         pass
 
