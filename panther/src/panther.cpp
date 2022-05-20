@@ -988,7 +988,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
   logAndTimeReplan("Success", true, log);
 
-  if (this_replan_uses_new_gterm == true && par_.static_planning == true)
+  if ((this_replan_uses_new_gterm == true && par_.static_planning == true) || (par_.static_planning == false))
   {
     printInfo(best_solution, n_safe_trajs);
   }
