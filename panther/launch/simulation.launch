@@ -11,6 +11,7 @@
  <!--  <arg name="mode" default="panther" />  --><!--  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther) ysweep (noPA but with sweep in yaw) -->
   <arg name="num_of_obs" default="1" /> 
   <arg name="student_policy_path" default="/home/jtorde/Dropbox (MIT)/Research/Planning_project/Deep_PANTHER/static_results/results_policies_and_MSE/Hung_True_epsilonRWTA_0.05.pt" /> 
+  <arg name="static_planning" default="true" />  <!-- #If true, it will always plan from the same initial condition -->
   <!-- <arg name="student_policy_path" default="/home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round17_log18.pt" />  -->
 
 
@@ -106,6 +107,7 @@
       <param name="gui_mission" value="$(arg gui_mission)" /> 
       <param name="perfect_prediction" value="$(arg perfect_prediction)" /> 
       <param name="student_policy_path" value="$(arg student_policy_path)" /> 
+      <param name="static_planning" value="$(arg static_planning)" /> 
      <!--  <param name="mode" value="$(arg mode)" />  --><!-- noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther) -->
 
         <!-- Subscriptions -->
