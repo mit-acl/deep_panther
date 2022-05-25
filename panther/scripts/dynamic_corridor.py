@@ -123,8 +123,8 @@ class DynCorridor:
         self.num_of_stat_objects=total_num_obs-self.num_of_dyn_objects; 
         self.x_min= 2.0 
         self.x_max= 40.0
-        self.y_min= -1.0 
-        self.y_max= 1.0
+        self.y_min= -0.0 
+        self.y_max= 0.0
         self.z_min= 0.5 
         self.z_max= 0.5
         # self.scale= [(self.x_max-self.x_min)/self.total_num_obs, 5.0, 1.0]
