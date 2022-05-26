@@ -553,7 +553,7 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 
       // std::cout << "best_solutions.size= " << best_solutions.size() << std::endl;
 
-      // pubVectorOfsolOrGuess(splines_fitted, pub_splines_fitted_, name_drone_ + "_spline_fitted", "vel");
+      pubVectorOfsolOrGuess(splines_fitted, pub_splines_fitted_, name_drone_ + "_spline_fitted", "vel");
     }
 
     // if (replanned)
