@@ -8,6 +8,8 @@
   <arg name="gazebo" default="true"/>
   <arg name="gzclient" default="false"/>
   <arg name="type_of_obst_traj" default="static"/>   <!-- trefoil   eightCurve    square  epitrochoid  static -->
+  <arg name="alpha_scale_obst_traj" default="2"/>   
+  <arg name="beta_faster_obst_traj" default="0.666666666666666666666"/>   
  <!--  <arg name="mode" default="panther" />  --><!--  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther) ysweep (noPA but with sweep in yaw) -->
   <arg name="num_of_obs" default="1" /> 
   <arg name="student_policy_path" default="/home/jtorde/Dropbox (MIT)/Research/Planning_project/Deep_PANTHER/static_results/results_policies_and_MSE/Hung_True_epsilonRWTA_0.05.pt" /> 
@@ -89,7 +91,7 @@
   </group>
 
   <!-- <group if="$(arg environment)"> -->
-    <node name="dynamic_corridor" pkg="panther" type="dynamic_corridor.py" output="screen" args="--num_of_obs $(arg num_of_obs) --gazebo $(arg gazebo) --type_of_obst_traj $(arg type_of_obst_traj)"/> 
+    <node name="dynamic_corridor" pkg="panther" type="dynamic_corridor.py" output="screen" args="--num_of_obs $(arg num_of_obs) --gazebo $(arg gazebo) --type_of_obst_traj $(arg type_of_obst_traj) --alpha_scale_obst_traj $(arg alpha_scale_obst_traj) --beta_faster_obst_traj $(arg beta_faster_obst_traj)"/> 
   <!-- </group>   -->
 
   <!-- ///////////////////////////////////////////////// -->

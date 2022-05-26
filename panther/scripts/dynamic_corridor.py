@@ -111,7 +111,7 @@ class DynCorridor:
         else:
             return "static"
 
-    def __init__(self, total_num_obs,gazebo, type_of_obst_traj):
+    def __init__(self, total_num_obs,gazebo, type_of_obst_traj, alpha_scale_obst_traj, beta_faster_obst_traj):
         self.state=State()
 
         name = rospy.get_namespace()
@@ -125,12 +125,12 @@ class DynCorridor:
         self.x_max= 40.0
         self.y_min= -0.0 
         self.y_max= 0.0
-        self.z_min= 0.5 
-        self.z_max= 0.5
+        self.z_min= 1.0 
+        self.z_max= 1.0
         # self.scale= [(self.x_max-self.x_min)/self.total_num_obs, 5.0, 1.0]
-        self.scale= [2.0, 2.0, 2.0]
-        self.slower_min=1.5   #1.2 or 2.3
-        self.slower_max=1.5   #1.2 or 2.3
+        self.scale= [alpha_scale_obst_traj, alpha_scale_obst_traj, alpha_scale_obst_traj]
+        self.slower_min=1.0/beta_faster_obst_traj   #1.2 or 2.3
+        self.slower_max=1.0/beta_faster_obst_traj   #1.2 or 2.3
         self.bbox_dynamic=[0.8, 0.8, 0.8] 
         self.bbox_static_vert=[0.4, 0.4, 4]
         self.bbox_static_horiz=[0.4, 8, 0.4]
@@ -468,22 +468,26 @@ class DynCorridor:
         y_string=str(scale_x)+'*0.5*(abs('+cost+')*'+cost + '-abs('+sint+')*'+sint+')';
         z_string=x_string;
 
-        #Now let's rotate around the z axis
-        costheta='cos('+str(offset)+')';
-        sintheta='sin('+str(offset)+')';
-        x_rotated_string='('+costheta+'*'+x_string +'-'+ sintheta+'*'+y_string+')'; 
-        y_rotated_string='('+sintheta+'*'+x_string +'+'+ costheta+'*'+y_string+')'; 
-        z_rotated_string=z_string; 
+        ##Now let's rotate around the z axis
+        ## Commented for now
+        # costheta='cos('+str(offset)+')';
+        # sintheta='sin('+str(offset)+')';
+        # x_rotated_string='('+costheta+'*'+x_string +'-'+ sintheta+'*'+y_string+')'; 
+        # y_rotated_string='('+sintheta+'*'+x_string +'+'+ costheta+'*'+y_string+')'; 
+        # z_rotated_string=z_string; 
 
-        x_rotated_string=x_rotated_string+'+' + str(x);
-        y_rotated_string=y_rotated_string+'+' + str(y);
-        z_rotated_string=z_rotated_string+'+' + str(z);
+        # x_rotated_string=x_rotated_string+'+' + str(x);
+        # y_rotated_string=y_rotated_string+'+' + str(y);
+        # z_rotated_string=z_rotated_string+'+' + str(z);
+        # return [x_rotated_string, y_rotated_string, z_rotated_string]
 
-        # x_rotated_string='1';
-        # y_rotated_string='0';
-        # z_rotated_string='1';
 
-        return [x_rotated_string, y_rotated_string, z_rotated_string]
+        #Without rotation
+        x_string=x_string+'+' + str(x);
+        y_string=y_string+'+' + str(y);
+        z_string=z_string+'+' + str(z);
+
+        return [x_string, y_string, z_string]
 
     def wave_in_z(self,x,y,z,scale, offset, slower):
 
@@ -608,10 +612,12 @@ if __name__ == '__main__':
     parser.add_argument('--num_of_obs', type=int, required=True)
     parser.add_argument('--gazebo', type=str2bool, required=True)
     parser.add_argument('--type_of_obst_traj', type=str, required=True)
+    parser.add_argument('--alpha_scale_obst_traj', type=float, required=True)
+    parser.add_argument('--beta_faster_obst_traj', type=float, required=True)
     # Parse the argument
     print(sys.argv)
     print("*************************************")
-    args = parser.parse_args(sys.argv[1:7]) #See https://discourse.ros.org/t/getting-python-argparse-to-work-with-a-launch-file-or-python-node/10606
+    args = parser.parse_args(sys.argv[1:11]) #See https://discourse.ros.org/t/getting-python-argparse-to-work-with-a-launch-file-or-python-node/10606
 
     
 
@@ -619,7 +625,7 @@ if __name__ == '__main__':
     ns = rospy.get_namespace()
     try:
         rospy.init_node('dynamic_obstacles')
-        c = DynCorridor(args.num_of_obs, args.gazebo, args.type_of_obst_traj)
+        c = DynCorridor(args.num_of_obs, args.gazebo, args.type_of_obst_traj, args.alpha_scale_obst_traj, args.beta_faster_obst_traj)
         rospy.Timer(rospy.Duration(0.01), c.pubTF) #was 0.01
         c.pubTF(None)
         rospy.spin()
