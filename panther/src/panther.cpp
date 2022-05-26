@@ -635,6 +635,10 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   {
     this_replan_uses_new_gterm = true;
   }
+  // else
+  // {
+  //   return false;
+  // }
   is_new_g_term_ = false;
   //////////
 
