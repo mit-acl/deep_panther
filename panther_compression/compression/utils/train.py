@@ -8,7 +8,7 @@ from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
 from compression.utils.other import ExpertDidntSucceed, ActionManager
 
-def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, expert_policy, use_Hungarian=True, only_test_loss=False, epsilon_WTA=0.05):
+def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, expert_policy, type_loss, only_test_loss=False, epsilon_RWTA=0.05):
     beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
 
     am=ActionManager()
@@ -24,10 +24,10 @@ def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr,
         traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
         traj_size_yaw_ctrl_pts=am.traj_size_yaw_ctrl_pts,
         use_closed_form_yaw_student=am.use_closed_form_yaw_student,
-        use_Hungarian=use_Hungarian,
+        type_loss=type_loss,
         weight_prob=weight_prob,
         only_test_loss=only_test_loss,
-        epsilon_WTA=epsilon_WTA
+        epsilon_RWTA=epsilon_RWTA
     )
 
     return dagger.SimpleDAggerTrainer(
@@ -39,7 +39,7 @@ def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr,
         custom_logger=custom_logger,
     )
 
-def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, only_test_loss=False, epsilon_WTA=0.05):
+def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, type_loss, only_test_loss=False, epsilon_RWTA=0.05):
     beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
 
     am=ActionManager()
@@ -55,10 +55,10 @@ def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_
         traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
         traj_size_yaw_ctrl_pts=am.traj_size_yaw_ctrl_pts,
         use_closed_form_yaw_student=am.use_closed_form_yaw_student,
-        use_Hungarian=use_Hungarian,
+        type_loss=type_loss,
         weight_prob=weight_prob,
         only_test_loss=only_test_loss,
-        epsilon_WTA=epsilon_WTA
+        epsilon_RWTA=epsilon_RWTA
     )
 
     return dagger.DAggerTrainer(
@@ -69,7 +69,7 @@ def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_
         custom_logger=custom_logger,
     )
 
-def make_bc_trainer(tmpdir, venv, custom_logger, lr, batch_size, weight_prob, only_test_loss=False, epsilon_WTA=0.05):
+def make_bc_trainer(tmpdir, venv, custom_logger, lr, batch_size, weight_prob, type_loss, only_test_loss=False, epsilon_RWTA=0.05):
     """Will make DAgger, but with a constant beta, set to 1 
     (always 100% prob of using expert)"""
     beta_schedule=dagger.AlwaysExpertBetaSchedule()
@@ -86,10 +86,10 @@ def make_bc_trainer(tmpdir, venv, custom_logger, lr, batch_size, weight_prob, on
         batch_size=batch_size,
         traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
         use_closed_form_yaw_student=am.use_closed_form_yaw_student,
-        use_Hungarian=use_Hungarian,
+        type_loss=type_loss,
         weight_prob=weight_prob,
         only_test_loss=only_test_loss,
-        epsilon_WTA=epsilon_WTA
+        epsilon_RWTA=epsilon_RWTA
     )
 
     return dagger.DAggerTrainer(

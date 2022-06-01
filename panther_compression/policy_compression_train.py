@@ -60,6 +60,11 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
+#https://stackoverflow.com/a/16801605/6057617
+def single_true(iterable):
+    i = iter(iterable)
+    return any(i) and not any(i)
+
 
 if __name__ == "__main__":
 
@@ -93,16 +98,18 @@ if __name__ == "__main__":
 
 
     parser.add_argument("--only_test_loss", type=str2bool, default=False)
-    parser.add_argument("--use_Hungarian", type=str2bool, default=True) 
+    parser.add_argument("--type_loss", type=str, default="Hung") 
 
-    parser.add_argument("--epsilon_WTA", type=float, default=0.05)
+    parser.add_argument("--epsilon_RWTA", type=float, default=0.05)
     
 
     args = parser.parse_args()
 
+    # assert single_true([args.use_Hungarian, args.use_RWTAr, args.use_RWTAc])
+
     printInBoldRed(f"only_test_loss={args.only_test_loss}")
-    printInBoldRed(f"use_Hungarian={args.use_Hungarian}")
-    printInBoldRed(f"epsilon_WTA={args.epsilon_WTA}")
+    printInBoldRed(f"type_loss={args.type_loss}")
+    printInBoldRed(f"epsilon_RWTA={args.epsilon_RWTA}")
 
     # print(f"only_test_loss={args.only_test_loss}")
     # exit();
@@ -285,9 +292,9 @@ if __name__ == "__main__":
         printInBoldBlue("---------------- Making Learner Policy: -------------------")
         # Create learner policy
         if args.on_policy_trainer: 
-            trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy, use_Hungarian=args.use_Hungarian, only_test_loss=args.only_test_loss, epsilon_WTA=args.epsilon_WTA) 
+            trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA) 
         else: 
-            trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, use_Hungarian=args.use_Hungarian, only_test_loss=args.only_test_loss, epsilon_WTA=args.epsilon_WTA)
+            trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA)
 
 
 
