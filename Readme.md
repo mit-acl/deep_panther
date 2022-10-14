@@ -4,6 +4,13 @@
 :-------------------------:|:-------------------------:|
 [![PANTHER: Perception-Aware Trajectory Planner in Dynamic Environments](./panther/imgs/eight_compressed.gif)](https://www.youtube.com/watch?v=jKmyW6v73tY "PANTHER: Perception-Aware Trajectory Planner in Dynamic Environments")       |  [![PANTHER: Perception-Aware Trajectory Planner in Dynamic Environments](./panther/imgs/sim_compressed.gif)](https://www.youtube.com/watch?v=jKmyW6v73tY "PANTHER: Perception-Aware Trajectory Planner in Dynamic Environments")    |  
 
+
+## To train with static obstacles, without replanning
+Set train_environment_max_steps=1 in panther.yaml and uncomment self.random_scale=np.zeros((3,1)) in other.py
+
+## To train with dynamic obstacles, with replanning
+Set train_environment_max_steps=10 in panther.yaml and comment self.random_scale=np.zeros((3,1)) in other.py
+
 ## Citation
 
 When using PANTHER, please cite [PANTHER: Perception-Aware Trajectory Planner in Dynamic Environments](https://arxiv.org/abs/2103.06372) ([pdf](https://arxiv.org/abs/2103.06372) and [video](https://www.youtube.com/watch?v=jKmyW6v73tY)):
