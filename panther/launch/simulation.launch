@@ -23,7 +23,7 @@
   <arg name="z" default="1.0" />
   <arg name="yaw" default="0.0" />
 
-  <node ns="$(arg quad)" name="commands" pkg="panther_other" type="commands.py" output="screen"/>
+  <node ns="$(arg quad)" name="commands" pkg="panther" type="commands.py" output="screen"/>
 
   <group unless="$(arg perfect_prediction)">
     <include file="$(find panther)/launch/tracker_predictor.launch">

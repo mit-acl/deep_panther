@@ -99,7 +99,7 @@ roslaunch panther simulation.launch
 
 ```
 
-Now you can click Start on the GUI, and then press G (or click the option 2D Nav Goal on the top bar of RVIZ) and click any goal for the drone. By default, `simulation.launch` will use the policy Hung_dynamic_obstacles.pt (which was trained with trefoil-knot trajectories). You can change the trajectory followed by the obstacle during testing using the `type_of_obst_traj` field of the launch file.
+Wait until the terminal says `Planner initialized`. Then, you can press G (or click the option 2D Nav Goal on the top bar of RVIZ) and click any goal for the drone. By default, `simulation.launch` will use the policy Hung_dynamic_obstacles.pt (which was trained with trefoil-knot trajectories). You can change the trajectory followed by the obstacle during testing using the `type_of_obst_traj` field of the launch file.
 
 You can also use policies trained using a static obstacle. Simply change the field `student_policy_path` of `simulation.launch`. The available policies have the format `A_epsilon_B.pt`, where `A` is the algorithm used: Hungarian (i.e., LSA), RWTAc, or RWTAr. `B` is the epsilon used. Note that this epsilon is irrelevant for the LSA algorithm. Check the paper for further details. 
 
