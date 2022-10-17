@@ -7,15 +7,14 @@
   <arg name="rviz" default="true"/>
   <arg name="gazebo" default="true"/>
   <arg name="gzclient" default="false"/>
-  <arg name="type_of_obst_traj" default="static"/>   <!-- trefoil   eightCurve    square  epitrochoid  static -->
+  <arg name="type_of_obst_traj" default="trefoil"/>   <!-- trefoil   eightCurve    square  epitrochoid  static -->
   <arg name="alpha_scale_obst_traj" default="2"/>   
   <arg name="beta_faster_obst_traj" default="0.666666666666666666666"/>   
  <!--  <arg name="mode" default="panther" />  --><!--  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther) ysweep (noPA but with sweep in yaw) -->
-  <arg name="num_of_obs" default="1" /> 
-  <arg name="student_policy_path" default="/home/jtorde/Dropbox (MIT)/Research/Planning_project/Deep_PANTHER/static_results/results_policies_and_MSE/Hung_epsilon_0.05.pt" /> 
-  <arg name="static_planning" default="true" />  <!-- #If true, it will always plan from the same initial condition -->
-  <!-- <arg name="student_policy_path" default="/home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/2/intermediate_policy_round17_log18.pt" />  -->
-
+  <arg name="num_of_obs" default="1" />  <!--  Only one obstacle is supported right now -->
+  <arg name="student_policy_path" default="$(find panther)/../panther_compression/trained_policies/Hung_dynamic_obstacles.pt" /> 
+<!--   <arg name="student_policy_path" default="/home/jtorde/Dropbox (MIT)/Research/Planning_project/Deep_PANTHER/static_results/results_policies_and_MSE/Hung_epsilon_0.05.pt" />  -->
+  <arg name="static_planning" default="false" />  <!-- #If true, it will always plan from the same initial condition -->
 
   <!-- ///////////////////////////////////////////////// -->
   <!-- ///////  PANTHER specific   //////////// -->
