@@ -25,20 +25,15 @@ The instructions below assume that you have ROS Noetic and MATLAB installed on y
 
 ### <ins>Dependencies<ins>
 
-
-#### CasADi and IPOPT
-
 > Note: the instructions below are partly taken from [here](https://github.com/casadi/casadi/wiki/InstallationLinux#installation-on-linux))
 
-First install IPOPT following these steps:
-
+#### IPOPT
 ```bash
 sudo apt-get install gcc g++ gfortran git cmake liblapack-dev pkg-config --install-recommends
 sudo apt-get install coinor-libipopt1v5 coinor-libipopt-dev
 ```
 
-And then install CasADi:
-
+#### CasADi
 ```bash
 sudo apt-get remove swig swig3.0 swig4.0 #If you don't do this, the compilation of casadi may fail with the error "swig error : Unrecognized option -matlab"
 mkdir ~/installations && cd ~/installations
@@ -62,9 +57,7 @@ cmake . -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=ON -DWITH_MATLAB=OFF -DWITH_PYTH
 make -j20
 sudo make install
 ```
-
-Now create a virtual Python environment:
-
+#### Virtual Python environment
 ```bash
 sudo apt-get install python3-venv
 cd ~/installations && mkdir venvs_python && cd venvs_python 
@@ -74,6 +67,7 @@ source ~/.bashrc
 activate_my_venv
 ```
 
+### <ins>Compilation<ins>
 And finally download the repo and compile it:
 
 ```bash
@@ -95,8 +89,9 @@ printf '\nsource PATH_TO_YOUR_WS/devel/setup.bash' >> ~/.bashrc #Remember to cha
 printf '\nexport PYTHONPATH="${PYTHONPATH}:$(rospack find panther)/../panther_compression"' >> ~/.bashrc 
 ```
 
+## Usage
 
-To use the trained Neural Network:
+Simply use:
 ```bash
 roslaunch panther simulation.launch
 
