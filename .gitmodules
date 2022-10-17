@@ -1,7 +1,3 @@
-[submodule "catkin_simple"]
-	path = submodules/catkin_simple
-	url = https://github.com/catkin/catkin_simple.git
-	branch = master
 [submodule "separator"]
 	path = submodules/separator
 	url = https://github.com/mit-acl/separator.git
@@ -23,3 +19,6 @@
 [submodule "imitation"]
 	path = panther_compression/imitation
 	url = git@github.com:jtorde/imitation.git
+[submodule "catkin_simple"]
+	path = submodules/catkin_simple
+	url = https://github.com/catkin/catkin_simple
