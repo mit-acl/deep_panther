@@ -66,10 +66,10 @@ Panther::Panther(mt::parameters par) : par_(par)
     *student_caller_ptr_ =
         pybind11::module::import("compression.utils.other").attr("StudentCaller")(par_.student_policy_path);
 
-    ///// TODO: For whatever reason, the first ~5 calls to the student are very slow. It is due to the
+    ///// TODO: The first ~5 calls to the student are very slow. It is due to the
     // because of having declared the variables just after class CostComputer(): (see python file), and not inside
     // init()
-    // For now, let's just put those calls here
+    // We put those calls here to avoid this overhead while actually planning 
     for (int i = 1; i < 10; i++)
     {
       std::cout << "Calling the student!" << std::endl;
@@ -698,7 +698,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   k_index = plan_.size() - 1 - k_index_end;
   A = plan_.get(k_index);
 
-  std::cout << "When selection A, plan_.size()= " << plan_.size() << std::endl;
+  // std::cout << "When selection A, plan_.size()= " << plan_.size() << std::endl;
 
   mtx_plan_.unlock();
 
@@ -935,7 +935,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
   solutions_found_++;
 
-  std::cout << "Appending to plan" << std::endl;
+  // std::cout << "Appending to plan" << std::endl;
 
   //////////////////////////////////////////////////////////////////////////
   ///////////////////////// Append to plan /////////////////////////////////
@@ -966,7 +966,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
     // }
   }
 
-  std::cout << "unlock" << std::endl;
+  // std::cout << "unlock" << std::endl;
 
   mtx_plan_.unlock();
 
