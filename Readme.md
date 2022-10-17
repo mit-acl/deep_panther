@@ -54,7 +54,7 @@ cd casadi
 #cd build && make clean && cd .. && rm -rf build #Only if you want to clean any previous installation/compilation 
 mkdir build && cd build
 cmake . -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=ON -DWITH_MATLAB=OFF -DWITH_PYTHON=ON -DWITH_DEEPBIND=ON ..
-#For some reason, I needed to run the command above twice until `Ipopt` was detected (although `IPOPT` was being detected already)
+#You may need to run the command above twice until the output says that `Ipopt` has been detected (although `IPOPT` is also being detected when you run it for the first time)
 make -j20
 sudo make install
 ```
