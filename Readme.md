@@ -163,18 +163,3 @@ Moreover, when using a linear solver different from `mumps`, you may need to sta
 </details>
 
 </details>
-
-
-
-
-TODOS: 
-
-- remove panther_extra_plus_plus??
-- Change name repo (from panther to deep_panther)
-- Remove the readme in https://github.com/mit-acl/panther_plus_plus/tree/master/panther/matlab
-- Hacer los repos publicos!! (y change name from imitation to imitation-deep-panther?)
-- Commit changes done in imitation repo!!
-- Remove los roslaunch que sobran
-- Explain how to use the expert directly
-
-
