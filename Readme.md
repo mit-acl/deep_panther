@@ -3,6 +3,7 @@
 
 [![Deep-PANTHER: Learning-Based Perception-Aware Trajectory Planner in Dynamic Environments](./panther/imgs/deep_panther.gif)](https://www.youtube.com/watch?v=53GBjP1jFW8 "Deep-PANTHER: Learning-Based Perception-Aware Trajectory Planner in Dynamic Environments")  
 
+Deep-PANTHER deployed on different environments. The policy in all the videos above is the same one, and was trained using an obstacle that followed a trefoil-knot trajectory. The green pyramid represents the field of view of the camera. 
 
 ## Citation
 
@@ -21,7 +22,7 @@ When using Deep-PANTHER, please cite [Deep-PANTHER: Learning-Based Perception-Aw
 
 Deep-PANTHER has been tested with Ubuntu 20.04/ROS Noetic. Other Ubuntu/ROS version may need some minor modifications, feel free to [create an issue](https://github.com/mit-acl/panther/issues) if you have any problems.
 
-The instructions below assume that you have ROS Noetic and MATLAB installed on your Linux machine. For Matlab you will only need the `Symbolic Math Toolbox` and the `Phased Array System Toolbox` installed. 
+The instructions below assume that you have ROS Noetic installed on your Linux machine.
 
 ### <ins>Dependencies<ins>
 
@@ -102,18 +103,22 @@ Now you can click Start on the GUI, and then press G (or click the option 2D Nav
 You can also use policies trained using a static obstacle. Simply change the field `student_policy_path` of `simulation.launch`. The available policies have the format `A_epsilon_B.pt`, where `A` is the algorithm used: Hungarian (i.e., LSA), RWTAc, or RWTAr. `B` is the epsilon used. Note that this epsilon is irrelevant for the LSA algorithm. Check the paper for further details. 
 
 
-If you want to use the expert, you first need to install a linear solver (see instructions below). Then, you can use the expert by simply setting `use_expert: true` and `use_student: false` in `panther.yaml`. 
+If you want to...
 
-If you want to introduce 
+* **Use the expert:** You first need to install a linear solver (see instructions below). Then, you can use the expert by simply setting `use_expert: true`, `use_student: false` , and `pause_time_when_replanning:true` in `panther.yaml` and running `roslaunch panther simulation.launch`. 
 
-#### MATLAB (optional)
+* **Modify the optimization problem:**, You will need to have MATLAB installed (especifically, you will need the `Symbolic Math Toolbox` and the `Phased Array System Toolbox` installed), and follow the steps detailed in the MATLAB section below. You can then make any modification in the optimization problem by modifying the file `main.m`, and then running it. This will generate all the necessary `.casadi` files in the `casadi_generated_files` folder, which will be read by the C++ code.
 
-If you want to modify the optimization problem, you will need to have MATLAB installed, and follow these steps:
+* **Train the policy:** You first need to install a linear solver (see instructions below). Then, you can train a new policy but simply running `python3 policy_compression_train.py` inside the `panther_compression` folder. 
+
+
+<details>
+  <summary> <b>MATLAB (optional dependency)</b></summary>
 
 First, when installing CasADi following the instructions above, you need to use `-DWITH_MATLAB=ON` instead of `-DWITH_MATLAB=OFF`. Then do the following:
 
 ```bash
-#Now, open MATLAB, and type this:
+#Open MATLAB, and type this:
 edit(fullfile(userpath,'startup.m'))
 #And in that file, add this line line 
 addpath(genpath('/usr/local/matlab/'))
@@ -127,9 +132,10 @@ x = MX.sym('x')
 disp(jacobian(sin(x),x))
 ```
 
-Then, install a linear solver following the instructions in the next section. Once installed, you can make any modification in the optimization problem by modifying the file `main.m`, and then running it. This will generate all the necessary `.casadi` files in the `casadi_generated_files` folder, which will be read by the C++ code.
+</details>
 
-#### Linear Solvers (optional)
+<details>
+  <summary> <b>Linear Solver (optional dependency)</b></summary>
 
 Go to [http://www.hsl.rl.ac.uk/ipopt/](http://www.hsl.rl.ac.uk/ipopt/), click on `Personal Licence, Source` to install the solver `MA27` (free for everyone), and fill and submit the form. Once you receive the corresponding email, download the compressed file, uncompress it, and place it in the folder `~/installations` (for example). Then execute the following commands:
 
@@ -150,15 +156,17 @@ echo "export LD_LIBRARY_PATH='\${LD_LIBRARY_PATH}:/usr/local/lib'" >> ~/.bashrc
 <details>
   <summary> <b>Note</b></summary>
 
-We recommend to use `MA27`. Alternatively, you can install both `MA27` and `MA57` by clicking on `Coin-HSL Full (Stable) Source` (free for academia) in [http://www.hsl.rl.ac.uk/ipopt/](http://www.hsl.rl.ac.uk/ipopt/) and then following the instructions above. Other alternative is to use the default `mumps` solver (no additional installation required), but its much slower than `MA27` or `MA57` You can change the linear solver used by changing the name of `linear_solver_name` in the file `main.m` and run that file. 
+We recommend to use `MA27`. Alternatively, you can install both `MA27` and `MA57` by clicking on `Coin-HSL Full (Stable) Source` (free for academia) in [http://www.hsl.rl.ac.uk/ipopt/](http://www.hsl.rl.ac.uk/ipopt/) and then following the instructions above. Other alternative is to use the default `mumps` solver (no additional installation required), but its much slower than `MA27` or `MA57` You can change the linear solver used by changing the name of `linear_solver_name` in the file `main.m` and run that file.
+
+Moreover, when using a linear solver different from `mumps`, you may need to start Matlab from the terminal (typing `matlab`). More info [in this issue](https://github.com/casadi/casadi/issues/2032). 
 
 </details>
 
-> Note: When using a linear solver different from `mumps`, you may need to start Matlab from the terminal (typing `matlab`). More info [in this issue](https://github.com/casadi/casadi/issues/2032).
+</details>
 
 
 
-================================
+
 TODOS: 
 
 - remove panther_extra_plus_plus??
