@@ -15,7 +15,7 @@
 	url = https://github.com/mit-acl/minvo.git
 [submodule "imitation"]
 	path = panther_compression/imitation
-	url = git@github.com:jtorde/imitation.git
+	url = https://github.com/jtorde/imitation.git
 [submodule "catkin_simple"]
 	path = submodules/catkin_simple
 	url = https://github.com/catkin/catkin_simple
