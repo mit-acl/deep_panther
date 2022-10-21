@@ -26,7 +26,7 @@ The instructions below assume that you have ROS Noetic installed on your Linux m
 
 ### <ins>Dependencies<ins>
 
-> Note: the instructions below are partly taken from [here](https://github.com/casadi/casadi/wiki/InstallationLinux#installation-on-linux))
+> Note: the instructions below are partly taken from [here](https://github.com/casadi/casadi/wiki/InstallationLinux#installation-on-linux)
 
 #### IPOPT
 ```bash
