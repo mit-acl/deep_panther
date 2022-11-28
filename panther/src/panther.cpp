@@ -69,7 +69,7 @@ Panther::Panther(mt::parameters par) : par_(par)
     ///// TODO: The first ~5 calls to the student are very slow. It is due to the
     // because of having declared the variables just after class CostComputer(): (see python file), and not inside
     // init()
-    // We put those calls here to avoid this overhead while actually planning 
+    // We put those calls here to avoid this overhead while actually planning
     for (int i = 1; i < 10; i++)
     {
       std::cout << "Calling the student!" << std::endl;
@@ -256,70 +256,36 @@ void Panther::updateTrajObstacles(mt::dynTraj traj)
     have_received_trajectories_while_checking_ = true;
   }
 
-  // std::cout << on_blue << bold << "in  updateTrajObstacles(), waiting to lock mtx_trajs_" << reset << std::endl;
-  mtx_trajs_.lock();
-
-  std::vector<mt::dynTrajCompiled>::iterator obs_ptr =
-      std::find_if(trajs_.begin(), trajs_.end(),
-                   [=](const mt::dynTrajCompiled& traj_compiled) { return traj_compiled.id == traj.id; });
-
-  bool exists_in_local_map = (obs_ptr != std::end(trajs_));
-
   mt::dynTrajCompiled traj_compiled;
   dynTraj2dynTrajCompiled(traj, traj_compiled);
 
-  if (exists_in_local_map)
-  {  // if that object already exists, substitute its trajectory
-    *obs_ptr = traj_compiled;
-  }
-  else
-  {  // if it doesn't exist, add it to the local map
-    trajs_.push_back(traj_compiled);
-    // ROS_WARN_STREAM("Adding " << traj_compiled.id);
-  }
-
-  // and now let's delete those trajectories of the obs/agents whose current positions are outside the local map
-  // Note that these positions are obtained with the trajectory stored in the past in the local map
-  std::vector<int> ids_to_remove;
-
   double time_now = ros::Time::now().toSec();
 
-  for (int index_traj = 0; index_traj < trajs_.size(); index_traj++)
+  // std::cout << on_blue << bold << "in  updateTrajObstacles(), waiting to lock mtx_trajs_" << reset << std::endl;
+  mtx_trajs_.lock();
+
+  ///////// LEAVE ONLY THE CLOSEST TRAJECTORY
+  ///////////////////////////////////////////
+
+  if (trajs_.size() >= 1)
   {
-    bool traj_affects_me = false;
+    double distance_new_traj = (evalMeanDynTrajCompiled(traj_compiled, time_now) - state_.pos).norm();
+    double distance_old_traj = (evalMeanDynTrajCompiled(trajs_[0], time_now) - state_.pos).norm();
 
-    Eigen::Vector3d center_obs = evalMeanDynTrajCompiled(trajs_[index_traj], time_now);
-
-    // mtx_t_.unlock();
-    if (((traj_compiled.is_static == true) && (center_obs - state_.pos).norm() > 2 * par_.Ra) ||  ////
-        ((traj_compiled.is_static == false) && (center_obs - state_.pos).norm() > 4 * par_.Ra))
-    // #### Static Obstacle: 2*Ra because: traj_{k-1} is inside a sphere of Ra.
-    // Then, in iteration k the point A (which I don't
-    // know yet)  is taken along that trajectory, and
-    // another trajectory of radius Ra will be obtained.
-    // Therefore, I need to take 2*Ra to make sure the
-    // extreme case (A taken at the end of traj_{k-1} is
-    // covered).
-
-    // #### Dynamic Agent: 4*Ra. Same reasoning as above, but with two agets
-    // #### Dynamic Obstacle: 4*Ra, it's a heuristics.
-
-    // ######REMEMBER######
-    // Note that removeTrajsThatWillNotAffectMe will later
-    // on take care of deleting the ones I don't need once
-    // I know A
+    if (distance_new_traj < distance_old_traj)
     {
-      ids_to_remove.push_back(trajs_[index_traj].id);
+      trajs_[0] = traj_compiled;
     }
   }
-
-  for (auto id : ids_to_remove)
+  else
   {
-    // ROS_WARN_STREAM("Removing " << id);
-    trajs_.erase(
-        std::remove_if(trajs_.begin(), trajs_.end(), [&](mt::dynTrajCompiled const& traj) { return traj.id == id; }),
-        trajs_.end());
+    trajs_.push_back(traj_compiled);
   }
+
+  verify(trajs_.size() == 1, "the vector trajs_ should have size = 1");
+
+  ///////////////////////////////////
+  ///////////////////////////////////
 
   mtx_trajs_.unlock();
   // std::cout << red << bold << "in updateTrajObstacles(), mtx_trajs_ unlocked" << reset << std::endl;
@@ -715,6 +681,8 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
   std::vector<mt::obstacleForOpt> obstacles_for_opt =
       getObstaclesForOpt(t_start, t_start + par_.fitter_total_time, splines_fitted);
+
+  verify(obstacles_for_opt.size() == 1, "obstacles_for_opt should have only 1 element");
 
   int n_safe_trajs_expert = 0;
   int n_safe_trajs_student = 0;
