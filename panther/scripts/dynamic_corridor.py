@@ -33,6 +33,7 @@ import sys
 import glob
 import rospkg
 import argparse
+from datetime import datetime
 
 def getColorJet(v, vmin, vmax): 
 
@@ -112,6 +113,10 @@ class DynCorridor:
             return "static"
 
     def __init__(self, total_num_obs,gazebo, type_of_obst_traj, alpha_scale_obst_traj, beta_faster_obst_traj):
+
+
+        random.seed(datetime.now())
+
         self.state=State()
 
         name = rospy.get_namespace()
@@ -122,9 +127,9 @@ class DynCorridor:
         self.num_of_dyn_objects=int(1.0*total_num_obs);
         self.num_of_stat_objects=total_num_obs-self.num_of_dyn_objects; 
         self.x_min= 2.0 
-        self.x_max= 40.0
-        self.y_min= -0.0 
-        self.y_max= 0.0
+        self.x_max= 6.0
+        self.y_min= -2.0 
+        self.y_max= 2.0
         self.z_min= 1.0 
         self.z_max= 1.0
         # self.scale= [(self.x_max-self.x_min)/self.total_num_obs, 5.0, 1.0]
