@@ -264,26 +264,47 @@ void Panther::updateTrajObstacles(mt::dynTraj traj)
   // std::cout << on_blue << bold << "in  updateTrajObstacles(), waiting to lock mtx_trajs_" << reset << std::endl;
   mtx_trajs_.lock();
 
+  ///////////////////////////////////////
+  ///////////////// ADD IT TO THE MAP IF IT DOES NOT EXIST
+  ///////////////////////////////////////
+  std::vector<mt::dynTrajCompiled>::iterator obs_ptr =
+      std::find_if(trajs_.begin(), trajs_.end(),
+                   [=](const mt::dynTrajCompiled& traj_compiled) { return traj_compiled.id == traj.id; });
+
+  bool exists_in_local_map = (obs_ptr != std::end(trajs_));
+
+  if (exists_in_local_map)
+  {  // if that object already exists, substitute its trajectory
+    *obs_ptr = traj_compiled;
+  }
+  else
+  {  // if it doesn't exist, add it to the local map
+    trajs_.push_back(traj_compiled);
+    // ROS_WARN_STREAM("Adding " << traj_compiled.id);
+  }
+
+  ///////////////////////////////////////////
   ///////// LEAVE ONLY THE CLOSEST TRAJECTORY
   ///////////////////////////////////////////
 
-  if (trajs_.size() >= 1)
-  {
-    double distance_new_traj = (evalMeanDynTrajCompiled(traj_compiled, time_now) - state_.pos).norm();
-    double distance_old_traj = (evalMeanDynTrajCompiled(trajs_[0], time_now) - state_.pos).norm();
+  // if (trajs_.size() >= 1)
+  // {
+  //   double distance_new_traj = (evalMeanDynTrajCompiled(traj_compiled, time_now) - state_.pos).norm();
+  //   double distance_old_traj = (evalMeanDynTrajCompiled(trajs_[0], time_now) - state_.pos).norm();
 
-    if (distance_new_traj < distance_old_traj)
-    {
-      trajs_[0] = traj_compiled;
-    }
-  }
-  else
-  {
-    trajs_.push_back(traj_compiled);
-  }
+  //   if (distance_new_traj < distance_old_traj)
+  //   {
+  //     trajs_[0] = traj_compiled;
+  //   }
+  // }
+  // else
+  // {
+  //   trajs_.push_back(traj_compiled);
+  // }
 
-  verify(trajs_.size() == 1, "the vector trajs_ should have size = 1");
+  // verify(trajs_.size() == 1, "the vector trajs_ should have size = 1");
 
+  ///////////////////////////////////
   ///////////////////////////////////
   ///////////////////////////////////
 
@@ -305,13 +326,6 @@ std::vector<mt::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
   // std::cout << "In getObstaclesForOpt" << std::endl;
 
   std::vector<mt::obstacleForOpt> obstacles_for_opt;
-
-  if (trajs_.size() > par_.num_max_of_obst)
-  {
-    std::cout << red << bold << "Too many obstacles. Run Matlab again with a higher num_max_of_obst" << reset
-              << std::endl;
-    abort();
-  }
 
   double delta = (t_end - t_start) / par_.fitter_num_samples;
 
@@ -679,10 +693,86 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   double time_now = ros::Time::now().toSec();
   double t_start = k_index * par_.dc + time_now;
 
+  mtx_trajs_.lock();
+
   std::vector<mt::obstacleForOpt> obstacles_for_opt =
       getObstaclesForOpt(t_start, t_start + par_.fitter_total_time, splines_fitted);
 
+  /////////////////////////////////////////////////////////////////////////
+  ////////////////////////Compute trajectory to focus on //////////////////
+  /////////////////////////////////////////////////////////////////////////
+
+  double time_allocated = getMinTimeDoubleIntegrator3D(A.pos, A.vel, G.pos, G.vel, par_.v_max, par_.a_max);
+  double t_final = t_start + par_.factor_alloc * time_allocated;
+  double max_prob_collision = -std::numeric_limits<double>::max();  // it's actually a heuristics of the probability
+                                                                    // (we are summing below --> can be >1)
+  int argmax_prob_collision = -1;  // will contain the index of the trajectory to focus on
+
+  int num_samplesp1 = 20;
+  double delta = 1.0 / num_samplesp1;
+  Eigen::Vector3d R = par_.drone_radius * Eigen::Vector3d::Ones();
+
+  std::vector<double> all_probs;
+
+  for (int i = 0; i < trajs_.size(); i++)
+  {
+    double prob_i = 0.0;
+    for (int j = 0; j <= num_samplesp1; j++)
+    {
+      double t = t_start + j * delta * (t_final - t_start);
+
+      Eigen::Vector3d pos_drone = A.pos + j * delta * (G_term_.pos - A.pos);  // not a random variable
+      Eigen::Vector3d pos_obs_mean = evalMeanDynTrajCompiled(trajs_[i], t);
+      Eigen::Vector3d pos_obs_std = (evalVarDynTrajCompiled(trajs_[i], t)).cwiseSqrt();
+      // std::cout << "pos_obs_std= " << pos_obs_std << std::endl;
+      prob_i += probMultivariateNormalDist(-R, R, pos_obs_mean - pos_drone, pos_obs_std);
+    }
+
+    all_probs.push_back(prob_i);
+    // std::cout << "[Selection] Trajectory " << i << " has P(collision)= " << prob_i * pow(10, 15) << "e-15" <<
+    // std::endl;
+
+    if (prob_i > max_prob_collision)
+    {
+      max_prob_collision = prob_i;
+      argmax_prob_collision = i;
+    }
+  }
+  mtx_trajs_.unlock();
+
+  std::cout << "[Selection] Probs of coll --> ";
+  for (int i = 0; i < all_probs.size(); i++)
+  {
+    std::cout << all_probs[i] * pow(10, 15) << "e-15,   ";
+  }
+  std::cout << std::endl;
+
+  // std::cout.precision(30);
+  std::cout << bold << "[Selection] Chosen Trajectory " << argmax_prob_collision
+            << ", P(collision)= " << max_prob_collision * pow(10, 5) << "e-5" << std::endl;
+
+  verify(obstacles_for_opt.size() >= 1, "obstacles_for_opt should have at least 1 element");
+  verify(argmax_prob_collision >= 0, "argmax_prob_collision should be >=0");
+  verify(argmax_prob_collision <= (obstacles_for_opt.size() - 1), "argmax_prob_collision should be <= "
+                                                                  "(obstacles_for_opt.size() - 1)");
+
+  // keep only the obstacle that has the highest probability of collision
+  auto tmp = obstacles_for_opt[argmax_prob_collision];
+  obstacles_for_opt.clear();
+  obstacles_for_opt.push_back(tmp);
+
+  ////////////////////////////////////////
+  ////////////////////////////////////////
+  ////////////////////////////////////////
+
   verify(obstacles_for_opt.size() == 1, "obstacles_for_opt should have only 1 element");
+
+  if (obstacles_for_opt.size() > par_.num_max_of_obst)
+  {
+    std::cout << red << bold << "Too many obstacles. Run Matlab again with a higher num_max_of_obst" << reset
+              << std::endl;
+    abort();
+  }
 
   int n_safe_trajs_expert = 0;
   int n_safe_trajs_student = 0;
@@ -701,65 +791,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
     // Eigen::Vector3d invsqrt3Vector = (1.0 / sqrt(3)) * Eigen::Vector3d::Ones();
 
-    double time_allocated = getMinTimeDoubleIntegrator3D(A.pos, A.vel, G.pos, G.vel, par_.v_max, par_.a_max);
-
-    // std::cout << green << bold << "Time allocated= " << time_allocated << reset << std::endl;
-
-    double t_final = t_start + par_.factor_alloc * time_allocated;
-
-    /////////////////////////////////////////////////////////////////////////
-    ////////////////////////Compute trajectory to focus on //////////////////
-    /////////////////////////////////////////////////////////////////////////
-
-    double max_prob_collision = -std::numeric_limits<double>::max();  // it's actually a heuristics of the probability
-                                                                      // (we are summing below --> can be >1)
-    int argmax_prob_collision = -1;  // will contain the index of the trajectory to focus on
-
-    int num_samplesp1 = 20;
-    double delta = 1.0 / num_samplesp1;
-    Eigen::Vector3d R = par_.drone_radius * Eigen::Vector3d::Ones();
-
-    std::vector<double> all_probs;
-
     mtx_trajs_.lock();
-    for (int i = 0; i < trajs_.size(); i++)
-    {
-      double prob_i = 0.0;
-      for (int j = 0; j <= num_samplesp1; j++)
-      {
-        double t = t_start + j * delta * (t_final - t_start);
-
-        Eigen::Vector3d pos_drone = A.pos + j * delta * (G_term_.pos - A.pos);  // not a random variable
-        Eigen::Vector3d pos_obs_mean = evalMeanDynTrajCompiled(trajs_[i], t);
-        Eigen::Vector3d pos_obs_std = (evalVarDynTrajCompiled(trajs_[i], t)).cwiseSqrt();
-        // std::cout << "pos_obs_std= " << pos_obs_std << std::endl;
-        prob_i += probMultivariateNormalDist(-R, R, pos_obs_mean - pos_drone, pos_obs_std);
-      }
-
-      all_probs.push_back(prob_i);
-      // std::cout << "[Selection] Trajectory " << i << " has P(collision)= " << prob_i * pow(10, 15) << "e-15" <<
-      // std::endl;
-
-      if (prob_i > max_prob_collision)
-      {
-        max_prob_collision = prob_i;
-        argmax_prob_collision = i;
-      }
-    }
-
-    std::cout << "[Selection] Probs of coll --> ";
-    for (int i = 0; i < all_probs.size(); i++)
-    {
-      std::cout << all_probs[i] * pow(10, 15) << "e-15,   ";
-    }
-    std::cout << std::endl;
-
-    // std::cout.precision(30);
-    std::cout << bold << "[Selection] Chosen Trajectory " << argmax_prob_collision
-              << ", P(collision)= " << max_prob_collision * pow(10, 5) << "e-5" << std::endl;
-
-    ////
-
     double angle = 3.14;
     if (argmax_prob_collision >= 0)
     {
