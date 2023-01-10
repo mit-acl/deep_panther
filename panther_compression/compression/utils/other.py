@@ -272,6 +272,7 @@ class ObstaclesManager():
 		for i in range(self.num_obs):
 			w_ctrl_pts_ob=np.array([[],[],[]]);
 			for j in range(self.fitter_num_seg + self.fitter_deg_pos):
+				self.newRandomPos()
 				w_ctrl_pts_ob=np.concatenate((w_ctrl_pts_ob, self.random_pos), axis=1)
 				# w_ctrl_pts_ob.append(np.array([[2],[2],[2]]))
 
@@ -291,9 +292,10 @@ class ObstaclesManager():
 		self.random_scale=np.zeros((3,1))
 		####################################
 
-		trefoil=Trefoil(pos=self.random_pos, scale=self.random_scale, offset=self.random_offset, slower=1.5);
-		for i in range(self.num_obs):
 
+		for i in range(self.num_obs):
+			self.newRandomPos()
+			trefoil=Trefoil(pos=self.random_pos, scale=self.random_scale, offset=self.random_offset, slower=1.5);
 			samples=[]
 			for t_interm in np.linspace(t, t + self.fitter_total_time, num=self.fitter_num_samples):#.tolist():
 				samples.append(trefoil.getPosT(t_interm))

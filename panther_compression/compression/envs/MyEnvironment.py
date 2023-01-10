@@ -397,6 +397,7 @@ class MyEnvironment(gym.Env):
 
       marker_array_msg=MarkerArray()
 
+      id_sample=0
       for i in range(len(obstacles)):
 
         t0=self.time
@@ -405,8 +406,7 @@ class MyEnvironment(gym.Env):
         bspline_obs_i=MyClampedUniformBSpline(t0=t0, tf=tf, deg=self.par.deg_pos, \
                                         dim=3, num_seg=self.par.num_seg, ctrl_pts=listOf3dVectors2numpy3Xmatrix(obstacles[i].ctrl_pts) )
 
-        id_sample=0
-        num_samples=20
+        num_samples=40 #TODO fix this
         for t_interm in np.linspace(t0, tf, num=num_samples).tolist():
 
           marker_msg=Marker();
@@ -427,7 +427,8 @@ class MyEnvironment(gym.Env):
           marker_msg.scale.x = obstacles[0].bbox_inflated[0];
           marker_msg.scale.y = obstacles[0].bbox_inflated[1];
           marker_msg.scale.z = obstacles[0].bbox_inflated[2];
-          marker_msg.color.a = 1.0*(num_samples-id_sample)/num_samples; 
+          # marker_msg.color.a = 1.0*(num_samples-id_sample)/num_samples; 
+          marker_msg.color.a = (t_interm-t0)/(tf - t0) + 0.01 #avoid starting with 0 alpha
           marker_msg.color.r = 1.0 if i == 0 else 0.0; #TODO: Hacky
           marker_msg.color.g = 0.0 if i == 0 else 1.0;
           marker_msg.color.b = 0.0;
