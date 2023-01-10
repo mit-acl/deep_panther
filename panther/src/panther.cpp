@@ -89,6 +89,7 @@ Panther::Panther(mt::parameters par) : par_(par)
 
       tmp.ctrl_pts = fitter_->fit(samples);
       obstacles_for_opt.push_back(tmp);
+      obstacles_for_opt.push_back(tmp);
 
       pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos);
       std::cout << "Called the student!" << std::endl;
@@ -757,15 +758,15 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
                                                                   "(obstacles_for_opt.size() - 1)");
 
   // keep only the obstacle that has the highest probability of collision
-  auto tmp = obstacles_for_opt[argmax_prob_collision];
-  obstacles_for_opt.clear();
-  obstacles_for_opt.push_back(tmp);
+  // auto tmp = obstacles_for_opt[argmax_prob_collision];
+  // obstacles_for_opt.clear();
+  // obstacles_for_opt.push_back(tmp);
 
   ////////////////////////////////////////
   ////////////////////////////////////////
   ////////////////////////////////////////
 
-  verify(obstacles_for_opt.size() == 1, "obstacles_for_opt should have only 1 element");
+  // verify(obstacles_for_opt.size() == 1, "obstacles_for_opt should have only 1 element");
 
   if (obstacles_for_opt.size() > par_.num_max_of_obst)
   {
