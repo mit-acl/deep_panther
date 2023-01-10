@@ -238,7 +238,7 @@ class ObstaclesManager():
 	fitter = py_panther.Fitter(params["fitter_num_samples"]);
 
 	def __init__(self):
-		self.num_obs=1;
+		self.num_obs=2;
 		self.params=readPANTHERparams();
 		# self.fitter_total_time=params["fitter_total_time"];
 		self.fitter_num_seg=self.params["fitter_num_seg"];
@@ -596,7 +596,7 @@ class ObservationManager():
 
 		tmp=index_start_obstacle_i+3*self.obsm.getCPsPerObstacle()
 
-		bbox_inflated=obs[0,tmp:tmp+4].reshape(3,1)
+		bbox_inflated=obs[0,tmp:tmp+3].reshape(3,1)
 
 		return bbox_inflated
 

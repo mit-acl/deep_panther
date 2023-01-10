@@ -428,8 +428,8 @@ class MyEnvironment(gym.Env):
           marker_msg.scale.y = obstacles[0].bbox_inflated[1];
           marker_msg.scale.z = obstacles[0].bbox_inflated[2];
           marker_msg.color.a = 1.0*(num_samples-id_sample)/num_samples; 
-          marker_msg.color.r = 0.0;
-          marker_msg.color.g = 1.0;
+          marker_msg.color.r = 1.0 if i == 0 else 0.0; #TODO: Hacky
+          marker_msg.color.g = 0.0 if i == 0 else 1.0;
           marker_msg.color.b = 0.0;
 
           marker_array_msg.markers.append(marker_msg)
