@@ -78,7 +78,7 @@ if __name__ == "__main__":
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
 
-    parser.add_argument("--n_rounds", default=5000, type=int) 
+    parser.add_argument("--n_rounds", default=100, type=int)  # how many time you update the nueral net (dagger)
     parser.add_argument("--total_demos_per_round", default=256, type=int) 
     parser.add_argument("--train_environment_max_steps", default=1, type=int)
     parser.add_argument("--rampdown_rounds", default=1, type=int) # Dagger properties
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     launch_tensorboard=True
     verbose_python_errors=False
     batch_size = 256
-    N_EPOCHS = 250           #WAS 50!! Num epochs for training.
+    N_EPOCHS = 50 #250 # how many time you go through the data set. once you go thru the dataset N_EPOCS, the round ends.          #WAS 50!! Num epochs for training.
     lr=1e-3
     weight_prob=0.005
     num_envs = 16
