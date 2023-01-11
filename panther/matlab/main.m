@@ -16,45 +16,48 @@ opti = casadi.Opti();
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CONSTANTS! %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+%If the position trajectory is also generated, if set to false only a yaw trajectory wil be made (leave as false)
 pos_is_fixed=false; %you need to run this file twice to produce the necessary casadi files: both with pos_is_fixed=false and pos_is_fixed=true. 
 
-optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
-optimize_d_planes=true;     %Optimize the scalar "d" of the planes
+%Variables to determine what should be part of the optimization problems
+optimize_n_planes=true;     %Optimize the normal vector "n" of the planes (the "tilt")
+optimize_d_planes=true;     %Optimize the scalar "d" of the planes (the dist)
 optimize_time_alloc=true;
 
+%Whether or not the dynamic limits and obstacle avoidance constraints are formulated as hard constraints or soft constraints (in the objective function)
 soft_dynamic_limits_constraints=false;
 soft_obstacle_avoid_constraint=false;
 
 make_plots=false;
 
-
-deg_pos=3;
-deg_yaw=2;
-num_seg =6; %number of segments
+deg_pos=3; %The degree of the position polynomial
+deg_yaw=2; %The degree of the yaw polynomial
+num_seg =6; %The number of segments in the trajectory
 num_max_of_obst=1; %This is the maximum num of the obstacles 
 
 %Constants for spline fitted to the obstacle trajectory
-fitter.deg_pos=3;
-fitter.num_seg=7;
-fitter.dim_pos=3;
-fitter.num_samples=20;
-fitter_num_of_cps= fitter.num_seg + fitter.deg_pos;
+fitter.deg_pos=3; %The degree of the fit past obstacle trajectory
+fitter.num_seg=7; %The number of segments in the fit in the past obstacle trajectory
+fitter.dim_pos=3; %The dimension of the fit past obstacle (3 for R3)
+fitter.num_samples=20; %The number of samples used to fit the past obstacle trajectory
+fitter_num_of_cps= fitter.num_seg + fitter.deg_pos; %The number of control points of fit past obstacle trajectory (B-spline)
+%Used to define the output of the fitter that is the input to the optimization problem
 for i=1:num_max_of_obst
     fitter.ctrl_pts{i}=opti.parameter(fitter.dim_pos,fitter_num_of_cps); %This comes from C++
     fitter.bbox_inflated{i}=opti.parameter(fitter.dim_pos,1); %This comes from C++
     fitter.bs_casadi{i}=MyCasadiClampedUniformSpline(0,1,fitter.deg_pos,fitter.dim_pos,fitter.num_seg,fitter.ctrl_pts{i}, false);
 end
-fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti);
+fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti); %Fit trajectories are B-Splines
+%The total time of the fitted past obstacle trajectory (horizon)
 fitter.total_time=6.0; %Time from (time at point d) to end of the fitted spline
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
+%NOTE: Everything uses B-Spline control points except for obstacle constraints which use the set basis
 
-
-
+%The number of segments used to discrete the past obstacle trajectory in the collision avoidance constraints 
 sampler.num_samples_obstacle_per_segment = 4;                    %This is used for both the feature sampling (simpson), and the obstacle avoidance sampling
 sampler.num_samples=sampler.num_samples_obstacle_per_segment*num_seg;    %This will also be the num_of_layers in the graph yaw search of C++
                                                              
-
+%The number of points used by astar in the yaw initialization search
 num_of_yaw_per_layer=40; %This will be used in the graph yaw search of C++
                          %Note that the initial layer will have only one yaw (which is given) 
 basis="MINVO"; %MINVO OR B_SPLINE or BEZIER. This is the basis used for collision checking (in position, velocity, accel and jerk space), both in Matlab and in C++
@@ -62,7 +65,8 @@ linear_solver_name='ma27'; %mumps [default, comes when installing casadi], ma27,
 print_level=0; %From 0 (no verbose) to 12 (very verbose), default is 5
 jit=false;
 
-t0_n=0.0; 
+%The trajectory is optimized from t=0 to t=1 then the total time is scaled by the decision variable alpha
+t0_n=0.0;
 tf_n=1.0;
 
 dim_pos=3;
@@ -72,26 +76,30 @@ offset_vel=0.1;
 
 assert(tf_n>t0_n);
 
-assert(t0_n==0.0); %This must be 0 (assummed in the C++ and MATLAB code)
-assert(tf_n==1.0); %This must be 1 (assummed in the C++ and MATLAB code)
+assert(t0_n==0.0); %This must be 0! (assummed in the C++ and MATLAB code)
+assert(tf_n==1.0); %This must be 1! (assummed in the C++ and MATLAB code)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% PARAMETERS! %%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%NOTE: All of the opti.parameter values are set by the C++ code by panther.yaml
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%% DEFINITION
 %%%%% factors for the cost
-c_pos_smooth= opti.parameter(1,1);
-c_yaw_smooth= opti.parameter(1,1);
-c_fov=        opti.parameter(1,1);
-c_final_pos = opti.parameter(1,1);
-c_final_yaw = opti.parameter(1,1);
-c_total_time = opti.parameter(1,1);
+c_pos_smooth= opti.parameter(1,1); %Position smoothing cost factor
+c_yaw_smooth= opti.parameter(1,1); %Yaw smoothing cost factor
+c_fov=        opti.parameter(1,1); %FOV cost factor
+c_final_pos = opti.parameter(1,1); %Distance to goal position cost factor
+c_final_yaw = opti.parameter(1,1); %Distance to goal yaw cost factor
+c_total_time = opti.parameter(1,1); %Total time cost factor
 % c_dyn_lim= opti.parameter(1,1);
 % c_costs.dist_im_cost=         opti.parameter(1,1);
 
+%The radius of the planning horizon sphere
 Ra=opti.parameter(1,1);
 
+%FOV is cone
 thetax_FOV_deg=opti.parameter(1,1);    %total angle of the FOV in the x direction
 thetay_FOV_deg=opti.parameter(1,1);    %total angle of the FOV in the y direction
 
@@ -104,15 +112,17 @@ thetay_half_FOV_rad=thetay_half_FOV_deg*pi/180.0;
 %%%%% Transformation matrix camera/body b_T_c
 b_T_c=opti.parameter(4,4);
 
+%If we are optimizing the total time (time allocation) then setup alpha as a decision variable, else it is a parameter read from panther.yaml
 if(optimize_time_alloc)
     alpha=opti.variable(1,1); 
 else
     alpha=opti.parameter(1,1); 
 end
-total_time=alpha*(tf_n-t0_n); %Total time is (tf_n-t0_n)*alpha. 
+total_time=alpha*(tf_n-t0_n); %Total time is (tf_n-t0_n)*alpha. (should be 1 * alpha)
 
 
 %%%%% Initial and final conditions, and max values
+%These parameters are also set by panther.yaml
 %FOR POSITION
 p0=opti.parameter(3,1); v0=opti.parameter(3,1); a0=opti.parameter(3,1);
 pf=opti.parameter(3,1); vf=opti.parameter(3,1); af=opti.parameter(3,1);
@@ -121,7 +131,8 @@ v_max=opti.parameter(3,1);
 a_max=opti.parameter(3,1);
 j_max=opti.parameter(3,1);
 
-%Normalized v0, a0, v_max,...
+%https://github.com/mit-acl/deep_panther/blob/master/panther/matlab/other/explanation_normalization.svg
+%Normalized v0, a0, v_max,... (Normalized values for time 0 to 1 * alpha, non-normalized are for time 0 to 1)
 v0_n=v0*alpha;
 a0_n=a0*(alpha^2);
 vf_n=vf*alpha;
@@ -165,7 +176,7 @@ end
 
 
 
-%%% Min/max x, y ,z
+%%% Min/max x, y ,z (in flight space)
 x_lim=opti.parameter(2,1); %[min max]
 y_lim=opti.parameter(2,1); %[min max]
 z_lim=opti.parameter(2,1); %[min max]
@@ -211,6 +222,7 @@ deltaT=total_time/num_seg; %Time allocated for each segment
 
 obst={}; %Obs{i}{j} Contains the vertexes (as columns) of the obstacle i in the interval j
 
+%Creates points (centers of the obstacles) used for obstacle constraints
 for i=1:num_max_of_obst
 
     all_centers=[];
@@ -247,11 +259,12 @@ t_opt_n_samples=linspace(0,1,sampler.num_samples);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CONSTRAINTS! %%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+% Set the total time and calculate alpha
 total_time_n=(tf_n-t0_n);
 
 alpha=total_time/total_time_n;  %Please read explanation_normalization.svg
 
+% TODO: Possibly repeats check later
 v0_n=v0*alpha;
 a0_n=a0*(alpha^2);
 ydot0_n=ydot0*alpha;
@@ -282,13 +295,14 @@ const_y{end+1}= sy.getVelT(tf_n)==ydotf_n ; % Needed: if not (and if you are min
 
 
 
-%
+%Need to ensure total time of trajectory being optimized is less than the predicted time of th obstacles
 if(optimize_time_alloc)
     const_p{end+1}= total_time<=fitter.total_time; %Samples for visibility/obs_avoidance are only taken for t<fitter.total_time
 end
 
 const_p_obs_avoid={}
 
+%One plane per segment per obstacle
 % epsilon=1;
 for j=1:(sp.num_seg)
 
@@ -371,30 +385,31 @@ h=alpha*(t_opt_n_samples(2)-t_opt_n_samples(1));
 
 for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
     
-    w_t_b = sp.getPosT(t_opt_n);
+    w_t_b = sp.getPosT(t_opt_n); %Translation between the body and the world frame
     a=sp.getAccelT(t_opt_n)/(alpha^(2));
     
-    qpsi=[cos(yaw/2), 0, 0, sin(yaw/2)]; %Note that qpsi has norm=1
+    %Definition 3 (hopf fibration) in the Panther paper table 3
+    qpsi=[cos(yaw/2), 0, 0, sin(yaw/2)]; %Note that qpsi has norm=1 (qyaw)
     qabc=qabcFromAccel(a,9.81);
     q=multquat(qabc,qpsi); %Note that q is guaranteed to have norm=1
-    w_R_b=toRotMat(q);
+    w_R_b=toRotMat(q); %Rotation between the body and the world frame
   
     w_T_b=[w_R_b w_t_b; zeros(1,3) 1];     w_T_c=w_T_b*b_T_c;     c_T_b=invPose(b_T_c);     b_T_w=invPose(w_T_b);
     
+    %Take the center of the obstacle and get the position of the obstacle in the world frame
     w_fevar=obst{1}.centers(:,simpson_index); %TODO: For now, only choosing one obstacle
     
-    c_P=c_T_b*b_T_w*[w_fevar;1]; %Position of the feature in the camera frame
+    c_P=c_T_b*b_T_w*[w_fevar;1]; %Position of the feature (the center of the obstacle) in the camera frame
     s=c_P(1:2)/(c_P(3));  %Note that here we are not using f (the focal length in meters) because it will simply add a constant factor in ||s|| and in ||s_dot||
     
-    %FOV is a cone:  (See more possible versions of this constraint at the end of this file)
+    %FOV is a cone:  (See more possible versions of this constraint at the end of this file) (inFOV in Panther paper table 2)
     is_in_FOV_tmp=-cos(thetax_half_FOV_deg*pi/180.0) + (c_P(1:3)'/norm(c_P((1:3))))*[0;0;1]; % Constraint is is_in_FOV1>=0
     
-    
-    
-    gamma=100;
+
+    gamma=100; %Weight on the field of view soft-constriant
     all_is_in_FOV_smooth=[all_is_in_FOV_smooth  (   1/(1+exp(-gamma*is_in_FOV_tmp))  ) ];
     
-    is_in_FOV=substitute(is_in_FOV_tmp,yaw,sy.getPosT(t_opt_n));
+    is_in_FOV=substitute(is_in_FOV_tmp,yaw,sy.getPosT(t_opt_n)); %Yaw was a symbolic variable so now we substitute it with an actually variable (the zeorth derivative [the yaw value] from the yaw spline)
     
     f=-is_in_FOV; % Constraint is f<=0
     
@@ -440,7 +455,7 @@ const_y_dyn_limits={};
 [const_p_dyn_limits,const_y_dyn_limits]=addDynLimConstraints(const_p_dyn_limits, const_y_dyn_limits, sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n);
 
 
-%%
+%Determines violation of constraints used for training by python
 opti_tmp=opti.copy;
 opti_tmp.subject_to(); %Clear constraints
 opti_tmp.subject_to([const_p_dyn_limits, const_y_dyn_limits]);
@@ -452,6 +467,7 @@ opti_tmp.subject_to(); %Clear constraints
 opti_tmp.subject_to([const_p_obs_avoid]);
 violation_obs_avoid=getViolationConstraints(opti_tmp);
 
+%Add all the constraints
 if(soft_dynamic_limits_constraints==true)
     total_cost = total_cost + (1/numel(violation_dyn_limits))*sum(violation_dyn_limits.^2);
 else
@@ -506,6 +522,7 @@ yCPs=sy.getCPsAsMatrix();
 % all_w_fe_value=cell2mat(all_w_fe_value);
 % all_w_velfewrtworld_value=cell2mat(all_w_velfewrtworld_value);
 
+%Setting all of the parameters for testing
 v_max_value=1.6*ones(3,1);
 a_max_value=5*ones(3,1);
 j_max_value=50*ones(3,1);
@@ -632,7 +649,7 @@ results_names={'pCPs','yCPs','all_nd','total_cost', 'yaw_smooth_cost', 'pos_smoo
 
 %%%%
 
-
+%Used for other things
 compute_cost = Function('compute_cost', par_and_init_guess_exprs ,{total_cost},...
                                         par_and_init_guess_names ,{'total_cost'});
 compute_cost(names_value{:})
@@ -643,6 +660,7 @@ compute_cost.save('./casadi_generated_files/compute_cost.casadi') %The file gene
 %%%%%%%%%
 %%
 
+%Used for other things
 % opti.subject_to([const_p, const_y]);
 compute_dyn_limits_constraints_violation = casadi.Function('compute_dyn_limits_constraints_violation', par_and_init_guess_exprs ,{violation_dyn_limits},...
                                                            par_and_init_guess_names ,{'violation'});
