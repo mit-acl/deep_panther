@@ -16,15 +16,15 @@ opti = casadi.Opti();
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CONSTANTS! %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%If the position trajectory is also generated, if set to false only a yaw trajectory wil be made (leave as false)
+%If the position trajectory is also generated, if set to false only a yaw trajectory wil be made (leave as false because we want both!)
 pos_is_fixed=false; %you need to run this file twice to produce the necessary casadi files: both with pos_is_fixed=false and pos_is_fixed=true. 
 
 %Variables to determine what should be part of the optimization problems
-optimize_n_planes=true;     %Optimize the normal vector "n" of the planes (the "tilt")
-optimize_d_planes=true;     %Optimize the scalar "d" of the planes (the dist)
+optimize_n_planes=true;     %Optimize the normal vector "n" of the planes (the "tilt") (see Panther paper diagram)
+optimize_d_planes=true;     %Optimize the scalar "d" of the planes (the distance) (see Panther paper diagram)
 optimize_time_alloc=true;
 
-%Whether or not the dynamic limits and obstacle avoidance constraints are formulated as hard constraints or soft constraints (in the objective function)
+%Whether or not the dynamic limits and obstacle avoidance constraints are formulated as hard constraints (as equalities/inequalities) or soft constraints (in the objective function)
 soft_dynamic_limits_constraints=false;
 soft_obstacle_avoid_constraint=false;
 
@@ -32,7 +32,7 @@ make_plots=false;
 
 deg_pos=3; %The degree of the position polynomial
 deg_yaw=2; %The degree of the yaw polynomial
-num_seg =6; %The number of segments in the trajectory
+num_seg =6; %The number of segments in the trajectory (the more segments the less conservative the trajectory is [also makes optimization problem harder])
 num_max_of_obst=1; %This is the maximum num of the obstacles 
 
 %Constants for spline fitted to the obstacle trajectory
@@ -47,17 +47,17 @@ for i=1:num_max_of_obst
     fitter.bbox_inflated{i}=opti.parameter(fitter.dim_pos,1); %This comes from C++
     fitter.bs_casadi{i}=MyCasadiClampedUniformSpline(0,1,fitter.deg_pos,fitter.dim_pos,fitter.num_seg,fitter.ctrl_pts{i}, false);
 end
-fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti); %Fit trajectories are B-Splines
-%The total time of the fitted past obstacle trajectory (horizon)
+fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti);
+%The total time of the fit past obstacle trajectory (horizon length[NOTE: This is also the max horizon length of the drone's trajectory])
 fitter.total_time=6.0; %Time from (time at point d) to end of the fitted spline
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
-%NOTE: Everything uses B-Spline control points except for obstacle constraints which use the set basis
+%NOTE: Everything uses B-Spline control points except for obstacle constraints which use the set basis (usually MINVO)
 
-%The number of segments used to discrete the past obstacle trajectory in the collision avoidance constraints 
+%The number of segments used to discritize the past obstacle trajectory in the collision avoidance constraints 
 sampler.num_samples_obstacle_per_segment = 4;                    %This is used for both the feature sampling (simpson), and the obstacle avoidance sampling
 sampler.num_samples=sampler.num_samples_obstacle_per_segment*num_seg;    %This will also be the num_of_layers in the graph yaw search of C++
                                                              
-%The number of points used by astar in the yaw initialization search
+%The number of yaw points used by astar in the yaw initialization search
 num_of_yaw_per_layer=40; %This will be used in the graph yaw search of C++
                          %Note that the initial layer will have only one yaw (which is given) 
 basis="MINVO"; %MINVO OR B_SPLINE or BEZIER. This is the basis used for collision checking (in position, velocity, accel and jerk space), both in Matlab and in C++
@@ -69,15 +69,15 @@ jit=false;
 t0_n=0.0;
 tf_n=1.0;
 
-dim_pos=3;
-dim_yaw=1;
+dim_pos=3; %The dimension of the position trajectory (R3)
+dim_yaw=1; %The dimension of the yaw trajectory (R1)
 
 offset_vel=0.1;
 
 assert(tf_n>t0_n);
 
-assert(t0_n==0.0); %This must be 0! (assummed in the C++ and MATLAB code)
-assert(tf_n==1.0); %This must be 1! (assummed in the C++ and MATLAB code)
+assert(t0_n==0.0); %This must be 0! (assumed in the C++ and MATLAB code)
+assert(tf_n==1.0); %This must be 1! (assumed in the C++ and MATLAB code)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% PARAMETERS! %%%%%%%%%%%%%%%%%%%%%%%
@@ -154,12 +154,14 @@ ydot_max_n=ydot_max*alpha; %v_max for yaw
 %%%%% Planes
 n={}; d={};
 for i=1:(num_max_of_obst*num_seg)
+    %If we are optimizing the plane normals, add them as decision variables, else they are parameters
     if(optimize_n_planes)
         n{i}=opti.variable(3,1); 
     else
         n{i}=opti.parameter(3,1); 
     end
-  
+    
+    %If we are optimizing the plane distances, add them as decision variables, else they are parameters
     if(optimize_d_planes)
         d{i}=opti.variable(1,1);
     else
@@ -176,7 +178,7 @@ end
 
 
 
-%%% Min/max x, y ,z (in flight space)
+%%% Min/max x, y, z (in flight space)
 x_lim=opti.parameter(2,1); %[min max]
 y_lim=opti.parameter(2,1); %[min max]
 z_lim=opti.parameter(2,1); %[min max]
@@ -222,7 +224,7 @@ deltaT=total_time/num_seg; %Time allocated for each segment
 
 obst={}; %Obs{i}{j} Contains the vertexes (as columns) of the obstacle i in the interval j
 
-%Creates points (centers of the obstacles) used for obstacle constraints
+%Creates points (centers of the obstacles and verticies) used for obstacle constraints
 for i=1:num_max_of_obst
 
     all_centers=[];
@@ -264,7 +266,7 @@ total_time_n=(tf_n-t0_n);
 
 alpha=total_time/total_time_n;  %Please read explanation_normalization.svg
 
-% TODO: Possibly repeats check later
+% TODO: Possibly repeats, check later
 v0_n=v0*alpha;
 a0_n=a0*(alpha^2);
 ydot0_n=ydot0*alpha;
