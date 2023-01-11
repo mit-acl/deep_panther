@@ -124,14 +124,14 @@ TrackerPredictor::TrackerPredictor(ros::NodeHandle nh) : nh_(nh)
   input_cloud_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
   input_cloud1 = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
   // ////////
-  std::string param_name = "/SQ01s/panther/mode";
-  std::string mode;
+  // std::string param_name = "/SQ01s/panther/mode";
+  std::string mode = "panther";
 
-  if (!nh_.getParam(param_name, mode))
-  {
-    ROS_ERROR("Failed to find parameter: %s", nh_.resolveName(param_name, true).c_str());
-    exit(1);
-  }
+  // if (!nh_.getParam(param_name, mode))
+  // {
+  //   ROS_ERROR("Failed to find parameter: %s", nh_.resolveName(param_name, true).c_str());
+  //   exit(1);
+  // }
 
   std::string folder = "/home/jtorde/Dropbox (MIT)/Research/Planning_project/PANTHER/bags_simulation/data/";
 
