@@ -3,6 +3,8 @@
 	<arg name="quad" default="HX09"/>
   <arg name="use_gui_mission" default="true"/>
   <arg name="perfect_prediction" default="false"/>
+  <arg name="student_policy_path" default="$(find panther)/../panther_compression/trained_policies/Hung_dynamic_obstacles.pt" />
+  <arg name="static_planning" default="false" />  <!-- #If true, it will always plan from the same initial condition -->
 
   <!-- COMMANDS -->
   <node ns="$(arg quad)" name="commands" pkg="panther_other" type="commands.py" output="screen"/>
@@ -73,8 +75,10 @@
     <!-- Parameters -->
     <rosparam file="$(find panther)/param/panther.yaml" command="load"/>
     <rosparam file="$(find panther)/matlab/casadi_generated_files/params_casadi.yaml" command="load"/>
-    <param name="use_gui_mission" value="$(arg use_gui_mission)" /> 
+    <param name="gui_mission" value="$(arg gui_mission)" /> 
     <param name="perfect_prediction" value="$(arg perfect_prediction)" /> 
+    <param name="student_policy_path" value="$(arg student_policy_path)" /> 
+    <param name="static_planning" value="$(arg static_planning)" /> 
 
     <!-- Subscriptions -->
     <remap from="~state" to="state"/>
