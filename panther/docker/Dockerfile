@@ -1,9 +1,10 @@
 FROM ros:noetic
+# FROM ubuntu:20.04
 
 LABEL Maintainer="Kota Kondo <kkondo@mit.edu>" \
-      Description="Ubuntu 20.04, ROS Noetic for Robust MADER"
+      Description="Ubuntu 20.04, ROS Noetic for Deep-PANTHER"
 
-RUN sudo rm -rf /var/lib/apt/lists/*
+RUN rm -rf /var/lib/apt/lists/*
 RUN apt-get update && \
       apt-get upgrade -y && \
       apt-get install -q -y --no-install-recommends git tmux vim apt-utils && \
@@ -13,6 +14,7 @@ RUN apt-get update && \
 
 #IPOPT
 RUN apt-get install -y gcc g++ gfortran git cmake liblapack-dev pkg-config --install-recommends
+# RUN apt-get install -y gcc g++ gfortran git cmake liblapack-dev pkg-config 
 RUN apt-get install -y coinor-libipopt1v5 coinor-libipopt-dev
 
 # CasADi
@@ -58,52 +60,49 @@ RUN mkdir ws
 WORKDIR /home/kota/ws
 RUN mkdir src
 WORKDIR /home/kota/ws/src
-RUN git clone https://github.com/mit-acl/deep_panther
+RUN git clone --recursive https://github.com/mit-acl/deep_panther.git 
 WORKDIR /home/kota/ws/src/deep_panther
 RUN git lfs install
-RUN git submodule init && git submodule update
-WORKDIR /home/kota/ws/src/deep_panter/panther_compression/imitation
+# # RUN git submodule init && git submodule update
+WORKDIR /home/kota/ws/src/deep_panther/panther_compression/imitation
 RUN apt-get install python3-pip -y
-RUN pip install numpy Cython wheel seals rospkg defusedxml empy pyquaternion pytest
-# RUN pip install -e .
+RUN pip3 install numpy Cython wheel seals rospkg defusedxml empy pyquaternion pytest
+# pip3 install -e . is editable mode (looks for setup.py)
+RUN pip3 install -e . 
 RUN apt-get install python3-catkin-tools -y
-# RUN apt-get install -y ros-"${ROS_DISTRO}"-rviz-visual-tools ros-"${ROS_DISTRO}"-pybind11-catkin ros-"${ROS_DISTRO}"-tf2-sensor-msgs ros-"${ROS_DISTRO}"-jsk-rviz-plugins
-
-#INSTALL python-catkin-tools (to be able to use catkin build)
-##########################################
-RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu `lsb_release -sc` main" > /etc/apt/sources.list.d/ros-latest.list'
-RUN wget http://packages.ros.org/ros.key -O - |  apt-key add -
-RUN apt-get update && apt-get install python3-catkin-tools -y
-
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y ros-"${ROS_DISTRO}"-rviz-visual-tools ros-"${ROS_DISTRO}"-pybind11-catkin ros-"${ROS_DISTRO}"-tf2-sensor-msgs ros-"${ROS_DISTRO}"-jsk-rviz-plugins
+RUN apt-get install --reinstall python3-rospkg python3-rosdep python3-catkin-pkg python3-rosinstall python3-vcstools
+RUN apt update && apt install ros-noetic-desktop-full -y
 WORKDIR /home/kota/ws/
+RUN catkin config --extend /opt/ros/noetic
 RUN catkin build
-RUN printf '\nsource PATH_TO_YOUR_WS/devel/setup.bash' >> ~/.bashrc #Remember to change PATH_TO_YOUR_WS
+RUN printf '\nsource /home/kota/ws/devel/setup.bash' >> ~/.bashrc #Remember to change PATH_TO_YOUR_WS
 RUN printf '\nexport PYTHONPATH="${PYTHONPATH}:$(rospack find panther)/../panther_compression"' >> ~/.bashrc 
 RUN . ~/.bashrc
 
 
-# RUN echo source /opt/ros/noetic/setup.bash >> ~/.bashrc
+# # RUN echo source /opt/ros/noetic/setup.bash >> ~/.bashrc
 
-#CLONE SUBMODULES, INSTALL DEPENDENCIES AND COMPILE
-##########################################
-# RUN apt update
-# RUN DEBIAN_FRONTEND=noninteractive rosdep install --from-paths /home/kota/rmader_ws/src --ignore-src -r -y
-# RUN apt-get update && apt-get install libncurses5-dev -y
-# RUN catkin config -DCMAKE_BUILD_TYPE=Release
-# RUN echo source /home/kota/ws/devel/setup.bash >> ~/.bashrc
+# #CLONE SUBMODULES, INSTALL DEPENDENCIES AND COMPILE
+# ##########################################
+# # RUN apt update
+# # RUN DEBIAN_FRONTEND=noninteractive rosdep install --from-paths /home/kota/rmader_ws/src --ignore-src -r -y
+# # RUN apt-get update && apt-get install libncurses5-dev -y
+# # RUN catkin config -DCMAKE_BUILD_TYPE=Release
+# # RUN echo source /home/kota/ws/devel/setup.bash >> ~/.bashrc
 
-RUN echo 'alias cb="catkin build"' >> ~/.bashrc && \
-      echo 'alias gs="git status"' >> ~/.bashrc && \
-      echo 'alias gp="git push"' >> ~/.bashrc && \
-      echo 'alias kr="killall -9 gazebo & killall -9 gzserver  & killall -9 gzclient & pkill -f panther & pkill -f gazebo_ros & pkill -f spawn_model & pkill -f gzserver & pkill -f gzclient  & pkill -f static_transform_publisher &  killall -9 multi_robot_node & killall -9 roscore & killall -9 rosmaster & pkill rmader_node & pkill -f tracker_predictor & pkill -f swarm_traj_planner & pkill -f dynamic_obstacles & pkill -f rosout & pkill -f behavior_selector_node & pkill -f rviz & pkill -f rqt_gui & pkill -f perfect_tracker & pkill -f rmader_commands & pkill -f dynamic_corridor & tmux kill-server & pkill -f perfect_controller & pkill -f publish_in_gazebo"' >> ~/.bashrc && \
-      echo 'alias py="python"' >> ~/.bashrc && \
-      echo 'alias rvmd="roscd rmader && cd rviz_cfgs && rosrun rviz rviz -d rmader.rviz"' >> ~/.bashrc && \
-      echo 'alias tks="tmux kill-server"' >> ~/.bashrc && \
-      apt-get install psmisc && \
-      apt-get update && \
-      pip3 install -U bagpy
-      # . ~/.bashrc && \
-      # roscd rmader && cd scripts && \
+# RUN echo 'alias cb="catkin build"' >> ~/.bashrc && \
+#       echo 'alias gs="git status"' >> ~/.bashrc && \
+#       echo 'alias gp="git push"' >> ~/.bashrc && \
+#       echo 'alias kr="killall -9 gazebo & killall -9 gzserver  & killall -9 gzclient & pkill -f panther & pkill -f gazebo_ros & pkill -f spawn_model & pkill -f gzserver & pkill -f gzclient  & pkill -f static_transform_publisher &  killall -9 multi_robot_node & killall -9 roscore & killall -9 rosmaster & pkill rmader_node & pkill -f tracker_predictor & pkill -f swarm_traj_planner & pkill -f dynamic_obstacles & pkill -f rosout & pkill -f behavior_selector_node & pkill -f rviz & pkill -f rqt_gui & pkill -f perfect_tracker & pkill -f rmader_commands & pkill -f dynamic_corridor & tmux kill-server & pkill -f perfect_controller & pkill -f publish_in_gazebo"' >> ~/.bashrc && \
+#       echo 'alias py="python"' >> ~/.bashrc && \
+#       echo 'alias rvmd="roscd rmader && cd rviz_cfgs && rosrun rviz rviz -d rmader.rviz"' >> ~/.bashrc && \
+#       echo 'alias tks="tmux kill-server"' >> ~/.bashrc && \
+#       apt-get install psmisc && \
+#       apt-get update && \
+#       pip3 install -U bagpy
+#       # . ~/.bashrc && \
+#       # roscd rmader && cd scripts && \
 
-# COPY to-be-copied/my-entrypoint.bash ~
-# ENTRYPOINT ["my-entrypoint.bash"]
+# # COPY to-be-copied/my-entrypoint.bash ~
+# # ENTRYPOINT ["my-entrypoint.bash"]
