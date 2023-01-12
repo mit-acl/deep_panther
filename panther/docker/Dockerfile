@@ -14,7 +14,6 @@ RUN apt-get update && \
 
 #IPOPT
 RUN apt-get install -y gcc g++ gfortran git cmake liblapack-dev pkg-config --install-recommends
-# RUN apt-get install -y gcc g++ gfortran git cmake liblapack-dev pkg-config 
 RUN apt-get install -y coinor-libipopt1v5 coinor-libipopt-dev
 
 # CasADi
@@ -80,29 +79,13 @@ RUN printf '\nsource /home/kota/ws/devel/setup.bash' >> ~/.bashrc #Remember to c
 RUN printf '\nexport PYTHONPATH="${PYTHONPATH}:$(rospack find panther)/../panther_compression"' >> ~/.bashrc 
 RUN . ~/.bashrc
 
+RUN printf '\nsource /opt/ros/noetic/setup.bash' >> ~/.bashrc
 
-# # RUN echo source /opt/ros/noetic/setup.bash >> ~/.bashrc
+RUN printf '\nalias cb="catkin build"' >> ~/.bashrc && \
+      printf '\nalias gs="git status"' >> ~/.bashrc && \
+      printf '\nalias gp="git push"' >> ~/.bashrc && \
+      printf '\nalias kr="killall -9 gazebo & killall -9 gzserver  & killall -9 gzclient & pkill -f panther & pkill -f gazebo_ros & pkill -f spawn_model & pkill -f gzserver & pkill -f gzclient  & pkill -f static_transform_publisher &  killall -9 multi_robot_node & killall -9 roscore & killall -9 rosmaster & pkill panther_node & pkill -f tracker_predictor & pkill -f swarm_traj_planner & pkill -f dynamic_obstacles & pkill -f rosout & pkill -f behavior_selector_node & pkill -f rviz & pkill -f rqt_gui & pkill -f perfect_tracker & pkill -f panther_commands & pkill -f dynamic_corridor & tmux kill-server & pkill -f perfect_controller & pkill -f publish_in_gazebo"' >> ~/.bashrc && \
+      printf '\nalias py="python"' >> ~/.bashrc && \
+      printf '\nalias tks="tmux kill-server"' >> ~/.bashrc
 
-# #CLONE SUBMODULES, INSTALL DEPENDENCIES AND COMPILE
-# ##########################################
-# # RUN apt update
-# # RUN DEBIAN_FRONTEND=noninteractive rosdep install --from-paths /home/kota/rmader_ws/src --ignore-src -r -y
-# # RUN apt-get update && apt-get install libncurses5-dev -y
-# # RUN catkin config -DCMAKE_BUILD_TYPE=Release
-# # RUN echo source /home/kota/ws/devel/setup.bash >> ~/.bashrc
-
-# RUN echo 'alias cb="catkin build"' >> ~/.bashrc && \
-#       echo 'alias gs="git status"' >> ~/.bashrc && \
-#       echo 'alias gp="git push"' >> ~/.bashrc && \
-#       echo 'alias kr="killall -9 gazebo & killall -9 gzserver  & killall -9 gzclient & pkill -f panther & pkill -f gazebo_ros & pkill -f spawn_model & pkill -f gzserver & pkill -f gzclient  & pkill -f static_transform_publisher &  killall -9 multi_robot_node & killall -9 roscore & killall -9 rosmaster & pkill rmader_node & pkill -f tracker_predictor & pkill -f swarm_traj_planner & pkill -f dynamic_obstacles & pkill -f rosout & pkill -f behavior_selector_node & pkill -f rviz & pkill -f rqt_gui & pkill -f perfect_tracker & pkill -f rmader_commands & pkill -f dynamic_corridor & tmux kill-server & pkill -f perfect_controller & pkill -f publish_in_gazebo"' >> ~/.bashrc && \
-#       echo 'alias py="python"' >> ~/.bashrc && \
-#       echo 'alias rvmd="roscd rmader && cd rviz_cfgs && rosrun rviz rviz -d rmader.rviz"' >> ~/.bashrc && \
-#       echo 'alias tks="tmux kill-server"' >> ~/.bashrc && \
-#       apt-get install psmisc && \
-#       apt-get update && \
-#       pip3 install -U bagpy
-#       # . ~/.bashrc && \
-#       # roscd rmader && cd scripts && \
-
-# # COPY to-be-copied/my-entrypoint.bash ~
-# # ENTRYPOINT ["my-entrypoint.bash"]
+WORKDIR /home/kota/ws/src/deep_panther
