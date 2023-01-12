@@ -844,6 +844,9 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
     // removeTrajsThatWillNotAffectMe(A, t_start, t_final);  // TODO: Commented (4-Feb-2021)
 
     solver_->setObstaclesForOpt(obstacles_for_opt);
+    solver_->setObstacleToTrackIndex(argmax_prob_collision);
+
+    std::cout << "Tracking Obstacle: " << argmax_prob_collision << std::endl;
 
     //////////////////////
     std::cout << on_cyan << bold << "Solved so far" << solutions_found_ << "/" << total_replannings_ << reset

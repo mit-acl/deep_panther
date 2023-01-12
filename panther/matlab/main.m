@@ -17,7 +17,7 @@ opti = casadi.Opti();
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CONSTANTS! %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-pos_is_fixed=true; %you need to run this file twice to produce the necessary casadi files: both with pos_is_fixed=false and pos_is_fixed=true. 
+pos_is_fixed=false; %you need to run this file twice to produce the necessary casadi files: both with pos_is_fixed=false and pos_is_fixed=true. 
 
 optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
 optimize_d_planes=true;     %Optimize the scalar "d" of the planes
@@ -26,7 +26,7 @@ optimize_time_alloc=true;
 soft_dynamic_limits_constraints=false;
 soft_obstacle_avoid_constraint=false;
 
-make_plots=false;
+make_plots=true;
 
 
 deg_pos=3;
@@ -47,6 +47,11 @@ for i=1:num_max_of_obst
 end
 fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti);
 fitter.total_time=6.0; %Time from (time at point d) to end of the fitted spline
+
+%The obstacle use for PA FOV tracking
+obst_to_track.ctrl_pts = opti.parameter(fitter.dim_pos, fitter_num_of_cps);
+obst_to_track.bbox_inflated = opti.parameter(fitter.dim_pos, 1);
+obst_to_track.bs_casadi = MyCasadiClampedUniformSpline(0, 1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, obst_to_track.ctrl_pts, false);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -211,35 +216,12 @@ deltaT=total_time/num_seg; %Time allocated for each segment
 
 obst={}; %Obs{i}{j} Contains the vertexes (as columns) of the obstacle i in the interval j
 
+%Generate the centers and vertices of the obstacles
 for i=1:num_max_of_obst
-
-    all_centers=[];
-    for j=1:num_seg
-
-        all_vertexes_segment_j=[];
-        
-        for k=1:sampler.num_samples_obstacle_per_segment
-            %This takes a sample at the end, but not at the beginning
-%             t_obs = beta1 + deltaT*(j-1) + (k/sampler.num_samples_obstacle_per_segment)*deltaT;
-            t_obs = deltaT*(j-1) + (k/sampler.num_samples_obstacle_per_segment)*deltaT;
-            
-            t_nobs= max( t_obs/fitter.total_time,  1.0 );  %Note that fitter.bs_casadi{i}.knots=[0...1]
-            
-            pos_center_obs=fitter.bs_casadi{i}.getPosT(t_nobs);
-            
-            all_centers=[all_centers pos_center_obs];
-
-            all_vertexes_segment_j=[all_vertexes_segment_j vertexesOfBox(pos_center_obs, fitter.bbox_inflated{i}) ];
-
-        end
-
-        obst{i}.vertexes{j}=all_vertexes_segment_j;
-        
-    end  
-    
-    obst{i}.centers=all_centers;
-    
+    [obst{i}.vertexes, obst{i}.centers] = genVerticesAndCenters(fitter.bs_casadi{i}, fitter.bbox_inflated{i}, num_seg, sampler.num_samples_obstacle_per_segment, fitter.total_time, deltaT);
 end
+
+[obst_to_track.vertexes, obst_to_track.centers] = genVerticesAndCenters(obst_to_track.bs_casadi, obst_to_track.bbox_inflated, num_seg, sampler.num_samples_obstacle_per_segment, fitter.total_time, deltaT);
 
 t_opt_n_samples=linspace(0,1,sampler.num_samples);
 
@@ -381,7 +363,7 @@ for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
   
     w_T_b=[w_R_b w_t_b; zeros(1,3) 1];     w_T_c=w_T_b*b_T_c;     c_T_b=invPose(b_T_c);     b_T_w=invPose(w_T_b);
     
-    w_fevar=obst{1}.centers(:,simpson_index); %TODO: For now, only choosing one obstacle
+    w_fevar=obst_to_track.centers(:,simpson_index); %TODO: For now, only choosing one obstacle
     
     c_P=c_T_b*b_T_w*[w_fevar;1]; %Position of the feature in the camera frame
     s=c_P(1:2)/(c_P(3));  %Note that here we are not using f (the focal length in meters) because it will simply add a constant factor in ||s|| and in ||s_dot||
@@ -595,7 +577,8 @@ par_and_init_guess= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV
               {createStruct('all_nd', all_nd, all_nd_value)},...
               {createStruct('pCPs', pCPs, tmp1)},...
              {createStruct('yCPs', yCPs, tmp2)},...
-             createCellArrayofStructsForObstacles(fitter)];   
+             createCellArrayofStructsForObstacles(fitter),...
+             createArrayofStructsForObstacleToTrack(obst_to_track)];   
               
 
 
@@ -606,7 +589,7 @@ opts = struct;
 opts.expand=true; %When this option is true, it goes WAY faster!
 opts.print_time=0;
 opts.ipopt.print_level=print_level; 
-opts.ipopt.max_iter=500;
+opts.ipopt.max_iter=1000;
 %opts.ipopt.print_frequency_iter=1e10;%1e10 %Big if you don't want to print all the iteratons
 opts.ipopt.linear_solver=linear_solver_name;
 opts.jit=jit;%If true, when I call solve(), Matlab will automatically generate a .c file, convert it to a .mex and then solve the problem using that compiled code
@@ -744,7 +727,9 @@ par_and_init_guess= [ {createStruct('pCPs', pCPs, full(sol.pCPs))},...
                       {createStruct('thetay_FOV_deg', thetay_FOV_deg, thetay_FOV_deg_value)},...
                       {createStruct('b_T_c', b_T_c, b_T_c_value)},...
                       {createStruct('yaw_samples', yaw_samples, linspace(0,2*pi,numel(yaw_samples)))},...
-                      createCellArrayofStructsForObstacles(fitter)];   
+                      createCellArrayofStructsForObstacles(fitter),...
+                      createArrayofStructsForObstacleToTrack(obst_to_track)
+                    ];
 
 [par_and_init_guess_exprs, par_and_init_guess_names, names_value]=toExprsNamesAndNamesValue(par_and_init_guess);
                   
@@ -1139,10 +1124,37 @@ plot(all_t_n,full(result.all_yaw_corrected),'o')
 
 %% Functions
 
+function [vertices, centers]=genVerticesAndCenters(bs_casadi, bbox_inflated, num_seg, num_samples_obstacle_per_segment, total_time, deltaT)
+    all_centers=[];
+    for j=1:num_seg
+
+        all_vertexes_segment_j=[];
+        
+        for k=1:num_samples_obstacle_per_segment
+            %This takes a sample at the end, but not at the beginning
+            %t_obs = beta1 + deltaT*(j-1) + (k/sampler.num_samples_obstacle_per_segment)*deltaT;
+            t_obs = deltaT*(j-1) + (k/num_samples_obstacle_per_segment)*deltaT;
+            
+            t_nobs= max( t_obs/total_time,  1.0 );  %Note that fitter.bs_casadi{obstacle_index}.knots=[0...1]
+            
+            pos_center_obs=bs_casadi.getPosT(t_nobs);
+            
+            all_centers=[all_centers pos_center_obs];
+
+            all_vertexes_segment_j=[all_vertexes_segment_j vertexesOfBox(pos_center_obs, bbox_inflated) ];
+
+        end
+
+        vertices{j}=all_vertexes_segment_j;
+        
+    end  
+    
+    centers=all_centers;
+end
+
          
- function result=createCellArrayofStructsForObstacles(fitter)
-         
-     num_obs=size(fitter.bbox_inflated,2);
+function result=createCellArrayofStructsForObstacles(fitter)        
+    num_obs=size(fitter.bbox_inflated,2);
 
      result=[];
      
@@ -1157,8 +1169,17 @@ plot(all_t_n,full(result.all_yaw_corrected),'o')
                 {createStruct(name_bbox_inflated, fitter.bbox_inflated{i} ,  [1;1;1]  )}];
 
     end
-         
- end
+        
+end
+
+function result=createArrayofStructsForObstacleToTrack(obst_to_track)
+    crtl_pts_value=zeros(size(obst_to_track.bs_casadi.CPoints));
+
+    result=[
+        {createStruct('obs_to_track_ctrl_pts',   obst_to_track.ctrl_pts, crtl_pts_value)},...
+        {createStruct('obs_to_track_bbox_inflated', obst_to_track.bbox_inflated,  [1;1;1]  )}
+    ];
+end
 
 function [par_and_init_guess_exprs, par_and_init_guess_names, names_value]=toExprsNamesAndNamesValue(par_and_init_guess)
 

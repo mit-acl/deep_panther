@@ -430,6 +430,11 @@ void SolverIpopt::setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obst
   //////
 }
 
+void SolverIpopt::setObstacleToTrackIndex(int index)
+{
+  obstacle_to_track_index_ = index;
+}
+
 casadi::DM SolverIpopt::eigen2casadi(const Eigen::Vector3d &a)
 {
   casadi::DM b = casadi::DM::zeros(3, 1);
@@ -702,6 +707,9 @@ std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
     map_arguments["obs_" + std::to_string(i) + "_bbox_inflated"] = eigen3d2CasadiMatrix(obstacles_for_opt_[i].bbox_inflated);
      // clang-format on
   }
+
+  map_arguments["obs_to_track_ctrl_pts"] = stdVectorEigen3d2CasadiMatrix(obstacles_for_opt_[obstacle_to_track_index_].ctrl_pts);
+  map_arguments["obs_to_track_bbox_inflated"] = eigen3d2CasadiMatrix(obstacles_for_opt_[obstacle_to_track_index_].bbox_inflated);
 
   map_arguments["c_pos_smooth"] = par_.c_pos_smooth;
   map_arguments["c_yaw_smooth"] = par_.c_yaw_smooth;

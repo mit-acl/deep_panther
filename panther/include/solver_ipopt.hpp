@@ -213,6 +213,7 @@ public:
     focus_on_obstacle_ = focus_on_obstacle;
   }
   void setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obstacles_for_opt);
+  void setObstacleToTrackIndex(int index);
   mt::parameters par_;
   // mt::trajectory traj_solution_;
   si::solOrGuess getBestSolution();
@@ -325,6 +326,7 @@ private:
   std::vector<Hyperplane3D> planes_;
 
   std::vector<mt::obstacleForOpt> obstacles_for_opt_;
+  int obstacle_to_track_index_ = 0;
 
   double t_init_;
   double t_final_guess_;

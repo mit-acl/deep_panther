@@ -58,8 +58,8 @@ max_dist2goal: 20.0
 max_dist2obs: 20.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
-use_expert: false
-use_student: true
+use_expert: true
+use_student: false
 use_closed_form_yaw_student: true #If false, the NN will predict this closed form for the yaw angle
 lambda_obst_avoidance_violation: 1.0 #To compute the augmented cost
 lambda_dyn_lim_violation: 1.0 #To compute the augmented cost
