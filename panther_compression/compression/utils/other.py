@@ -596,7 +596,7 @@ class ObservationManager():
 
 		tmp=index_start_obstacle_i+3*self.obsm.getCPsPerObstacle()
 
-		bbox_inflated=obs[0,tmp:tmp+4].reshape(3,1)
+		bbox_inflated=obs[0,tmp:tmp+3].reshape(3,1)
 
 		return bbox_inflated
 
