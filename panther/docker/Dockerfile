@@ -132,7 +132,7 @@ RUN apt-get install -y python3-pip && \
     pip3 install -e . # pip3 install -e . is editable mode (looks for setup.py)
 
 RUN apt-get install python3-catkin-tools -y && \
-    apt-get install -y ros-"${ROS_DISTRO}"-rviz-visual-tools ros-"${ROS_DISTRO}"-pybind11-catkin ros-"${ROS_DISTRO}"-tf2-sensor-msgs ros-"${ROS_DISTRO}"-jsk-rviz-plugins && \
+    apt-get install -y ros-"${ROS_DISTRO}"-rviz-visual-tools ros-"${ROS_DISTRO}"-pybind11-catkin ros-"${ROS_DISTRO}"-tf2-sensor-msgs ros-"${ROS_DISTRO}"-jsk-rviz-plugins
 #     apt-get install -y --reinstall python3-rospkg python3-rosdep python3-catkin-pkg python3-rosinstall python3-vcstools && \
 #     apt update && apt install -y ros-noetic-desktop-full
 
