@@ -684,7 +684,7 @@ void PantherRos::pubCB(const ros::TimerEvent& e)
   {
     snapstack_msgs::Goal goal;
 
-    goal.p = eigen2rosvector(next_goal.pos);
+    goal.p = eigen2point(next_goal.pos);
     goal.v = eigen2rosvector(next_goal.vel);
     goal.a = eigen2rosvector((par_.use_ff) * next_goal.accel);
     goal.j = eigen2rosvector((par_.use_ff) * next_goal.jerk);
