@@ -35,7 +35,6 @@ WORKDIR /home/kota/installations
 RUN mkdir casadi
 WORKDIR /home/kota/installations/casadi
 RUN git clone https://github.com/casadi/casadi
-WORKDIR /home/kota/installations/casadi/casadi 
 RUN mkdir build
 WORKDIR /home/kota/installations/casadi/casadi/build
 #You may need to run the command twice until the output says that `Ipopt` has been detected (although `IPOPT` is also being detected when you run it for the first time)
