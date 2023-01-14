@@ -11,6 +11,6 @@
 	<remap from="~cloud" to="$(arg cloud_topic)"/>
 	</node>
 
-<!-- 	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find panther)/rviz_cfgs/panther.rviz"/> -->
+	<!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find panther)/rviz_cfgs/panther.rviz"/> -->
 
 </launch>
