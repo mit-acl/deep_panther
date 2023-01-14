@@ -332,7 +332,7 @@ if __name__ == "__main__":
         if(launch_tensorboard==True):
             os.system("pkill -f tensorboard")
             proc1 = subprocess.Popen(["tensorboard","--logdir",LOG_PATH,"--bind_all"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-            proc2 = subprocess.Popen(["google-chrome","http://jtorde-alienware-aurora-r8:6006/"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+            # proc2 = subprocess.Popen(["google-chrome","http://jtorde-alienware-aurora-r8:6006/"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
         # # os.system("tensorboard --logdir "+args.log_dir +" --bind_all")
         # # os.system("google-chrome http://jtorde-alienware-aurora-r8:6006/")  
 
