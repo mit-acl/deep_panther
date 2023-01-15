@@ -207,7 +207,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   verify((par_.fov_x_deg >= 0), "fov_x_deg>=0 must hold");
   verify((par_.fov_y_deg >= 0), "fov_y_deg>=0 must hold");
 
-  verify((par_.fov_y_deg == par_.fov_x_deg), "par_.fov_y_deg == par_.fov_x_deg must hold");
+  // verify((par_.fov_y_deg == par_.fov_x_deg), "par_.fov_y_deg == par_.fov_x_deg must hold");
 
   if (par_.impose_FOV_in_trajCB)
   {
