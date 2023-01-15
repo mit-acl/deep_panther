@@ -212,7 +212,8 @@ class GTermManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.w_gterm=np.array([[random.uniform(-10.0, 10.0)],[random.uniform(-10.0, 10.0)],[random.uniform(1.0,1.0)]]);
+		# self.w_gterm=np.array([[random.uniform(-10.0, 10.0)],[random.uniform(-10.0, 10.0)],[random.uniform(1.0,1.0)]])
+		self.w_gterm=np.array([[random.uniform(-4.0, 4.5)],[random.uniform(-3.0, 4.0)],[random.uniform(2.0,3.0)]])
 		#self.w_gterm=np.array([[5.0],[0.0],[1.0]]);
 
 	def newRandomPosFarFrom_w_Position(self, w_position):

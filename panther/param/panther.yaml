@@ -30,13 +30,12 @@ goal_radius: 0.15    #(m) Drone has arrived to the goal when distance_to_goal<GO
 drone_radius: 0.1  #(m) Used for collision checking
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
-# the west side of highbay
-x_min: -4.3   # [m] don't forget the .0  , be careful with setting these to extremely high values (they are used in the constraints, and may introduce numerical issues)
-x_max: 4.8    # [m] don't forget the .0
-y_min: -3.5   # [m] don't forget the .0
-y_max: 4.3    # [m] don't forget the .0
-z_min: 0.8    #[m] points below this are considered ground
-z_max: 3.5    #[m] 
+x_min: -5.0  # [m] don't forget the .0  , be careful with setting these to extremely high values (they are used in the constraints, and may introduce numerical issues)
+x_max: 5.0   # [m] don't forget the .0
+y_min: -5.0  # [m] don't forget the .0
+y_max: 5.0   # [m] don't forget the .0
+z_min: 0.0   #[m] points below this are considered ground
+z_max: 3.0 
 ydot_max: 0.4 #3.1415926           # [rd/s] Maximum angular velocity. 0.4 for Hardware
 v_max: [2.0, 2.0, 2.0]   #[m/s]  7.0
 a_max: [3.0, 3.0, 3.0]   #[m/s2] Note that if a_max.z() > 9.81, the drone may flip
