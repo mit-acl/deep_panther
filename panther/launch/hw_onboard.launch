@@ -75,6 +75,7 @@
         <rosparam file="$(find panther)/matlab/casadi_generated_files/params_casadi.yaml" command="load"/>
         <param name="use_gui_mission" value="$(arg use_gui_mission)" /> 
         <param name="perfect_prediction" value="$(arg perfect_prediction)" /> 
+        <param name="student_policy_path" value="$(arg student_policy_path)" /> 
 
         <!-- Subscriptions -->
         <remap from="~state" to="state"/>
