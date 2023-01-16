@@ -1,47 +1,68 @@
-use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
-visual: true #publish visualization stuff
-color_type_student: "vel" #"vel" or "time" or "aug_cost" or "agent" or "black"
-color_type_expert: "black" #"vel" or "time" or "aug_cost" or "agent" or "black"
-n_agents: 16 #only used for the color in the trajectory
-num_of_trajs_per_replan: 6
-max_num_of_initial_guesses: 10
-dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
-goal_radius: 0.5    #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
-drone_radius: 0.1  #(m) Used for collision checking
+# Training setting
+#############################################
+num_of_trajs_per_replan: 6 # num of students' traj (n_s in Table I in deep panther paper)
+max_num_of_initial_guesses: 10 # (n_runs in Table I)
 drone_extra_radius_for_NN: 0.0  #(m) Used for collision checking
-Ra: 7.0           # [m] Radius of my planning sphere (planning horizon)
-impose_FOV_in_trajCB: false
+Ra: 10.0           # [m] Radius of my planning sphere (planning horizon)
+impose_FOV_in_trajCB: false # if true, it allows communication betw obstacle that is in FOV
 pause_time_when_replanning: false
 replanning_trigger_time_student: 0.01 #[seconds] 
 replanning_trigger_time_expert: 0.5 #[seconds] 
-replanning_lookahead_time: 0.1 #[seconds] 
-max_runtime_octopus_search: 0.1 #[seconds] 
-fov_x_deg: 70 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Horizontal FOV
-fov_y_deg: 70 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Vertical FOV
-fov_depth: 5.0 #[m] 
+replanning_lookahead_time: 0.1 #[seconds] #distance in time space = t_in - t_1 in Table I
+max_runtime_octopus_search: 0.1 #[seconds]
+
+# FOV setting
+#############################################
+# From https://www.intel.com/content/www/us/en/support/articles/000030385/emerging-technologies/intel-realsense-technology.html
+# Horizontal FOV: 86 [deg]
+# Vertical FOV:   57 [deg]
+# Diagonal FOV:   94 [deg]
+# From https://www.intelrealsense.com/depth-camera-d435/#:~:text=A%20Powerful%2C%20Full%E2%80%91featured%20Depth%20Camera&text=With%20a%20range%20up%20to,2.0%20and%20cross%2Dplatform%20support.
+# Depth: up to 10 [m]
+fov_x_deg: 76 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Horizontal FOV
+fov_y_deg: 47 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Vertical FOV
+fov_depth: 5.0 #[m]
+
+# PANTHER setting 
+#############################################
+use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
+goal_radius: 0.15    #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
+drone_radius: 0.1  #(m) Used for collision checking
+dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
+# flight space size
 x_min: -100.0  # [m] don't forget the .0  , be careful with setting these to extremely high values (they are used in the constraints, and may introduce numerical issues)
 x_max: 100.0  # [m] don't forget the .0
 y_min: -100.0  # [m] don't forget the .0
 y_max: 100.0   # [m] don't forget the .0
 z_min: -100.0        #[m] points below this are considered ground
 z_max: 100.0         #[m] 
-ydot_max: 1000.0 #3.1415926           # [rd/s] Maximum angular velocity. 0.4 for Hardware
-v_max: [2.5, 2.5, 2.5]   #[m/s]  7.0
-a_max: [5.5, 5.5, 5.5]   #[m/s2] Note that if a_max.z() > 9.81, the drone may flip
-j_max: [30.0, 30.0, 30.0]   #[m/s3] 
+ydot_max: 0.4 #3.1415926           # [rd/s] Maximum angular velocity. 0.4 for Hardware
+v_max: [2.0, 2.0, 2.0]   #[m/s]  7.0
+a_max: [3.0, 3.0, 3.0]   #[m/s2] Note that if a_max.z() > 9.81, the drone may flip
+j_max: [4.0, 4.0, 4.0]   #[m/s3] 
 factor_alpha: 2.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
 max_seconds_keeping_traj: 30.0     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
-a_star_samp_x: 3
-a_star_samp_y: 3 
-a_star_samp_z: 3 
-a_star_fraction_voxel_size: 0.00 #\in [0,1] The higher, the bigger the voxel size in A* is(i.e. more prunning)
+
+# Octopus Search
+#############################################
+a_star_samp_x: 5
+a_star_samp_y: 5 
+a_star_samp_z: 5 
+a_star_fraction_voxel_size: 0.0 #\in [0,1] The higher, the bigger the voxel size in A* is(i.e. more prunning)
 a_star_bias: 1.0 #Bias (cost=g+bias*h) in the A* search 
-res_plot_traj: 30.0  #Higher --> More resolution when plotting the trajectory 
-factor_alloc: 1.0 #>=1. Used to find the total duration of a given trajectory.
-alpha_shrink: 0.9 #\in [0,1] Only used for MINVO/Bezier
-norminv_prob: 1.0 #For x% bands, set this to norminv(x). #70.0% band <--> 0.524, 80.0% band <--> 0.841, 90.0% band <--> 1.282, 97.5% band <--> 1.96 (i.e. total area is 95%)
 disc_pts_per_interval_oct_search: 4
+
+# Visualization
+#############################################
+visual: true #publish visualization stuff
+res_plot_traj: 30.0  #Higher --> More resolution when plotting the trajectory 
+color_type_student: "vel" #"vel" or "time" or "aug_cost" or "agent" or "black"
+color_type_expert: "black" #"vel" or "time" or "aug_cost" or "agent" or "black"
+n_agents: 16 #only used for the color in the trajectory
+
+# Optimization
+#############################################
 c_smooth_yaw_search: 0.0      #weight for the yaw search
 c_visibility_yaw_search: 1.0  #weight for the yaw search
 c_maxydot_yaw_search: 0.0     #weight for the yaw search
@@ -51,15 +72,21 @@ c_fov: 6.0                 #weight for the optimization
 c_final_pos: 100.0           #weight for the optimization
 c_final_yaw: 0.0              #weight for the optimization
 c_total_time: 80             #weight for the optimization
-print_graph_yaw_info: false
 z_goal_when_using_rviz: 1.0 #[meters] 
-mode: panther #  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther), ysweep (noPA but with sweep in yaw) 
 max_dist2goal: 20.0
 max_dist2obs: 20.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
-use_expert: false
-use_student: true
+use_expert: true
+use_student: false
 use_closed_form_yaw_student: true #If false, the NN will predict this closed form for the yaw angle
 lambda_obst_avoidance_violation: 1.0 #To compute the augmented cost
 lambda_dyn_lim_violation: 1.0 #To compute the augmented cost
+
+# Other
+#############################################
+factor_alloc: 1.0 #>=1. Used to find the total duration of a given trajectory. # check if it's used!!
+alpha_shrink: 0.9 #\in [0,1] Only used for MINVO/Bezier
+norminv_prob: 1.0 #For x% bands, set this to norminv(x). #70.0% band <--> 0.524, 80.0% band <--> 0.841, 90.0% band <--> 1.282, 97.5% band <--> 1.96 (i.e. total area is 95%)
+print_graph_yaw_info: false
+mode: panther #  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther), ysweep (noPA but with sweep in yaw) 
