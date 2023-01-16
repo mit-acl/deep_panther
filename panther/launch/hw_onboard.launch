@@ -76,6 +76,7 @@
         <param name="use_gui_mission" value="$(arg use_gui_mission)" /> 
         <param name="perfect_prediction" value="$(arg perfect_prediction)" /> 
         <param name="student_policy_path" value="$(arg student_policy_path)" /> 
+        <param name="static_planning" value="$(arg static_planning)" /> 
 
         <!-- Subscriptions -->
         <remap from="~state" to="state"/>
