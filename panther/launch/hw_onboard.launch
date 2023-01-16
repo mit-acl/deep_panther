@@ -7,7 +7,7 @@
     <arg name="static_planning" default="false" />  <!-- #If true, it will always plan from the same initial condition -->
 
     <!-- COMMANDS -->
-    <node ns="$(arg quad)" name="commands" pkg="panther_other" type="commands.py" output="screen"/>
+    <node ns="$(arg quad)" name="commands" pkg="panther" type="commands.py" output="screen"/>
 
     <!-- RUN CAMERA AND TRACKER-->
     <group unless="$(arg perfect_prediction)">
@@ -19,14 +19,14 @@
           <arg name="quad" value="$(arg quad)"/>
           <arg name="record" value="false"/>
           <arg name="pub_tf_drone2camera" value="false"/>
-        </include> 
+        </include>
     </group>  
 
     <!-- BEHAVIOUR SELECTOR  
     <node pkg="behavior_selector" type="behavior_selector_node.py" name="behavior_selector" output="screen" />
     -->
 
-    <!-- NOt using tf2_ros here because of all the issues with /tf_static and rosbags -->
+    <!-- Not using tf2_ros here because of all the issues with /tf_static and rosbags -->
     <!-- See https://github.com/ros/robot_state_publisher/issues/105#issuecomment-467406420 -->
 
     <node pkg="tf" type="static_transform_publisher" name="drone2camera" args="0.1 0.0 0.09 0.05 -0.15 0.0 $(arg quad) $(arg quad)/camera_link 5" />
@@ -37,7 +37,7 @@
     -->
 
 
-    <node pkg="rosbag" type="record" name="rosbag_record_panther"
+<!--     <node pkg="rosbag" type="record" name="rosbag_record_panther"
        args="record -o  /home/ubuntu/Desktop/bags/panther 
                         /$(arg quad)/goal
                         /$(arg quad)/state
@@ -65,7 +65,7 @@
                         /rosout_agg
                         /rviz_visual_tools
                         /tf
-                        /tf_static"/>
+                        /tf_static"/> -->
 
     <!-- PANTHER --> 
     <node ns="$(arg quad)" name="panther" pkg="panther" type="panther_node" output="screen" clear_params="false"> 
