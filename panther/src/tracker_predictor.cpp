@@ -230,21 +230,21 @@ void TrackerPredictor::cloud_cb(const sensor_msgs::PointCloud2ConstPtr& pcl2ptr_
   Eigen::Affine3d w_T_b;
   geometry_msgs::TransformStamped transform_stamped;
 
-  // Get the name of the drone and remove slashes
-  std::istringstream ss(nh_.getNamespace());
-  ss.ignore(std::numeric_limits<std::streamsize>::max(), '/');
+  // // Get the name of the drone and remove slashes
+  // std::istringstream ss(nh_.getNamespace());
+  // ss.ignore(std::numeric_limits<std::streamsize>::max(), '/');
 
-  // The name of the drone is the first word after the first slash
-  std::string name_drone;
-  std::getline(ss, name_drone, '/');
+  // // The name of the drone is the first word after the first slash
+  // std::string name_drone;
+  // std::getline(ss, name_drone, '/');
 
-  // The name of the camera depth optical frame is: the name of the drone + the name of the point cloud frame
-  std::string name_camera_depth_optical_frame_tf = name_drone + "/" + header_pcloud.frame_id;
+  // // The name of the camera depth optical frame is: the name of the drone + the name of the point cloud frame
+  // std::string name_camera_depth_optical_frame_tf = name_drone + "/" + header_pcloud.frame_id;
 
   // Try to find camera frame transform
   try
   {
-    transform_stamped = tf_buffer_.lookupTransform("world", name_camera_depth_optical_frame_tf, header_pcloud.stamp,
+    transform_stamped = tf_buffer_.lookupTransform("world", header_pcloud.frame_id, header_pcloud.stamp,
                                                    ros::Duration(0.02));  // TODO: change this duration time?
 
     // transform_stamped = tf_buffer_.lookupTransform("world", header_pcloud.frame_id,

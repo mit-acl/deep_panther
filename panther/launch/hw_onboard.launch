@@ -13,6 +13,7 @@
     <group unless="$(arg perfect_prediction)">
         <include file="$(find panther)/launch/tracker_predictor.launch">
           <arg name="quad" value="$(arg quad)"/>
+          <arg name="cloud_topic" value="/$(arg quad)/camera/depth/color/points"/>
         </include> 
 
         <include file="$(find panther_other)/launch/start_rs.launch">
