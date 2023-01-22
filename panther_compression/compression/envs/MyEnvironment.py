@@ -139,7 +139,7 @@ class MyEnvironment(gym.Env):
     # self.printwithName(f"Received actionN={f_action_n}")
 
     if(self.am.isNanAction(f_action_n)):
-      #f_observationn, reward, done, info
+      #f_observation_n, reward, done, info
       return self.om.getNanObservation(), 0.0, True, {} #This line is added to make generate_trajectories() of rollout.py work when the expert fails 
 
     f_action_n=f_action_n.reshape(self.action_shape) 
@@ -229,11 +229,11 @@ class MyEnvironment(gym.Env):
 
     
     info = {}
-    if(self.om.obsIsNormalized(f_observationn)==False):
-      # self.printwithName(f"f_observationn={f_observationn} is not normalized (i.e., constraints are not satisfied). Terminating")
+    if(self.om.obsIsNormalized(f_observation_n)==False):
+      # self.printwithName(f"f_observation_n={f_observation_n} is not normalized (i.e., constraints are not satisfied). Terminating")
       # self.printwithName(f"f_observation={f_observation} is not normalized (i.e., constraints are not satisfied). Terminating")
       # exit();
-      self.printwithName(Style.BRIGHT+Fore.RED +"f_observationn is not normalized (i.e., constraints are not satisfied). Terminating" + Style.RESET_ALL)
+      self.printwithName(Style.BRIGHT+Fore.RED +"f_observation_n is not normalized (i.e., constraints are not satisfied). Terminating" + Style.RESET_ALL)
       # self.om.printObservation(f_observation)
     
       # print(f"[Env] Terminated due to constraint violation: obs: {self.x}, act: {u}, steps: {self.timestep}")
@@ -270,12 +270,12 @@ class MyEnvironment(gym.Env):
     ###################
 
     # self.printwithName("THIS IS THE OBSERVATION:")
-    # self.om.printObservation(f_observationn)
+    # self.om.printObservation(f_observation_n)
     # np.set_printoptions(precision=2)
     # print("w_obstacles[0].ctrl_pts=", w_obstacles[0].ctrl_pts)
     # print("w_obstacles[0].bbox_inflated=", w_obstacles[0].bbox_inflated.T)
     # print("self.gm.get_w_GTermPos()=", self.gm.get_w_GTermPos().T)
-    # print("observation=", f_observationn)
+    # print("observation=", f_observation_n)
 
     # print("w_yawBS.getPosT(self.dt)= ", w_yawBS.getPosT(self.dt))
         # self.printwithName(f"w_obstacles={w_obstacles[0].ctrl_pts}")
@@ -285,9 +285,9 @@ class MyEnvironment(gym.Env):
     # self.printwithName(f"returning obs size={observation.shape}")
 
     self.previous_f_observation=f_observation
-    self.previous_f_obs_n=f_observationn
+    self.previous_f_obs_n=f_observation_n
 
-    return f_observationn, reward, done, info
+    return f_observation_n, reward, done, info
 
   def reset(self):
     self.printwithNameAndColor("Resetting environment")
@@ -328,16 +328,16 @@ class MyEnvironment(gym.Env):
     self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
     # print("w_obstacles[0].ctrl_pts=", w_obstacles[0].ctrl_pts)
     f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles);
-    f_observationn=self.om.normalizeObservation(f_observation);
+    f_observation_n=self.om.normalizeObservation(f_observation);
 
     # self.printwithName("THIS IS THE OBSERVATION:")
     # self.om.printObservation(f_observation)
 
-    self.previous_f_observation=self.om.denormalizeObservation(f_observationn)
-    self.previous_f_obs_n=f_observationn
+    self.previous_f_observation=self.om.denormalizeObservation(f_observation_n)
+    self.previous_f_obs_n=f_observation_n
     # assert observation.shape == self.observation_shape
     # self.printwithName(f"returning obs={observation}")
-    return f_observationn
+    return f_observation_n
 
  
   def render(self, mode='human'):

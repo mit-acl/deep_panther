@@ -34,7 +34,7 @@ print("action= \n", action)
 
 my_state=State(p0, v0, a0, y0, y_dot0)
 
-w_posBS, w_yawBS= am.f_actionAnd_w_State2wBS(action, my_state)
+w_posBS, w_yawBS= am.f_trajAnd_w_State2wBS(am.getTrajFromAction(action, 0), my_state)
 
 
 
@@ -78,13 +78,15 @@ f_action=am.getRandomAction()
 
 print("f_action 1= ", f_action)
 
-w_SolOrGuess= am.f_actionAnd_w_State2w_ppSolOrGuess(f_action, my_state)
+w_SolOrGuess = []
+for i in range(am.getActionShape()[0]):
+    w_SolOrGuess.append(am.f_trajAnd_w_State2w_ppSolOrGuess(am.getTrajFromAction(f_action, i), my_state))
 
 f_SolOrGuess=w_SolOrGuess; #Due to the fact that p0,v0,a0,y0,...=0
 
-f_SolOrGuess.printInfo()
+f_SolOrGuess[0].printInfo()
 
-f_action_result=am.solOrGuess2action(f_SolOrGuess)
+f_action_result=am.solsOrGuesses2action(f_SolOrGuess)
 
 assert np.linalg.norm(f_action_result-f_action)<1e7, "Assertion failed"
 
@@ -103,7 +105,7 @@ my_wState=State(p0, v0, a0, y0, y_dot0)
 
 f_action=am.getRandomAction();
 
-w_posBS, w_yawBS=am.f_actionAnd_w_State2wBS(f_action, my_wState)
+w_posBS, w_yawBS=am.f_trajAnd_w_State2wBS(am.getTrajFromAction(f_action, 0), my_wState)
 
 print(f"w_yawBS.getPosT(0.0)={w_yawBS.getPosT(0.0)}")
 print(f"y0={y0}")
@@ -112,7 +114,7 @@ print("Test 1")
 np.testing.assert_allclose(w_yawBS.getPosT(0.0)-y0, 0, atol=1e-05)
 
 
-f_yaw_ctrl_pts=am.getYawCtrlPts(f_action);
+f_yaw_ctrl_pts=am.getYawCtrlPts(f_action, 0);
 
 print("w_Last pos=",w_yawBS.getLastPos())
 print("f_yaw_ctrl_pts=",f_yaw_ctrl_pts)

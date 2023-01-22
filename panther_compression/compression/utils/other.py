@@ -178,29 +178,31 @@ def convertPPState2State(ppstate):
 
 
 def getObsAndGtermToCrossPath():
-
 	# thetas=[-np.pi/4, np.pi/4]
 	# theta=random.choice(thetas)
 	theta=random.uniform(-np.pi, np.pi)
-	radius_obstacle=random.uniform(0.0, 5.5)
-	radius_gterm=random.uniform(0.0, 10.0) #radius_obstacle + random.uniform(2.0, 10.0)
+	radius_obstacle=random.uniform(0.0, 5.0)
+	radius_gterm=random.uniform(0.0, 8.0) #radius_obstacle + random.uniform(2.0, 10.0)
 	std_deg=30
 	theta_g_term=theta + random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
 	center=np.zeros((3,1))
 
-	w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
-	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[1.0]])
+	height_g_term = random.uniform(1.0, 3.0)
+	height_obstacle = height_g_term + random.uniform(-0.25, 0.25)
 
-	# Use this to train static obstacles
-	theta=random.uniform(-np.pi/2, np.pi/2)
-	radius_obstacle=random.uniform(1.5, 4.5)
-	radius_gterm=radius_obstacle + random.uniform(1.0, 6.0)
-	std_deg=10#30
-	theta_g_term=theta + random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
-	center=np.zeros((3,1))
+	w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[height_obstacle]])
+	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[height_g_term]])
 
-	w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
-	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[random.uniform(1.0-1.5, 1.0+1.5)]])
+	# # Use this to train static obstacles
+	# theta=random.uniform(-np.pi/2, np.pi/2)
+	# radius_obstacle=random.uniform(1.5, 4.5)
+	# radius_gterm=radius_obstacle + random.uniform(1.0, 6.0)
+	# std_deg=10#30
+	# theta_g_term=theta + random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
+	# center=np.zeros((3,1))
+
+	# w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
+	# w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[random.uniform(1.0-1.5, 1.0+1.5)]])
 	########
 
 
@@ -212,9 +214,12 @@ class GTermManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.w_gterm=np.array([[random.uniform(-10.0, 10.0)],[random.uniform(-10.0, 10.0)],[random.uniform(1.0,3.0)]])
-		# self.w_gterm=np.array([[random.uniform(-4.0, 4.5)],[random.uniform(-3.0, 4.0)],[random.uniform(2.0,3.0)]])
-		#self.w_gterm=np.array([[5.0],[0.0],[1.0]]);
+		self.w_gterm = np.array([
+			[random.uniform(-4.3 + 0.5, 4.8 - 0.5)],
+			[random.uniform(-3.5 + 0.5, 4.3 - 0.5)],
+			[random.uniform(0.8 + 0.2, 3.5 - 0.2)]
+		]);
+		# self.w_gterm=np.array([[2.0],[0.0],[1.0]]);
 
 	def newRandomPosFarFrom_w_Position(self, w_position):
 		dist=0.0
@@ -250,9 +255,13 @@ class ObstaclesManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.random_pos=np.array([[random.uniform(-4.0, 4.0)],[random.uniform(-4.0, 4.0)],[random.uniform(1.0,1.0)]]);
+		self.random_pos = np.array([
+			[random.uniform(-4.3 + 0.5, 4.8 - 0.5)],
+			[random.uniform(-3.5 + 0.5, 4.3 - 0.5)],
+			[random.uniform(0.8 + 0.2, 3.5 - 0.2)]
+		]);
 		self.random_offset=random.uniform(0.0, 10*math.pi)
-		self.random_scale=np.array([[random.uniform(0.5, 4.0)],[random.uniform(0.5, 4.0)],[random.uniform(0.5, 4.0)]]);
+		self.random_scale=np.array([[random.uniform(0.5, 3.0)],[random.uniform(0.5, 3.0)],[random.uniform(0.5, 3.0)]]);
 		#self.random_pos=np.array([[2.5],[1.0],[1.0]]);
 
 	def setPos(self, pos):
@@ -277,7 +286,7 @@ class ObstaclesManager():
 				# w_ctrl_pts_ob.append(np.array([[2],[2],[2]]))
 
 			# bbox_ob=np.array([[0.5],[0.5], [0.5]]);
-			bbox_inflated=np.array([[0.8],[0.8], [0.8]])+2*self.params["drone_radius"]*np.ones((3,1));
+			bbox_inflated=np.array([[0.3],[0.3], [0.1]])+2*self.params["drone_radius"]*np.ones((3,1));
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 		return w_obs;
 
@@ -289,7 +298,7 @@ class ObstaclesManager():
 		# print(f"Using random_scale={self.random_scale}")
 
 		###HACK TO GENERATE A STATIC OBSTACLE
-		self.random_scale=np.zeros((3,1))
+		# self.random_scale=np.zeros((3,1))
 		####################################
 
 		trefoil=Trefoil(pos=self.random_pos, scale=self.random_scale, offset=self.random_offset, slower=1.5);
@@ -303,7 +312,7 @@ class ObstaclesManager():
 
 			w_ctrl_pts_ob=listOf3dVectors2numpy3Xmatrix(w_ctrl_pts_ob_list)
 
-			bbox_inflated=np.array([[0.8],[0.8], [0.8]])+2*self.params["drone_radius"]*np.ones((3,1));
+			bbox_inflated=np.array([[0.3],[0.3], [0.1]])+2*self.params["drone_radius"]*np.ones((3,1));
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 		return w_obs;
 
@@ -508,6 +517,7 @@ class ObservationManager():
 		self.a_max=np.array(params["a_max"]).reshape(3,1);
 		self.j_max=np.array(params["j_max"]).reshape(3,1);
 		self.ydot_max=params["ydot_max"];
+		self.ydot_max_normalization=params["ydot_max_normalization"] # We use a different (higher) ydot_max for normalization because the closed form yaw solutions is not guaranteed to respect ydot_max
 		# self.max_dist2goal=params["max_dist2goal"];
 		self.max_dist2obs=params["max_dist2obs"];
 		self.max_side_bbox_obs=params["max_side_bbox_obs"];
@@ -516,8 +526,7 @@ class ObservationManager():
 		#Note that the sqrt(3) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
 		margin_v=math.sqrt(3) #math.sqrt(3)
 		margin_a=math.sqrt(3) #math.sqrt(3)
-		margin_ydot=1.5 
-		self.normalization_constant=np.concatenate((margin_v*self.v_max.T*ones13, margin_a*self.a_max.T*ones13, margin_ydot*self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
+		self.normalization_constant=np.concatenate((margin_v*self.v_max.T*ones13, margin_a*self.a_max.T*ones13, self.ydot_max_normalization*np.ones((1,1)), self.Ra*ones13), axis=1)
 		for i in range(self.obsm.getNumObs()):
 			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)
 
