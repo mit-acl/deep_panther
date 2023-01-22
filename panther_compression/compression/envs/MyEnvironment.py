@@ -213,7 +213,7 @@ class MyEnvironment(gym.Env):
     # w_obstacles=self.obsm.getFutureWPosStaticObstacles()
     self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
     f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles);
-    f_observationn=self.om.normalizeObservation(f_observation);
+    f_observation_n=self.om.normalizeObservation(f_observation);
 
 
     dist_current_2gterm=np.linalg.norm(self.w_state.w_pos-self.gm.get_w_GTermPos()) #From the current position to the goal
