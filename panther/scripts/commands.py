@@ -31,11 +31,19 @@ class Panther_Commands:
         self.pubGoal = rospy.Publisher('goal', Goal, queue_size=1)
         self.pubWhoPlans = rospy.Publisher("who_plans",WhoPlans,queue_size=1,latch=True) 
         #self.pubClickedPoint = rospy.Publisher("/move_base_simple/goal",PoseStamped,queue_size=1,latch=True)
-        
+        self.timer_take_off=rospy.Timer(rospy.Duration(0.002), self.timerTakeOffCB)
+        self.timer_take_off.shutdown()
 
         # self.alt_taken_off = 2.5; #Altitude when hovering after taking off
         self.alt_ground = 0; #Altitude of the ground
-        self.initialized=False;
+        self.initialized=False
+
+        self.is_kill = False
+        self.takeoff_goal=Goal()
+
+        # Uncomment to test planning while stationary            
+        # self.whoplans.value=self.whoplans.PANTHER
+        # self.sendWhoPlans()
 
     #In rospy, the callbacks are all of them in separate threads
     def stateCB(self, data):
@@ -47,7 +55,6 @@ class Panther_Commands:
         if(self.initialized==False):
             #self.pubFirstTerminalGoal() Not needed
             self.initialized=True
-            self.takeOff() #hack to take off directly
 
     #Called when buttom pressed in the interface
     def globalflightmodeCB(self,req):
@@ -58,7 +65,8 @@ class Panther_Commands:
         if req.mode == req.GO and self.whoplans.value==self.whoplans.OTHER:
             print ("Starting taking off")
             self.takeOff()
-            print ("Take off done")
+            self.whoplans.value = self.whoplans.PANTHER
+            # print("Taking off done")
 
         if req.mode == req.KILL:
             print ("Killing")
@@ -70,36 +78,34 @@ class Panther_Commands:
             self.land()
             print ("Landing done")
 
-
     def sendWhoPlans(self):
         self.whoplans.header.stamp = rospy.get_rostime()
         self.pubWhoPlans.publish(self.whoplans)
 
 
     def takeOff(self):
-        goal=Goal();
-        goal.p.x = self.pose.position.x;
-        goal.p.y = self.pose.position.y;
-        goal.p.z = self.pose.position.z;
-        goal.psi = quat2yaw(self.pose.orientation)
-        goal.power= True; #Turn on the motors
+        print("In takeOff")
+        self.is_kill = False
+        self.takeoff_goal.p.x = self.pose.position.x;
+        self.takeoff_goal.p.y = self.pose.position.y;
+        self.takeoff_goal.p.z = self.pose.position.z;
+        self.takeoff_goal.psi = quat2yaw(self.pose.orientation)
+        self.takeoff_goal.power= True; #Turn on the motors
+        self.timer_take_off=rospy.Timer(rospy.Duration(0.002), self.timerTakeOffCB)
 
-        alt_taken_off = self.pose.position.z + 1.0; #Altitude when hovering after taking off
+    def timerTakeOffCB(self, event):
+        alt_taken_off = 1.8; #Altitude when hovering after taking off
+        self.takeoff_goal.p.z = min(self.takeoff_goal.p.z+0.0005, alt_taken_off);
+        rospy.loginfo_throttle(0.5, "Taking off..., error={}".format(self.pose.position.z-alt_taken_off) )
+        self.sendGoal(self.takeoff_goal)
 
-
-        #Note that self.pose.position is being updated in the parallel callback
-        ######## Commented for simulations
-        # while(  abs(self.pose.position.z-alt_taken_off)>0.2  ):  
-        #     goal.p.z = min(goal.p.z+0.0035, alt_taken_off);
-        #     rospy.sleep(0.004) 
-        #     rospy.loginfo_throttle(0.5, "Taking off..., error={}".format(self.pose.position.z-alt_taken_off) )
-        #     self.sendGoal(goal)
-        ######## 
-        rospy.sleep(0.1) 
-        self.whoplans.value=self.whoplans.PANTHER
-        self.sendWhoPlans();
+        if abs(self.pose.position.z-alt_taken_off)<0.1:
+            self.timer_take_off.shutdown()
+            self.whoplans.value=self.whoplans.PANTHER
+            self.sendWhoPlans()
 
     def land(self):
+        self.is_kill = False
         self.whoplans.value=self.whoplans.OTHER
         self.sendWhoPlans();
         goal=Goal();
@@ -108,8 +114,8 @@ class Panther_Commands:
         goal.p.z = self.pose.position.z;
         goal.power= True; #Motors still on
         print ("self.pose.orientation= ", self.pose.orientation)
-        goal.yaw = quat2yaw(self.pose.orientation)
-        print ("goal.yaw= ", goal.yaw)
+        goal.psi = quat2yaw(self.pose.orientation)
+        print ("goal.psi= ", goal.psi)
 
 
         #Note that self.pose.position is being updated in the parallel callback
@@ -121,22 +127,24 @@ class Panther_Commands:
         self.kill()
 
     def kill(self):
+        self.is_kill = True
+        self.timer_take_off.shutdown()
         self.whoplans.value=self.whoplans.OTHER
         self.sendWhoPlans()
         goal=Goal();
         goal.p.x = self.pose.position.x;
         goal.p.y = self.pose.position.y;
         goal.p.z = self.pose.position.z;
-        goal.yaw = quat2yaw(self.pose.orientation)
+        goal.psi = quat2yaw(self.pose.orientation)
         goal.power=False #Turn off the motors 
         self.sendGoal(goal) #TODO: due to race conditions, publishing whoplans.OTHER and then goal.power=False does NOT guarantee that the external planner doesn't publish a goal with power=true
                             #The easy workaround is to click several times in the 'kill' button of the GUI
 
 
     def sendGoal(self, goal):
-        # goal.yaw = quat2yaw(self.pose.orientation)
+        # goal.psi = quat2yaw(self.pose.orientation)
         goal.header.stamp = rospy.get_rostime()
-        # print("[panther_cmds.py] Sending goal.yaw=",goal.yaw);
+        # print("[panther_cmds.py] Sending goal.yaw=",goal.psi);
         self.pubGoal.publish(goal)
 
     # def pubFirstTerminalGoal(self):

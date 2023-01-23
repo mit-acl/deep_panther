@@ -26,7 +26,7 @@ fov_depth: 5.0 #[m]
 # PANTHER setting 
 #############################################
 use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
-goal_radius: 0.15    #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
+goal_radius: 2.0    #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
 drone_radius: 0.1  #(m) Used for collision checking
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
@@ -72,16 +72,17 @@ c_fov: 6.0                 #weight for the optimization
 c_final_pos: 100.0           #weight for the optimization
 c_final_yaw: 0.0              #weight for the optimization
 c_total_time: 80             #weight for the optimization
-z_goal_when_using_rviz: 1.0 #[meters] 
+z_goal_when_using_rviz: 2.0 #[meters] 
 max_dist2goal: 20.0
 max_dist2obs: 20.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
-use_expert: true
-use_student: false
+use_expert: false
+use_student: true
 use_closed_form_yaw_student: true #If false, the NN will predict this closed form for the yaw angle
 lambda_obst_avoidance_violation: 1.0 #To compute the augmented cost
-lambda_dyn_lim_violation: 1.0 #To compute the augmented cost
+lambda_dyn_lim_violation: 100.0 #To compute the augmented cost
+max_dyn_lim_violation: 250.0
 
 # Other
 #############################################

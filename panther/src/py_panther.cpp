@@ -140,6 +140,7 @@ PYBIND11_MODULE(py_panther, m)
 .def_readwrite("use_closed_form_yaw_student", &mt::parameters::use_closed_form_yaw_student)
 .def_readwrite("lambda_obst_avoidance_violation", &mt::parameters::lambda_obst_avoidance_violation)
 .def_readwrite("lambda_dyn_lim_violation", &mt::parameters::lambda_dyn_lim_violation)
+.def_readwrite("max_dyn_lim_violation", &mt::parameters::max_dyn_lim_violation)
       // clang-format on
       .def("__repr__", [](const mt::parameters &a) { return "<py_panther.parameters>"; });
 

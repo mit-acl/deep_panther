@@ -157,6 +157,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "use_closed_form_yaw_student", par_.use_closed_form_yaw_student);
   safeGetParam(nh1_, "lambda_obst_avoidance_violation", par_.lambda_obst_avoidance_violation);
   safeGetParam(nh1_, "lambda_dyn_lim_violation", par_.lambda_dyn_lim_violation);
+  safeGetParam(nh1_, "max_dyn_lim_violation", par_.max_dyn_lim_violation);
 
   bool perfect_prediction;  // use_ground_truth_prediction
   safeGetParam(nh1_, "perfect_prediction", perfect_prediction);
@@ -486,13 +487,13 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
     // mt::PieceWisePol pwp;
     mt::log log;
 
-    // std::cout << "WAITING FOR SERVICE" << std::endl;
-    ros::service::waitForService("/gazebo/pause_physics");
-    // std::cout << "SERVICE found" << std::endl;
-    // std::cout << "pauseGazebo_.exists()= " << pauseGazebo_.exists() << std::endl;
-
     if (par_.pause_time_when_replanning)
     {
+      std::cout << "WAITING FOR SERVICE" << std::endl;
+      ros::service::waitForService("/gazebo/pause_physics");
+      std::cout << "SERVICE found" << std::endl;
+      // std::cout << "pauseGazebo_.exists()= " << pauseGazebo_.exists() << std::endl;
+
       pauseTime();
     }
 
@@ -541,12 +542,14 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
           std::vector<si::solOrGuess> best_solution_expert_vector;
           best_solution_expert_vector.push_back(best_solution_expert);
           // clang-format off
-        clearMarkerArray(ma_best_solution_expert_, pub_best_solution_expert_);
-        ma_best_solutions_expert_=pubVectorOfsolOrGuess(best_solution_expert_vector, pub_best_solution_expert_, name_drone_ + "_best_solution_expert", par_.color_type_expert);
-        clearMarkerArray(ma_best_solutions_expert_, pub_best_solutions_expert_);
-        ma_best_solutions_expert_=pubVectorOfsolOrGuess(best_solutions_expert, pub_best_solutions_expert_, name_drone_ + "_best_solutions_expert", par_.color_type_expert);
-        clearMarkerArray(ma_guesses_, pub_guesses_);
-        ma_guesses_=pubVectorOfsolOrGuess(guesses, pub_guesses_, name_drone_ + "_guess", par_.color_type_expert);
+          // clearMarkerArray(ma_best_solution_expert_, pub_best_solution_expert_);
+          // ma_best_solutions_expert_=pubVectorOfsolOrGuess(best_solution_expert_vector, pub_best_solution_expert_, name_drone_ + "_best_solution_expert", par_.color_type_expert);
+          
+          clearMarkerArray(ma_best_solutions_expert_, pub_best_solutions_expert_);
+          ma_best_solutions_expert_=pubVectorOfsolOrGuess(best_solutions_expert, pub_best_solutions_expert_, name_drone_ + "_best_solutions_expert", par_.color_type_expert);
+          
+          clearMarkerArray(ma_guesses_, pub_guesses_);
+          ma_guesses_=pubVectorOfsolOrGuess(guesses, pub_guesses_, name_drone_ + "_guess", par_.color_type_expert);
           // clang-format on
         }
       }

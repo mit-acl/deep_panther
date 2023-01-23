@@ -1,13 +1,21 @@
-x_min: -4000.0
-x_max: 4000.0
-y_min: -4000.0
-y_max: 4000.0
-z_min: -4000.0
-z_max: 4000.0
+# x_min: -4000.0
+# x_max: 4000.0
+# y_min: -4000.0
+# y_max: 4000.0
+# z_min: -4000.0
+# z_max: 4000.0
+# World Frame
+x_min: -4.3   # [m] don't forget the .0  , be careful with setting these to extremely high values (they are used in the constraints, and may introduce numerical issues)
+x_max: 4.8    # [m] don't forget the .0
+y_min: -3.5   # [m] don't forget the .0
+y_max: 4.3    # [m] don't forget the .0
+z_min: 0.0    #[m] points below this are considered ground
+z_max: 3.5  
+
 meters_to_create_new_track: 2.0
 max_frames_skipped: 0.0
 cluster_tolerance: 0.3
-min_cluster_size: 15       #units= num of points
+min_cluster_size: 10       #units= num of points
 max_cluster_size: 600     #units= num of points
-min_dim_cluster_size: 0.1 #units= meters
-leaf_size_filter: 0.1
+min_dim_cluster_size: 0.5 #units= meters
+leaf_size_filter: 0.05

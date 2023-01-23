@@ -474,7 +474,7 @@ void Panther::doStuffTermGoal()
 
     mt::state last_state = plan_.back();
 
-    double desired_yaw = atan2(G_term_.pos[1] - last_state.pos[1], G_term_.pos[0] - last_state.pos[0]);
+    double desired_yaw = atan2(G_term_.pos[1] - last_state.pos[1], G_term_.pos[0] - last_state.pos[0]) - M_PI / 2;
     double diff = desired_yaw - last_state.yaw;
     angle_wrap(diff);
 
@@ -989,6 +989,12 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   log_ptr_->cost = best_solution.cost;
   log_ptr_->obst_avoidance_violation = best_solution.obst_avoidance_violation;
   log_ptr_->dyn_lim_violation = best_solution.dyn_lim_violation;
+  
+  // Check for trajectories that significantly violate dynamic limits
+  if (best_solution.dyn_lim_violation > par_.max_dyn_lim_violation) {
+    logAndTimeReplan("Dynamic Limit Violation Exceeds Threshold!", false, log);
+    return false;
+  }
 
   logAndTimeReplan("Success", true, log);
 
