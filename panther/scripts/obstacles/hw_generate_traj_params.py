@@ -5,6 +5,7 @@ import sympy as sp
 import rospy
 import rospkg
 import collections
+from datetime import date
 
 def getTrefoil(tt,offset,slower,lim_x, lim_y, lim_z):
     x=(sp.sin((tt+slower*offset)/slower)+2*sp.sin(2*((tt+slower*offset)/slower))+3)/6; # in [0,1] approx
@@ -25,7 +26,7 @@ if __name__=="__main__":
     # Obstacle Params
     Obstacle = collections.namedtuple('Name', ["name","bbox", "slower", "offset", "lim_x", "lim_y", "lim_z"])
     all_drones=[        #"name"     ,"bbox"         ,"slower","offset","lim_x"    ,"lim_y"    ,"lim_z"
-                Obstacle("obstacle1",[1.0, 1.0, 1.0],3.5     ,0.0     ,[-2.0, 2.0],[-2.0, 2.0],[1.0, 2.5])
+                Obstacle("obstacle1",[1.0, 1.0, 1.0],1.5     ,0.0     ,[-2.0, 2.0],[-2.0, 2.0],[1.0, 2.5])
                 ]
 
     # symbolic t
@@ -39,6 +40,7 @@ if __name__=="__main__":
         name_file=package_path+"/param/obstacle1.yaml"
         f = open(name_file, "w")
         f.write("# DO NOT EDIT. RUN THE PYTHON FILE INSTEAD TO GENERATE THIS .yaml FILE \n")
+        f.write("# date: "+str(date.today())+"\n")
         f.write("traj_x: "+str(traj[0])+"\n")
         f.write("traj_y: "+str(traj[1])+"\n")
         f.write("traj_z: "+str(traj[2])+"\n")
