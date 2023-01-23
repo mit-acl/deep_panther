@@ -35,7 +35,7 @@ class Panther_Commands:
 
         # self.alt_taken_off = 2.5; #Altitude when hovering after taking off
         self.alt_ground = 0; #Altitude of the ground
-        self.initialized=False;
+        self.initialized=True
 
     #In rospy, the callbacks are all of them in separate threads
     def stateCB(self, data):
@@ -127,7 +127,7 @@ class Panther_Commands:
         goal.p.x = self.pose.position.x;
         goal.p.y = self.pose.position.y;
         goal.p.z = self.pose.position.z;
-        goal.yaw = quat2yaw(self.pose.orientation)
+        goal.psi = quat2yaw(self.pose.orientation)
         goal.power=False #Turn off the motors 
         self.sendGoal(goal) #TODO: due to race conditions, publishing whoplans.OTHER and then goal.power=False does NOT guarantee that the external planner doesn't publish a goal with power=true
                             #The easy workaround is to click several times in the 'kill' button of the GUI
@@ -153,7 +153,7 @@ class Panther_Commands:
 def startNode():
     c = Panther_Commands()
     #s = rospy.Service("/change_mode",MissionModeChange,c.srvCB)
-    rospy.Subscriber("state", State, c.stateCB)
+    rospy.Subscriber("/state", State, c.stateCB)
     rospy.Subscriber("/globalflightmode", QuadFlightMode, c.globalflightmodeCB)
     rospy.spin()
 
