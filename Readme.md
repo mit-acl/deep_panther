@@ -43,6 +43,7 @@ cd swig
 git checkout -b matlab-customdoc origin/matlab-customdoc        
 sh autogen.sh
 sudo apt-get install gcc-7 g++-7 bison byacc
+sudo apt-get install libpcre3 libpcre3-dev
 ./configure CXX=g++-7 CC=gcc-7            
 make
 sudo make install
