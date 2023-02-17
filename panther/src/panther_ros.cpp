@@ -64,6 +64,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   ROS_INFO("Found transform %s --> %s", name_drone_.c_str(), name_camera_depth_optical_frame_tf_.c_str());
   // std::cout << "par_.b_T_c.matrix()= " << par_.b_T_c.matrix() << std::endl;
 
+  safeGetParam(nh1_, "is_multiagent", par_.is_multiagent);
   safeGetParam(nh1_, "use_ff", par_.use_ff);
   safeGetParam(nh1_, "visual", par_.visual);
   safeGetParam(nh1_, "color_type_expert", par_.color_type_expert);
@@ -238,7 +239,15 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   pub_guesses_ = nh1_.advertise<visualization_msgs::MarkerArray>("guesses", 1);
   pub_splines_fitted_ = nh1_.advertise<visualization_msgs::MarkerArray>("splines_fitted", 1);
 
-  pub_traj_ = nh1_.advertise<panther_msgs::DynTraj>("/trajs", 1, true);  // The last boolean is latched or not
+  if (par_.is_multiagent)
+  {
+    pub_traj_ = nh1_.advertise<panther_msgs::DynTraj>("trajs", 1, true);  // The last boolean is latched or not
+  }
+  else
+  {
+    pub_traj_ = nh1_.advertise<panther_msgs::DynTraj>("/trajs", 1, true);  // The last boolean is latched or not
+  }
+
   pub_fov_ = nh1_.advertise<visualization_msgs::Marker>("fov", 1);
   pub_obstacles_ = nh1_.advertise<visualization_msgs::Marker>("obstacles", 1);
   pub_log_ = nh1_.advertise<panther_msgs::Log>("log", 1);
@@ -251,6 +260,29 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   ////Services
   pauseGazebo_ = nh1_.serviceClient<std_srvs::Empty>("/gazebo/pause_physics");
   unpauseGazebo_ = nh1_.serviceClient<std_srvs::Empty>("/gazebo/unpause_physics");
+
+  // get my namespace
+  std::string myns = ros::this_node::getNamespace();
+  std::string veh = myns.substr(1, 2);
+
+  // get agents id
+  safeGetParam(nh1_, "agents_ids", par_.agents_ids);
+
+  if (par_.is_multiagent)
+  {
+    ROS_INFO("Using Multiagent Scheme");
+    for (std::string id : par_.agents_ids)  // id is a string
+    {
+      std::string agent;
+      veh == "NX" ? agent = "/" + veh + id : agent = "/" + veh + id + "s";
+      std::cout << "agent name initialized" << agent << std::endl;
+      if (myns != agent)
+      {  // if my namespace is the same as the agent, then it's you
+        sub_traj_list_.push_back(nh1_.subscribe(agent + "/panther/trajs", 3, &PantherRos::trajCB,
+                                                this));  // The number is the queue size
+      }
+    }
+  }
 
   if (perfect_prediction == false)
   {
@@ -483,7 +515,6 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
     std::vector<si::solOrGuess> splines_fitted;
 
     std::vector<Hyperplane3D> planes;
-    // mt::PieceWisePol pwp;
     mt::log log;
 
     // std::cout << "WAITING FOR SERVICE" << std::endl;
@@ -556,27 +587,36 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
       pubVectorOfsolOrGuess(splines_fitted, pub_splines_fitted_, name_drone_ + "_spline_fitted", "vel");
     }
 
-    // if (replanned)
-    // {
-    //   publishOwnTraj(pwp);
-    //   pwp_last_ = pwp;
-    // }
-    // else
-    // {
-    //   int time_ms = int(ros::Time::now().toSec() * 1000);
+    mt::PieceWisePol pwp;
+    si::solOrGuess best_solution;
+    par_.use_student ? best_solution = best_solution_student : best_solution = best_solution_expert;
+    panther_ptr_->convertsolOrGuess2pwp(pwp, best_solution, par_.dc);
 
-    //   if (timer_stop_.elapsedSoFarMs() > 500.0)  // publish every half a second. TODO set as param
-    //   {
-    //     publishOwnTraj(pwp_last_);  // This is needed because is drone DRONE1 stops, it needs to keep publishing his
-    //                                 // last planned trajectory, so that other drones can avoid it (even if DRONE1 was
-    //                                 // very far from the other drones with it last successfully planned a
-    //                                 trajectory).
-    //                                 // Note that these trajectories are time-indexed, and the last position is taken
-    //                                 if
-    //                                 // t>times.back(). See eval() function in the pwp struct
-    //     timer_stop_.reset();
-    //   }
-    // }
+    if (par_.is_multiagent)
+    {
+      /// check and recheck and delay check!!!!!!!!!
+
+      if (replanned)
+      {
+        publishOwnTraj(pwp);
+        pwp_last_ = pwp;
+      }
+      else
+      {
+        int time_ms = int(ros::Time::now().toSec() * 1000);
+
+        if (timer_stop_.elapsedSoFarMs() > 500.0)  // publish every half a second. TODO set as param
+        {
+          publishOwnTraj(pwp_last_);  // This is needed because is drone DRONE1 stops, it needs to keep publishing his
+                                      // last planned trajectory, so that other drones can avoid it (even if DRONE1 was
+                                      // very far from the other drones with it last successfully planned a
+                                      // trajectory).
+                                      // Note that these trajectories are time-indexed, and the last position is taken
+                                      // if t>times.back(). See eval() function in the pwp struct
+          timer_stop_.reset();
+        }
+      }
+    }
 
     // std::cout << "[Callback] Leaving replanCB" << std::endl;
   }

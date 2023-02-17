@@ -26,8 +26,8 @@ int sgn(T val)
 OctopusSearch::OctopusSearch(std::string basis, int num_seg, int deg_pos, double alpha_shrink)
 {
   p_ = deg_pos;
-  M_ = num_seg + 2 * p_;
-  N_ = M_ - p_ - 1;
+  M_ = num_seg + 2 * p_;  // m+1 is # of knots (see MADER paper for definition)
+  N_ = M_ - p_ - 1;       // n+1 is # of control points (see MADER paper for definition)
   num_seg_ = num_seg;
 
   mt::basisConverter basis_converter;

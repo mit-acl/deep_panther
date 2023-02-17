@@ -44,12 +44,12 @@ namespace si  // Solver Ipopt
 {
 struct solOrGuess
 {
-  std::vector<Eigen::Vector3d> qp;
-  std::vector<double> qy;
+  std::vector<Eigen::Vector3d> qp;  // control points for position
+  std::vector<double> qy;           // control points for yaw
 
   // mt::PieceWisePol pwp;
-  Eigen::RowVectorXd knots_p;
-  Eigen::RowVectorXd knots_y;
+  Eigen::RowVectorXd knots_p;  // contains time information
+  Eigen::RowVectorXd knots_y;  // contains time information
 
   bool solver_succeeded = false;
   // double cost = std::numeric_limits<double>::max();

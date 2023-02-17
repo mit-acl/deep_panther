@@ -1169,3 +1169,60 @@ void Panther::printDroneStatus()
       break;
   }
 }
+
+// Given the control points, this function returns the associated traj and mt::PieceWisePol
+void Panther::convertsolOrGuess2pwp(mt::PieceWisePol& pwp_p, si::solOrGuess& solorguess, double dc)
+{
+  std::vector<Eigen::Vector3d> qp = solorguess.qp;
+  std::vector<double> qy = solorguess.qy;
+  Eigen::RowVectorXd knots_p = solorguess.knots_p;
+  // Right now we use this function only for publishOwnTraj() and it doesn't matter yaw, so we don't have yaw pwp
+  // param_pp is degree of position polynomial (p is degree of polynomial (usually p = 3))
+  int param_pp = solorguess.deg_p;
+  // param_pp is degree of yaw polynomial (p is degree of polynomial (usually p = 2))
+  int param_py = solorguess.deg_y;
+  assert(((knots_p.size() - 1) == (qp.size() - 1) + param_pp + 1) && "M=N+p+1 not satisfied");
+
+  int num_seg = (knots_p.size() - 1) - 2 * param_pp;  // M-2*p
+
+  // Stack the control points in matrices
+  Eigen::Matrix<double, 3, -1> qp_matrix(3, qp.size());
+  for (int i = 0; i < qp.size(); i++)
+  {
+    qp_matrix.col(i) = qp[i];
+  }
+
+  Eigen::Matrix<double, 1, -1> qy_matrix(1, qy.size());
+  for (int i = 0; i < qy.size(); i++)
+  {
+    qy_matrix(0, i) = qy[i];
+  }
+
+  /////////////////////////////////////////////////////////////////////
+  /// CONSTRUCT THE PIECE-WISE POLYNOMIAL FOR POSITION
+  /////////////////////////////////////////////////////////////////////
+  Eigen::Matrix<double, 4, 4> M;
+  M << 1, 4, 1, 0,   //////
+      -3, 0, 3, 0,   //////
+      3, -6, 3, 0,   //////
+      -1, 3, -3, 1;  //////
+  M = M / 6.0;       // *1/3!
+
+  pwp_p.clear();
+
+  for (int i = param_pp; i < (param_pp + num_seg + 1); i++)  // i < knots.size() - p
+  {
+    pwp_p.times.push_back(knots_p(i));
+  }
+
+  for (int j = 0; j < num_seg; j++)
+  {
+    Eigen::Matrix<double, 4, 1> cps_x = (qp_matrix.block(0, j, 1, 4).transpose());
+    Eigen::Matrix<double, 4, 1> cps_y = (qp_matrix.block(1, j, 1, 4).transpose());
+    Eigen::Matrix<double, 4, 1> cps_z = (qp_matrix.block(2, j, 1, 4).transpose());
+
+    pwp_p.all_coeff_x.push_back((M * cps_x).reverse());  // at^3 + bt^2 + ct + d --> [a b c d]'
+    pwp_p.all_coeff_y.push_back((M * cps_y).reverse());  // at^3 + bt^2 + ct + d --> [a b c d]'
+    pwp_p.all_coeff_z.push_back((M * cps_z).reverse());  // at^3 + bt^2 + ct + d --> [a b c d]'
+  }
+}

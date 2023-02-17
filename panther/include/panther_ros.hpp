@@ -140,7 +140,8 @@ private:
   ros::Subscriber sub_term_goal_;
   ros::Subscriber sub_whoplans_;
   ros::Subscriber sub_state_;
-  ros::Subscriber sub_traj_;
+  ros::Subscriber sub_traj_;                    // subscriber for obs perfect traj prediction
+  std::vector<ros::Subscriber> sub_traj_list_;  // subscribers for each agent
 
   ros::Timer pubCBTimer_;
   ros::Timer replanCBTimer_;

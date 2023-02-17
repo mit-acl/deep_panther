@@ -25,6 +25,8 @@ fov_depth: 5.0 #[m]
 
 # PANTHER setting 
 #############################################
+is_multiagent: true
+agents_ids: ["01", "02", "03", "04", "05"]
 use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
 goal_radius: 0.15    #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
 drone_radius: 0.1  #(m) Used for collision checking
