@@ -37,6 +37,13 @@ public:
               int& k_index_end);
   bool addTrajToPlan(const int& k_index_end, mt::log& log, const si::solOrGuess& best_solution,
                      mt::trajectory& X_safe_out);
+  bool safetyCheck(mt::PieceWisePol& pwp);
+  bool trajsAndPwpAreInCollision(mt::dynTrajCompiled& traj, mt::PieceWisePol& pwp, const double& t_start,
+                                 const double& t_end);
+  std::vector<Eigen::Vector3d> vertexesOfInterval(mt::PieceWisePol& pwp, double t_start, double t_end,
+                                                  const Eigen::Vector3d& delta);
+  std::vector<Eigen::Vector3d> vertexesOfInterval(mt::dynTrajCompiled& traj, double t_start, double t_end);
+
   void updateState(mt::state data);
 
   bool getNextGoal(mt::state& next_goal);

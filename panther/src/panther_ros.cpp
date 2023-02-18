@@ -74,7 +74,11 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "max_num_of_initial_guesses", par_.max_num_of_initial_guesses);
   safeGetParam(nh1_, "dc", par_.dc);
   safeGetParam(nh1_, "goal_radius", par_.goal_radius);
-  safeGetParam(nh1_, "drone_radius", par_.drone_radius);
+
+  std::vector<double> drone_bbox_tmp;
+  safeGetParam(nh1_, "drone_bbox", drone_bbox_tmp);
+  par_.drone_bbox << drone_bbox_tmp[0], drone_bbox_tmp[1], drone_bbox_tmp[2];
+
   safeGetParam(nh1_, "drone_extra_radius_for_NN", par_.drone_extra_radius_for_NN);
   safeGetParam(nh1_, "Ra", par_.Ra);
   safeGetParam(nh1_, "impose_FOV_in_trajCB", par_.impose_FOV_in_trajCB);
@@ -94,6 +98,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "z_min", par_.z_min);
   safeGetParam(nh1_, "z_max", par_.z_max);
   safeGetParam(nh1_, "ydot_max", par_.ydot_max);
+  safeGetParam(nh1_, "num_of_intervals", par_.num_of_intervals);
 
   std::vector<double> v_max_tmp;
   std::vector<double> a_max_tmp;
@@ -158,6 +163,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "use_closed_form_yaw_student", par_.use_closed_form_yaw_student);
   safeGetParam(nh1_, "lambda_obst_avoidance_violation", par_.lambda_obst_avoidance_violation);
   safeGetParam(nh1_, "lambda_dyn_lim_violation", par_.lambda_dyn_lim_violation);
+  safeGetParam(nh1_, "gamma", par_.gamma);
 
   bool perfect_prediction;  // use_ground_truth_prediction
   safeGetParam(nh1_, "perfect_prediction", perfect_prediction);
@@ -212,8 +218,8 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
 
   if (par_.impose_FOV_in_trajCB)
   {
-    verify((par_.fov_depth > (par_.Ra + par_.drone_radius)), "(par_.fov_depth > (par_.Ra + par_.drone_radius) must "
-                                                             "hold");
+    verify((par_.fov_depth > (par_.Ra + par_.drone_bbox[0])), "(par_.fov_depth > (par_.Ra + par_.drone_radius) must "
+                                                              "hold");
   }
 
   std::cout << bold << "Parameters checked" << reset << std::endl;
@@ -458,9 +464,9 @@ void PantherRos::publishOwnTraj(const mt::PieceWisePol& pwp)
   msg.pwp_var = pwp2PwpMsg(createPwpFromStaticPosition(tmp));  // zero variance
 
   // msg.function = s;
-  msg.bbox.push_back(2 * par_.drone_radius);
-  msg.bbox.push_back(2 * par_.drone_radius);
-  msg.bbox.push_back(2 * par_.drone_radius);
+  msg.bbox.push_back(par_.drone_bbox[0]);
+  msg.bbox.push_back(par_.drone_bbox[1]);
+  msg.bbox.push_back(par_.drone_bbox[2]);
   msg.pos.x = state_.pos.x();
   msg.pos.y = state_.pos.y();
   msg.pos.z = state_.pos.z();
@@ -522,13 +528,13 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
     // std::cout << "SERVICE found" << std::endl;
     // std::cout << "pauseGazebo_.exists()= " << pauseGazebo_.exists() << std::endl;
 
-    if (par_.pause_time_when_replanning)
-    {
-      pauseTime();
-    }
+    // if (par_.pause_time_when_replanning)
+    // {
+    //   pauseTime();
+    // }
 
     //
-    // optimization
+    // Optimization
     //
 
     int k_index_end;
@@ -536,14 +542,51 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
         panther_ptr_->replan(edges_obstacles, best_solution_expert, best_solutions_expert, best_solution_student,
                              best_solutions_student, guesses, splines_fitted, planes, log, k_index_end);
 
+    // if (par_.pause_time_when_replanning)
+    // {
+    //   unpauseTime();
+    // }
+
+    // converting best_solution to pwp
+    mt::PieceWisePol pwp;
+    si::solOrGuess best_solution;
+    par_.use_student ? best_solution = best_solution_student : best_solution = best_solution_expert;
+    panther_ptr_->convertsolOrGuess2pwp(pwp, best_solution, par_.dc);
+
+    if (!replanned)
+    {
+      publishOwnTrajInFailure();
+      return;
+    }
+
     //
-    // check
+    // Check & Recheck
     //
 
-    if (par_.pause_time_when_replanning)
+    bool checked = panther_ptr_->safetyCheck(pwp);
+
+    if (!checked)
     {
-      unpauseTime();
+      publishOwnTrajInFailure();
+      return;
     }
+
+    //
+    // add Traj to Plan
+    //
+
+    bool added_traj_to_plan = panther_ptr_->addTrajToPlan(k_index_end, log, best_solution, X_safe);
+
+    if (!added_traj_to_plan)
+    {
+      publishOwnTrajInFailure();
+      return;
+    }
+
+    // Success
+
+    publishOwnTraj(pwp);
+    pwp_last_ = pwp;
 
     if (log.drone_status != DroneStatus::GOAL_REACHED)  // log.replanning_was_needed
     {
@@ -562,7 +605,7 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 
       // pubBestTrajs(best_solutions);
 
-      if (replanned == true)
+      if (replanned && checked)
       {
         if (par_.use_student)
         {
@@ -581,58 +624,46 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
           std::vector<si::solOrGuess> best_solution_expert_vector;
           best_solution_expert_vector.push_back(best_solution_expert);
           // clang-format off
-        clearMarkerArray(ma_best_solution_expert_, pub_best_solution_expert_);
-        ma_best_solutions_expert_=pubVectorOfsolOrGuess(best_solution_expert_vector, pub_best_solution_expert_, name_drone_ + "_best_solution_expert", par_.color_type_expert);
-        clearMarkerArray(ma_best_solutions_expert_, pub_best_solutions_expert_);
-        ma_best_solutions_expert_=pubVectorOfsolOrGuess(best_solutions_expert, pub_best_solutions_expert_, name_drone_ + "_best_solutions_expert", par_.color_type_expert);
-        clearMarkerArray(ma_guesses_, pub_guesses_);
-        ma_guesses_=pubVectorOfsolOrGuess(guesses, pub_guesses_, name_drone_ + "_guess", par_.color_type_expert);
+          clearMarkerArray(ma_best_solution_expert_, pub_best_solution_expert_);
+          ma_best_solutions_expert_=pubVectorOfsolOrGuess(best_solution_expert_vector, pub_best_solution_expert_, name_drone_ + "_best_solution_expert", par_.color_type_expert);
+          clearMarkerArray(ma_best_solutions_expert_, pub_best_solutions_expert_);
+          ma_best_solutions_expert_=pubVectorOfsolOrGuess(best_solutions_expert, pub_best_solutions_expert_, name_drone_ + "_best_solutions_expert", par_.color_type_expert);
+          clearMarkerArray(ma_guesses_, pub_guesses_);
+          ma_guesses_=pubVectorOfsolOrGuess(guesses, pub_guesses_, name_drone_ + "_guess", par_.color_type_expert);
           // clang-format on
         }
       }
 
-      // std::cout << "best_solutions.size= " << best_solutions.size() << std::endl;
-
       pubVectorOfsolOrGuess(splines_fitted, pub_splines_fitted_, name_drone_ + "_spline_fitted", "vel");
-    }
-
-    if (replanned)
-    {
-      mt::PieceWisePol pwp;
-      si::solOrGuess best_solution;
-      par_.use_student ? best_solution = best_solution_student : best_solution = best_solution_expert;
-      panther_ptr_->convertsolOrGuess2pwp(pwp, best_solution, par_.dc);
-
-      if (par_.is_multiagent)
-      {
-        /// check and recheck and delay check!!!!!!!!!
-
-        if (replanned)
-        {
-          publishOwnTraj(pwp);
-          pwp_last_ = pwp;
-        }
-        else
-        {
-          int time_ms = int(ros::Time::now().toSec() * 1000);
-
-          if (timer_stop_.elapsedSoFarMs() > 500.0)  // publish every half a second. TODO set as param
-          {
-            publishOwnTraj(pwp_last_);  // This is needed because is drone DRONE1 stops, it needs to keep publishing his
-                                        // last planned trajectory, so that other drones can avoid it (even if DRONE1
-                                        // was very far from the other drones with it last successfully planned a
-                                        // trajectory).
-                                        // Note that these trajectories are time-indexed, and the last position is taken
-                                        // if t>times.back(). See eval() function in the pwp struct
-            timer_stop_.reset();
-          }
-        }
-      }
     }
 
     // std::cout << "[Callback] Leaving replanCB" << std::endl;
   }
 }
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
+void PantherRos::publishOwnTrajInFailure()
+{
+  int time_ms = int(ros::Time::now().toSec() * 1000);
+
+  if (timer_stop_.elapsedSoFarMs() > 500.0)  // publish every half a second. TODO set as param
+  {
+    publishOwnTraj(pwp_last_);  // This is needed because is drone DRONE1 stops, it needs to keep publishing his
+                                // last planned trajectory, so that other drones can avoid it (even if DRONE1
+                                // was very far from the other drones with it last successfully planned a
+                                // trajectory).
+                                // Note that these trajectories are time-indexed, and the last position is taken
+                                // if t>times.back(). See eval() function in the pwp struct
+    timer_stop_.reset();
+  }
+}
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
 
 void PantherRos::publishPlanes(std::vector<Hyperplane3D>& planes)
 {

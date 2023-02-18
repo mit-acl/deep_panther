@@ -72,7 +72,7 @@ PYBIND11_MODULE(py_panther, m)
       .def_readwrite("max_num_of_initial_guesses", &mt::parameters::max_num_of_initial_guesses)         
       .def_readwrite("dc", &mt::parameters::dc)                              
       .def_readwrite("goal_radius", &mt::parameters::goal_radius)                     
-      .def_readwrite("drone_radius", &mt::parameters::drone_radius)                    
+      .def_readwrite("drone_bbox", &mt::parameters::drone_bbox)                    
       .def_readwrite("drone_extra_radius_for_NN", &mt::parameters::drone_extra_radius_for_NN)                    
       .def_readwrite("Ra", &mt::parameters::Ra)                              
       .def_readwrite("impose_FOV_in_trajCB", &mt::parameters::impose_FOV_in_trajCB)            
@@ -143,6 +143,8 @@ PYBIND11_MODULE(py_panther, m)
       .def_readwrite("use_closed_form_yaw_student", &mt::parameters::use_closed_form_yaw_student)
       .def_readwrite("lambda_obst_avoidance_violation", &mt::parameters::lambda_obst_avoidance_violation)
       .def_readwrite("lambda_dyn_lim_violation", &mt::parameters::lambda_dyn_lim_violation)
+      .def_readwrite("num_of_intervals", &mt::parameters::num_of_intervals)
+      .def_readwrite("gamma", &mt::parameters::gamma)
       // clang-format on
       .def("__repr__", [](const mt::parameters &a) { return "<py_panther.parameters>"; });
 

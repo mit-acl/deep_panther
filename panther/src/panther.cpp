@@ -348,7 +348,7 @@ std::vector<mt::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
 
     obstacle_for_opt.ctrl_pts = fitter_->fit(samples);
 
-    Eigen::Vector3d bbox_inflated = trajs_[i].bbox + 2 * par_.drone_radius * Eigen::Vector3d::Ones();
+    Eigen::Vector3d bbox_inflated = trajs_[i].bbox + 2 * par_.drone_bbox;
 
     obstacle_for_opt.bbox_inflated = bbox_inflated;
 
@@ -712,7 +712,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
 
   int num_samplesp1 = 20;
   double delta = 1.0 / num_samplesp1;
-  Eigen::Vector3d R = par_.drone_radius * Eigen::Vector3d::Ones();
+  Eigen::Vector3d R = par_.drone_bbox;
 
   std::vector<double> all_probs;
 
@@ -1004,6 +1004,235 @@ bool Panther::addTrajToPlan(const int& k_index_end, mt::log& log, const si::solO
   return true;
 }
 
+// Checks that I have not received new trajectories that affect me while doing the optimization
+bool Panther::safetyCheck(mt::PieceWisePol& pwp)
+{
+  mtx_trajs_.lock();
+
+  started_check_ = true;
+
+  bool result = true;
+
+  //
+  // Check
+  //
+
+  for (auto traj : trajs_)
+  {
+    if (traj.time_received > time_init_opt_ && traj.is_agent == true)
+    {
+      if (trajsAndPwpAreInCollision(traj, pwp, pwp.times.front(), pwp.times.back()))
+      {
+        ROS_ERROR_STREAM("Traj collides with " << traj.id);
+        result = false;  // will have to redo the optimization
+        return result;
+      }
+    }
+  }
+
+  mtx_trajs_.unlock();
+
+  //
+  // Recheck
+  //
+
+  // and now do another check in case I've received anything while I was checking.
+  if (have_received_trajectories_while_checking_ == true)
+  {
+    ROS_ERROR_STREAM("Recvd traj while checking ");
+    result = false;
+  }
+
+  started_check_ = false;
+
+  return result;
+}
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
+bool Panther::trajsAndPwpAreInCollision(mt::dynTrajCompiled& traj, mt::PieceWisePol& pwp, const double& t_start,
+                                        const double& t_end)
+{
+  Eigen::Vector3d n_i;
+  double d_i;
+  double deltaT = (t_end - t_start) / (1.0 * par_.num_of_intervals);
+
+  for (int i = 0; i < par_.num_of_intervals; i++)  // for each interval
+  {
+    // This is my trajectory (no inflation)
+    std::vector<Eigen::Vector3d> pointsA =
+        vertexesOfInterval(pwp, t_start + i * deltaT, t_start + (i + 1) * deltaT, Eigen::Vector3d::Zero());
+
+    // This is the trajectory of the other agent/obstacle
+    std::vector<Eigen::Vector3d> pointsB = vertexesOfInterval(traj, t_start + i * deltaT, t_start + (i + 1) * deltaT);
+
+    if (separator_solver_->solveModel(n_i, d_i, pointsA, pointsB) == false)
+    {
+      return true;  // There is not a solution --> they collide
+    }
+  }
+
+  // if reached this point, they don't collide
+  return false;
+}
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
+std::vector<Eigen::Vector3d> Panther::vertexesOfInterval(mt::dynTrajCompiled& traj, double t_start, double t_end)
+{
+  Eigen::Vector3d delta = Eigen::Vector3d::Zero();
+  Eigen::Vector3d drone_boundarybox = par_.drone_bbox;
+
+  if (traj.is_agent == false)
+  {
+    std::vector<Eigen::Vector3d> points;
+    // delta = traj.bbox / 2.0 + (par_.drone_radius + par_.beta + par_.alpha) *
+    //                            Eigen::Vector3d::Ones();  // every side of the box will be increased by 2*delta
+    //(+delta on one end, -delta on the other)
+
+    // changeBBox(drone_boundarybox);
+
+    delta = traj.bbox / 2.0 + drone_boundarybox / 2.0;
+    // std::cout << "boundary box size" << std::endl;
+    // std::cout << drone_boundarybox[0] << std::endl;
+    // std::cout << drone_boundarybox[1] << std::endl;
+    // std::cout << drone_boundarybox[2] << std::endl;
+
+    // Will always have a sample at the beginning of the interval, and another at the end.
+    for (double t = t_start;                           /////////////
+         (t < t_end) ||                                /////////////
+         ((t > t_end) && ((t - t_end) < par_.gamma));  /////// This is to ensure we have a sample a the end
+         t = t + par_.gamma)
+    {
+      mtx_t_.lock();
+      t_ = std::min(t, t_end);  // this min only has effect on the last sample
+
+      double x = traj.s_mean[0].value();
+      double y = traj.s_mean[1].value();
+      double z = traj.s_mean[2].value();
+      mtx_t_.unlock();
+
+      //"Minkowski sum along the trajectory: box centered on the trajectory"
+      points.push_back(Eigen::Vector3d(x + delta.x(), y + delta.y(), z + delta.z()));
+      points.push_back(Eigen::Vector3d(x + delta.x(), y - delta.y(), z - delta.z()));
+      points.push_back(Eigen::Vector3d(x + delta.x(), y + delta.y(), z - delta.z()));
+      points.push_back(Eigen::Vector3d(x + delta.x(), y - delta.y(), z + delta.z()));
+      points.push_back(Eigen::Vector3d(x - delta.x(), y - delta.y(), z - delta.z()));
+      points.push_back(Eigen::Vector3d(x - delta.x(), y + delta.y(), z + delta.z()));
+      points.push_back(Eigen::Vector3d(x - delta.x(), y + delta.y(), z - delta.z()));
+      points.push_back(Eigen::Vector3d(x - delta.x(), y - delta.y(), z + delta.z()));
+    }
+
+    return points;
+  }
+  else
+  {  // is an agent --> use the pwp field
+
+    // delta = traj.bbox / 2.0 + (par_.drone_radius) * Eigen::Vector3d::Ones();
+    // delta = traj.bbox / 2.0 + par_.drone_bbox / 2.0;  // instad of using drone_radius
+
+    // changeBBox(drone_boundarybox);
+
+    delta = traj.bbox / 2.0 + drone_boundarybox / 2.0;
+    // std::cout << "boundary box size" << std::endl;
+    // std::cout << drone_boundarybox[0] << std::endl;
+    // std::cout << drone_boundarybox[1] << std::endl;
+    // std::cout << drone_boundarybox[2] << std::endl;
+
+    // std::cout << "****traj.bbox = " << traj.bbox << std::endl;
+    // std::cout << "****par_.drone_radius = " << par_.drone_radius << std::endl;
+    // std::cout << "****Inflation by delta= " << delta.transpose() << std::endl;
+
+    return vertexesOfInterval(traj.pwp_mean, t_start, t_end, delta);
+  }
+}
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
+std::vector<Eigen::Vector3d> Panther::vertexesOfInterval(mt::PieceWisePol& pwp, double t_start, double t_end,
+                                                         const Eigen::Vector3d& delta)
+{
+  std::vector<Eigen::Vector3d> points;
+
+  std::vector<double>::iterator low = std::lower_bound(pwp.times.begin(), pwp.times.end(), t_start);
+  std::vector<double>::iterator up = std::upper_bound(pwp.times.begin(), pwp.times.end(), t_end);
+
+  // // Example: times=[1 2 3 4 5 6 7]
+  // // t_start=1.5;
+  // // t_end=5.5
+  // // then low points to "2" (low - pwp.times.begin() is 1)
+  // // and up points to "6" (up - pwp.times.begin() is 5)
+
+  int index_first_interval = low - pwp.times.begin() - 1;  // index of the interval [1,2]
+  int index_last_interval = up - pwp.times.begin() - 1;    // index of the interval [5,6]
+
+  saturate(index_first_interval, 0, (int)(pwp.all_coeff_x.size() - 1));
+  saturate(index_last_interval, 0, (int)(pwp.all_coeff_x.size() - 1));
+
+  // int index_first_interval = 0;
+  // int index_last_interval = static_cast<int>(pwp.coeff_x.size() - 1);
+
+  Eigen::Matrix<double, 3, 4> P;
+  Eigen::Matrix<double, 3, 4> V;
+
+  mt::basisConverter basis_converter;
+  Eigen::Matrix<double, 4, 4> A_rest_pos_basis_inverse = basis_converter.getArestMinvoDeg3();
+
+  // push all the complete intervals
+  for (int i = index_first_interval; i <= index_last_interval; i++)
+  {
+    P.row(0) = pwp.all_coeff_x[i];
+    P.row(1) = pwp.all_coeff_y[i];
+    P.row(2) = pwp.all_coeff_z[i];
+
+    V = P * A_rest_pos_basis_inverse;
+
+    for (int j = 0; j < V.cols(); j++)
+    {
+      double x = V(0, j);
+      double y = V(1, j);
+      double z = V(2, j);  //[x,y,z] is the point
+
+      if (delta.norm() < 1e-6)
+      {  // no inflation
+        points.push_back(Eigen::Vector3d(x, y, z));
+      }
+      else
+      {
+        // points.push_back(Eigen::Vector3d(V(1, j), V(2, j), V(3, j)));  // x,y,z
+
+        if (j == V.cols() - 1)
+        {
+          points.push_back(Eigen::Vector3d(x + delta.x(), y + delta.y(), z + delta.z()));
+          points.push_back(Eigen::Vector3d(x + delta.x(), y - delta.y(), z - delta.z()));
+          points.push_back(Eigen::Vector3d(x + delta.x(), y + delta.y(), z - delta.z()));
+          points.push_back(Eigen::Vector3d(x + delta.x(), y - delta.y(), z + delta.z()));
+          points.push_back(Eigen::Vector3d(x - delta.x(), y - delta.y(), z - delta.z()));
+          points.push_back(Eigen::Vector3d(x - delta.x(), y + delta.y(), z + delta.z()));
+          points.push_back(Eigen::Vector3d(x - delta.x(), y + delta.y(), z - delta.z()));
+          points.push_back(Eigen::Vector3d(x - delta.x(), y - delta.y(), z + delta.z()));
+        }
+        else
+        {
+          points.push_back(Eigen::Vector3d(x, y, z));
+        }
+      }
+    }
+  }
+
+  return points;
+}
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 void Panther::printInfo(si::solOrGuess& best_solution, int n_safe_trajs)
 {
   std::cout << std::setprecision(8)
@@ -1218,11 +1447,6 @@ void Panther::convertsolOrGuess2pwp(mt::PieceWisePol& pwp_p, si::solOrGuess& sol
   {
     pwp_p.times.push_back(knots_p(i));
   }
-
-  std::cout << "pwp_p.times is ";
-  for (auto i : pwp_p.times)
-    std::cout << i << " ";
-  std::cout << std::endl;
 
   for (int j = 0; j < num_seg; j++)
   {

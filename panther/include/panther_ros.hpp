@@ -62,6 +62,7 @@ private:
   void whoPlansCB(const panther_msgs::WhoPlans& msg);
   void pubCB(const ros::TimerEvent& e);
   void replanCB(const ros::TimerEvent& e);
+  void publishOwnTrajInFailure();
   void trajCB(const panther_msgs::DynTraj& msg);
 
   void pauseTime();

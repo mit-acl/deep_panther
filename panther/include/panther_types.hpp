@@ -816,7 +816,7 @@ struct parameters
   int             max_num_of_initial_guesses;            //void setVar_num_of_trajs_per_replan(const std::string& value) { num_of_trajs_per_replan = std::stoi(value); };
   double          dc;                                 //void setVar_dc(const std::string& value) { dc = std::stod(value); };
   double          goal_radius;                        //void setVar_goal_radius(const std::string& value) { goal_radius = std::stod(value); };
-  double          drone_radius;                       //void setVar_drone_radius(const std::string& value) { drone_radius = std::stod(value); };//
+  Eigen::Vector3d drone_bbox;                         //void setVar_drone_radius(const std::string& value) { drone_radius = std::stod(value); };//
   double          drone_extra_radius_for_NN;                       //void setVar_drone_radius(const std::string& value) { drone_radius = std::stod(value); };//
   double          Ra;                                 //void setVar_Ra(const std::string& value) { Ra = std::stod(value); };
   bool            impose_FOV_in_trajCB;               //void setVar_impose_FOV_in_trajCB(const std::string& value) { impose_FOV_in_trajCB = string2bool(value); };
@@ -876,6 +876,7 @@ struct parameters
   double          fitter_num_seg;                     //From Casadi               //void setVar_fitter_num_seg(const std::string& value) { fitter_num_seg = std::stod(value); };  
   double          fitter_deg_pos;                     //From Casadi               //void setVar_fitter_deg_pos(const std::string& value) { fitter_deg_pos = std::stod(value); };   
   int             sampler_num_samples;                //From Casadi              //void setVar_sampler_num_samples(const std::string& value) { sampler_num_samples = std::stoi(value); };
+  int             num_of_intervals;
   double max_dist2goal;
   double max_dist2obs;
   double max_side_bbox_obs;
@@ -887,6 +888,7 @@ struct parameters
   bool use_closed_form_yaw_student;
   double lambda_obst_avoidance_violation;
   double lambda_dyn_lim_violation;
+  double gamma;
   // clang-format on
 };
 

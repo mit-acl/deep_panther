@@ -286,7 +286,7 @@ class ObstaclesManager():
 				# w_ctrl_pts_ob.append(np.array([[2],[2],[2]]))
 
 			# bbox_ob=np.array([[0.5],[0.5], [0.5]]);
-			bbox_inflated=np.array([[0.3],[0.3], [0.1]])+2*self.params["drone_radius"]*np.ones((3,1));
+			bbox_inflated=np.array([[0.3],[0.3], [0.1]])+self.params["drone_bbox"];
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 		return w_obs;
 
@@ -312,7 +312,7 @@ class ObstaclesManager():
 
 			w_ctrl_pts_ob=listOf3dVectors2numpy3Xmatrix(w_ctrl_pts_ob_list)
 
-			bbox_inflated=np.array([[0.3],[0.3], [0.1]])+2*self.params["drone_radius"]*np.ones((3,1));
+			bbox_inflated=np.array([[0.3],[0.3], [0.1]])+self.params["drone_bbox"];
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 		return w_obs;
 
