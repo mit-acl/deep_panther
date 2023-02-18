@@ -527,9 +527,18 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
       pauseTime();
     }
 
+    //
+    // optimization
+    //
+
+    int k_index_end;
     bool replanned =
-        panther_ptr_->replan(edges_obstacles, X_safe, best_solution_expert, best_solutions_expert,
-                             best_solution_student, best_solutions_student, guesses, splines_fitted, planes, log);
+        panther_ptr_->replan(edges_obstacles, best_solution_expert, best_solutions_expert, best_solution_student,
+                             best_solutions_student, guesses, splines_fitted, planes, log, k_index_end);
+
+    //
+    // check
+    //
 
     if (par_.pause_time_when_replanning)
     {
@@ -587,33 +596,36 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
       pubVectorOfsolOrGuess(splines_fitted, pub_splines_fitted_, name_drone_ + "_spline_fitted", "vel");
     }
 
-    mt::PieceWisePol pwp;
-    si::solOrGuess best_solution;
-    par_.use_student ? best_solution = best_solution_student : best_solution = best_solution_expert;
-    panther_ptr_->convertsolOrGuess2pwp(pwp, best_solution, par_.dc);
-
-    if (par_.is_multiagent)
+    if (replanned)
     {
-      /// check and recheck and delay check!!!!!!!!!
+      mt::PieceWisePol pwp;
+      si::solOrGuess best_solution;
+      par_.use_student ? best_solution = best_solution_student : best_solution = best_solution_expert;
+      panther_ptr_->convertsolOrGuess2pwp(pwp, best_solution, par_.dc);
 
-      if (replanned)
+      if (par_.is_multiagent)
       {
-        publishOwnTraj(pwp);
-        pwp_last_ = pwp;
-      }
-      else
-      {
-        int time_ms = int(ros::Time::now().toSec() * 1000);
+        /// check and recheck and delay check!!!!!!!!!
 
-        if (timer_stop_.elapsedSoFarMs() > 500.0)  // publish every half a second. TODO set as param
+        if (replanned)
         {
-          publishOwnTraj(pwp_last_);  // This is needed because is drone DRONE1 stops, it needs to keep publishing his
-                                      // last planned trajectory, so that other drones can avoid it (even if DRONE1 was
-                                      // very far from the other drones with it last successfully planned a
-                                      // trajectory).
-                                      // Note that these trajectories are time-indexed, and the last position is taken
-                                      // if t>times.back(). See eval() function in the pwp struct
-          timer_stop_.reset();
+          publishOwnTraj(pwp);
+          pwp_last_ = pwp;
+        }
+        else
+        {
+          int time_ms = int(ros::Time::now().toSec() * 1000);
+
+          if (timer_stop_.elapsedSoFarMs() > 500.0)  // publish every half a second. TODO set as param
+          {
+            publishOwnTraj(pwp_last_);  // This is needed because is drone DRONE1 stops, it needs to keep publishing his
+                                        // last planned trajectory, so that other drones can avoid it (even if DRONE1
+                                        // was very far from the other drones with it last successfully planned a
+                                        // trajectory).
+                                        // Note that these trajectories are time-indexed, and the last position is taken
+                                        // if t>times.back(). See eval() function in the pwp struct
+            timer_stop_.reset();
+          }
         }
       }
     }

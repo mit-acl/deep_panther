@@ -604,10 +604,11 @@ bool Panther::isReplanningNeeded()
   return true;
 }
 
-bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out, si::solOrGuess& best_solution_expert,
+bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_solution_expert,
                      std::vector<si::solOrGuess>& best_solutions_expert, si::solOrGuess& best_solution_student,
                      std::vector<si::solOrGuess>& best_solutions_student, std::vector<si::solOrGuess>& guesses,
-                     std::vector<si::solOrGuess>& splines_fitted, std::vector<Hyperplane3D>& planes, mt::log& log)
+                     std::vector<si::solOrGuess>& splines_fitted, std::vector<Hyperplane3D>& planes, mt::log& log,
+                     int& k_index_end)
 {
   //////////
   bool this_replan_uses_new_gterm = false;
@@ -653,7 +654,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   //////////////////////////////////////////////////////////////////////////
 
   mt::state A;
-  int k_index_end, k_index;
+  int k_index;
 
   // If k_index_end=0, then A = plan_.back() = plan_[plan_.size() - 1]
 
@@ -685,12 +686,13 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   //////////////////////////////////////////////////////////////////////////
   ///////////////////////// Get point G ////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////
+
   double distA2TermGoal = (G_term.pos - A.pos).norm();
   double ra = std::min((distA2TermGoal - 0.001), par_.Ra);  // radius of the sphere S
   mt::state G;
   G.pos = A.pos + ra * (G_term.pos - A.pos).normalized();
 
-  double time_now = ros::Time::now().toSec();
+  double time_now = ros::Time::now().toSec();  // shouldn't have ros dependency here
   double t_start = k_index * par_.dc + time_now;
 
   mtx_trajs_.lock();
@@ -828,6 +830,8 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
     //////////////////////////////////////////////////////////////////////////
     ///////////////////////// Set init and final states //////////////////////
     //////////////////////////////////////////////////////////////////////////
+
+    std::cout << "t_start is " << t_start << "\n";
     bool correctInitialCond = solver_->setInitStateFinalStateInitTFinalT(A, G, t_start, t_final);
 
     if (correctInitialCond == false)
@@ -891,7 +895,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
     best_solution_student = best_solutions_student[index_smallest_augmented_cost];
 
     // std::cout << "Chosen cost=" << best_solution_student.augmented_cost << std::endl;
-    ///////////////////////////////
 
     if (best_solution_student.isInCollision())
     {
@@ -935,43 +938,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
 
   solutions_found_++;
 
-  // std::cout << "Appending to plan" << std::endl;
-
-  //////////////////////////////////////////////////////////////////////////
-  ///////////////////////// Append to plan /////////////////////////////////
-  //////////////////////////////////////////////////////////////////////////
-  mtx_plan_.lock();
-
-  int plan_size = plan_.size();
-
-  if ((plan_size - 1 - k_index_end) < 0)
-  {
-    std::cout << "plan_size= " << plan_size << std::endl;
-    std::cout << "k_index_end= " << k_index_end << std::endl;
-    mtx_plan_.unlock();
-    logAndTimeReplan("Point A already published", false, log);
-    return false;
-  }
-  else
-  {
-    plan_.erase(plan_.end() - k_index_end - 1, plan_.end());  // this deletes also the initial condition...
-
-    for (auto& state : best_solution.traj)  //... which is included in best_solution.traj[0]
-    {
-      plan_.push_back(state);
-    }
-    // for (int i = 0; i < (solver_->traj_solution_).size(); i++)
-    // {
-    //   plan_.push_back(solver_->traj_solution_[i]);
-    // }
-  }
-
-  // std::cout << "unlock" << std::endl;
-
-  mtx_plan_.unlock();
-
-  X_safe_out = plan_.toStdVector();
-
   ///////////////////////////////////////////////////////////
   ///////////////       OTHER STUFF    //////////////////////
   //////////////////////////////////////////////////////////
@@ -996,6 +962,44 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   {
     printInfo(best_solution, n_safe_trajs);
   }
+
+  return true;
+}
+
+bool Panther::addTrajToPlan(const int& k_index_end, mt::log& log, const si::solOrGuess& best_solution,
+                            mt::trajectory& X_safe_out)
+{
+  // std::cout << "Appending to plan" << std::endl;
+
+  //////////////////////////////////////////////////////////////////////////
+  ///////////////////////// Append to plan /////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////
+
+  mtx_plan_.lock();
+
+  int plan_size = plan_.size();
+
+  if ((plan_size - 1 - k_index_end) < 0)
+  {
+    std::cout << "plan_size= " << plan_size << std::endl;
+    std::cout << "k_index_end= " << k_index_end << std::endl;
+    mtx_plan_.unlock();
+    logAndTimeReplan("Point A already published", false, log);
+    return false;
+  }
+  else
+  {
+    plan_.erase(plan_.end() - k_index_end - 1, plan_.end());  // this deletes also the initial condition...
+
+    for (auto& state : best_solution.traj)  //... which is included in best_solution.traj[0]
+    {
+      plan_.push_back(state);
+    }
+  }
+
+  mtx_plan_.unlock();
+
+  X_safe_out = plan_.toStdVector();
 
   return true;
 }
@@ -1214,6 +1218,11 @@ void Panther::convertsolOrGuess2pwp(mt::PieceWisePol& pwp_p, si::solOrGuess& sol
   {
     pwp_p.times.push_back(knots_p(i));
   }
+
+  std::cout << "pwp_p.times is ";
+  for (auto i : pwp_p.times)
+    std::cout << i << " ";
+  std::cout << std::endl;
 
   for (int j = 0; j < num_seg; j++)
   {

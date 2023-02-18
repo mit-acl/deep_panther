@@ -935,6 +935,8 @@ bool SolverIpopt::optimize(bool supress_all_prints)
     solution.cost = double(result["total_cost"]);
     solution.dyn_lim_violation = 0.0;         // Because it's feasible
     solution.obst_avoidance_violation = 0.0;  // Because it's feasible
+    solution.deg_p = par_.deg_pos;
+    solution.deg_y = par_.deg_yaw;
 
     // hack (TODO): sometimes the total time is very small (and final position is very close to initial position)
     if (double(result["alpha"]) < 1e-4)

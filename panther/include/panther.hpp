@@ -30,10 +30,13 @@ class Panther
 public:
   Panther(mt::parameters par);
   ~Panther();
-  bool replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out, si::solOrGuess& best_solution_expert,
+  bool replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_solution_expert,
               std::vector<si::solOrGuess>& best_solutions_expert, si::solOrGuess& best_solution_student,
               std::vector<si::solOrGuess>& best_solutions_student, std::vector<si::solOrGuess>& guesses,
-              std::vector<si::solOrGuess>& splines_fitted, std::vector<Hyperplane3D>& planes, mt::log& log);
+              std::vector<si::solOrGuess>& splines_fitted, std::vector<Hyperplane3D>& planes, mt::log& log,
+              int& k_index_end);
+  bool addTrajToPlan(const int& k_index_end, mt::log& log, const si::solOrGuess& best_solution,
+                     mt::trajectory& X_safe_out);
   void updateState(mt::state data);
 
   bool getNextGoal(mt::state& next_goal);
