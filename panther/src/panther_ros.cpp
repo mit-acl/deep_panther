@@ -65,6 +65,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   // std::cout << "par_.b_T_c.matrix()= " << par_.b_T_c.matrix() << std::endl;
 
   safeGetParam(nh1_, "is_multiagent", par_.is_multiagent);
+  safeGetParam(nh1_, "use_delaycheck", par_.use_delaycheck);
   safeGetParam(nh1_, "use_ff", par_.use_ff);
   safeGetParam(nh1_, "visual", par_.visual);
   safeGetParam(nh1_, "color_type_expert", par_.color_type_expert);
@@ -599,6 +600,7 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
       visual_tools_->deleteAllMarkers();
       visual_tools_->enableBatchPublishing();
 
+      std::cout << "size of edges_obstacles: " << edges_obstacles.size() << std::endl;
       pubObstacles(edges_obstacles);
       pubTraj(X_safe);
       publishPlanes(planes);

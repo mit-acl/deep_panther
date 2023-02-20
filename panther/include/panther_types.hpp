@@ -889,6 +889,7 @@ struct parameters
   double lambda_obst_avoidance_violation;
   double lambda_dyn_lim_violation;
   double gamma;
+  bool use_delaycheck;
   // clang-format on
 };
 

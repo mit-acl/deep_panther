@@ -824,7 +824,7 @@ std_msgs::ColorRGBA color(int id)
     case BLACK_TRANS:
       return black_trans;
       break;
-    case BLACK:
+    case BLACK_NORMAL:
       return black;
       break;
     case TEAL_NORMAL:
@@ -1048,7 +1048,7 @@ visualization_msgs::MarkerArray trajectory2ColoredMarkerArray(const mt::trajecto
     }
     else if (color_type == "black")  // TODO: "time" is hand-coded
     {
-      m.color = color(BLACK);
+      m.color = color(BLACK_NORMAL);
     }
     else
     {

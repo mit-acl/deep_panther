@@ -864,7 +864,7 @@ bool SolverIpopt::optimize(bool supress_all_prints)
 
       // printMap(map_arguments);
 
-      result = cf_op_(map_arguments);
+      result = cf_op_(map_arguments);  // from Casadi
     }
     else if (par_.mode == "py" && focus_on_obstacle_ == true)
     {

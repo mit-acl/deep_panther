@@ -1,3 +1,4 @@
+
 cmake_minimum_required(VERSION 2.8.12)
 # cmake_minimum_required(VERSION 3.16) #To be able to use target_precompile_headers
 project(panther)
@@ -22,6 +23,9 @@ include_directories ( ${Boost_INCLUDE_DIR} )
 
 find_package(CASADI REQUIRED)
 include_directories( ${CASADI_INCLUDE_DIR} )
+
+find_package(CGAL REQUIRED)
+include(${CGAL_USE_FILE})
 
 #From terminal: catkin config -DCMAKE_BUILD_TYPE=Release (or RelWithDebInfo or Debug)
 set(CMAKE_BUILD_TYPE Release) 
@@ -72,10 +76,13 @@ add_library( mparser src/mparser.cpp include/mparser.hpp )
 add_executable( test_mparser src/test_mparser.cpp )
 target_link_libraries( test_mparser mparser )
 
+add_library(cgal_utils STATIC src/cgal_utils)
+target_include_directories (cgal_utils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(cgal_utils PUBLIC ${DECOMP_UTIL_LIBRARIES} ${catkin_LIBRARIES})
 
 add_executable(${PROJECT_NAME}_node src/panther_node.cpp src/panther_ros.cpp src/panther.cpp src/solver_ipopt.cpp src/solver_ipopt_utils.cpp src/utils.cpp src/solver_ipopt_guess.cpp src/yaw_guess_generator.cpp src/octopus_search.cpp src/bspline_utils.cpp)
 target_include_directories (${PROJECT_NAME}_node PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${DECOMP_UTIL_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
-target_link_libraries(${PROJECT_NAME}_node PUBLIC  mparser ${CASADI_LIBRARIES} ${catkin_LIBRARIES} ${DECOMP_UTIL_LIBRARIES} ${Boost_LIBRARIES})  #${CGAL_LIBS}
+target_link_libraries(${PROJECT_NAME}_node PUBLIC  mparser cgal_utils ${CASADI_LIBRARIES} ${catkin_LIBRARIES} ${DECOMP_UTIL_LIBRARIES} ${Boost_LIBRARIES})  #${CGAL_LIBS}
 add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS} )
 
 add_executable(test_octopus_search src/examples/test_octopus_search.cpp src/octopus_search.cpp src/bspline_utils.cpp src/utils.cpp) 

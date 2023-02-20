@@ -11,7 +11,7 @@
 #define PANTHER_HPP
 
 #include <vector>
-
+#include "cgal_utils.hpp"
 #include <mutex>
 
 #include "panther_types.hpp"
@@ -70,6 +70,10 @@ private:
 
   // mt::state M_;
   mt::committedTrajectory plan_;
+
+  ConvexHullsOfCurves convexHullsOfCurves(double t_start, double t_end);
+  ConvexHullsOfCurve convexHullsOfCurve(mt::dynTrajCompiled& traj, double t_start, double t_end);
+  CGAL_Polyhedron_3 convexHullOfInterval(mt::dynTrajCompiled& traj, double t_start, double t_end);
 
   std::vector<mt::obstacleForOpt> getObstaclesForOpt(double t_start, double t_end,
                                                      std::vector<si::solOrGuess>& splines_fitted);

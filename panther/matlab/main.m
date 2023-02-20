@@ -169,14 +169,10 @@ for i=1:(num_max_of_obst*num_seg)
     end    
 end
 
-
-
 % obstacle_bbox_inflated={};
 % for i=1:num_max_of_obst
 %     obstacle_bbox_inflated{i}=opti.parameter(3,1); %It has three elements: hx, hy, hz (bbox_inflated of size hx x hy x hz)
 % end
-
-
 
 %%% Min/max x, y, z (in flight space)
 x_lim=opti.parameter(2,1); %[min max]

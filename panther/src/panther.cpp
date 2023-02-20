@@ -823,7 +823,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
       solver_->par_.c_final_yaw = par_.c_final_yaw;
       solver_->par_.c_yaw_smooth = par_.c_yaw_smooth;
     }
-    ////
 
     mtx_trajs_.unlock();
 
@@ -839,6 +838,18 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
       logAndTimeReplan("Solver cannot guarantee feasibility for v1", false, log);
       return false;
     }
+
+    //
+    // Get edges_obstacles
+    //
+
+    mtx_trajs_.lock();
+
+    ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
+
+    mtx_trajs_.unlock();
+
+    edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
 
     //////////////////////////////////////////////////////////////////////////
     ///////////////////////// Solve optimization! ////////////////////////////
@@ -1458,4 +1469,43 @@ void Panther::convertsolOrGuess2pwp(mt::PieceWisePol& pwp_p, si::solOrGuess& sol
     pwp_p.all_coeff_y.push_back((M * cps_y).reverse());  // at^3 + bt^2 + ct + d --> [a b c d]'
     pwp_p.all_coeff_z.push_back((M * cps_z).reverse());  // at^3 + bt^2 + ct + d --> [a b c d]'
   }
+}
+
+ConvexHullsOfCurves Panther::convexHullsOfCurves(double t_start, double t_end)
+{
+  ConvexHullsOfCurves result;
+
+  for (auto traj : trajs_)
+  {
+    result.push_back(convexHullsOfCurve(traj, t_start, t_end));
+  }
+
+  return result;
+}
+
+ConvexHullsOfCurve Panther::convexHullsOfCurve(mt::dynTrajCompiled& traj, double t_start, double t_end)
+{
+  ConvexHullsOfCurve convexHulls;
+  double deltaT = (t_end - t_start) / (1.0 * par_.num_seg);  // num_seg is the number of intervals
+
+  for (int i = 0; i <= par_.num_seg; i++)
+  {
+    convexHulls.push_back(convexHullOfInterval(traj, t_start + i * deltaT, t_start + (i + 1) * deltaT));
+  }
+
+  return convexHulls;
+}
+
+// See https://doc.cgal.org/Manual/3.7/examples/Convex_hull_3/quickhull_3.cpp
+CGAL_Polyhedron_3 Panther::convexHullOfInterval(mt::dynTrajCompiled& traj, double t_start, double t_end)
+{
+  std::vector<Eigen::Vector3d> points = vertexesOfInterval(traj, t_start, t_end);
+
+  std::vector<Point_3> points_cgal;
+  for (auto point_i : points)
+  {
+    points_cgal.push_back(Point_3(point_i.x(), point_i.y(), point_i.z()));
+  }
+
+  return cu::convexHullOfPoints(points_cgal);
 }
