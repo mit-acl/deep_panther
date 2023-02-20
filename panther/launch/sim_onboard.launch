@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+  <!--
+    Parameters
+  -->
+
+	<arg name="quad" default="SQ01s"/>
+  <arg name="perfect_controller" default="true"/>
+  <arg name="perfect_prediction" default="true"/>
+  <arg name="gui_mission" default="false"/>
+  <arg name="gazebo" default="true"/>
+  <arg name="student_policy_path" default="$(find panther)/../panther_compression/trained_policies/Hung_dynamic_obstacles.pt" /> 
+  <arg name="static_planning" default="false" />  <!-- #If true, it will always plan from the same initial condition -->
+  <!--  <arg name="mode" default="panther" />  --><!--  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther) ysweep (noPA but with sweep in yaw) -->
+
+  <!--
+    Agent specific parameters
+  -->
+  
+  <arg name="x" default="0.0" />
+  <arg name="y" default="0.0" />
+  <arg name="z" default="1.0" />
+  <arg name="yaw" default="0.0" />
+
+  <!--
+    Agent
+  -->
+
+  <node ns="$(arg quad)" name="commands" pkg="panther" type="commands.py" output="screen"/>
+
+  <group unless="$(arg perfect_prediction)">
+    <include file="$(find panther)/launch/tracker_predictor.launch">
+        <arg name="quad" value="$(arg quad)"/>
+     </include> 
+  </group>
+
+  <!-- 
+    Gazebo for Agent
+  -->
+  
+  <group if="$(arg gazebo)">
+    <include file="$(find panther_gazebo)/launch/spawn_quadrotor_with_asus.launch">
+        <arg name="name" value="$(arg quad)"/>
+        <arg name="tf_prefix" default="$(optenv ROS_NAMESPACE)"/>
+        <arg name="x" value="$(arg x)"/>
+        <arg name="y" value="$(arg y)"/>
+        <arg name="z" value="$(arg z)"/>
+        <arg name="yaw" default="$(arg yaw)"/>
+    </include>
+    <node ns="$(arg quad)" name="publish_in_gazebo" pkg="panther" type="publish_in_gazebo.py" output="screen">
+    </node>
+  </group>
+
+  <group if="$(arg perfect_controller)">
+    <node ns="$(arg quad)" name="perfect_controller" pkg="panther" type="perfect_controller.py" output="screen">
+          <param name="x" value="$(arg x)"/>
+          <param name="y" value="$(arg y)"/>
+          <param name="z" value="$(arg z)"/>
+          <param name="yaw" value="$(arg yaw)"/>
+      </node>
+  </group>
+
+  <!--
+    Static Transformer for Agent
+  -->
+  
+  <include file="$(find panther)/launch/static_transforms.launch">
+    <arg name="quad" value="$(arg quad)"/>
+  </include> 
+
+  <!--
+    Perfect Controller for Agent (TODO: needs to give veh and num arguments for each agent)
+  -->
+
+  <group unless="$(arg perfect_controller)"> 
+    <include file="$(find snap_sim)/launch/sim.launch">
+    </include> 
+  </group>
+  
+  <!--
+   PANTHER launch
+  -->
+
+  <node ns="$(arg quad)" name="panther" pkg="panther" type="panther_node" output="screen" clear_params="false"> 
+
+    <!-- Parameters -->
+    <rosparam file="$(find panther)/param/panther.yaml" command="load"/>
+    <rosparam file="$(find panther)/matlab/casadi_generated_files/params_casadi.yaml" command="load"/>
+    <param name="gui_mission" value="$(arg gui_mission)" /> 
+    <param name="perfect_prediction" value="$(arg perfect_prediction)" /> 
+    <param name="student_policy_path" value="$(arg student_policy_path)" /> 
+    <param name="static_planning" value="$(arg static_planning)" /> 
+    <!--  <param name="mode" value="$(arg mode)" />  --><!-- noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther) -->
+
+    <!-- Subscriptions -->
+    <remap from="~state" to="state"/>
+    <remap from="~who_plans" to="who_plans"/>
+    <remap from="~term_goal" to="term_goal" />
+    <remap from="~trajs_predicted" to="tracker_predictor_node/trajs_predicted" />
+
+    <!-- Publications -->
+    <remap from="~traj" to="traj"/>
+    <remap from="~trajs_zhejiang" to="trajs_zhejiang"/>
+    <remap from="~goal" to="goal" />
+    <remap from="~setpoint" to="setpoint" />
+
+  </node>
+
+</launch>

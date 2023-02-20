@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+  <!--
+    Parameters
+  -->
+
+  <arg name="quad1" default="SQ01s"/>
+  <arg name="quad2" default="SQ02s"/>
+  <arg name="gui_mission" default="false"/>
+  <arg name="rviz" default="true"/>
+  <arg name="gazebo" default="true"/>
+  <arg name="gzclient" default="false"/>
+  <arg name="type_of_obst_traj" default="trefoil"/>   <!-- trefoil   eightCurve    square  epitrochoid  static -->
+  <arg name="alpha_scale_obst_traj" default="2"/>   
+  <arg name="beta_faster_obst_traj" default="0.666666666666666666666"/>   
+  <arg name="num_of_obs" default="1" />  <!--  Only one obstacle is supported right now -->
+
+  <!--
+    Agent 1 specific parameters
+  -->
+  
+  <arg name="x1" default="1.0" />
+  <arg name="y1" default="0.0" />
+  <arg name="z1" default="1.0" />
+  <arg name="yaw1" default="0.0" />
+
+  <!-- Agent 1 -->
+
+  <!-- <include file="$(find panther)/launch/sim_onboard.launch">
+    <arg name="quad" value="$(arg quad1)"/>
+    <arg name="x" value="$(arg x1)"/>
+    <arg name="y" value="$(arg y1)"/>
+    <arg name="z" value="$(arg z1)"/>
+    <arg name="yaw" default="$(arg yaw1)"/>
+  </include> -->
+
+  <!--
+    Agent 2 specific parameters
+  -->
+  
+  <arg name="x2" default="-1.0" />
+  <arg name="y2" default="0.0" />
+  <arg name="z2" default="1.0" />
+  <arg name="yaw2" default="0.0" />
+
+  <!-- Agent 2 -->
+
+  <!-- <include file="$(find panther)/launch/sim_onboard.launch">
+    <arg name="quad" value="$(arg quad2)"/>
+    <arg name="x" value="$(arg x2)"/>
+    <arg name="y" value="$(arg y2)"/>
+    <arg name="z" value="$(arg z2)"/>
+    <arg name="yaw" default="$(arg yaw2)"/>
+  </include> -->
+
+  <!-- Start Behaviour Selector-->
+  <node pkg="behavior_selector" type="behavior_selector_node.py" name="behavior_selector" output="screen" />
+
+  <!-- Start Gazebo-->
+  <group if="$(arg gazebo)">
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+      <arg name="world_name" value="$(find panther)/meshes/empty.world"/>
+      <arg name="gui" value="$(arg gzclient)"/> <!-- Set to false if you only want gzserver (and NOT gzclient) -->
+    </include>
+  </group>
+
+  <!-- Disable, for instance, for ssh connections -->
+  <group if="$(arg rviz)">
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find panther)/rviz_cfgs/panther.rviz"/>
+  </group>
+
+  <!-- Disable, for instance, for ssh connections -->
+  <group if="$(arg gui_mission)"> 
+    <node pkg="rqt_gui" type="rqt_gui" name="rqt_gui" args="--perspective-file $(find panther)/rqt_cfgs/demo_interface.perspective"/>
+  </group>
+
+  <node name="dynamic_corridor" pkg="panther" type="dynamic_corridor.py" output="screen" args="--num_of_obs $(arg num_of_obs) --gazebo $(arg gazebo) --type_of_obst_traj $(arg type_of_obst_traj) --alpha_scale_obst_traj $(arg alpha_scale_obst_traj) --beta_faster_obst_traj $(arg beta_faster_obst_traj)"/> 
+
+</launch>
