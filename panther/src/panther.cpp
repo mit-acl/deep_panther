@@ -1034,6 +1034,7 @@ bool Panther::safetyCheck(mt::PieceWisePol& pwp)
     {
       if (trajsAndPwpAreInCollision(traj, pwp, pwp.times.front(), pwp.times.back()))
       {
+        mtx_trajs_.unlock();
         ROS_ERROR_STREAM("Traj collides with " << traj.id);
         result = false;  // will have to redo the optimization
         return result;
@@ -1068,15 +1069,16 @@ bool Panther::trajsAndPwpAreInCollision(mt::dynTrajCompiled& traj, mt::PieceWise
 {
   Eigen::Vector3d n_i;
   double d_i;
-  double deltaT = (t_end - t_start) / (1.0 * par_.num_of_intervals);
+  double deltaT = (t_end - t_start) / (1.0 * par_.num_seg);
 
-  for (int i = 0; i < par_.num_of_intervals; i++)  // for each interval
+  for (int i = 0; i < par_.num_seg; i++)  // for each interval
   {
     // This is my trajectory (no inflation)
     std::vector<Eigen::Vector3d> pointsA =
         vertexesOfInterval(pwp, t_start + i * deltaT, t_start + (i + 1) * deltaT, Eigen::Vector3d::Zero());
 
     // This is the trajectory of the other agent/obstacle
+
     std::vector<Eigen::Vector3d> pointsB = vertexesOfInterval(traj, t_start + i * deltaT, t_start + (i + 1) * deltaT);
 
     if (separator_solver_->solveModel(n_i, d_i, pointsA, pointsB) == false)
@@ -1193,7 +1195,7 @@ std::vector<Eigen::Vector3d> Panther::vertexesOfInterval(mt::PieceWisePol& pwp, 
   Eigen::Matrix<double, 3, 4> V;
 
   mt::basisConverter basis_converter;
-  Eigen::Matrix<double, 4, 4> A_rest_pos_basis_inverse = basis_converter.getArestMinvoDeg3();
+  Eigen::Matrix<double, 4, 4> A_rest_pos_basis_inverse = basis_converter.getArestMinvoDeg3().inverse();
 
   // push all the complete intervals
   for (int i = index_first_interval; i <= index_last_interval; i++)
@@ -1420,11 +1422,13 @@ void Panther::convertsolOrGuess2pwp(mt::PieceWisePol& pwp_p, si::solOrGuess& sol
   std::vector<Eigen::Vector3d> qp = solorguess.qp;
   std::vector<double> qy = solorguess.qy;
   Eigen::RowVectorXd knots_p = solorguess.knots_p;
+
   // Right now we use this function only for publishOwnTraj() and it doesn't matter yaw, so we don't have yaw pwp
   // param_pp is degree of position polynomial (p is degree of polynomial (usually p = 3))
   int param_pp = solorguess.deg_p;
   // param_pp is degree of yaw polynomial (p is degree of polynomial (usually p = 2))
   int param_py = solorguess.deg_y;
+
   assert(((knots_p.size() - 1) == (qp.size() - 1) + param_pp + 1) && "M=N+p+1 not satisfied");
 
   int num_seg = (knots_p.size() - 1) - 2 * param_pp;  // M-2*p
