@@ -886,6 +886,18 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
   }
   if (par_.use_student)
   {
+    //
+    // Get edges_obstacles
+    //
+
+    mtx_trajs_.lock();
+
+    ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
+
+    mtx_trajs_.unlock();
+
+    edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
+
     log_ptr_->tim_initial_setup.toc();
     std::cout << "Calling the student!" << std::endl;
     pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos);
