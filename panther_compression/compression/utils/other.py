@@ -312,7 +312,7 @@ class ObstaclesManager():
 
 			w_ctrl_pts_ob=listOf3dVectors2numpy3Xmatrix(w_ctrl_pts_ob_list)
 
-			bbox_inflated=np.array([[0.3],[0.3], [0.1]])+2*self.params["drone_radius"]*np.ones((3,1));
+			bbox_inflated=np.array([[0.3],[0.3],[0.1]])+2*self.params["drone_radius"]*np.ones((3,1));
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 		return w_obs;
 
@@ -711,11 +711,17 @@ class ObservationManager():
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
 		observation=np.concatenate((w_state.f_vel().flatten(), w_state.f_accel().flatten(), w_state.yaw_dot.flatten(), f_g.flatten()));
 
+		print(len(w_obstacles))
+		print(observation.shape)
+
 		#Convert obs to f frame and append ethem to observation
 		for w_obstacle in w_obstacles:
+			print(len((w_obstacle.bbox_inflated).flatten()))
 			assert type(w_obstacle.ctrl_pts).__module__ == np.__name__, "the ctrl_pts should be a numpy matrix, not a list"
 			observation=np.concatenate((observation, (w_state.f_T_w*w_obstacle.ctrl_pts).flatten(order='F'), (w_obstacle.bbox_inflated).flatten()))
 
+		print("observation shape ", observation.shape)
+		print("self.getObservationShape() ", self.getObservationShape())
 
 		observation=observation.reshape(self.getObservationShape())
 
