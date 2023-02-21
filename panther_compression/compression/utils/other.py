@@ -10,7 +10,7 @@ from colorama import init, Fore, Back, Style
 import random
 import pytest
 import time
-
+import sys
 
 import numpy.matlib
 
@@ -286,7 +286,7 @@ class ObstaclesManager():
 				# w_ctrl_pts_ob.append(np.array([[2],[2],[2]]))
 
 			# bbox_ob=np.array([[0.5],[0.5], [0.5]]);
-			bbox_inflated=np.array([[0.3],[0.3], [0.1]])+self.params["drone_bbox"];
+			bbox_inflated=np.array(self.params["drone_bbox"])
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 		return w_obs;
 
@@ -312,7 +312,7 @@ class ObstaclesManager():
 
 			w_ctrl_pts_ob=listOf3dVectors2numpy3Xmatrix(w_ctrl_pts_ob_list)
 
-			bbox_inflated=np.array([[0.3],[0.3], [0.1]])+self.params["drone_bbox"];
+			bbox_inflated=np.array(self.params["drone_bbox"])
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 		return w_obs;
 
@@ -710,16 +710,13 @@ class ObservationManager():
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
 		observation=np.concatenate((w_state.f_vel().flatten(), w_state.f_accel().flatten(), w_state.yaw_dot.flatten(), f_g.flatten()));
-
+		
 		#Convert obs to f frame and append ethem to observation
 		for w_obstacle in w_obstacles:
 			assert type(w_obstacle.ctrl_pts).__module__ == np.__name__, "the ctrl_pts should be a numpy matrix, not a list"
 			observation=np.concatenate((observation, (w_state.f_T_w*w_obstacle.ctrl_pts).flatten(order='F'), (w_obstacle.bbox_inflated).flatten()))
 
-
 		observation=observation.reshape(self.getObservationShape())
-
-		# print("observation= ", observation)
 
 		assert observation.shape == self.getObservationShape()
 
