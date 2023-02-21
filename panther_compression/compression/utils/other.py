@@ -711,17 +711,10 @@ class ObservationManager():
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
 		observation=np.concatenate((w_state.f_vel().flatten(), w_state.f_accel().flatten(), w_state.yaw_dot.flatten(), f_g.flatten()));
 
-		print(len(w_obstacles))
-		print(observation.shape)
-
 		#Convert obs to f frame and append ethem to observation
 		for w_obstacle in w_obstacles:
-			print(len((w_obstacle.bbox_inflated).flatten()))
 			assert type(w_obstacle.ctrl_pts).__module__ == np.__name__, "the ctrl_pts should be a numpy matrix, not a list"
 			observation=np.concatenate((observation, (w_state.f_T_w*w_obstacle.ctrl_pts).flatten(order='F'), (w_obstacle.bbox_inflated).flatten()))
-
-		print("observation shape ", observation.shape)
-		print("self.getObservationShape() ", self.getObservationShape())
 
 		observation=observation.reshape(self.getObservationShape())
 
