@@ -1027,6 +1027,10 @@ bool Panther::addTrajToPlan(const int& k_index_end, mt::log& log, const si::solO
   return true;
 }
 
+//
+// --------------------------------------------------------------------------------------------------------------
+//
+
 // Checks that I have not received new trajectories that affect me while doing the optimization
 bool Panther::safetyCheck(mt::PieceWisePol& pwp)
 {

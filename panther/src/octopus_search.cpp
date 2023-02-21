@@ -1249,6 +1249,14 @@ bool OctopusSearch::run(std::vector<os::solution>& solutions, int max_num_of_sol
           computeUpperAndLowerConstraints(i, qiM2, qiM1, (*current_ptr).qi, constraint_xL, constraint_xU, constraint_yL,
                                           constraint_yU, constraint_zL, constraint_zU);
     }
+
+    // std::cout << "constraint_xU " << constraint_xU << std::endl;
+    // std::cout << "constraint_xL " << constraint_xL << std::endl;
+    // std::cout << "constraint_yU " << constraint_yU << std::endl;
+    // std::cout << "constraint_yL " << constraint_yL << std::endl;
+    // std::cout << "constraint_zU " << constraint_zU << std::endl;
+    // std::cout << "constraint_zL " << constraint_zL << std::endl;
+
     if (intervalIsNotZero == false)  // constraintxL>constraint_xU (or with other axes)
     {
       std::cout << "   " << current_ptr->qi.transpose() << " Interval is zero!" << std::endl;

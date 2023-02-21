@@ -66,13 +66,23 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
 
   safeGetParam(nh1_, "is_multiagent", par_.is_multiagent);
   safeGetParam(nh1_, "use_delaycheck", par_.use_delaycheck);
+  safeGetParam(nh1_, "use_panther_star", par_.use_panther_star);
   safeGetParam(nh1_, "use_ff", par_.use_ff);
   safeGetParam(nh1_, "visual", par_.visual);
   safeGetParam(nh1_, "color_type_expert", par_.color_type_expert);
   safeGetParam(nh1_, "color_type_student", par_.color_type_student);
   safeGetParam(nh1_, "n_agents", par_.n_agents);
-  safeGetParam(nh1_, "num_of_trajs_per_replan", par_.num_of_trajs_per_replan);
-  safeGetParam(nh1_, "max_num_of_initial_guesses", par_.max_num_of_initial_guesses);
+  if (par_.use_panther_star)
+  {
+    safeGetParam(nh1_, "num_of_trajs_per_replan", par_.num_of_trajs_per_replan);
+    safeGetParam(nh1_, "max_num_of_initial_guesses", par_.max_num_of_initial_guesses);
+  }
+  else
+  {
+    // if you use panther, then we only optimize one trajectory
+    par_.num_of_trajs_per_replan = 1;
+    par_.max_num_of_initial_guesses = 1;
+  }
   safeGetParam(nh1_, "dc", par_.dc);
   safeGetParam(nh1_, "goal_radius", par_.goal_radius);
 
@@ -539,7 +549,9 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
     //
 
     int k_index_end;
-    bool replanned =
+    bool replanned = false;
+
+    replanned =
         panther_ptr_->replan(edges_obstacles, best_solution_expert, best_solutions_expert, best_solution_student,
                              best_solutions_student, guesses, splines_fitted, planes, log, k_index_end);
 
@@ -556,7 +568,7 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 
     if (!replanned)
     {
-      publishOwnTrajInFailure();
+      publishOwnTrajInFailure(edges_obstacles);
       return;
     }
 
@@ -568,7 +580,7 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 
     if (!checked)
     {
-      publishOwnTrajInFailure();
+      publishOwnTrajInFailure(edges_obstacles);
       return;
     }
 
@@ -580,7 +592,7 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 
     if (!added_traj_to_plan)
     {
-      publishOwnTrajInFailure();
+      publishOwnTrajInFailure(edges_obstacles);
       return;
     }
 
@@ -647,8 +659,12 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 // ------------------------------------------------------------------------------------------------------
 //
 
-void PantherRos::publishOwnTrajInFailure()
+void PantherRos::publishOwnTrajInFailure(mt::Edges edges_obstacles)
 {
+  if (par_.visual)
+  {
+    pubObstacles(edges_obstacles);
+  }
   int time_ms = int(ros::Time::now().toSec() * 1000);
 
   if (timer_stop_.elapsedSoFarMs() > 500.0)  // publish every half a second. TODO set as param

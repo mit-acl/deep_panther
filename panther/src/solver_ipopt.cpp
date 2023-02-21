@@ -231,7 +231,15 @@ SolverIpopt::SolverIpopt(const mt::parameters &par)
   cf_fit_yaw_ = casadi::Function::load(folder + "fit_yaw.casadi");
   // cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
   cf_visibility_ = casadi::Function::load(folder + "visibility.casadi");
-  cf_compute_cost_ = casadi::Function::load(folder + "compute_cost.casadi");
+
+  if (par_.use_panther_star)
+  {
+    cf_compute_cost_ = casadi::Function::load(folder + "compute_cost.casadi");
+  }
+  else
+  {
+    cf_compute_cost_ = casadi::Function::load(folder + "panther_compute_cost.casadi");
+  }
   cf_compute_dyn_limits_constraints_violation_ = casadi::Function::load(folder + "compute_dyn_limits_constraints_"
                                                                                  "violation.casadi");
 
@@ -779,8 +787,9 @@ bool SolverIpopt::optimize(bool supress_all_prints)
     return false;
   }
 
-  ////////////////////////////////////
-  //////////////////////////////////// CASADI
+  //
+  // CASADI
+  //
 
   std::map<std::string, casadi::DM> map_arguments = getMapConstantArguments();
 
@@ -789,7 +798,9 @@ bool SolverIpopt::optimize(bool supress_all_prints)
 
   std::cout << "alpha_guess= " << alpha_guess << std::endl;
 
-  /////////////////////////////////////////// SOLVE AN OPIMIZATION FOR EACH OF THE GUESSES FOUND
+  //
+  // SOLVE AN OPIMIZATION FOR EACH OF THE GUESSES FOUND
+  //
 
   std::vector<si::solOrGuess> solutions;
   std::vector<si::solOrGuess> guesses;

@@ -20,9 +20,18 @@ opti = casadi.Opti();
 pos_is_fixed=false; %you need to run this file twice to produce the necessary casadi files: both with pos_is_fixed=false and pos_is_fixed=true. 
 
 %Variables to determine what should be part of the optimization problems
-optimize_n_planes=true;     %Optimize the normal vector "n" of the planes (the "tilt") (see Panther paper diagram)
-optimize_d_planes=true;     %Optimize the scalar "d" of the planes (the distance) (see Panther paper diagram)
-optimize_time_alloc=true;
+
+use_panther_star=true;
+
+if use_panther_star
+    optimize_n_planes=true;     %Optimize the normal vector "n" of the planes (the "tilt") (see Panther paper diagram)
+    optimize_d_planes=true;     %Optimize the scalar "d" of the planes (the distance) (see Panther paper diagram)
+    optimize_time_alloc=true;
+else
+    optimize_n_planes=false;     %Optimize the normal vector "n" of the planes (the "tilt") (see Panther paper diagram)
+    optimize_d_planes=false;     %Optimize the scalar "d" of the planes (the distance) (see Panther paper diagram)
+    optimize_time_alloc=false;
+end
 
 %Whether or not the dynamic limits and obstacle avoidance constraints are formulated as hard constraints (as equalities/inequalities) or soft constraints (in the objective function)
 soft_dynamic_limits_constraints=false;
@@ -652,8 +661,12 @@ compute_cost = Function('compute_cost', par_and_init_guess_exprs ,{total_cost},.
                                         par_and_init_guess_names ,{'total_cost'});
 compute_cost(names_value{:})
 compute_cost=compute_cost.expand();
-compute_cost.save('./casadi_generated_files/compute_cost.casadi') %The file generated is quite big
 
+if use_panther_star
+    compute_cost.save('./casadi_generated_files/compute_cost.casadi') %The file generated is quite big
+else
+    compute_cost.save('./casadi_generated_files/panther_compute_cost.casadi') %The file generated is quite big
+end
 
 %%%%%%%%%
 %%
