@@ -101,7 +101,8 @@ if __name__ == "__main__":
     parser.add_argument("--type_loss", type=str, default="Hung") 
 
     parser.add_argument("--epsilon_RWTA", type=float, default=0.05)
-    
+    parser.add_argument('--net_arch', type=int, nargs='+', help='<Required> Set flag')
+
 
     args = parser.parse_args()
 
@@ -292,7 +293,7 @@ if __name__ == "__main__":
         printInBoldBlue("---------------- Making Learner Policy: -------------------")
         # Create learner policy
         if args.on_policy_trainer: 
-            trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA) 
+            trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA, net_arch=args.net_arch) 
         else: 
             trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA)
 
