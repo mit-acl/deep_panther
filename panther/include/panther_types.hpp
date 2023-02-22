@@ -809,6 +809,7 @@ struct parameters
   bool            is_multiagent;
   bool            use_panther_star;
   bool            look_teammates;
+  bool            perfect_prediction;                 // use_ground_truth_prediction
   bool            use_ff;                             //void setVar_use_ff(const std::string& value) { use_ff = string2bool(value); };
   bool            visual;                             //void setVar_visual(const std::string& value) { visual = string2bool(value); };
   std::string     color_type_expert;                         //void setVar_color_type(const std::string& value) { color_type = value; };

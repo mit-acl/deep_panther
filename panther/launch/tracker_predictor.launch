@@ -1,8 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <launch>
 
 	<arg name="quad" default="SQ01s"/>
 	<arg name="cloud_topic" default="camera/depth/color/points"  />   <!--camera/cloud -->
-
 
 	<node ns="$(arg quad)" name="tracker_predictor_node" pkg="panther" type="tracker_predictor_node" output="screen" clear_params="false" respawn="true"> 
 		<rosparam file="$(find panther)/matlab/casadi_generated_files/params_casadi_prediction.yaml" command="load"/>

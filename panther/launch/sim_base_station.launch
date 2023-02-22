@@ -75,6 +75,8 @@
     <node pkg="rqt_gui" type="rqt_gui" name="rqt_gui" args="--perspective-file $(find panther)/rqt_cfgs/demo_interface.perspective"/>
   </group>
 
+
+
   <node name="dynamic_corridor" pkg="panther" type="dynamic_corridor.py" output="screen" args="--num_of_obs $(arg num_of_obs) --gazebo $(arg gazebo) --type_of_obst_traj $(arg type_of_obst_traj) --alpha_scale_obst_traj $(arg alpha_scale_obst_traj) --beta_faster_obst_traj $(arg beta_faster_obst_traj)"/> 
 
 </launch>

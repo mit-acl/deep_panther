@@ -399,6 +399,13 @@ class TermGoalSender:
                 else:
                     self.term_goal.pose.position.x = 1.0
                     self.term_goal.pose.position.y = -4.0
+            elif self.mode == 3:
+                if self.if_arrived:
+                    self.term_goal.pose.position.x = 10.0
+                    self.term_goal.pose.position.y = 0.0
+                else:
+                    self.term_goal.pose.position.x = 3.0
+                    self.term_goal.pose.position.y = 0.0
 
             # self.term_goal.pose.position.z = 1.0 + 2.0 * random()
             self.term_goal.pose.position.z = 2.0

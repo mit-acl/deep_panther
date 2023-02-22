@@ -231,22 +231,25 @@ void TrackerPredictor::cloud_cb(const sensor_msgs::PointCloud2ConstPtr& pcl2ptr_
   geometry_msgs::TransformStamped transform_stamped;
 
   // // Get the name of the drone and remove slashes
-  // std::istringstream ss(nh_.getNamespace());
-  // ss.ignore(std::numeric_limits<std::streamsize>::max(), '/');
+  std::istringstream ss(nh_.getNamespace());
+  ss.ignore(std::numeric_limits<std::streamsize>::max(), '/');
 
-  // // The name of the drone is the first word after the first slash
-  // std::string name_drone;
-  // std::getline(ss, name_drone, '/');
+  // The name of the drone is the first word after the first slash
+  std::string name_drone;
+  std::getline(ss, name_drone, '/');
 
-  // // The name of the camera depth optical frame is: the name of the drone + the name of the point cloud frame
-  // std::string name_camera_depth_optical_frame_tf = name_drone + "/" + header_pcloud.frame_id;
+  // The name of the camera depth optical frame is: the name of the drone + the name of the point cloud frame
+  std::string name_camera_depth_optical_frame_tf = name_drone + "/" + header_pcloud.frame_id;
 
   // Try to find camera frame transform
   try
   {
-    transform_stamped = tf_buffer_.lookupTransform("world", header_pcloud.frame_id, header_pcloud.stamp,
-                                                   ros::Duration(0.02));  // TODO: change this duration time?
+    // std::cout << bold << name_camera_depth_optical_frame_tf << std::endl;
+    // transform_stamped = tf_buffer_.lookupTransform("world", header_pcloud.frame_id, header_pcloud.stamp,
+    // ros::Duration(0.02));  // TODO: change this duration time?
 
+    transform_stamped = tf_buffer_.lookupTransform("world", name_camera_depth_optical_frame_tf, header_pcloud.stamp,
+                                                   ros::Duration(0.02));  // TODO: change this duration time?
     // transform_stamped = tf_buffer_.lookupTransform("world", header_pcloud.frame_id,
     // header_pcloud.stamp,ros::Duration(0.02));
 
@@ -255,7 +258,8 @@ void TrackerPredictor::cloud_cb(const sensor_msgs::PointCloud2ConstPtr& pcl2ptr_
   catch (tf2::TransformException& ex)
   {
     ROS_WARN("[world_database_master_ros] OnGetTransform failed with %s!", ex.what());
-    ROS_WARN("[world_database_master_ros] This is sometimes due to an incorrect name of the camera frame! Returning...");
+    ROS_WARN("[world_database_master_ros] This is sometimes due to an incorrect name of the camera frame! "
+             "Returning...");
     return;
   }
 

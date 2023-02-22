@@ -331,6 +331,8 @@ std::vector<mt::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
 
   // std::cout << "delta= " << delta << std::endl;
 
+  std::cout << "trajs_.size() " << trajs_.size() << std::endl;
+
   for (int i = 0; i < trajs_.size(); i++)
   {
     mt::obstacleForOpt obstacle_for_opt;
@@ -387,6 +389,8 @@ std::vector<mt::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
 
     // ///////////////////////////
   }
+
+  std::cout << "obstacles_for_opt.size() " << obstacles_for_opt.size() << std::endl;
 
   return obstacles_for_opt;
 }
@@ -918,13 +922,13 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     // Get edges_obstacles
     //
 
-    // mtx_trajs_.lock();
+    mtx_trajs_.lock();
 
-    // ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
+    ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
 
-    // mtx_trajs_.unlock();
+    mtx_trajs_.unlock();
 
-    // edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
+    edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
 
     log_ptr_->tim_initial_setup.toc();
     std::cout << "Calling the student!" << std::endl;

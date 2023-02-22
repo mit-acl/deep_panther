@@ -178,9 +178,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "gamma", par_.gamma);
   safeGetParam(nh1_, "obstacle_edge_cb_duration", par_.obstacle_edge_cb_duration);
   safeGetParam(nh1_, "look_teammates", par_.look_teammates);
-
-  bool perfect_prediction;  // use_ground_truth_prediction
-  safeGetParam(nh1_, "perfect_prediction", perfect_prediction);
+  safeGetParam(nh1_, "perfect_prediction", par_.perfect_prediction);
 
   // safeGetParam(nh1_, "distance_to_force_final_pos", par_.distance_to_force_final_pos);
   // safeGetParam(nh1_, "factor_alloc_when_forcing_final_pos", par_.factor_alloc_when_forcing_final_pos);
@@ -304,10 +302,11 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
     }
   }
 
-  if (perfect_prediction == false)
+  if (par_.perfect_prediction == false)
   {
     ROS_INFO("NOT using ground truth trajectories (subscribed to trajs_predicted)");
-    sub_traj_ = nh1_.subscribe("trajs_predicted", 20, &PantherRos::trajCB, this);  // number is queue size
+    sub_traj_ = nh1_.subscribe("trajs_predicted", 10, &PantherRos::trajCB,
+                               this);  // number is queue size
 
     // obstacles --> topic trajs_predicted
     // agents -->  //Not implemented yet  (solve the common frame problem)
@@ -366,7 +365,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "gui_mission", gui_mission);
 
   std::cout << yellow << bold << "gui_mission= " << gui_mission << reset << std::endl;
-  std::cout << yellow << bold << "perfect_prediction= " << perfect_prediction << reset << std::endl;
+  std::cout << yellow << bold << "perfect_prediction= " << par_.perfect_prediction << reset << std::endl;
   std::cout << yellow << bold << "mode= " << par_.mode << reset << std::endl;
   // To avoid having to click on the GUI
   if (gui_mission == false)
@@ -793,7 +792,11 @@ void PantherRos::whoPlansCB(const panther_msgs::WhoPlans& msg)
     sub_state_ = nh1_.subscribe("state", 1, &PantherRos::stateCB, this);                 // TODO: duplicated from above
     pubCBTimer_.start();                                                                 /////// Oct-12-2021
     replanCBTimer_.start();
-    obstacleEdgeCBTimer_.start();
+
+    if (par_.perfect_prediction)  // tracker_predictor and obstacleEdgeCBTimer conflicts and throw an error
+    {
+      obstacleEdgeCBTimer_.start();
+    }
     std::cout << on_blue << "**************PANTHER STARTED" << reset << std::endl;
   }
 }
