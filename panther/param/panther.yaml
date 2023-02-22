@@ -34,7 +34,7 @@ use_delaycheck: false
 ### Don't forget to change the compute_cost.save() line from compute_cost.casadi to panther_compute_cost.casadi
 use_panther_star: false
 ###
-
+obstacle_edge_cb_duration: 1.0 #seconds
 
 # PANTHER setting 
 #############################################

@@ -604,6 +604,25 @@ bool Panther::isReplanningNeeded()
   return true;
 }
 
+void Panther::pubObstacleEdge(mt::Edges& edges_obstacles_out)
+{
+  //
+  // Get edges_obstacles
+  //
+
+  double t_start = ros::Time::now().toSec();
+  double t_final =
+      t_start + 5.0;  // 5.0 is just a duration into the future in which we want to visualize obstacle edges.
+
+  mtx_trajs_.lock();
+
+  ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
+
+  mtx_trajs_.unlock();
+
+  edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
+}
+
 bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_solution_expert,
                      std::vector<si::solOrGuess>& best_solutions_expert, si::solOrGuess& best_solution_student,
                      std::vector<si::solOrGuess>& best_solutions_student, std::vector<si::solOrGuess>& guesses,

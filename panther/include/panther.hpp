@@ -35,6 +35,7 @@ public:
               std::vector<si::solOrGuess>& best_solutions_student, std::vector<si::solOrGuess>& guesses,
               std::vector<si::solOrGuess>& splines_fitted, std::vector<Hyperplane3D>& planes, mt::log& log,
               int& k_index_end);
+  void pubObstacleEdge(mt::Edges& edges_obstacles_out);
   bool addTrajToPlan(const int& k_index_end, mt::log& log, const si::solOrGuess& best_solution,
                      mt::trajectory& X_safe_out);
   bool safetyCheck(mt::PieceWisePol& pwp);

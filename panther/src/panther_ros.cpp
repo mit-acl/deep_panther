@@ -25,7 +25,8 @@
 typedef PANTHER_timers::Timer MyTimer;
 
 // this object is created in the panther_ros_node
-PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle nh3) : nh1_(nh1), nh2_(nh2), nh3_(nh3)
+PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle nh3, ros::NodeHandle nh4)
+  : nh1_(nh1), nh2_(nh2), nh3_(nh3), nh4_(nh4)
 {
   name_drone_ = ros::this_node::getNamespace();  // This returns also the slashes (2 in Kinetic, 1 in Melodic)
   name_drone_.erase(std::remove(name_drone_.begin(), name_drone_.end(), '/'), name_drone_.end());  // Remove the slashes
@@ -175,6 +176,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "lambda_obst_avoidance_violation", par_.lambda_obst_avoidance_violation);
   safeGetParam(nh1_, "lambda_dyn_lim_violation", par_.lambda_dyn_lim_violation);
   safeGetParam(nh1_, "gamma", par_.gamma);
+  safeGetParam(nh1_, "obstacle_edge_cb_duration", par_.obstacle_edge_cb_duration);
 
   bool perfect_prediction;  // use_ground_truth_prediction
   safeGetParam(nh1_, "perfect_prediction", perfect_prediction);
@@ -330,6 +332,13 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
 
   replanCBTimer_ = nh3_.createTimer(ros::Duration(replan_timer_trigger_time), &PantherRos::replanCB, this);
 
+  if (par_.visual)
+  {
+    obstacleEdgeCBTimer_ =
+        nh4_.createTimer(ros::Duration(par_.obstacle_edge_cb_duration), &PantherRos::obstacleEdgeCB, this);
+    obstacleEdgeCBTimer_.stop();
+  }
+
   // For now stop all these subscribers/timers until we receive GO
   sub_state_.shutdown();
   sub_term_goal_.shutdown();
@@ -376,6 +385,7 @@ PantherRos::~PantherRos()
   sub_term_goal_.shutdown();
   pubCBTimer_.stop();
   replanCBTimer_.stop();
+  obstacleEdgeCBTimer_.stop();
 }
 
 void PantherRos::pubObstacles(mt::Edges edges_obstacles)
@@ -513,6 +523,13 @@ void PantherRos::unpauseTime()
   //   ROS_ERROR("Failed to call unpauseGazebo_");
   //   abort();  // Debugging
   // }
+}
+
+void PantherRos::obstacleEdgeCB(const ros::TimerEvent& e)
+{
+  mt::Edges edges_obstacles;
+  panther_ptr_->pubObstacleEdge(edges_obstacles);
+  pubObstacles(edges_obstacles);
 }
 
 void PantherRos::replanCB(const ros::TimerEvent& e)
@@ -765,6 +782,7 @@ void PantherRos::whoPlansCB(const panther_msgs::WhoPlans& msg)
     sub_term_goal_.shutdown();
     pubCBTimer_.stop();
     replanCBTimer_.stop();
+    obstacleEdgeCBTimer_.stop();
     panther_ptr_->resetInitialization();
     std::cout << on_blue << "**************PANTHER STOPPED" << reset << std::endl;
   }
@@ -774,6 +792,7 @@ void PantherRos::whoPlansCB(const panther_msgs::WhoPlans& msg)
     sub_state_ = nh1_.subscribe("state", 1, &PantherRos::stateCB, this);                 // TODO: duplicated from above
     pubCBTimer_.start();                                                                 /////// Oct-12-2021
     replanCBTimer_.start();
+    obstacleEdgeCBTimer_.start();
     std::cout << on_blue << "**************PANTHER STARTED" << reset << std::endl;
   }
 }

@@ -147,6 +147,7 @@ PYBIND11_MODULE(py_panther, m)
       .def_readwrite("lambda_dyn_lim_violation", &mt::parameters::lambda_dyn_lim_violation)
       .def_readwrite("num_of_intervals", &mt::parameters::num_of_intervals)
       .def_readwrite("gamma", &mt::parameters::gamma)
+      .def_readwrite("obstacle_edge_cb_duration", &mt::parameters::obstacle_edge_cb_duration)
       // clang-format on
       .def("__repr__", [](const mt::parameters &a) { return "<py_panther.parameters>"; });
 
