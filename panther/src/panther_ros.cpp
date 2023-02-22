@@ -177,6 +177,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "lambda_dyn_lim_violation", par_.lambda_dyn_lim_violation);
   safeGetParam(nh1_, "gamma", par_.gamma);
   safeGetParam(nh1_, "obstacle_edge_cb_duration", par_.obstacle_edge_cb_duration);
+  safeGetParam(nh1_, "look_teammates", par_.look_teammates);
 
   bool perfect_prediction;  // use_ground_truth_prediction
   safeGetParam(nh1_, "perfect_prediction", perfect_prediction);

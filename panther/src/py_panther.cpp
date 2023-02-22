@@ -63,6 +63,7 @@ PYBIND11_MODULE(py_panther, m)
       // clang-format off
       .def_readwrite("agents_ids", &mt::parameters::agents_ids)                          
       .def_readwrite("is_multiagent", &mt::parameters::is_multiagent)                          
+      .def_readwrite("look_teammates", &mt::parameters::look_teammates)                          
       .def_readwrite("use_panther_star", &mt::parameters::use_panther_star)                          
       .def_readwrite("use_delaycheck", &mt::parameters::use_delaycheck)                          
       .def_readwrite("use_ff", &mt::parameters::use_ff)                          

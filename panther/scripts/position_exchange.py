@@ -387,18 +387,18 @@ class TermGoalSender:
             # panther simulations
             if self.mode == 1:
                 if self.if_arrived:
-                    self.term_goal.pose.position.x = 10.0
-                    self.term_goal.pose.position.y = 3.0
+                    self.term_goal.pose.position.x = 8.0
+                    self.term_goal.pose.position.y = -4.0
                 else:
-                    self.term_goal.pose.position.x = 0.0
-                    self.term_goal.pose.position.y = 3.0
+                    self.term_goal.pose.position.x = 1.0
+                    self.term_goal.pose.position.y = 4.0
             elif self.mode == 2:
                 if self.if_arrived:
-                    self.term_goal.pose.position.x = 10.0
-                    self.term_goal.pose.position.y = -3.0
+                    self.term_goal.pose.position.x = 8.0
+                    self.term_goal.pose.position.y = 4.0
                 else:
-                    self.term_goal.pose.position.x = 0.0
-                    self.term_goal.pose.position.y = -3.0
+                    self.term_goal.pose.position.x = 1.0
+                    self.term_goal.pose.position.y = -4.0
 
             # self.term_goal.pose.position.z = 1.0 + 2.0 * random()
             self.term_goal.pose.position.z = 2.0

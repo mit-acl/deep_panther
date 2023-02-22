@@ -737,6 +737,14 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
 
   for (int i = 0; i < trajs_.size(); i++)
   {
+    if (!par_.look_teammates)
+    {
+      if (trajs_[i].is_agent)
+      {
+        continue;
+      }
+    }
+
     double prob_i = 0.0;
     for (int j = 0; j <= num_samplesp1; j++)
     {
@@ -757,6 +765,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     {
       max_prob_collision = prob_i;
       argmax_prob_collision = i;
+      std::cout << bold << red << "argmax_prob_collision's id is: " << trajs_[i].id << std::endl;
     }
   }
   mtx_trajs_.unlock();
@@ -862,13 +871,13 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     // Get edges_obstacles
     //
 
-    mtx_trajs_.lock();
+    // mtx_trajs_.lock();
 
-    ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
+    // ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
 
-    mtx_trajs_.unlock();
+    // mtx_trajs_.unlock();
 
-    edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
+    // edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
 
     //////////////////////////////////////////////////////////////////////////
     ///////////////////////// Solve optimization! ////////////////////////////
@@ -909,13 +918,13 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     // Get edges_obstacles
     //
 
-    mtx_trajs_.lock();
+    // mtx_trajs_.lock();
 
-    ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
+    // ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
 
-    mtx_trajs_.unlock();
+    // mtx_trajs_.unlock();
 
-    edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
+    // edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
 
     log_ptr_->tim_initial_setup.toc();
     std::cout << "Calling the student!" << std::endl;
