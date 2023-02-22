@@ -197,10 +197,10 @@ class MyEnvironment(gym.Env):
     self.w_state= State(w_posBS.getPosT(actual_dt), w_posBS.getVelT(actual_dt), w_posBS.getAccelT(actual_dt), \
                         w_yawBS.getPosT(actual_dt), w_yawBS.getVelT(actual_dt));
 
-    self.printwithName("w and f state AFTER UPDATE")
-    self.w_state.print_w_frameHorizontal(self.name);
+    # self.printwithName("w and f state AFTER UPDATE")
+    # self.w_state.print_w_frameHorizontal(self.name);
     # print(f"Matrix w_T_f=\n{self.w_state.w_T_f.T}")
-    self.w_state.print_f_frameHorizontal(self.name);
+    # self.w_state.print_f_frameHorizontal(self.name);
 
     #Update time and timestep
     self.time = self.time + actual_dt;
