@@ -1027,7 +1027,6 @@ class ActionManager():
 
 	def f_trajAnd_w_State2wBS(self, f_traj, w_state, no_deriv=False):
 
-
 		w_pos_ctrl_pts,_=self.f_trajAnd_w_State2_w_pos_ctrl_pts_and_knots(f_traj, w_state)
 		w_yaw_ctrl_pts,_=self.f_trajAnd_w_State2_w_yaw_ctrl_pts_and_knots(f_traj, w_state)
 		total_time=self.getTotalTimeTraj(f_traj)
@@ -1036,7 +1035,6 @@ class ActionManager():
 		# print(f"f_action={f_action}")
 		# print(f"total_time={total_time}")
 		w_posBS = MyClampedUniformBSpline(0.0, total_time, self.deg_pos, 3, self.num_seg, w_pos_ctrl_pts, no_deriv) #def __init__():[BSpline(knots_pos, w_pos_ctrl_pts[0,:], self.deg_pos)
-
 		w_yawBS = MyClampedUniformBSpline(0.0, total_time, self.deg_yaw, 1, self.num_seg, w_yaw_ctrl_pts, no_deriv)
 		
 		return w_posBS, w_yawBS
