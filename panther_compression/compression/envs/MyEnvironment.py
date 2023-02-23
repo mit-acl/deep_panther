@@ -142,7 +142,7 @@ class MyEnvironment(gym.Env):
       #f_observation_n, reward, done, info
       return self.om.getNanObservation(), 0.0, True, {} #This line is added to make generate_trajectories() of rollout.py work when the expert fails 
 
-    f_action_n=f_action_n.reshape(self.action_shape) 
+    f_action_n=f_action_n.reshape(self.action_shape)
 
     self.am.assertAction(f_action_n)
     self.am.assertActionIsNormalized(f_action_n)
@@ -153,6 +153,11 @@ class MyEnvironment(gym.Env):
     if(self.par.use_closed_form_yaw_student==True):
       f_action_n=self.cfys.substituteWithClosedFormYaw(f_action_n, self.w_state, self.w_obstacles) #f_action_n, w_init_state, w_obstacles
     ##################################
+
+
+    ### to have bigger loss, we magnified yaw actions (look at bc.py's expert_yaw_i assignment)
+    ### before convert actions to B-spline, we need to revert this change
+    f_action_n[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts] = f_action_n[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts]*1e-4
 
     # self.printwithName(f"Received actionN={f_action_n}")
     f_action= self.am.denormalizeAction(f_action_n);
