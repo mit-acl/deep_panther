@@ -840,7 +840,6 @@ struct parameters
   double          z_min;                              //void setVar_z_min(const std::string& value) { z_min = std::stod(value); };
   double          z_max;                              //void setVar_z_max(const std::string& value) { z_max = std::stod(value); };
   double          ydot_max;                           //void setVar_ydot_max(const std::string& value) { ydot_max = std::stod(value); };
-  double          ydot_max_normalization;
   Eigen::Vector3d          v_max;                              
   Eigen::Vector3d          a_max;
   Eigen::Vector3d          j_max;

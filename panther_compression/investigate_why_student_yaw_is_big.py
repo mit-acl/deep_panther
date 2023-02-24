@@ -29,71 +29,89 @@ from imitation.algorithms import bc
 import torch as th
 from numpy import load
 from scipy.optimize import linear_sum_assignment
-
+from compression.utils.other import getPANTHERparamsAsCppStruct
 
 # not sure but traj is short..
 
 if __name__ == "__main__":
 
-	### get demonstration data
-	rospack = rospkg.RosPack()
-	path_panther=rospack.get_path('panther')
-	data = load(path_panther[:-8]+'/panther_compression/evals/tmp_dagger/2/demos/round-004/dagger-demo-20230223_212805_2379ee.npz')
-	lst = data.files
-	obs = th.as_tensor(data["obs"]).detach()
-	acts_expert = th.as_tensor(data["acts"]).detach()
+	##
+	## params
+	##
 
-	### params for venv
+	yaw_scaling = getPANTHERparamsAsCppStruct().yaw_scaling
+	use_demo_obs_acts = False
+	calculate_loss = False
 	ENV_NAME = 	"my-environment-v1" # you shouldn't change the name
 	num_envs = 	1
 	seed = 	1
-	###
 
-	### get vectorized environment
-	# venv = util.make_env(env_name=ENV_NAME, n_envs=num_envs, seed=seed, parallel=False)
+	##
+	## get demonstration data
+	##
+
+	rospack = rospkg.RosPack()
+	path_panther=rospack.get_path('panther')
+	if use_demo_obs_acts:
+		data = load(path_panther[:-8]+'/panther_compression/evals/tmp_dagger/2/demos/round-004/dagger-demo-20230223_212805_2379ee.npz')
+		lst = data.files
+
+	##
+	## get vectorized environment
+	##
+
 	venv = gym.make(ENV_NAME)
 	venv.seed(seed)
-	###
 
-	### policies
+	##
+	## policies
+	##
+
 	expert_policy = ExpertPolicy()
-	# path_file=path_panther[:-8]+"/panther_compression/trained_policies/Hung_dynamic_obstacles.pt"
-	# path_file=path_panther[:-8]+"/panther_compression/evals/tmp_dagger/2/intermediate_policy_round3_log18.pt"
-	path_file=path_panther[:-8]+"/panther_compression/evals/tmp_dagger/2/intermediate_policy_round13_log73.pt"
+	path_file=path_panther[:-8]+"/panther_compression/evals/tmp_dagger/2/intermediate_policy_round0_log6.pt"
 	student_policy = bc.reconstruct_policy(path_file) #got this from test_infeasibility_ipopt.py
-	# student_policy = StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space)
 
-	### get observation and actions
-	obstacle_position = np.array([[2.5],[0.0],[1.0]])
-	goal_position = np.array([[5.0],[0.0],[1.0]])
-	venv.changeConstantObstacleAndGtermPos(obstacle_position, goal_position)
-	obs = venv.reset()
+	##
+	## get observation and actions
+	##
+	
+	## note that demo's obs and acts are tensor and visualization is not supported yet in this file (you can see loss tho)
+	if use_demo_obs_acts:
+		obs = th.as_tensor(data["obs"]).detach()
+		acts_expert = th.as_tensor(data["acts"]).detach()
+	else:
+		obstacle_position = np.array([[2.5],[0.0],[1.0]])
+		goal_position = np.array([[5.0],[0.0],[1.0]])
+		venv.changeConstantObstacleAndGtermPos(obstacle_position, goal_position)
+		obs = venv.reset()
 
-	### initial condition
+	##
+	## initial condition
+	##
+
 	p0=np.array([[0.0],[0.0],[1.0]])
 	v0=np.array([[0.0],[0.0],[0.0]])
 	a0=np.array([[0.0],[0.0],[0.0]])
 	y0=np.array([[0.0]])
 	ydot0=np.array([[0.0]])
 
-	### get BS for expert (ref: MyEnvironment.py)
+	##
+	## get BS for expert (ref: MyEnvironment.py)
+	##
+
 	acts_n_expert_np = expert_policy.predict(obs, deterministic=False)
 	acts_n_expert_np = acts_n_expert_np[0].reshape(venv.am.getActionShape())
 	venv.am.assertAction(acts_n_expert_np)
 	venv.am.assertActionIsNormalized(acts_n_expert_np)
 	acts_expert_np = venv.am.denormalizeAction(acts_n_expert_np)
-
-	# print(acts_expert.numpy()[0])
-
 	# traj_expert = venv.am.getTrajFromAction(np.array([acts_expert.detach().numpy()[0,1]]), 0)
-	# print(traj_expert)
 	traj_expert = venv.am.getTrajFromAction(acts_expert_np, 0)
-	print(acts_expert_np)
 	w_posBS_expert, w_yawBS_expert= venv.am.f_trajAnd_w_State2wBS(traj_expert, State(p0, v0, a0, y0, ydot0))
 
-	# print("acts_n_expert\n", acts_n_expert)
+	##
+	## get BS for student
+	##
 
-	### get BS for student
 	acts_n = student_policy.predict(obs, deterministic=False)
 	# acts_student = student_policy.forward(obs[0], deterministic=True)
 	# acts_student = acts_student.detach().numpy()[0]
@@ -103,97 +121,103 @@ if __name__ == "__main__":
 	venv.am.assertAction(acts_n_student)
 	venv.am.assertActionIsNormalized(acts_n_student)
 	acts_student = venv.am.denormalizeAction(acts_n_student)
-	print(acts_student)
+
 	# scale back down the acts_student
-	acts_student[:,venv.am.traj_size_pos_ctrl_pts:venv.am.traj_size_pos_ctrl_pts+venv.am.traj_size_yaw_ctrl_pts] = acts_student[:,venv.am.traj_size_pos_ctrl_pts:venv.am.traj_size_pos_ctrl_pts+venv.am.traj_size_yaw_ctrl_pts]*1e-4
+	acts_student[:,venv.am.traj_size_pos_ctrl_pts:venv.am.traj_size_pos_ctrl_pts+venv.am.traj_size_yaw_ctrl_pts] = acts_student[:,venv.am.traj_size_pos_ctrl_pts:venv.am.traj_size_pos_ctrl_pts+venv.am.traj_size_yaw_ctrl_pts]/yaw_scaling
 	traj_student = venv.am.getTrajFromAction(acts_student, 0)
 	w_posBS_student, w_yawBS_student= venv.am.f_trajAnd_w_State2wBS(traj_student, State(p0, v0, a0, y0, ydot0))
 
-	# print("acts_n_student\n", acts_n_student)
-	# print("acts_expert\n", acts_expert[:,:,venv.am.traj_size_pos_ctrl_pts:(venv.am.traj_size_pos_ctrl_pts+venv.am.traj_size_yaw_ctrl_pts)])
-	# print("acts_student\n", acts_student[:,:,venv.am.traj_size_pos_ctrl_pts:(venv.am.traj_size_pos_ctrl_pts+venv.am.traj_size_yaw_ctrl_pts)])
-
+	##
 	## get ydot_max
+	##
+
 	rospack = rospkg.RosPack()
 	with open(rospack.get_path('panther')+'/param/panther.yaml', 'rb') as f:
 	    conf = yaml.safe_load(f.read())    # load the config file
 	yaw_dot_max = conf['ydot_max']
 
-	### calculate loss (ref:: bc.py)
-	# num_of_traj_per_action=list(acts_expert_np.shape)[1] #acts_expert_np.shape is [batch size, num_traj_action, size_traj]
-	# num_of_elements_per_traj=list(acts_expert_np.shape)[2] #acts_expert_np.shape is [batch size, num_traj_action, size_traj]
-	# batch_size=list(acts_expert_np.shape)[0]
+	##
+	## calculate loss (ref:: bc.py)
+	##
 
-	# not sure why but list(acts_expert_np.shape)[0] is different from list(acts_student.shape)[0]
-	# acts_student = acts_student[:batch_size,:,:]
+	## note that this is only for tensor obs acts (in case use_demos_obs_acts == True)
+	if (calculate_loss):
+		num_of_traj_per_action=list(acts_expert_np.shape)[1] #acts_expert_np.shape is [batch size, num_traj_action, size_traj]
+		num_of_elements_per_traj=list(acts_expert_np.shape)[2] #acts_expert_np.shape is [batch size, num_traj_action, size_traj]
+		batch_size=list(acts_expert_np.shape)[0]
 
-	# distance_matrix= th.zeros(batch_size, num_of_traj_per_action, num_of_traj_per_action); 
-	# distance_pos_matrix= th.zeros(batch_size, num_of_traj_per_action, num_of_traj_per_action); 
-	# distance_yaw_matrix= th.zeros(batch_size, num_of_traj_per_action, num_of_traj_per_action); 
-	# distance_time_matrix= th.zeros(batch_size, num_of_traj_per_action, num_of_traj_per_action); 
-	# distance_pos_matrix_within_expert= th.zeros(batch_size, num_of_traj_per_action, num_of_traj_per_action); 
+		# not sure why but list(acts_expert_np.shape)[0] is different from list(acts_student.shape)[0]
+		acts_student = acts_student[:batch_size,:,:]
 
-	# for i in range(num_of_traj_per_action):
-	# 	for j in range(num_of_traj_per_action):
-	# 		expert_i = acts_expert_np[:,i,:].float() #All the elements
-	# 		student_j = acts_student[:,j,:].float() #All the elements
+		distance_matrix= th.zeros(batch_size, num_of_traj_per_action, num_of_traj_per_action); 
+		distance_pos_matrix= th.zeros(batch_size, num_of_traj_per_action, num_of_traj_per_action); 
+		distance_yaw_matrix= th.zeros(batch_size, num_of_traj_per_action, num_of_traj_per_action); 
+		distance_time_matrix= th.zeros(batch_size, num_of_traj_per_action, num_of_traj_per_action); 
+		distance_pos_matrix_within_expert= th.zeros(batch_size, num_of_traj_per_action, num_of_traj_per_action); 
 
-	# 		expert_pos_i = acts_expert_np[:,i,0:venv.am.traj_size_pos_ctrl_pts].float()
-	# 		student_pos_j = acts_student[:,j,0:venv.am.traj_size_pos_ctrl_pts].float()
+		for i in range(num_of_traj_per_action):
+			for j in range(num_of_traj_per_action):
+				expert_i = acts_expert_np[:,i,:].float() #All the elements
+				student_j = acts_student[:,j,:].float() #All the elements
 
-	# 		expert_yaw_i = acts_expert_np[:,i,venv.am.traj_size_pos_ctrl_pts:(venv.am.traj_size_pos_ctrl_pts+venv.am.traj_size_yaw_ctrl_pts)].float()
-	# 		student_yaw_j = acts_student[:,j,venv.am.traj_size_pos_ctrl_pts:(venv.am.traj_size_pos_ctrl_pts+venv.am.traj_size_yaw_ctrl_pts)].float()
+				expert_pos_i = acts_expert_np[:,i,0:venv.am.traj_size_pos_ctrl_pts].float()
+				student_pos_j = acts_student[:,j,0:venv.am.traj_size_pos_ctrl_pts].float()
 
-	# 		expert_time_i = acts_expert_np[:,i,-1:].float(); #Time. Note: Is you use only -1 (instead of -1:), then distance_time_matrix will have required_grad to false
-	# 		student_time_j = acts_student[:,j,-1:].float() #Time. Note: Is you use only -1 (instead of -1:), then distance_time_matrix will have required_grad to false
+				expert_yaw_i = acts_expert_np[:,i,venv.am.traj_size_pos_ctrl_pts:(venv.am.traj_size_pos_ctrl_pts+venv.am.traj_size_yaw_ctrl_pts)].float()
+				student_yaw_j = acts_student[:,j,venv.am.traj_size_pos_ctrl_pts:(venv.am.traj_size_pos_ctrl_pts+venv.am.traj_size_yaw_ctrl_pts)].float()
 
-	# 		distance_matrix[:,i,j]=th.mean(th.nn.MSELoss(reduction='none')(expert_i, student_j), dim=1)
-	# 		distance_pos_matrix[:,i,j]=th.mean(th.nn.MSELoss(reduction='none')(expert_pos_i, student_pos_j), dim=1)
-	# 		distance_yaw_matrix[:,i,j]=th.mean(th.nn.MSELoss(reduction='none')(expert_yaw_i, student_yaw_j), dim=1)
-	# 		distance_time_matrix[:,i,j]=th.mean(th.nn.MSELoss(reduction='none')(expert_time_i, student_time_j), dim=1)
+				expert_time_i = acts_expert_np[:,i,-1:].float(); #Time. Note: Is you use only -1 (instead of -1:), then distance_time_matrix will have required_grad to false
+				student_time_j = acts_student[:,j,-1:].float() #Time. Note: Is you use only -1 (instead of -1:), then distance_time_matrix will have required_grad to false
 
-	# 		#This is simply to delete the trajs from the expert that are repeated
-	# 		expert_pos_j = acts_expert_np[:,j,0:venv.am.traj_size_pos_ctrl_pts].float();
-	# 		distance_pos_matrix_within_expert[:,i,j]=th.mean(th.nn.MSELoss(reduction='none')(expert_pos_i, expert_pos_j), dim=1)
+				distance_matrix[:,i,j]=th.mean(th.nn.MSELoss(reduction='none')(expert_i, student_j), dim=1)
+				distance_pos_matrix[:,i,j]=th.mean(th.nn.MSELoss(reduction='none')(expert_pos_i, student_pos_j), dim=1)
+				distance_yaw_matrix[:,i,j]=th.mean(th.nn.MSELoss(reduction='none')(expert_yaw_i, student_yaw_j), dim=1)
+				distance_time_matrix[:,i,j]=th.mean(th.nn.MSELoss(reduction='none')(expert_time_i, student_time_j), dim=1)
 
-	# is_repeated=th.zeros(batch_size, num_of_traj_per_action, dtype=th.bool)
+				#This is simply to delete the trajs from the expert that are repeated
+				expert_pos_j = acts_expert_np[:,j,0:venv.am.traj_size_pos_ctrl_pts].float();
+				distance_pos_matrix_within_expert[:,i,j]=th.mean(th.nn.MSELoss(reduction='none')(expert_pos_i, expert_pos_j), dim=1)
 
-	# for index_batch in range(batch_size):         
-	# 	# cost_matrix_numpy=distance_pos_matrix_numpy[index_batch,:,:];
-	# 	cost_matrix=distance_pos_matrix[index_batch,:,:];
-	# 	map2RealRows=np.array(range(num_of_traj_per_action))
-	# 	map2RealCols=np.array(range(num_of_traj_per_action))
+		is_repeated=th.zeros(batch_size, num_of_traj_per_action, dtype=th.bool)
 
-	# 	rows_to_delete=[]
-	# 	for i in range(num_of_traj_per_action): #for each row (expert traj)
-	# 	    # expert_prob=th.round(acts[index_batch, i, -1]) #this should be either 1 or -1
-	# 	    # if(expert_prob==-1): 
-	# 	    if(is_repeated[index_batch,i]==True): 
-	# 	        #Delete that row
-	# 	        rows_to_delete.append(i)
+		for index_batch in range(batch_size):         
+			# cost_matrix_numpy=distance_pos_matrix_numpy[index_batch,:,:];
+			cost_matrix=distance_pos_matrix[index_batch,:,:];
+			map2RealRows=np.array(range(num_of_traj_per_action))
+			map2RealCols=np.array(range(num_of_traj_per_action))
 
-	# 	# print(f"Deleting index_batch={index_batch}, rows_to_delete={rows_to_delete}")
-	# 	# cost_matrix_numpy=np.delete(cost_matrix_numpy, rows_to_delete, axis=0)
-	# 	cost_matrix=cost_matrix[is_repeated[index_batch,:]==False]   #np.delete(cost_matrix_numpy, rows_to_delete, axis=0)
-	# 	cost_matrix_numpy=cost_matrix.cpu().detach().numpy()
+			rows_to_delete=[]
+			for i in range(num_of_traj_per_action): #for each row (expert traj)
+			    # expert_prob=th.round(acts[index_batch, i, -1]) #this should be either 1 or -1
+			    # if(expert_prob==-1): 
+			    if(is_repeated[index_batch,i]==True): 
+			        #Delete that row
+			        rows_to_delete.append(i)
 
-	# map2RealRows=np.delete(map2RealRows, rows_to_delete, axis=0)
-	# A_matrix=th.ones(batch_size, num_of_traj_per_action, num_of_traj_per_action)
-	# row_indexes, col_indexes = linear_sum_assignment(cost_matrix_numpy)
-	# for row_index, col_index in zip(row_indexes, col_indexes):
-	#     A_matrix[index_batch, map2RealRows[row_index], map2RealCols[col_index]]=1
-	# num_nonzero_A=th.count_nonzero(A_matrix)
-	# pos_loss=th.sum(A_matrix*distance_pos_matrix)/num_nonzero_A
-	# yaw_loss=th.sum(A_matrix*distance_yaw_matrix)/num_nonzero_A
-	# time_loss=th.sum(A_matrix*distance_time_matrix)/num_nonzero_A
-	# print("distance_pos_matrix", distance_pos_matrix)
-	# print("distance_yaw_matrix", distance_yaw_matrix)
-	# print("pos_loss ", pos_loss)
-	# print("yaw_loss ", yaw_loss)
-	# print("time_loss ", time_loss)
+			# print(f"Deleting index_batch={index_batch}, rows_to_delete={rows_to_delete}")
+			# cost_matrix_numpy=np.delete(cost_matrix_numpy, rows_to_delete, axis=0)
+			cost_matrix=cost_matrix[is_repeated[index_batch,:]==False]   #np.delete(cost_matrix_numpy, rows_to_delete, axis=0)
+			cost_matrix_numpy=cost_matrix.cpu().detach().numpy()
+
+		map2RealRows=np.delete(map2RealRows, rows_to_delete, axis=0)
+		A_matrix=th.ones(batch_size, num_of_traj_per_action, num_of_traj_per_action)
+		row_indexes, col_indexes = linear_sum_assignment(cost_matrix_numpy)
+		for row_index, col_index in zip(row_indexes, col_indexes):
+		    A_matrix[index_batch, map2RealRows[row_index], map2RealCols[col_index]]=1
+		num_nonzero_A=th.count_nonzero(A_matrix)
+		pos_loss=th.sum(A_matrix*distance_pos_matrix)/num_nonzero_A
+		yaw_loss=th.sum(A_matrix*distance_yaw_matrix)/num_nonzero_A
+		time_loss=th.sum(A_matrix*distance_time_matrix)/num_nonzero_A
+		print("distance_pos_matrix", distance_pos_matrix)
+		print("distance_yaw_matrix", distance_yaw_matrix)
+		print("pos_loss ", pos_loss)
+		print("yaw_loss ", yaw_loss)
+		print("time_loss ", time_loss)
 
 
-	### plot
+	##
+	## plot
+	##
 
 	def get_cube():   
 		phi = np.arange(1,10,2)*np.pi/4
@@ -204,16 +228,26 @@ if __name__ == "__main__":
 		z = np.cos(Theta)/np.sqrt(2)
 		return x,y,z
 
+	##
 	## pos
+	##
+
 	fig = plt.figure()
 	ax = fig.add_subplot(projection='3d')
 	xx = np.linspace(w_posBS_expert.getT0(), w_posBS_expert.getTf(), 100)
 	ax.set_title('3d pos')
 
-	# trajs
+	##
+	## trajs
+	##
+
 	ax.plot(w_posBS_expert.pos_bs[0](xx), w_posBS_expert.pos_bs[1](xx), w_posBS_expert.pos_bs[2](xx), lw=4, alpha=0.7, label='expert traj')
 	ax.plot(w_posBS_student.pos_bs[0](xx), w_posBS_student.pos_bs[1](xx), w_posBS_student.pos_bs[2](xx), lw=4, alpha=0.7, label='student traj')
-	# box
+	
+	##
+	## box
+	##
+
 	f_obs = venv.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(venv.w_state, venv.gm.get_w_GTermPos(), venv.w_obstacles)
 	obstacles=venv.om.getObstacles(f_obs)
 	x,y,z = get_cube()
@@ -224,7 +258,11 @@ if __name__ == "__main__":
 	y += obstacle_position[1]
 	z += obstacle_position[2]
 	ax.plot_surface(x, y, z, alpha=0.2, color='brown')
-	# yaw vector
+	
+	##
+	## yaw vector
+	##
+
 	num_vectors = 10
 	xx2 = np.linspace(w_posBS_expert.getT0(), w_posBS_expert.getTf(), num_vectors)
 	initialized = False # for quiver label
@@ -264,7 +302,10 @@ if __name__ == "__main__":
 	fig.savefig('/home/kota/Research/deep-panther_ws/src/deep_panther/panther/matlab/figures/test_pos.png')
 	# plt.show()
 
+	##
 	## yaw
+	##
+	
 	fig, ax = plt.subplots(2,1)
 	fig.tight_layout(pad=2.0)
 	xx = np.linspace(w_yawBS_expert.getT0(), w_yawBS_expert.getTf(), 100)
@@ -282,14 +323,18 @@ if __name__ == "__main__":
 	fig.savefig('/home/kota/Research/deep-panther_ws/src/deep_panther/panther/matlab/figures/test_yaw.png')
 	plt.show()
 
+	##
 	## check constraint violation
-	for xx_i in xx:
-		if abs(w_yawBS_expert.vel_bs[0](xx_i)) > yaw_dot_max:
-			print('expert violates ydot constraint')
-		if abs(w_yawBS_student.vel_bs[0](xx_i)) > yaw_dot_max:
-			print('student violates ydot constraint') 
+	##
 
-	### save in bag
-	# save_in_bag(venv, acts_expert_np)
+	exp_violated = False
+	stu_violated = False
+	for xx_i in xx:
+		if abs(w_yawBS_expert.vel_bs[0](xx_i)) > yaw_dot_max and not exp_violated:
+			print('expert violates ydot constraint')
+			exp_violated = True
+		if abs(w_yawBS_student.vel_bs[0](xx_i)) > yaw_dot_max and not stu_violated:
+			print('student violates ydot constraint') 
+			stu_violated = True
 
 	sys.exit(0)
