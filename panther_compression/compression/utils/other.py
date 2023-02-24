@@ -948,8 +948,8 @@ class ActionManager():
 		tpP1 = knots_pos[p + 1];
 		t1PpP1 = knots_pos[1 + p + 1];
 
-		
-		# // See Mathematica Notebook
+		# See Mathematica Notebook
+		# the first three control points are already set with the initial conditions
 		q0_pos = p0;
 		q1_pos = p0 + (-t1 + tpP1) * v0 / p;
 		q2_pos = (p * p * q1_pos - (t1PpP1 - t2) * (a0 * (t2 - tpP1) + v0) - p * (q1_pos + (-t1PpP1 + t2) * v0)) / ((-1 + p) * p);

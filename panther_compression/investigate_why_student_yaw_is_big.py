@@ -68,7 +68,8 @@ if __name__ == "__main__":
 	##
 
 	expert_policy = ExpertPolicy()
-	path_file=path_panther[:-8]+"/panther_compression/evals/tmp_dagger/2/intermediate_policy_round0_log6.pt"
+	path_file=path_panther[:-8]+"/panther_compression/trained_policies/Hung_dynamic_obstacles.pt"
+	# path_file=path_panther[:-8]+"/panther_compression/evals/tmp_dagger/2/intermediate_policy_round0_log1.pt"
 	student_policy = bc.reconstruct_policy(path_file) #got this from test_infeasibility_ipopt.py
 
 	##
@@ -98,6 +99,11 @@ if __name__ == "__main__":
 	##
 	## get BS for expert (ref: MyEnvironment.py)
 	##
+
+	## acts_n_expert_np is control points (the last element is total time)
+	## acts_expert_np is normalized control points (the last element is total time)
+	## traj_expert is just a reshaped control points (the last element is total time)
+	## w_posBS_expert is a B-spline
 
 	acts_n_expert_np = expert_policy.predict(obs, deterministic=False)
 	acts_n_expert_np = acts_n_expert_np[0].reshape(venv.am.getActionShape())
