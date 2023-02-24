@@ -157,7 +157,9 @@ class MyEnvironment(gym.Env):
 
     ### to have bigger loss, we magnified yaw actions (look at bc.py's expert_yaw_i assignment)
     ### before convert actions to B-spline, we need to revert this change
-    f_action_n[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts] = f_action_n[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts]*1e-4
+    
+    ### note f_action_n needs to be scaled down by yaw_scaling param
+    f_action_n[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts] = f_action_n[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts]/self.par.yaw_scaling
 
     # self.printwithName(f"Received actionN={f_action_n}")
     f_action= self.am.denormalizeAction(f_action_n);

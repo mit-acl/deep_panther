@@ -36,6 +36,7 @@ use_panther_star: false
 ###
 obstacle_edge_cb_duration: 1.0 #seconds
 look_teammates: false
+yaw_scaling: 1000.0
 
 # PANTHER setting 
 #############################################

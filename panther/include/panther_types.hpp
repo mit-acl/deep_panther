@@ -805,6 +805,7 @@ struct parameters
 {
   //
   // clang-format off
+  double          yaw_scaling;
   std::vector<std::string> agents_ids;
   bool            is_multiagent;
   bool            use_panther_star;

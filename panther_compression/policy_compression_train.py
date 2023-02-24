@@ -16,8 +16,6 @@ import random
 from tqdm import trange
 # import os
 import subprocess
-
-
 from colorama import init, Fore, Back, Style
 
 from imitation.policies import serialize
@@ -28,6 +26,7 @@ from compression.policies.ExpertPolicy import ExpertPolicy
 from compression.utils.train import make_dagger_trainer, make_bc_trainer, make_simple_dagger_trainer
 from compression.utils.eval import evaluate_policy
 
+from compression.utils.other import readPANTHERparams
 
 from stable_baselines3.common.env_checker import check_env
 
@@ -68,7 +67,6 @@ def single_true(iterable):
 
 if __name__ == "__main__":
 
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=2)
     parser.add_argument("--log_dir", type=str, default="evals/log_dagger") # usually "log"
@@ -103,7 +101,6 @@ if __name__ == "__main__":
     parser.add_argument("--epsilon_RWTA", type=float, default=0.05)
     parser.add_argument('--net_arch', type=int, nargs='+', help='<Required> Set flag')
 
-
     args = parser.parse_args()
 
     # assert single_true([args.use_Hungarian, args.use_RWTAr, args.use_RWTAc])
@@ -111,6 +108,7 @@ if __name__ == "__main__":
     printInBoldRed(f"only_test_loss={args.only_test_loss}")
     printInBoldRed(f"type_loss={args.type_loss}")
     printInBoldRed(f"epsilon_RWTA={args.epsilon_RWTA}")
+
 
     # print(f"only_test_loss={args.only_test_loss}")
     # exit();
@@ -141,7 +139,6 @@ if __name__ == "__main__":
         only_collect_data=False 
         log_interval=15 
         num_envs=1
-
 
     if(train_only_supervised==True):
         num_envs=1
@@ -337,14 +334,12 @@ if __name__ == "__main__":
         # # os.system("tensorboard --logdir "+args.log_dir +" --bind_all")
         # # os.system("google-chrome http://jtorde-alienware-aurora-r8:6006/")  
 
-
         stats = {"training":list(), "eval_no_dist":list()}
         if args.on_policy_trainer == True:
             assert trainer.round_num == 0
 
         policy_path = os.path.join(DATA_POLICY_PATH, "intermediate_policy.pt") # Where to save curr policy
         trainer.train(n_rounds=args.n_rounds, total_demos_per_round=args.total_demos_per_round, only_collect_data=only_collect_data, bc_train_kwargs=dict(n_epochs=N_EPOCHS, save_full_policy_path=policy_path, log_interval=log_interval))
-
 
         # for i in trange(args.n_rounds, desc="Round"):
 

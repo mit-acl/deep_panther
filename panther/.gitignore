@@ -11,3 +11,4 @@
 #*.casadi
 
 **/build 
+/matlab/figures
