@@ -179,6 +179,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "obstacle_edge_cb_duration", par_.obstacle_edge_cb_duration);
   safeGetParam(nh1_, "look_teammates", par_.look_teammates);
   safeGetParam(nh1_, "perfect_prediction", par_.perfect_prediction);
+  safeGetParam(nh1_, "dist_from_gterm_to_dummy", par_.dist_from_gterm_to_dummy);
 
   // safeGetParam(nh1_, "distance_to_force_final_pos", par_.distance_to_force_final_pos);
   // safeGetParam(nh1_, "factor_alloc_when_forcing_final_pos", par_.factor_alloc_when_forcing_final_pos);
@@ -749,9 +750,9 @@ void PantherRos::stateCB(const snapstack_msgs::State& msg)
   state_tmp.setAccel(0.0, 0.0, 0.0);
   state_tmp.setYaw(0.0);  // This field is not used
 
-  // double roll, pitch, yaw;
-  // quaternion2Euler(msg.quat, roll, pitch, yaw);
-  // state_tmp.setYaw(yaw); TODO: use here (for yaw) the convention PANTHER is using (psi)
+  double roll, pitch, yaw;
+  quaternion2Euler(msg.quat, roll, pitch, yaw);
+  state_tmp.setYaw(yaw);  // TODO: use here (for yaw) the convention PANTHER is using (psi)
 
   state_ = state_tmp;
 

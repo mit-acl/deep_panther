@@ -85,6 +85,7 @@ struct obstacleForOpt
   // casadi::DM ctrl_pts;
   std::vector<Eigen::Vector3d> ctrl_pts;
   Eigen::Vector3d bbox_inflated;
+  bool is_dummy = false;
 
   void printInfo()
   {
@@ -806,6 +807,7 @@ struct parameters
   //
   // clang-format off
   double          yaw_scaling;
+  double          dist_from_gterm_to_dummy;
   std::vector<std::string> agents_ids;
   bool            is_multiagent;
   bool            use_panther_star;

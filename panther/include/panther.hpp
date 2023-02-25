@@ -48,10 +48,14 @@ public:
   void updateState(mt::state data);
 
   bool getNextGoal(mt::state& next_goal);
-  void getState(mt::state& data);
   void getG(mt::state& G);
+  void getState(mt::state& data);
+  void getG_term(mt::state& data);
   void setTerminalGoal(mt::state& term_goal);
   void resetInitialization();
+
+  void yaw(double diff, mt::state& next_goal);
+  void getDesiredYaw(mt::state& next_goal);
 
   bool IsTranslating();
   void updateTrajObstacles(mt::dynTraj traj);
@@ -78,6 +82,8 @@ private:
 
   std::vector<mt::obstacleForOpt> getObstaclesForOpt(double t_start, double t_end,
                                                      std::vector<si::solOrGuess>& splines_fitted);
+  void addDummyObstacle(double t_start, double t_end, std::vector<mt::obstacleForOpt>& obstacles_for_opt, mt::state& A,
+                        std::vector<si::solOrGuess>& splines_fitted);
 
   Eigen::Vector3d evalMeanDynTrajCompiled(const mt::dynTrajCompiled& traj, double t);
   Eigen::Vector3d evalVarDynTrajCompiled(const mt::dynTrajCompiled& traj, double t);
@@ -190,6 +196,8 @@ private:
 
   bool need_to_do_stuff_term_goal_ = false;
   bool is_new_g_term_ = false;
+  double dyaw_filtered_ = 0.0;
+  double previous_yaw_ = 0.0;
 };
 
 #endif

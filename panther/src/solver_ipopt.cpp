@@ -705,10 +705,11 @@ std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
   map_arguments["z_lim"] = std::vector<double>{ par_.z_min, par_.z_max };
 
   for (int i = 0; i < par_.num_max_of_obst; i++)
-  {  // clang-format off
-    map_arguments["obs_" + std::to_string(i) + "_ctrl_pts"] = stdVectorEigen3d2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
-    map_arguments["obs_" + std::to_string(i) + "_bbox_inflated"] = eigen3d2CasadiMatrix(obstacles_for_opt_[i].bbox_inflated);
-     // clang-format on
+  {
+    map_arguments["obs_" + std::to_string(i) + "_ctrl_pts"] =
+        stdVectorEigen3d2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
+    map_arguments["obs_" + std::to_string(i) + "_bbox_inflated"] =
+        eigen3d2CasadiMatrix(obstacles_for_opt_[i].bbox_inflated);
   }
 
   map_arguments["c_pos_smooth"] = par_.c_pos_smooth;

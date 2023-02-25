@@ -37,6 +37,7 @@ use_panther_star: false
 obstacle_edge_cb_duration: 1.0 #seconds
 look_teammates: false
 yaw_scaling: 5000.0
+dist_from_gterm_to_dummy: 20.0 #[m]
 
 # PANTHER setting 
 #############################################
@@ -53,11 +54,11 @@ y_min: -100.0  # [m] don't forget the .0
 y_max: 100.0   # [m] don't forget the .0
 z_min: -100.0        #[m] points below this are considered ground
 z_max: 100.0         #[m] 
-ydot_max: 2.0           # [rd/s] Maximum angular velocity. 0.4 for Hardware
+ydot_max: 0.4           # [rd/s] Maximum angular velocity. 0.4 for Hardware
 v_max: [2.5, 2.5, 2.5]   #[m/s]  7.0
 a_max: [5.5, 5.5, 5.5]   #[m/s2] Note that if a_max.z() > 9.81, the drone may flip
 j_max: [30.0, 30.0, 30.0]   #[m/s3] 
-factor_alpha: 5.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
+factor_alpha: 2.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
 max_seconds_keeping_traj: 30.0     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
 gamma: 0.1 #[seconds] >0 Time step between discretization points
 
@@ -77,19 +78,19 @@ res_plot_traj: 30.0  #Higher --> More resolution when plotting the trajectory
 color_type_student: "vel" #"vel" or "time" or "aug_cost" or "agent" or "black"
 color_type_expert: "black" #"vel" or "time" or "aug_cost" or "agent" or "black"
 n_agents: 16 #only used for the color in the trajectory
+z_goal_when_using_rviz: 1.0 #[meters] 
 
 # Optimization
 #############################################
-c_smooth_yaw_search: 0.0      #weight for the yaw search
+c_smooth_yaw_search: 10.0      #weight for the yaw search
 c_visibility_yaw_search: 1.0  #weight for the yaw search
-c_maxydot_yaw_search: 0.0     #weight for the yaw search
-c_pos_smooth: 0.0003           #weight for the optimization
-c_yaw_smooth: 0.00            #weight for the optimization
+c_maxydot_yaw_search: 10.0     #weight for the yaw search
+c_pos_smooth: 0.01           #weight for the optimization
+c_yaw_smooth: 100.0            #weight for the optimization
 c_fov: 10000.0                 #weight for the optimization
-c_final_pos: 100.0           #weight for the optimization
+c_final_pos: 500.0           #weight for the optimization
 c_final_yaw: 0.0              #weight for the optimization
 c_total_time: 80             #weight for the optimization
-z_goal_when_using_rviz: 1.0 #[meters] 
 max_dist2goal: 20.0
 max_dist2obs: 20.0
 max_side_bbox_obs: 2.0

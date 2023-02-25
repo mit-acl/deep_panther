@@ -320,6 +320,83 @@ bool Panther::IsTranslating()
   return (drone_status_ == DroneStatus::GOAL_SEEN || drone_status_ == DroneStatus::TRAVELING);
 }
 
+void Panther::addDummyObstacle(double t_start, double t_end, std::vector<mt::obstacleForOpt>& obstacles_for_opt,
+                               mt::state& A, std::vector<si::solOrGuess>& splines_fitted)
+{
+  double delta = (t_end - t_start) / par_.fitter_num_samples;
+
+  //
+  // get the vector from where you are now to g_term
+  //
+
+  mt::state G_term;
+  getG_term(G_term);
+  mt::state current_state;
+  getState(current_state);
+
+  Eigen::Vector3d n_vec_to_g_term = (G_term.pos - current_state.pos).normalized();
+
+  //
+  // first construct dummy obstacle in dynTraj
+  //
+
+  mt::dynTraj dummy_traj;
+  dummy_traj.use_pwp_field = false;
+
+  dummy_traj.s_mean.push_back(std::to_string(G_term.pos[0] + par_.dist_from_gterm_to_dummy * n_vec_to_g_term.x()));
+  dummy_traj.s_mean.push_back(std::to_string(G_term.pos[1] + par_.dist_from_gterm_to_dummy * n_vec_to_g_term.y()));
+  dummy_traj.s_mean.push_back(std::to_string(G_term.pos[2] + par_.dist_from_gterm_to_dummy * n_vec_to_g_term.z()));
+
+  dummy_traj.bbox = par_.drone_bbox;
+  dummy_traj.id = 6000;            // TODO: hardcoded
+  dummy_traj.time_received = 0.0;  // TODO: fix if necessary
+  dummy_traj.is_agent = false;
+
+  //
+  // compile
+  //
+
+  mt::dynTrajCompiled dummy_traj_compiled;
+  dynTraj2dynTrajCompiled(dummy_traj, dummy_traj_compiled);
+
+  //
+  // construct dummy obstacle_for_opt
+  //
+
+  mt::obstacleForOpt dummy_obstacle_for_opt;
+  std::vector<Eigen::Vector3d> samples;
+
+  for (int k = 0; k < par_.fitter_num_samples; k++)
+  {
+    double tk = t_start + k * delta;
+    Eigen::Vector3d pos_k = evalMeanDynTrajCompiled(dummy_traj_compiled, tk);
+    samples.push_back(pos_k);
+  }
+
+  dummy_obstacle_for_opt.ctrl_pts = fitter_->fit(samples);
+  dummy_obstacle_for_opt.bbox_inflated = dummy_traj_compiled.bbox + 2 * par_.drone_bbox;
+  dummy_obstacle_for_opt.is_dummy = true;
+
+  obstacles_for_opt.push_back(dummy_obstacle_for_opt);
+
+  ///////////////////////// FOR VISUALIZATION
+
+  si::solOrGuess spline_fitted;
+  spline_fitted.qp = dummy_obstacle_for_opt.ctrl_pts;
+  std::vector<double> qy(par_.num_seg + par_.deg_yaw, 0.0);
+  spline_fitted.qy = qy;
+  spline_fitted.knots_p = constructKnotsClampedUniformSpline(t_start, t_end, par_.fitter_deg_pos, par_.fitter_num_seg);
+  spline_fitted.deg_p = par_.fitter_deg_pos;
+
+  // Dummy for yaw
+  spline_fitted.knots_y = spline_fitted.knots_p;
+  spline_fitted.deg_y = spline_fitted.deg_p;
+
+  spline_fitted.fillTraj(par_.dc);
+
+  splines_fitted.push_back(spline_fitted);
+}
+
 std::vector<mt::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, double t_end,
                                                             std::vector<si::solOrGuess>& splines_fitted)
 {
@@ -331,7 +408,7 @@ std::vector<mt::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
 
   // std::cout << "delta= " << delta << std::endl;
 
-  std::cout << "trajs_.size() " << trajs_.size() << std::endl;
+  // std::cout << "trajs_.size() " << trajs_.size() << std::endl;
 
   for (int i = 0; i < trajs_.size(); i++)
   {
@@ -390,7 +467,7 @@ std::vector<mt::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
     // ///////////////////////////
   }
 
-  std::cout << "obstacles_for_opt.size() " << obstacles_for_opt.size() << std::endl;
+  // std::cout << "obstacles_for_opt.size() " << obstacles_for_opt.size() << std::endl;
 
   return obstacles_for_opt;
 }
@@ -424,11 +501,19 @@ void Panther::getState(mt::state& data)
   mtx_state.unlock();
 }
 
+void Panther::getG_term(mt::state& data)
+{
+  mtx_G_term.lock();
+  data = G_term_;  // Local copy of the terminal terminal goal
+  mtx_G_term.unlock();
+}
+
 void Panther::updateState(mt::state data)
 {
   state_ = data;
 
-  if (state_initialized_ == false)
+  mtx_plan_.lock();
+  if (state_initialized_ == false || plan_.size() == 1)
   {
     plan_.clear();  // (actually not needed because done in resetInitialization()
     mt::state tmp;
@@ -436,6 +521,7 @@ void Panther::updateState(mt::state data)
     tmp.yaw = data.yaw;
     plan_.push_back(tmp);
   }
+  mtx_plan_.unlock();
 
   state_initialized_ = true;
 
@@ -456,17 +542,14 @@ void Panther::doStuffTermGoal()
   //   return;
   // }
 
-  // std::cout << "[doStuffTermGoal]" << std::endl;
   mtx_G_term.lock();
-  mtx_state.lock();
-  mtx_planner_status_.lock();
-
   G_.pos = G_term_.pos;
+  mtx_G_term.unlock();
+
+  mtx_planner_status_.lock();
   if (drone_status_ == DroneStatus::GOAL_REACHED)
   {
     /////////////////////////////////
-    mtx_plan_.lock();  // must be before changeDroneStatus
-
     if (par_.static_planning)  // plan from the same position all the time
     {
       changeDroneStatus(DroneStatus::TRAVELING);
@@ -475,43 +558,11 @@ void Panther::doStuffTermGoal()
     {
       changeDroneStatus(DroneStatus::YAWING);
     }
-
-    mt::state last_state = plan_.back();
-
-    double desired_yaw = atan2(G_term_.pos[1] - last_state.pos[1], G_term_.pos[0] - last_state.pos[0]);
-    double diff = desired_yaw - last_state.yaw;
-    angle_wrap(diff);
-
-    double dyaw =
-        copysign(1, diff) *
-        std::min(2.0, par_.ydot_max);  // par_.ydot_max; Changed to 0.5 (in HW the drone stops the motors when
-                                       // status==YAWING and ydot_max is too high, due to saturation + calibration of
-                                       // the ESCs) see https://gitlab.com/mit-acl/fsw/snap-stack/snap/-/issues/3
-
-    int num_of_el = (int)fabs(diff / (par_.dc * dyaw));
-
-    verify((plan_.size() >= 1), "plan_.size() must be >=1");
-
-    for (int i = 1; i < (num_of_el + 1); i++)
-    {
-      mt::state state_i = plan_.get(i - 1);
-      state_i.yaw = state_i.yaw + dyaw * par_.dc;
-      if (i == num_of_el)
-      {
-        state_i.dyaw = 0;  // 0 final yaw velocity
-      }
-      else
-      {
-        state_i.dyaw = dyaw;
-      }
-      plan_.push_back(state_i);
-    }
-    mtx_plan_.unlock();
-    /////////////////////////////////
   }
-  if (drone_status_ == DroneStatus::GOAL_SEEN)
+  else if (drone_status_ == DroneStatus::GOAL_SEEN)
   {
-    changeDroneStatus(DroneStatus::TRAVELING);
+    // changeDroneStatus(DroneStatus::TRAVELING);
+    changeDroneStatus(DroneStatus::YAWING);
   }
   terminal_goal_initialized_ = true;
 
@@ -519,9 +570,6 @@ void Panther::doStuffTermGoal()
   // std::cout << bold << red << "[FA] Received Proj Goal=" << G_.pos.transpose() << reset << std::endl;
 
   is_new_g_term_ = true;
-
-  mtx_state.unlock();
-  mtx_G_term.unlock();
   mtx_planner_status_.unlock();
 }
 
@@ -785,21 +833,27 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
   std::cout << bold << "[Selection] Chosen Trajectory " << argmax_prob_collision
             << ", P(collision)= " << max_prob_collision * pow(10, 5) << "e-5" << std::endl;
 
-  verify(obstacles_for_opt.size() >= 1, "obstacles_for_opt should have at least 1 element");
-  verify(argmax_prob_collision >= 0, "argmax_prob_collision should be >=0");
-  verify(argmax_prob_collision <= (obstacles_for_opt.size() - 1), "argmax_prob_collision should be <= "
-                                                                  "(obstacles_for_opt.size() - 1)");
+  if (obstacles_for_opt.size() == 0)
+  {
+    std::cout << bold << "No obstacle found" << std::endl;
+  }
+  else
+  {
+    verify(obstacles_for_opt.size() >= 1, "obstacles_for_opt should have at least 1 element");
+    verify(argmax_prob_collision >= 0, "argmax_prob_collision should be >=0");
+    verify(argmax_prob_collision <= (obstacles_for_opt.size() - 1), "argmax_prob_collision should be <= "
+                                                                    "(obstacles_for_opt.size() - 1)");
+    // keep only the obstacle that has the highest probability of collision
+    auto tmp = obstacles_for_opt[argmax_prob_collision];
+    obstacles_for_opt.clear();
+    obstacles_for_opt.push_back(tmp);
 
-  // keep only the obstacle that has the highest probability of collision
-  auto tmp = obstacles_for_opt[argmax_prob_collision];
-  obstacles_for_opt.clear();
-  obstacles_for_opt.push_back(tmp);
+    ////////////////////////////////////////
+    ////////////////////////////////////////
+    ////////////////////////////////////////
 
-  ////////////////////////////////////////
-  ////////////////////////////////////////
-  ////////////////////////////////////////
-
-  verify(obstacles_for_opt.size() == 1, "obstacles_for_opt should have only 1 element");
+    verify(obstacles_for_opt.size() == 1, "obstacles_for_opt should have only 1 element");
+  }
 
   if (obstacles_for_opt.size() > par_.num_max_of_obst)
   {
@@ -888,6 +942,31 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     //////////////////////////////////////////////////////////////////////////
 
     // removeTrajsThatWillNotAffectMe(A, t_start, t_final);  // TODO: Commented (4-Feb-2021)
+
+    //
+    // if there's not obstacle detected, add a dummy one
+    //
+
+    std::cout << "obstacles_for_opt.size() " << obstacles_for_opt.size() << std::endl;
+
+    //
+    // check if the only trajectory it has is dummy or not
+    //
+
+    // if (obstacles_for_opt.size() == 1 && obstacles_for_opt[0].is_dummy)
+    // {
+    //   obstacles_for_opt.pop_back();
+    // }
+
+    if (obstacles_for_opt.size() == 0)
+    {
+      addDummyObstacle(t_start, t_final, obstacles_for_opt, A, splines_fitted);
+    }
+    else if (obstacles_for_opt.size() == 1 && obstacles_for_opt[0].is_dummy == true)
+    {
+      obstacles_for_opt.clear();
+      addDummyObstacle(t_start, t_final, obstacles_for_opt, A, splines_fitted);
+    }
 
     solver_->setObstaclesForOpt(obstacles_for_opt);
 
@@ -1342,6 +1421,39 @@ void Panther::resetInitialization()
   plan_.clear();
 }
 
+void Panther::yaw(double diff, mt::state& next_goal)
+{
+  saturate(diff, -par_.dc * par_.ydot_max, par_.dc * par_.ydot_max);
+  double dyaw_not_filtered;
+  double alpha_filter_dyaw = 0.1;
+
+  dyaw_not_filtered = copysign(1, diff) * par_.ydot_max;
+
+  dyaw_filtered_ = (1 - alpha_filter_dyaw) * dyaw_not_filtered + alpha_filter_dyaw * dyaw_filtered_;
+  next_goal.dyaw = dyaw_filtered_;
+  next_goal.yaw = previous_yaw_ + dyaw_filtered_ * par_.dc;
+  previous_yaw_ = next_goal.yaw;
+}
+
+void Panther::getDesiredYaw(mt::state& next_goal)
+{
+  mt::state current_state;
+  getState(current_state);
+
+  double desired_yaw = atan2(G_term_.pos[1] - current_state.pos[1], G_term_.pos[0] - current_state.pos[0]);
+  double diff = desired_yaw - current_state.yaw;
+
+  angle_wrap(diff);
+
+  yaw(diff, next_goal);
+
+  if (fabs(diff) < 0.04)
+  {
+    std::cout << bold << "YAWING IS DONE!!" << std::endl;
+    changeDroneStatus(DroneStatus::TRAVELING);
+  }
+}
+
 bool Panther::getNextGoal(mt::state& next_goal)
 {
   if (initializedStateAndTermGoal() == false)  // || (drone_status_ == DroneStatus::GOAL_REACHED && plan_.size() == 1))
@@ -1368,9 +1480,9 @@ bool Panther::getNextGoal(mt::state& next_goal)
     }
   }
 
-  if (plan_.size() == 1 && drone_status_ == DroneStatus::YAWING)
+  if (drone_status_ == DroneStatus::YAWING)
   {
-    changeDroneStatus(DroneStatus::TRAVELING);
+    getDesiredYaw(next_goal);
   }
 
   if (par_.mode == "ysweep")
