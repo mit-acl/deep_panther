@@ -171,15 +171,33 @@ class MyEnvironment(gym.Env):
     # self.am.printAction(f_action)
     ####################################
 
-
-
     #Choose the trajectory with smallest cost:
+
+    # print("f_action_n", f_action_n)
+    # print("f_action", f_action)
+
+    # f_action_tmp = f_action.copy()
+    # f_action_n_tmp = f_action_n.copy()
+
+    for i, (f_act, f_act_n) in enumerate(zip(f_action, f_action_n)):
+          # print(f"total time {f_act[-1]}")
+          if f_act[-1] <= 0.0:
+            f_act[-1] = 1e-3; # if total time that student produced is 0.0, BS function gives you an error so let's just make it bigger than 0
+          # if True:
+          #   del f_action_n_tmp[i,:]
+          #   del f_action_tmp[i,:]
+            # exit(0)
+
+    # f_action_n = f_action_n_tmp.copy()
+    # f_action = f_action_tmp.copy()
+
     index_smallest_augmented_cost=self.cost_computer.getIndexBestTraj(self.previous_f_obs_n, f_action_n)
 
     self.printwithNameAndColor(f"Choosing traj_{index_smallest_augmented_cost}")
     f_traj=self.am.getTrajFromAction(f_action, index_smallest_augmented_cost)
     f_traj_n=self.am.getTrajFromAction(f_action_n, index_smallest_augmented_cost)
     w_posBS, w_yawBS= self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
+
 
     ####################################
     ####### MOVE THE ENVIRONMENT #######

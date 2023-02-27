@@ -1,4 +1,4 @@
-# benchmark studies for yaw comparison
+ # benchmark studies for yaw comparison
 
 import sys
 import gym
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
 	expert_policy = ExpertPolicy()
 	path_file=path_panther[:-8]+"/panther_compression/trained_policies/Hung_dynamic_obstacles.pt"
-	# path_file=path_panther[:-8]+"/panther_compression/evals/tmp_dagger/2/intermediate_policy_round0_log1.pt"
+	# path_file=path_panther[:-8]+"/panther_compression/evals/tmp_dagger/2/64_intermediate_policy_round23_log9.pt"
 	student_policy = bc.reconstruct_policy(path_file) #got this from test_infeasibility_ipopt.py
 
 	##
@@ -81,8 +81,8 @@ if __name__ == "__main__":
 		obs = th.as_tensor(data["obs"]).detach()
 		acts_expert = th.as_tensor(data["acts"]).detach()
 	else:
-		obstacle_position = np.array([[2.5],[0.0],[1.0]])
-		goal_position = np.array([[5.0],[0.0],[1.0]])
+		obstacle_position = np.array([[5.5],[0.0],[1.0]])
+		goal_position = np.array([[10.0],[0.0],[1.0]])
 		venv.changeConstantObstacleAndGtermPos(obstacle_position, goal_position)
 		obs = venv.reset()
 
