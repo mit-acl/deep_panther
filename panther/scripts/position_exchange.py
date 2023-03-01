@@ -16,6 +16,8 @@ class TermGoalSender:
 
         # mode
         self.mode = rospy.get_param('mode', 0) #default value is 0
+        self.quad = rospy.get_namespace()
+        self.goal_radius = rospy.get_param("/" + self.quad + "/panther/goal_radius")
 
         # home yet?
         self.is_home = False
@@ -116,8 +118,7 @@ class TermGoalSender:
         #print("dist=", dist)
 
         # check distance and if it's close enough publish new term_goal
-        dist_limit = 0.5
-        if (dist < dist_limit):
+        if (dist < self.goal_radius):
             if not self.is_home:
                 print("goal reached")
                 self.sendGoal()

@@ -547,23 +547,32 @@ void Panther::doStuffTermGoal()
   mtx_G_term.unlock();
 
   mtx_planner_status_.lock();
-  if (drone_status_ == DroneStatus::GOAL_REACHED)
-  {
-    /////////////////////////////////
-    if (par_.static_planning)  // plan from the same position all the time
-    {
-      changeDroneStatus(DroneStatus::TRAVELING);
-    }
-    else
-    {
-      changeDroneStatus(DroneStatus::YAWING);
-    }
-  }
-  else if (drone_status_ == DroneStatus::GOAL_SEEN)
-  {
-    // changeDroneStatus(DroneStatus::TRAVELING);
-    changeDroneStatus(DroneStatus::YAWING);
-  }
+  // if (drone_status_ == DroneStatus::GOAL_REACHED)
+  // {
+  //   std::cout << "Goal Reached" << std::endl;
+  //   if (par_.static_planning)  // plan from the same position all the time
+  //   {
+  //     changeDroneStatus(DroneStatus::TRAVELING);
+  //   }
+  //   else
+  //   {
+  //     changeDroneStatus(DroneStatus::YAWING);
+  //     std::cout << "Start Yawing" << std::endl;
+  //   }
+  // }
+  // else if (drone_status_ == DroneStatus::GOAL_SEEN)
+  // {
+  //   // changeDroneStatus(DroneStatus::TRAVELING);
+  //   changeDroneStatus(DroneStatus::YAWING);
+  //   std::cout << "Start Yawing" << std::endl;
+  // }
+
+  //
+  // No matter what, let's do yawing (might need to change this if we give term_goal while agent is flying)
+  //
+
+  changeDroneStatus(DroneStatus::YAWING);
+
   terminal_goal_initialized_ = true;
 
   // std::cout << bold << red << "[FA] Received Term Goal=" << G_term_.pos.transpose() << reset << std::endl;
@@ -1471,6 +1480,7 @@ bool Panther::getNextGoal(mt::state& next_goal)
 
   next_goal.setZero();
   next_goal = plan_.front();
+  previous_yaw_ = next_goal.yaw;
 
   if (plan_.size() > 1)
   {

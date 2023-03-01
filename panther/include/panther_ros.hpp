@@ -29,6 +29,8 @@
 
 #include "timer.hpp"
 
+#include <mutex>
+
 // #define WHOLE 1  // Whole trajectory (part of which is planned on unkonwn space)
 // #define SAFE 2   // Safe path
 
@@ -37,7 +39,7 @@ namespace rvt = rviz_visual_tools;
 class PantherRos
 {
 public:
-  PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle nh3, ros::NodeHandle nh4);
+  PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle nh3, ros::NodeHandle nh4, ros::NodeHandle nh5);
   ~PantherRos();
 
 private:
@@ -63,8 +65,10 @@ private:
   void pubCB(const ros::TimerEvent& e);
   void replanCB(const ros::TimerEvent& e);
   void obstacleEdgeCB(const ros::TimerEvent& e);
+  void publishObstacleCB(const ros::TimerEvent& e);
   void publishOwnTrajInFailure(mt::Edges edges_obstacles);
   void trajCB(const panther_msgs::DynTraj& msg);
+  void obstacleTrajCB(const panther_msgs::DynTraj& msg);
 
   void pauseTime();
   void unpauseTime();
@@ -104,6 +108,7 @@ private:
   ros::NodeHandle nh2_;
   ros::NodeHandle nh3_;
   ros::NodeHandle nh4_;
+  ros::NodeHandle nh5_;
 
   ros::Publisher pub_point_G_;
   ros::Publisher pub_point_G_term_;
@@ -149,6 +154,7 @@ private:
   ros::Timer pubCBTimer_;
   ros::Timer replanCBTimer_;
   ros::Timer obstacleEdgeCBTimer_;
+  ros::Timer obstacleShareCBTimer_;
 
   ros::ServiceClient pauseGazebo_;
   ros::ServiceClient unpauseGazebo_;
@@ -178,4 +184,7 @@ private:
   visualization_msgs::Marker marker_fov_;
 
   std::string name_camera_depth_optical_frame_tf_;
+
+  panther_msgs::DynTraj obstacle_traj_;
+  std::mutex mtx_obstacle_traj_;
 };

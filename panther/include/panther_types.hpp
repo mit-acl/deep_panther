@@ -896,6 +896,9 @@ struct parameters
   double gamma;
   bool use_delaycheck;
   double obstacle_edge_cb_duration;
+  double obstacle_share_cb_duration;
+  bool use_obstacle_share;
+  bool use_obstacle_shareCB;
   // clang-format on
 };
 

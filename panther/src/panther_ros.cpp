@@ -25,8 +25,9 @@
 typedef PANTHER_timers::Timer MyTimer;
 
 // this object is created in the panther_ros_node
-PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle nh3, ros::NodeHandle nh4)
-  : nh1_(nh1), nh2_(nh2), nh3_(nh3), nh4_(nh4)
+PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle nh3, ros::NodeHandle nh4,
+                       ros::NodeHandle nh5)
+  : nh1_(nh1), nh2_(nh2), nh3_(nh3), nh4_(nh4), nh5_(nh5)
 {
   name_drone_ = ros::this_node::getNamespace();  // This returns also the slashes (2 in Kinetic, 1 in Melodic)
   name_drone_.erase(std::remove(name_drone_.begin(), name_drone_.end(), '/'), name_drone_.end());  // Remove the slashes
@@ -180,6 +181,9 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "look_teammates", par_.look_teammates);
   safeGetParam(nh1_, "perfect_prediction", par_.perfect_prediction);
   safeGetParam(nh1_, "dist_from_gterm_to_dummy", par_.dist_from_gterm_to_dummy);
+  safeGetParam(nh1_, "obstacle_share_cb_duration", par_.obstacle_share_cb_duration);
+  safeGetParam(nh1_, "use_obstacle_share", par_.use_obstacle_share);
+  safeGetParam(nh1_, "use_obstacle_shareCB", par_.use_obstacle_shareCB);
 
   // safeGetParam(nh1_, "distance_to_force_final_pos", par_.distance_to_force_final_pos);
   // safeGetParam(nh1_, "factor_alloc_when_forcing_final_pos", par_.factor_alloc_when_forcing_final_pos);
@@ -306,7 +310,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   if (par_.perfect_prediction == false)
   {
     ROS_INFO("NOT using ground truth trajectories (subscribed to trajs_predicted)");
-    sub_traj_ = nh1_.subscribe("trajs_predicted", 10, &PantherRos::trajCB,
+    sub_traj_ = nh1_.subscribe("trajs_predicted", 10, &PantherRos::obstacleTrajCB,
                                this);  // number is queue size
 
     // obstacles --> topic trajs_predicted
@@ -323,9 +327,11 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
     // agents --> topic /trajs
     // Everything in the same world frame
   }
+
+  //
+  // Timers
   //
 
-  // Timers
   pubCBTimer_ = nh2_.createTimer(ros::Duration(par_.dc), &PantherRos::pubCB, this);
 
   double replan_timer_trigger_time =
@@ -339,6 +345,10 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
         nh4_.createTimer(ros::Duration(par_.obstacle_edge_cb_duration), &PantherRos::obstacleEdgeCB, this);
     obstacleEdgeCBTimer_.stop();
   }
+
+  obstacleShareCBTimer_ =
+      nh5_.createTimer(ros::Duration(par_.obstacle_share_cb_duration), &PantherRos::publishObstacleCB, this);
+  obstacleShareCBTimer_.stop();
 
   // For now stop all these subscribers/timers until we receive GO
   sub_state_.shutdown();
@@ -387,6 +397,7 @@ PantherRos::~PantherRos()
   pubCBTimer_.stop();
   replanCBTimer_.stop();
   obstacleEdgeCBTimer_.stop();
+  obstacleShareCBTimer_.stop();
 }
 
 void PantherRos::pubObstacles(mt::Edges edges_obstacles)
@@ -397,6 +408,25 @@ void PantherRos::pubObstacles(mt::Edges edges_obstacles)
   }
 
   return;
+}
+
+void PantherRos::obstacleTrajCB(const panther_msgs::DynTraj& msg)
+{
+  //
+  // store this received trajectory in trajs_
+  //
+
+  trajCB(msg);
+
+  //
+  // stored this obstacle trajectory in obstacle_traj_
+  // Note that this is only supported for one obstacle per agent case
+  //
+
+  mtx_obstacle_traj_.lock();
+  obstacle_traj_ = msg;
+  obstacle_traj_.id = 5000 + id_;  // TODO: hardcoded here + it only supports an one-obstacle case
+  mtx_obstacle_traj_.unlock();
 }
 
 void PantherRos::trajCB(const panther_msgs::DynTraj& msg)
@@ -471,6 +501,18 @@ void PantherRos::trajCB(const panther_msgs::DynTraj& msg)
   tmp.time_received = ros::Time::now().toSec();
 
   panther_ptr_->updateTrajObstacles(tmp);
+
+  //
+  // Obstacle Sharing
+  //
+
+  if (par_.use_obstacle_share && !par_.use_obstacle_shareCB && !tmp.is_agent)
+  {
+    panther_msgs::DynTraj tmp_obs_msg;
+    tmp_obs_msg = msg;
+    tmp_obs_msg.id = 5000 + id_;
+    pub_traj_.publish(tmp_obs_msg);
+  }
 }
 
 // This trajectory contains all the future trajectory (current_pos --> A --> final_point_of_traj), because it's the
@@ -526,12 +568,38 @@ void PantherRos::unpauseTime()
   // }
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 void PantherRos::obstacleEdgeCB(const ros::TimerEvent& e)
 {
   mt::Edges edges_obstacles;
   panther_ptr_->pubObstacleEdge(edges_obstacles);
   pubObstacles(edges_obstacles);
 }
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
+void PantherRos::publishObstacleCB(const ros::TimerEvent& e)
+{
+  panther_msgs::DynTraj tmp;
+  mtx_obstacle_traj_.lock();
+  tmp = obstacle_traj_;
+  mtx_obstacle_traj_.unlock();
+  if (!(tmp.pwp_mean.all_coeff_x.size() == 0 && tmp.pwp_mean.all_coeff_x.size() == 0 &&
+        tmp.pwp_mean.all_coeff_x.size() == 0))  // if all_ceff are all empty obstacle_traj_ has not been initialized
+  {
+    tmp.id = 5000 + id_;
+    pub_traj_.publish(tmp);
+  }
+}
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
 
 void PantherRos::replanCB(const ros::TimerEvent& e)
 {
@@ -784,6 +852,7 @@ void PantherRos::whoPlansCB(const panther_msgs::WhoPlans& msg)
     pubCBTimer_.stop();
     replanCBTimer_.stop();
     obstacleEdgeCBTimer_.stop();
+    obstacleShareCBTimer_.stop();
     panther_ptr_->resetInitialization();
     std::cout << on_blue << "**************PANTHER STOPPED" << reset << std::endl;
   }
@@ -797,6 +866,10 @@ void PantherRos::whoPlansCB(const panther_msgs::WhoPlans& msg)
     if (par_.perfect_prediction)  // tracker_predictor and obstacleEdgeCBTimer conflicts and throw an error
     {
       obstacleEdgeCBTimer_.start();
+    }
+    if (par_.use_obstacle_share && par_.use_obstacle_shareCB)
+    {
+      obstacleShareCBTimer_.start();
     }
     std::cout << on_blue << "**************PANTHER STARTED" << reset << std::endl;
   }
