@@ -13,7 +13,7 @@ max_runtime_octopus_search: 0.5 #[seconds]
 use_expert: true
 use_student: false
 use_closed_form_yaw_student: false #If false, the NN will predict this closed form for the yaw angle
-make_yaw_NN: true
+make_yaw_NN: false
 
 # FOV setting
 #############################################
