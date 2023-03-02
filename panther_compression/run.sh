@@ -1,6 +1,6 @@
 	reset
     python3 policy_compression_train.py \
-    --net_arch 128 128
+    --net_arch 256 256
     # --log_dir "evals/log_dagger" \
     # --policy_dir "evals/tmp_dagger" \
     # --eval_ep_len 200 \

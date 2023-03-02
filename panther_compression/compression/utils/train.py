@@ -13,7 +13,6 @@ def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr,
 
     am=ActionManager()
 
-
     bc_trainer = bc.BC(
         observation_space=venv.observation_space,
         action_space=venv.action_space,
@@ -24,6 +23,7 @@ def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr,
         traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
         traj_size_yaw_ctrl_pts=am.traj_size_yaw_ctrl_pts,
         use_closed_form_yaw_student=am.use_closed_form_yaw_student,
+        make_yaw_NN=am.make_yaw_NN,
         type_loss=type_loss,
         weight_prob=weight_prob,
         only_test_loss=only_test_loss,

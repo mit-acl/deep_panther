@@ -757,6 +757,7 @@ class ActionManager():
 		self.deg_yaw=params["deg_yaw"];
 		self.num_seg=params["num_seg"];
 		self.use_closed_form_yaw_student=params["use_closed_form_yaw_student"];
+		self.make_yaw_NN=params["make_yaw_NN"];
 
 		# Define action and observation space
 

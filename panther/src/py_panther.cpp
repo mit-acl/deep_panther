@@ -154,6 +154,7 @@ PYBIND11_MODULE(py_panther, m)
       .def_readwrite("obstacle_share_cb_duration", &mt::parameters::obstacle_share_cb_duration)
       .def_readwrite("use_obstacle_share", &mt::parameters::use_obstacle_share)
       .def_readwrite("use_obstacle_shareCB", &mt::parameters::use_obstacle_shareCB)
+      .def_readwrite("make_yaw_NN", &mt::parameters::make_yaw_NN)
       // clang-format on
       .def("__repr__", [](const mt::parameters &a) { return "<py_panther.parameters>"; });
 

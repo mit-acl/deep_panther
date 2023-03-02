@@ -806,6 +806,7 @@ struct parameters
 {
   //
   // clang-format off
+  bool            make_yaw_NN;
   double          yaw_scaling;
   double          dist_from_gterm_to_dummy;
   std::vector<std::string> agents_ids;
