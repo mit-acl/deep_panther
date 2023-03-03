@@ -61,6 +61,7 @@ PYBIND11_MODULE(py_panther, m)
       .def(py::init<>())  /////////////////////////
       // This part below should be copied/pasted from parameters of panther_types.hpp
       // clang-format off
+      .def_readwrite("prob_choose_cross", &mt::parameters::prob_choose_cross)                          
       .def_readwrite("dist_from_gterm_to_dummy", &mt::parameters::dist_from_gterm_to_dummy)                          
       .def_readwrite("yaw_scaling", &mt::parameters::yaw_scaling)                          
       .def_readwrite("agents_ids", &mt::parameters::agents_ids)                          

@@ -14,6 +14,7 @@ use_expert: true
 use_student: false
 use_closed_form_yaw_student: false #If false, the NN will predict this closed form for the yaw angle
 make_yaw_NN: false
+prob_choose_cross: 0.6 # how much you wanna choose cross obstacle in training [0.1]
 
 # FOV setting
 #############################################

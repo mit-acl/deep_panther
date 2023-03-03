@@ -332,8 +332,9 @@ class MyEnvironment(gym.Env):
 
       self.obsm.newRandomPos();
 
-      prob_choose_cross=1.0;
-      if np.random.uniform(0, 1) < 1 - prob_choose_cross:
+      # prob_choose_cross=0.6
+
+      if np.random.uniform(0, 1) < 1 - self.par.prob_choose_cross:
         self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos);
         # self.gm.newRandomPos();
       else:
