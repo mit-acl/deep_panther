@@ -1116,6 +1116,9 @@ class ClosedFormYawSubstituter():
 		return f_action_n
 
 
+##
+## StudentCaller().predict() is called in panther.cpp
+##
 
 class StudentCaller():
 	def __init__(self, policy_path):
@@ -1125,7 +1128,7 @@ class StudentCaller():
 		self.am=ActionManager();
 		self.cc=CostComputer();
 		self.cfys=ClosedFormYawSubstituter();
-
+		self.yaw_scaling = getPANTHERparamsAsCppStruct().yaw_scaling
 		# self.index_smallest_augmented_cost = 0
 		# self.index_best_safe_traj = None
 		# self.index_best_unsafe_traj = None
@@ -1163,7 +1166,10 @@ class StudentCaller():
 		end = time.time()
 		print(f" Calling the NN + Closed form yaw took {(end - start)*(1e3)} ms")
 
-		action=self.am.denormalizeAction(action_normalized)
+		action=self.am.denormalizeAction(action_normalized)\
+
+		# scale back down the acts_student
+		action[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts] = action[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts]/self.yaw_scaling
 
 		# print("action.shape= ", action.shape)
 		# print("action=", action)   
