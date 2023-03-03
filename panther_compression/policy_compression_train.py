@@ -76,7 +76,7 @@ if __name__ == "__main__":
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
 
-    parser.add_argument("--n_rounds", default=5000, type=int) 
+    parser.add_argument("--n_rounds", default=500, type=int) 
     parser.add_argument("--total_demos_per_round", default=256*5, type=int) 
     parser.add_argument("--train_environment_max_steps", default=10, type=int)
     parser.add_argument("--rampdown_rounds", default=1, type=int) # Dagger properties
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     only_collect_data=False
 
     # when you want to train student only from existing data
-    train_only_supervised=True
+    train_only_supervised=False
 
     # use the existing data?
     reuse_previous_samples=True
