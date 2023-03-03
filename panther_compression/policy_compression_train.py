@@ -110,19 +110,27 @@ if __name__ == "__main__":
     printInBoldRed(f"epsilon_RWTA={args.epsilon_RWTA}")
 
 
-    # print(f"only_test_loss={args.only_test_loss}")
-    # exit();
-    
+    ##
+    ## Parameters
+    ##
+
+    # when you want to collect data and not train student
     only_collect_data=False
 
-    train_only_supervised=False
+    # when you want to train student only from existing data
+    train_only_supervised=True
+
+    # use the existing data?
     reuse_previous_samples=True
+
+    # reuse the latest_policy?
+    reuse_latest_policy=False
 
     record_bag=True
     launch_tensorboard=True
     verbose_python_errors=False
     batch_size = 256
-    N_EPOCHS = 250           #WAS 50!! Num epochs for training.
+    N_EPOCHS = 50           #WAS 50!! Num epochs for training.
     lr=1e-3
     weight_prob=0.005
     num_envs = 16
@@ -166,7 +174,7 @@ if __name__ == "__main__":
     if(args.train_environment_max_steps>1 and only_collect_data==True):
         printInBoldRed("Note that DAgger will not be used (since we are only collecting data)")
 
-    if(args.only_test_loss==False):
+    if(args.only_test_loss==False and reuse_latest_policy == False):
         os.system("find "+args.policy_dir+" -type f -name '*.pt' -delete") #Delete the policies
     os.system("rm -rf "+args.log_dir) #Delete the logs
 
@@ -290,11 +298,12 @@ if __name__ == "__main__":
 
         printInBoldBlue("---------------- Making Learner Policy: -------------------")
         # Create learner policy
-        if args.on_policy_trainer: 
-            trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA, net_arch=args.net_arch) 
-        else: 
-            trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA)
+        # if args.on_policy_trainer: 
+        #     trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA, net_arch=args.net_arch) 
+        # else: 
+        #     trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA)
 
+        trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA, net_arch=args.net_arch, reuse_latest_policy=reuse_latest_policy) 
 
 
 

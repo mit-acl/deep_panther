@@ -1,6 +1,7 @@
 import gym
 import os
 import pandas as pd
+import glob
 from imitation.algorithms import bc, dagger
 from imitation.data import types, rollout
 from imitation.data.rollout import generate_trajectories, rollout_stats
@@ -8,17 +9,22 @@ from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
 from compression.utils.other import ExpertDidntSucceed, ActionManager
 
-def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, expert_policy, type_loss, net_arch, only_test_loss=False, epsilon_RWTA=0.05):
+def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, expert_policy, type_loss, net_arch, only_test_loss=False, epsilon_RWTA=0.05, reuse_latest_policy=True):
     beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
 
     am=ActionManager()
+
+    if reuse_latest_policy:
+        policy = get_latest_policy()
+    else:
+        policy = StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space, net_arch=net_arch)
 
     bc_trainer = bc.BC(
         observation_space=venv.observation_space,
         action_space=venv.action_space,
         optimizer_kwargs=dict(lr=lr),
         custom_logger=custom_logger,
-        policy=StudentPolicy(observation_space=venv.observation_space, action_space=venv.action_space, net_arch=net_arch),
+        policy=policy,
         batch_size=batch_size,
         traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
         traj_size_yaw_ctrl_pts=am.traj_size_yaw_ctrl_pts,
@@ -99,6 +105,23 @@ def make_bc_trainer(tmpdir, venv, custom_logger, lr, batch_size, weight_prob, ty
         bc_trainer=bc_trainer,
         custom_logger=custom_logger,
     )
+
+def get_latest_policy():
+
+    # get list of files that matches pattern
+    dir_path = os.getcwd()+'/evals/tmp_dagger/2'
+    files = [(os.path.join(dir_path, file), os.path.getmtime(os.path.join(dir_path, file))) for file in os.listdir(dir_path) if file.endswith('.pt')]
+
+    # sort by modified time
+    # files.sort(key=lambda x: os.path.getmtime(x[1]))
+    files_sorted = sorted(files, key=lambda x: x[1])
+
+    # get last item in list
+    lastfile = files_sorted[-1]
+
+    print("latest file: ", lastfile[0])
+
+    return bc.reconstruct_policy(lastfile[0])
 
 #Trainer is the student
 # def train(trainer, expert, seed, n_traj_per_round, n_epochs, log_path, save_full_policy_path, use_only_last_coll_ds, only_collect_data):

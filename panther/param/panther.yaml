@@ -10,8 +10,8 @@ replanning_trigger_time_student: 0.01 #[seconds]
 replanning_trigger_time_expert: 0.5 #[seconds] 
 replanning_lookahead_time: 0.1 #[seconds] #distance in time space = t_in - t_1 in Table I
 max_runtime_octopus_search: 0.5 #[seconds]
-use_expert: true
-use_student: false
+use_expert: false
+use_student: true
 use_closed_form_yaw_student: false #If false, the NN will predict this closed form for the yaw angle
 make_yaw_NN: false
 prob_choose_cross: 0.6 # how much you wanna choose cross obstacle in training [0.1]
