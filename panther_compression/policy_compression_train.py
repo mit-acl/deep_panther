@@ -121,7 +121,7 @@ if __name__ == "__main__":
     train_only_supervised=False
 
     # use the existing data?
-    reuse_previous_samples=True
+    reuse_previous_samples=False
 
     # reuse the latest_policy?
     reuse_latest_policy=False
