@@ -335,8 +335,8 @@ class MyEnvironment(gym.Env):
       # prob_choose_cross=0.6
 
       if np.random.uniform(0, 1) < 1 - self.par.prob_choose_cross:
-        # self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos); # this will set goal away from the starting point
-        self.gm.newRandomPos();
+        self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos); # this will set goal away from the starting point
+        # self.gm.newRandomPos();
       else:
         w_pos_obstacle, w_pos_g_term = getObsAndGtermToCrossPath();
         self.obsm.setPos(w_pos_obstacle)
