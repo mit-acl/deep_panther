@@ -35,7 +35,7 @@ use_delaycheck: false
 ### You first need to generate panther_compute_cost.casadi by running main.m with 
 ### optimize_n_planes=false, optimize_d_planes=false, and optimize_time_alloc=false. (which is now done by use_panther_star=false)
 ### Don't forget to change the compute_cost.save() line from compute_cost.casadi to panther_compute_cost.casadi
-use_panther_star: false # read the comment above
+use_panther_star: true # read the comment above
 obstacle_edge_cb_duration: 1.0 #seconds
 look_teammates: false
 yaw_scaling: 2000.0
@@ -50,7 +50,7 @@ use_obstacle_shareCB: false # if it's False and use_obstacle_share is True, then
 agents_ids: ["01", "02", "03", "04", "05"]
 use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
 goal_radius: 0.3   #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
-drone_bbox: [0.25, 0.25, 0.25]  #(m) Used for collision checking
+drone_bbox: [0.1, 0.1, 0.1]  #(m) Used for collision checking
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
 # flight space size
@@ -64,7 +64,7 @@ ydot_max: 1.0           # [rd/s] Maximum angular velocity. 0.4 for Hardware
 v_max: [2.5, 2.5, 2.5]   #[m/s]  7.0
 a_max: [5.5, 5.5, 5.5]   #[m/s2] Note that if a_max.z() > 9.81, the drone may flip
 j_max: [30.0, 30.0, 30.0]   #[m/s3] 
-factor_alpha: 2.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
+factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
 max_seconds_keeping_traj: 30.0     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
 gamma: 0.1 #[seconds] >0 Time step between discretization points
 use_expert: false
@@ -95,7 +95,7 @@ c_visibility_yaw_search: 1.0  #weight for the yaw search
 c_maxydot_yaw_search: 0.0     #weight for the yaw search
 c_pos_smooth: 0.0003           #weight for the optimization
 c_yaw_smooth: 0.0            #weight for the optimization
-c_fov: 1000.0                 #weight for the optimization
+c_fov: 10000.0                 #weight for the optimization
 c_final_pos: 100.0           #weight for the optimization
 c_final_yaw: 0.01              #weight for the optimization
 c_total_time: 80             #weight for the optimization
