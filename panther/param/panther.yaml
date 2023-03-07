@@ -13,6 +13,7 @@ max_runtime_octopus_search: 0.5 #[seconds]
 use_closed_form_yaw_student: false #If false, the NN will predict this closed form for the yaw angle
 make_yaw_NN: false
 prob_choose_cross: 0.1 # how much you wanna choose cross obstacle in training [0.1]
+use_lstm: True
 
 # FOV setting
 #############################################
@@ -95,7 +96,7 @@ c_visibility_yaw_search: 1.0  #weight for the yaw search
 c_maxydot_yaw_search: 0.0     #weight for the yaw search
 c_pos_smooth: 0.0003           #weight for the optimization
 c_yaw_smooth: 0.0            #weight for the optimization
-c_fov: 10000.0                 #weight for the optimization
+c_fov: 1000.0                 #weight for the optimization
 c_final_pos: 100.0           #weight for the optimization
 c_final_yaw: 0.01              #weight for the optimization
 c_total_time: 80             #weight for the optimization

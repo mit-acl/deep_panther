@@ -806,6 +806,7 @@ struct parameters
 {
   //
   // clang-format off
+  bool            use_lstm;
   double          prob_choose_cross;
   bool            make_yaw_NN;
   double          yaw_scaling;

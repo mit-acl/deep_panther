@@ -14,7 +14,7 @@ from stable_baselines3.common.torch_layers import (
     create_mlp,
 )
 
-from compression.utils.other import ActionManager, ObservationManager
+from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct
 from colorama import init, Fore, Back, Style
 # CAP the standard deviation of the actor
 LOG_STD_MAX = 2
@@ -45,6 +45,7 @@ class StudentPolicy(BasePolicy):
         activation_fn: Type[nn.Module] = nn.ReLU,
         optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
         optimizer_kwargs: Optional[Dict[str, Any]] = None,
+        use_lstm: bool = False,
         
     ):
         if optimizer_kwargs is None:
@@ -68,16 +69,19 @@ class StudentPolicy(BasePolicy):
         self.net_arch = net_arch
         self.activation_fn = activation_fn
 
-
         self.name=Style.BRIGHT+Fore.WHITE+"  [Stu]"+Style.RESET_ALL
 
-
-        self.om=ObservationManager();
-        self.am=ActionManager();
+        self.om=ObservationManager()
+        self.am=ActionManager()
 
         self.features_dim=self.om.getObservationSize()
-
         print("features_dim= ", self.features_dim)
+        
+        self.use_lstm = use_lstm
+
+        self.agent_input_dim, self.lstm_input_dim = self.om.getAgentAndObstacleObservationSize()
+
+        self.lstm_output_dim = 10 # this is an arbitray dimension of vector h. TODO: expose this
 
         action_dim = get_action_dim(self.action_space)
 
@@ -87,11 +91,22 @@ class StudentPolicy(BasePolicy):
 
         ####
 
-        latent_pi_net = create_mlp(self.features_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
-        self.latent_pi = nn.Sequential(*latent_pi_net)
-        last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
+        if self.use_lstm:
 
+            # latent_pi_net = create_lstm_mlp(self.features_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
+            # self.latent_pi = nn.Sequential(*latent_pi_net)
+            # last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
 
+            self.lstm = nn.LSTM(self.lstm_input_dim, self.lstm_output_dim)
+            latent_pi_net = create_mlp(self.agent_input_dim+self.lstm_output_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
+            self.latent_pi = nn.Sequential(*latent_pi_net)
+            last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
+
+        else: # if not using LSTM
+
+            latent_pi_net = create_mlp(self.features_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
+            self.latent_pi = nn.Sequential(*latent_pi_net)
+            last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
 
         print(f"self.net_arch={self.net_arch}") #This is a list containing the number of neurons in each layer (excluding input and output)
         #features_dim is the number of inputs (i.e., the number of input layers)
@@ -127,9 +142,47 @@ class StudentPolicy(BasePolicy):
         :return:
             Mean, standard deviation and optional keyword arguments.
         """
-        features = self.extract_features(obs_n)
-        latent_pi = self.latent_pi(features)
-        mean_actions = self.mu(latent_pi)
+
+        if self.use_lstm:
+
+            ##
+            ## get features
+            ##
+
+            features = self.extract_features(obs_n)
+            
+            ##
+            ## devide features into agent and obst
+            ##
+
+            agent_features = features[None, 0, :self.om.observation_size - 33] # TODO: pass # obstacles and change 30 #None is for keeping the same dimension
+            obst_features = features[None, 0, self.om.observation_size - 33:] # TODO: pass # obstacles and change 30
+            
+
+            ##
+            ## LSTM layer
+            ##
+
+            lstm_out, _ = self.lstm(obst_features)
+            
+            ##
+            ## FC layers
+            ##
+
+            lstm_out_cat = th.cat((agent_features[0], lstm_out[-1])) #agent[0] for dimension match, lstm_out[-1] because we only need the last output from LSTM.
+            latent_pi = self.latent_pi(lstm_out_cat[None,:]) #lstm_out_cat[None,:] -- None is added for dimension match
+            
+            ##
+            ## Last layer
+            ##
+
+            mean_actions = self.mu(latent_pi)
+
+        else: # if not using LSTM
+
+            features = self.extract_features(obs_n)
+            latent_pi = self.latent_pi(features)
+            mean_actions = self.mu(latent_pi)
 
         log_std = self.log_std(latent_pi)
         log_std = th.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
@@ -139,7 +192,6 @@ class StudentPolicy(BasePolicy):
         mean_actions, log_std, kwargs = self.get_action_dist_params(obs_n)
         # Note: the action is squashed
         output=self.action_dist.actions_from_params(mean_actions, log_std, deterministic=deterministic, **kwargs);
-
 
         # self.printwithName(f"In forward, output before reshaping={output.shape}")
         before_shape=list(output.shape)
@@ -200,4 +252,57 @@ class StudentPolicy(BasePolicy):
     # def predictAndDenormalize(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
     #     action =self._predict(observation, deterministic)
     #     return self.am.denormalizeAction(action)
-        
+    
+    # def create_lstm_mlp(
+    #     lstm_input_dim: int,
+    #     lstm_output_dim: int,
+    #     mlp_input_dim: int,
+    #     mlp_output_dim: int,
+    #     mlp_net_arch: List[int],
+    #     activation_fn: Type[nn.Module] = nn.ReLU,
+    #     squash_output: bool = False,
+    #     with_bias: bool = True,
+    # ) -> List[nn.Module]:
+    #     """
+    #     refered to https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/torch_layers.py
+
+    #     Create a LSTM layer followd by multi layer perceptron (MLP), which is
+    #     a collection of fully-connected layers each followed by an activation function.
+
+    #     Note that Agent current state goes into MLP, but observations first go into LSTM, and then it will generates a fixed
+    #     size vector, h, which will then go into MLP together with the agent current state
+
+    #     :param lstm_input_dim: Dimension of the input vector
+    #     :param lstm_output_dim:
+    #     :param mlp_input_dim: this is equal to agent's state dim + lstm_output_dim
+    #     :param mlp_output_dim:
+    #     :param mlp_net_arch: Architecture of the neural net
+    #     :param activation_fn: The activation function to use after each layer.
+    #     :param squash_output: Whether to squash the output using a Tanh
+    #         activation function
+    #     :param with_bias: If set to False, the layers will not learn an additive bias
+    #     :return:
+    #     """
+
+    #     ##
+    #     ## lstm layer
+    #     ##
+
+    #     modules = [nn.LSTM(lstm_input_dim, lstm_output_dim, bias=with_bias), activation_fn()]
+
+    #     ##
+    #     ## FC
+    #     ##
+
+    #     modules.append(nn.Linear(mlp_input_dim, net_arch[0], bias=with_bias))
+
+    #     for idx in range(len(mlp_net_arch) - 1):
+    #         modules.append(nn.Linear(mlp_net_arch[idx], mlp_net_arch[idx + 1], bias=with_bias))
+    #         modules.append(activation_fn())
+
+    #     last_layer_dim = mlp_net_arch[-1] if len(mlp_net_arch) > 0 else input_dim
+    #     modules.append(nn.Linear(last_layer_dim, output_dim, bias=with_bias))
+
+    #     if squash_output:
+    #         modules.append(nn.Tanh())
+    #     return modules

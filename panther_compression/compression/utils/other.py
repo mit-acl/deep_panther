@@ -214,6 +214,7 @@ class GTermManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
+
 		self.w_gterm = np.array([
 			[random.uniform(-4.3 + 0.5, 4.8 - 0.5)],
 			[random.uniform(-3.5 + 0.5, 4.3 - 0.5)],
@@ -223,7 +224,7 @@ class GTermManager():
 
 	def newRandomPosFarFrom_w_Position(self, w_position):
 		dist=0.0
-		while dist<3.0: #Goal at least 3 meters away from the current position
+		while dist<0.1: #Goal at least 3 meters away from the current position
 			self.newRandomPos()
 			dist=np.linalg.norm(self.w_gterm-w_position)
 
@@ -271,7 +272,7 @@ class ObstaclesManager():
 		return self.num_obs
 
 	def getCPsPerObstacle(self):
-		return self.fitter_num_seg + self.fitter_deg_pos
+		return self.fitter_num_seg + self.fitter_deg_pos # 7 + 3
 
 	def getSizeAllObstacles(self):
 		#Size of the ctrl_pts + bbox
@@ -510,7 +511,7 @@ class ObservationManager():
 		#Observation =       [f_v, f_a, yaw_dot, f_g,  [f_ctrl_pts_o0], bbox_o0, [f_ctrl_pts_o1], bbox_o1 ,...]
 		#
 		# Where f_ctrl_pts_oi = [cp0.transpose(), cp1.transpose(), ...]
-		self.observation_size= 3 +  3 +   1    + 3   + self.obsm.getSizeAllObstacles();
+		self.observation_size= 3 +  3 +   1    + 3   + self.obsm.getSizeAllObstacles()
 
 		params=readPANTHERparams();
 		self.v_max=np.array(params["v_max"]).reshape(3,1);
@@ -687,6 +688,9 @@ class ObservationManager():
 
 	def getObservationSize(self):
 		return self.observation_size
+
+	def getAgentAndObstacleObservationSize(self):
+		return self.observation_size - self.obsm.getSizeAllObstacles(), self.obsm.getSizeAllObstacles() 
 
 	def getObservationShape(self):
 		return (1,self.observation_size)
