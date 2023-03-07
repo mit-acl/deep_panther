@@ -267,8 +267,18 @@ class ObstaclesManager():
 			[random.uniform(self.y_min, self.y_max)],
 			[random.uniform(self.z_min, self.z_max)]
 		]);
-		self.random_offset=random.uniform(0.0, 10*math.pi)
-		self.random_scale=np.array([[random.uniform(0.5, 3.0)],[random.uniform(0.5, 3.0)],[random.uniform(0.5, 3.0)]]);
+
+		##
+		## randomized params
+		##
+
+		# self.random_offset=random.uniform(0.0, 10*math.pi)
+		# self.random_scale=np.array([[random.uniform(0.5, 3.0)],[random.uniform(0.5, 3.0)],[random.uniform(0.5, 3.0)]]);
+		
+		##
+		## ideal params (got from sim_base_station.launch)
+		self.random_offset=0
+		self.random_scale=np.array([[2],[2],[2]])
 
 	def setPos(self, pos):
 		self.random_pos=pos
@@ -326,31 +336,24 @@ class ObstaclesManager():
 
 class Trefoil():
 	def __init__(self, pos, scale, offset, slower):
-		self.x=pos[0,0];
-		self.y=pos[1,0];
-		self.z=pos[2,0];
+		self.x=pos[0,0]
+		self.y=pos[1,0]
+		self.z=pos[2,0]
 		self.scale_x=scale[0,0]
 		self.scale_y=scale[1,0]
 		self.scale_z=scale[2,0]
-		self.offset=offset;
-		self.slower=slower;
+		self.offset=offset
+		self.slower=slower
+		#slower=1.0; #The higher, the slower the obstacles move" 
 
 	def getPosT(self,t):
-		#slower=1.0; #The higher, the slower the obstacles move" 
 		tt=t/self.slower;
 
 		x_trefoil=(self.scale_x/6.0)*(math.sin(tt+self.offset) + 2*math.sin(2*tt+self.offset)) + self.x
 		y_trefoil=(self.scale_y/5.0)*(math.cos(tt+self.offset) - 2*math.cos(2*tt+self.offset)) + self.y
 		z_trefoil=(self.scale_z/2.0)*(-math.sin(3*tt+self.offset)) + self.z
 
-		# x_trefoil=self.x
-		# y_trefoil=self.y
-		# z_trefoil=self.z
-
 		return np.array([[x_trefoil], [y_trefoil], [z_trefoil]])
-
-
-
 
 class State():
 	def __init__(self, w_pos, w_vel, w_accel, w_yaw, yaw_dot):

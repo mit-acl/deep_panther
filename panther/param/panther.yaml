@@ -56,7 +56,7 @@ use_delaycheck: false
 use_panther_star: true # read the comment above
 obstacle_edge_cb_duration: 1.0 #seconds
 look_teammates: false
-yaw_scaling: 2000.0
+yaw_scaling: 4000.0
 dist_from_gterm_to_dummy: 5.0 #[m]
 obstacle_share_cb_duration: 1.0 #seconds
 use_obstacle_share: true
@@ -68,7 +68,7 @@ use_obstacle_shareCB: false # if it's False and use_obstacle_share is True, then
 agents_ids: ["01", "02", "03", "04", "05"]
 use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
 goal_radius: 0.3   #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
-drone_bbox: [0.1, 0.1, 0.1]  #(m) Used for collision checking
+drone_bbox: [0.8, 0.8, 0.8]  #(m) Used for collision checking
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
 # flight space size
