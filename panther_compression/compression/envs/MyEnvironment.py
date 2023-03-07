@@ -176,9 +176,9 @@ class MyEnvironment(gym.Env):
     ##
 
     for i, (f_act, f_act_n) in enumerate(zip(f_action, f_action_n)):
-          print(f"total time {f_act[-1]}, so increase it up to 1e-3")
-          if f_act[-1] <= 0.0:
-            f_act[-1] = 1e-3
+      if f_act[-1] <= 0.0:
+        print(f"total time {f_act[-1]}, so increase it up to 1e-3")
+        f_act[-1] = 1e-3
 
     ##
     ## Choose the trajectory with smallest cost:
