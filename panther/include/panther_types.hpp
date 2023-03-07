@@ -806,6 +806,7 @@ struct parameters
 {
   //
   // clang-format off
+  bool            lstm_output_dim;
   double          training_obst_x_max;
   double          training_obst_x_min;
   double          training_obst_y_max;

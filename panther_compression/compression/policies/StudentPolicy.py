@@ -14,7 +14,7 @@ from stable_baselines3.common.torch_layers import (
     create_mlp,
 )
 
-from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct
+from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct, readPANTHERparams
 from colorama import init, Fore, Back, Style
 # CAP the standard deviation of the actor
 LOG_STD_MAX = 2
@@ -73,6 +73,7 @@ class StudentPolicy(BasePolicy):
 
         self.om=ObservationManager()
         self.am=ActionManager()
+        self.params = readPANTHERparams()
 
         self.features_dim=self.om.getObservationSize()
         print("features_dim= ", self.features_dim)
@@ -81,7 +82,10 @@ class StudentPolicy(BasePolicy):
 
         self.agent_input_dim, self.lstm_input_dim = self.om.getAgentAndObstacleObservationSize()
 
-        self.lstm_output_dim = 10 # this is an arbitray dimension of vector h. TODO: expose this
+        self.lstm_output_dim = self.params["lstm_output_dim"] # this is an arbitray dimension of vector h. TODO: expose this
+        print("use_lstm? ", self.use_lstm)
+        if self.use_lstm:
+            print("lstm_output_dim= ", self.lstm_output_dim)
 
         action_dim = get_action_dim(self.action_space)
 

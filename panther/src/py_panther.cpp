@@ -61,6 +61,8 @@ PYBIND11_MODULE(py_panther, m)
       .def(py::init<>())  /////////////////////////
       // This part below should be copied/pasted from parameters of panther_types.hpp
       // clang-format off
+
+      .def_readwrite("lstm_output_dim", &mt::parameters::lstm_output_dim)
       .def_readwrite("training_obst_x_max", &mt::parameters::training_obst_x_max)
       .def_readwrite("training_obst_x_min", &mt::parameters::training_obst_x_min)
       .def_readwrite("training_obst_y_max", &mt::parameters::training_obst_y_max)

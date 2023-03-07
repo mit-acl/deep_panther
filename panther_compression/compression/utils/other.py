@@ -259,7 +259,7 @@ class ObstaclesManager():
 		self.fitter_total_time=self.params["fitter_total_time"]
 		self.fitter_num_samples=self.params["fitter_num_samples"]
 		# self.fitter = py_panther.Fitter(self.fitter_num_samples)
-		self.newRandomPos();
+		self.newRandomPos()
 
 	def newRandomPos(self):
 		self.random_pos = np.array([
