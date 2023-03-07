@@ -3,7 +3,7 @@
 deg_pos: 3
 deg_yaw: 2
 num_seg: 6
-num_max_of_obst: 2
+num_max_of_obst: 1
 sampler_num_samples: 24
 fitter_num_samples: 20
 fitter_total_time: 6

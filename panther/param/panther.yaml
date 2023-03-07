@@ -29,7 +29,7 @@ max_dist2BSPoscPoint: 30.0
 # LSTM
 #############################################
 use_lstm: False # use LSTM?
-num_of_obstacles_in_training: 2 # this needs to be the same as num_max_of_obst defined in main.m
+num_of_obstacles_in_training: 1 # this needs to be the same as num_max_of_obst defined in main.m
 lstm_output_dim: 30
 
 # FOV setting
@@ -42,7 +42,7 @@ lstm_output_dim: 30
 # Depth: up to 10 [m]
 fov_x_deg: 76 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Horizontal FOV
 fov_y_deg: 47 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Vertical FOV
-fov_depth: 5.0 #[m]
+fov_depth: 10.0 #[m]
 
 # Primer Setting
 #############################################
@@ -67,7 +67,7 @@ use_obstacle_shareCB: false # if it's False and use_obstacle_share is True, then
 #############################################
 agents_ids: ["01", "02", "03", "04", "05"]
 use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
-goal_radius: 0.3   #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
+goal_radius: 1.0   #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
 drone_bbox: [0.1, 0.1, 0.1]  #(m) Used for collision checking
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
@@ -78,7 +78,7 @@ y_min: -100.0  # [m] don't forget the .0
 y_max: 100.0   # [m] don't forget the .0
 z_min: -100.0        #[m] points below this are considered ground
 z_max: 100.0         #[m] 
-ydot_max: 1.0           # [rd/s] Maximum angular velocity. 0.4 for Hardware
+ydot_max: 3.0           # [rd/s] Maximum angular velocity. 0.4 for Hardware
 v_max: [2.5, 2.5, 2.5]   #[m/s]  7.0
 a_max: [5.5, 5.5, 5.5]   #[m/s2] Note that if a_max.z() > 9.81, the drone may flip
 j_max: [30.0, 30.0, 30.0]   #[m/s3] 

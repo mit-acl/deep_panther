@@ -42,7 +42,7 @@ make_plots=false;
 deg_pos=3; %The degree of the position polynomial
 deg_yaw=2; %The degree of the yaw polynomial
 num_seg=6; %The number of segments in the trajectory (the more segments the less conservative the trajectory is [also makes optimization problem harder])
-num_max_of_obst=2; %This is the maximum num of the obstacles 
+num_max_of_obst=1; %This is the maximum num of the obstacles 
 
 %Constants for spline fitted to the obstacle trajectory
 fitter.deg_pos=3; %The degree of the fit past obstacle trajectory

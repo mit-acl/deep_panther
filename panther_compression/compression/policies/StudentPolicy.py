@@ -74,7 +74,7 @@ class StudentPolicy(BasePolicy):
         self.om=ObservationManager()
         self.am=ActionManager()
         self.obsm=ObstaclesManager()
-        self.params = readPANTHERparams()
+        par = getPANTHERparamsAsCppStruct()
 
         self.features_dim=self.om.getObservationSize()
         print("features_dim= ", self.features_dim)
@@ -84,7 +84,7 @@ class StudentPolicy(BasePolicy):
         self.agent_input_dim = self.om.getAgentObservationSize()
         self.lstm_each_obstacle_dim = self.obsm.getSizeEachObstacle()
 
-        self.lstm_output_dim = self.params["lstm_output_dim"]
+        self.lstm_output_dim = par.lstm_output_dim
         print("use_lstm? ", self.use_lstm)
         if self.use_lstm:
             print("lstm_output_dim= ", self.lstm_output_dim)
