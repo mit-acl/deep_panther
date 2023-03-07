@@ -809,7 +809,7 @@ class ActionManager():
 
 	def assertActionIsNormalized(self, action_normalized, msg_before=""):
 		if not self.actionIsNormalized(action_normalized):
-			print(msg_before+"The observation is not normalized")
+			print(msg_before+"The action is not normalized")
 			print(f"NORMALIZED VALUE={action_normalized}")
 			action=self.denormalizeAction(action_normalized)
 			print(f"VALUE={action}")

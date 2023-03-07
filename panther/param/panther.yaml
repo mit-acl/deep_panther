@@ -20,6 +20,11 @@ training_obst_y_max: 15.0
 training_obst_y_min: -15.0
 training_obst_z_max: 6.0 # note that agent initial pos_z = 1.0
 training_obst_z_min: -4.0 # it is important to have negative z since planning is in agent frame # note that agent initial pos_z = 1.0
+# used for normalizatoin
+max_dist2goal: 30.0
+max_dist2obs: 30.0
+max_side_bbox_obs: 2.0
+max_dist2BSPoscPoint: 30.0
 
 # LSTM
 #############################################
@@ -111,10 +116,6 @@ c_fov: 1000.0                 #weight for the optimization
 c_final_pos: 100.0           #weight for the optimization
 c_final_yaw: 0.01              #weight for the optimization
 c_total_time: 80             #weight for the optimization
-max_dist2goal: 20.0
-max_dist2obs: 20.0
-max_side_bbox_obs: 2.0
-max_dist2BSPoscPoint: 10.0
 lambda_obst_avoidance_violation: 1.0 #To compute the augmented cost
 lambda_dyn_lim_violation: 1.0 #To compute the augmented cost
 num_of_intervals: 6 #nlopt/num_pol in rmader.yaml (TODO: could be the same as num_seg in params_casadi.yaml)

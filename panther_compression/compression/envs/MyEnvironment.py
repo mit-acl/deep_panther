@@ -147,13 +147,12 @@ class MyEnvironment(gym.Env):
     self.am.assertAction(f_action_n)
     self.am.assertActionIsNormalized(f_action_n)
 
+    ##
+    ## USE CLOSED FORM FOR YAW
+    ##
 
-    #################################
-    #### USE CLOSED FORM FOR YAW #####
     if(self.par.use_closed_form_yaw_student==True):
       f_action_n=self.cfys.substituteWithClosedFormYaw(f_action_n, self.w_state, self.w_obstacles) #f_action_n, w_init_state, w_obstacles
-    ##################################
-
 
     ### to have bigger loss, we magnified yaw actions (look at bc.py's expert_yaw_i assignment)
     ### before convert actions to B-spline, we need to revert this change
@@ -171,25 +170,19 @@ class MyEnvironment(gym.Env):
     # self.am.printAction(f_action)
     ####################################
 
-    #Choose the trajectory with smallest cost:
 
-    # print("f_action_n", f_action_n)
-    # print("f_action", f_action)
-
-    # f_action_tmp = f_action.copy()
-    # f_action_n_tmp = f_action_n.copy()
+    ##
+    ##  if total time that student produced is 0.0, BS function gives you an error so let's just make it bigger than 0
+    ##
 
     for i, (f_act, f_act_n) in enumerate(zip(f_action, f_action_n)):
-          # print(f"total time {f_act[-1]}")
+          print(f"total time {f_act[-1]}, so increase it up to 1e-3")
           if f_act[-1] <= 0.0:
-            f_act[-1] = 1e-3; # if total time that student produced is 0.0, BS function gives you an error so let's just make it bigger than 0
-          # if True:
-          #   del f_action_n_tmp[i,:]
-          #   del f_action_tmp[i,:]
-            # exit(0)
+            f_act[-1] = 1e-3
 
-    # f_action_n = f_action_n_tmp.copy()
-    # f_action = f_action_tmp.copy()
+    ##
+    ## Choose the trajectory with smallest cost:
+    ##
 
     index_smallest_augmented_cost=self.cost_computer.getIndexBestTraj(self.previous_f_obs_n, f_action_n)
 
