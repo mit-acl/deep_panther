@@ -61,6 +61,12 @@ PYBIND11_MODULE(py_panther, m)
       .def(py::init<>())  /////////////////////////
       // This part below should be copied/pasted from parameters of panther_types.hpp
       // clang-format off
+      .def_readwrite("training_obst_x_max", &mt::parameters::training_obst_x_max)
+      .def_readwrite("training_obst_x_min", &mt::parameters::training_obst_x_min)
+      .def_readwrite("training_obst_y_max", &mt::parameters::training_obst_y_max)
+      .def_readwrite("training_obst_y_min", &mt::parameters::training_obst_y_min)
+      .def_readwrite("training_obst_z_max", &mt::parameters::training_obst_z_max)
+      .def_readwrite("training_obst_z_min", &mt::parameters::training_obst_z_min)
       .def_readwrite("use_lstm", &mt::parameters::use_lstm)
       .def_readwrite("prob_choose_cross", &mt::parameters::prob_choose_cross)                          
       .def_readwrite("dist_from_gterm_to_dummy", &mt::parameters::dist_from_gterm_to_dummy)                          

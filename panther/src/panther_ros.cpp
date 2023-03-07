@@ -66,6 +66,12 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   ROS_INFO("Found transform %s --> %s", name_drone_.c_str(), name_camera_depth_optical_frame_tf_.c_str());
   // std::cout << "par_.b_T_c.matrix()= " << par_.b_T_c.matrix() << std::endl;
 
+  safeGetParam(nh1_, "training_obst_x_max", par_.training_obst_x_max);
+  safeGetParam(nh1_, "training_obst_x_min", par_.training_obst_x_min);
+  safeGetParam(nh1_, "training_obst_y_max", par_.training_obst_y_max);
+  safeGetParam(nh1_, "training_obst_y_min", par_.training_obst_y_min);
+  safeGetParam(nh1_, "training_obst_z_max", par_.training_obst_z_max);
+  safeGetParam(nh1_, "training_obst_z_min", par_.training_obst_z_min);
   safeGetParam(nh1_, "use_lstm", par_.use_lstm);
   safeGetParam(nh1_, "is_multiagent", par_.is_multiagent);
   safeGetParam(nh1_, "use_delaycheck", par_.use_delaycheck);

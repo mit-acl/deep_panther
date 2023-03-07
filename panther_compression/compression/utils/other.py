@@ -11,24 +11,16 @@ import random
 import pytest
 import time
 import sys
-
 import numpy.matlib
-
-########
 import torch as th
 from stable_baselines3.common import utils
-########
-
-#######
 import geometry_msgs.msg
 import tf.transformations 
 # from geometry_msgs.msg import PointStamped, TransformStamped, PoseStamped, Vector3, Quaternion, Pose
-#######
-
-###
 from joblib import Parallel, delayed
 import multiprocessing
-##
+
+
 
 
 class ExpertDidntSucceed(Exception):
@@ -211,14 +203,21 @@ def getObsAndGtermToCrossPath():
 
 class GTermManager():
 	def __init__(self):
-		self.newRandomPos();
+		self.params = readPANTHERparams()
+		self.x_max = self.params["training_obst_x_max"]
+		self.x_min = self.params["training_obst_x_min"]
+		self.y_max = self.params["training_obst_y_max"]
+		self.y_min = self.params["training_obst_y_min"]
+		self.z_max = self.params["training_obst_z_max"]
+		self.z_min = self.params["training_obst_z_min"]
+		self.newRandomPos()
 
 	def newRandomPos(self):
 
 		self.w_gterm = np.array([
-			[random.uniform(-4.3 + 0.5, 4.8 - 0.5)],
-			[random.uniform(-3.5 + 0.5, 4.3 - 0.5)],
-			[random.uniform(0.8 + 0.2, 3.5 - 0.2)]
+			[random.uniform(self.x_min, self.x_max)],
+			[random.uniform(self.y_min, self.y_max)],
+			[random.uniform(self.z_min, self.z_max)]
 		]);
 		# self.w_gterm=np.array([[2.0],[0.0],[1.0]]);
 
@@ -242,24 +241,31 @@ class ObstaclesManager():
     #Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
     #Note that pickle is needed when saving the Student Policy (which has a ObservationManager, which has a ObstaclesManager, which has a Fitter )
 	params=readPANTHERparams()
-	fitter = py_panther.Fitter(params["fitter_num_samples"]);
+	fitter = py_panther.Fitter(params["fitter_num_samples"])
 
 	def __init__(self):
 		self.num_obs=1;
-		self.params=readPANTHERparams();
-		# self.fitter_total_time=params["fitter_total_time"];
-		self.fitter_num_seg=self.params["fitter_num_seg"];
-		self.fitter_deg_pos=self.params["fitter_deg_pos"];
-		self.fitter_total_time=self.params["fitter_total_time"];
-		self.fitter_num_samples=self.params["fitter_num_samples"];
-		# self.fitter = py_panther.Fitter(self.fitter_num_samples);
+		self.params = readPANTHERparams()
+		self.x_max = self.params["training_obst_x_max"]
+		self.x_min = self.params["training_obst_x_min"]
+		self.y_max = self.params["training_obst_y_max"]
+		self.y_min = self.params["training_obst_y_min"]
+		self.z_max = self.params["training_obst_z_max"]
+		self.z_min = self.params["training_obst_z_min"]
+
+		# self.fitter_total_time=params["fitter_total_time"]s
+		self.fitter_num_seg=self.params["fitter_num_seg"]
+		self.fitter_deg_pos=self.params["fitter_deg_pos"]
+		self.fitter_total_time=self.params["fitter_total_time"]
+		self.fitter_num_samples=self.params["fitter_num_samples"]
+		# self.fitter = py_panther.Fitter(self.fitter_num_samples)
 		self.newRandomPos();
 
 	def newRandomPos(self):
 		self.random_pos = np.array([
-			[random.uniform(-4.3 + 0.5, 4.8 - 0.5)],
-			[random.uniform(-3.5 + 0.5, 4.3 - 0.5)],
-			[random.uniform(0.8 + 0.2, 3.5 - 0.2)]
+			[random.uniform(self.x_min, self.x_max)],
+			[random.uniform(self.y_min, self.y_max)],
+			[random.uniform(self.z_min, self.z_max)]
 		]);
 		self.random_offset=random.uniform(0.0, 10*math.pi)
 		self.random_scale=np.array([[random.uniform(0.5, 3.0)],[random.uniform(0.5, 3.0)],[random.uniform(0.5, 3.0)]]);

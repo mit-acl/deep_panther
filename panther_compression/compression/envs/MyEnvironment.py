@@ -68,7 +68,7 @@ class MyEnvironment(gym.Env):
     ######
     self.par=getPANTHERparamsAsCppStruct();
     # self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
-    #######
+    ######
     print("Creating new environment!")
 
     self.constant_obstacle_pos=None

@@ -806,6 +806,12 @@ struct parameters
 {
   //
   // clang-format off
+  double          training_obst_x_max;
+  double          training_obst_x_min;
+  double          training_obst_y_max;
+  double          training_obst_y_min;
+  double          training_obst_z_max;
+  double          training_obst_z_min;
   bool            use_lstm;
   double          prob_choose_cross;
   bool            make_yaw_NN;
