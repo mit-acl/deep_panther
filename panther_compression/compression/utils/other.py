@@ -244,8 +244,8 @@ class ObstaclesManager():
 	fitter = py_panther.Fitter(params["fitter_num_samples"])
 
 	def __init__(self):
-		self.num_obs=1;
 		self.params = readPANTHERparams()
+		self.num_obs = self.params["num_of_obstacles_in_training"]
 		self.x_max = self.params["training_obst_x_max"]
 		self.x_min = self.params["training_obst_x_min"]
 		self.y_max = self.params["training_obst_y_max"]
@@ -269,7 +269,6 @@ class ObstaclesManager():
 		]);
 		self.random_offset=random.uniform(0.0, 10*math.pi)
 		self.random_scale=np.array([[random.uniform(0.5, 3.0)],[random.uniform(0.5, 3.0)],[random.uniform(0.5, 3.0)]]);
-		#self.random_pos=np.array([[2.5],[1.0],[1.0]]);
 
 	def setPos(self, pos):
 		self.random_pos=pos
@@ -282,11 +281,15 @@ class ObstaclesManager():
 
 	def getSizeAllObstacles(self):
 		#Size of the ctrl_pts + bbox
-		return self.num_obs*(3*self.getCPsPerObstacle() + 3) 
+		return self.num_obs*(3*self.getCPsPerObstacle() + 3)
+
+	def getSizeEachObstacle(self):
+		return 3*self.getCPsPerObstacle() + 3
 
 	def getFutureWPosStaticObstacles(self):
 		w_obs=[];
 		for i in range(self.num_obs):
+			self.newRandomPos()
 			w_ctrl_pts_ob=np.array([[],[],[]]);
 			for j in range(self.fitter_num_seg + self.fitter_deg_pos):
 				w_ctrl_pts_ob=np.concatenate((w_ctrl_pts_ob, self.random_pos), axis=1)
@@ -308,17 +311,15 @@ class ObstaclesManager():
 		# self.random_scale=np.zeros((3,1))
 		####################################
 
-		trefoil=Trefoil(pos=self.random_pos, scale=self.random_scale, offset=self.random_offset, slower=1.5);
 		for i in range(self.num_obs):
-
+			self.newRandomPos()
+			trefoil=Trefoil(pos=self.random_pos, scale=self.random_scale, offset=self.random_offset, slower=1.5);
 			samples=[]
 			for t_interm in np.linspace(t, t + self.fitter_total_time, num=self.fitter_num_samples):#.tolist():
 				samples.append(trefoil.getPosT(t_interm))
 
 			w_ctrl_pts_ob_list=ObstaclesManager.fitter.fit(samples)
-
 			w_ctrl_pts_ob=listOf3dVectors2numpy3Xmatrix(w_ctrl_pts_ob_list)
-
 			bbox_inflated=np.array(self.params["drone_bbox"])
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 		return w_obs;
@@ -513,11 +514,11 @@ def wrapInmPiPi(data): #https://stackoverflow.com/a/15927914
 
 class ObservationManager():
 	def __init__(self):
-		self.obsm=ObstaclesManager();
-		#Observation =       [f_v, f_a, yaw_dot, f_g,  [f_ctrl_pts_o0], bbox_o0, [f_ctrl_pts_o1], bbox_o1 ,...]
-		#
+		self.obsm=ObstaclesManager()
+		
+		#Observation = [f_v, f_a, yaw_dot, f_g,  [f_ctrl_pts_o0], bbox_o0, [f_ctrl_pts_o1], bbox_o1 ,...]
 		# Where f_ctrl_pts_oi = [cp0.transpose(), cp1.transpose(), ...]
-		self.observation_size= 3 +  3 +   1    + 3   + self.obsm.getSizeAllObstacles()
+		self.observation_size= 3 + 3 + 1 + 3 + self.obsm.getSizeAllObstacles()
 
 		params=readPANTHERparams();
 		self.v_max=np.array(params["v_max"]).reshape(3,1);
@@ -528,6 +529,7 @@ class ObservationManager():
 		self.max_dist2obs=params["max_dist2obs"];
 		self.max_side_bbox_obs=params["max_side_bbox_obs"];
 		self.Ra=params["Ra"]
+		self.num_max_of_obst = params["num_max_of_obst"] # from casadi
 		ones13=np.ones((1,3));
 		#Note that the sqrt(3) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
 		margin_v=math.sqrt(3) #math.sqrt(3)
@@ -647,6 +649,23 @@ class ObservationManager():
 
 		return obstacles
 
+	def getObstaclesForCasadi(self, obs):
+
+		obstacles=[]
+		for i in range(self.num_max_of_obst): # num_max_of_obst is Casadi
+
+			ctrl_pts=self.getCtrlPtsObstacleI(obs,i) 
+			bbox_inflated=self.getBboxInflatedObstacleI(obs,i)
+
+			obstacle=py_panther.obstacleForOpt()
+
+			obstacle.ctrl_pts=ctrl_pts
+			obstacle.bbox_inflated=bbox_inflated
+
+			obstacles.append(obstacle)
+
+		return obstacles
+
 	def getInit_f_StateFromObservation(self, obs):
 		init_state=py_panther.state();  #Everything initialized as zero
 		init_state.pos= np.array([[0.0],[0.0],[0.0]]);#Because it's in f frame
@@ -695,8 +714,8 @@ class ObservationManager():
 	def getObservationSize(self):
 		return self.observation_size
 
-	def getAgentAndObstacleObservationSize(self):
-		return self.observation_size - self.obsm.getSizeAllObstacles(), self.obsm.getSizeAllObstacles() 
+	def getAgentObservationSize(self):
+		return self.observation_size - self.obsm.getSizeAllObstacles()
 
 	def getObservationShape(self):
 		return (1,self.observation_size)
@@ -800,7 +819,6 @@ class ActionManager():
 													self.max_yawcPoint*np.ones((1, self.traj_size_yaw_ctrl_pts))), axis=1)
 
 		self.normalization_constant=np.matlib.repmat(self.normalization_constant_traj, self.num_traj_per_action, 1)
-
 
 	def actionIsNormalized(self, action_normalized):
 		assert action_normalized.shape == self.getActionShape()
@@ -1266,8 +1284,6 @@ class CostComputer():
 		# self.par=getPANTHERparamsAsCppStruct();
 
 		self.num_obstacles=CostComputer.obsm.getNumObs()
-
-		
 
 	def setUpSolverIpoptAndGetppSolOrGuess(self, f_obs_n, f_traj_n):
 

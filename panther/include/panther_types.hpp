@@ -806,6 +806,7 @@ struct parameters
 {
   //
   // clang-format off
+  int             num_of_obstacles_in_training;
   bool            lstm_output_dim;
   double          training_obst_x_max;
   double          training_obst_x_min;

@@ -14,7 +14,7 @@ from stable_baselines3.common.torch_layers import (
     create_mlp,
 )
 
-from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct, readPANTHERparams
+from compression.utils.other import ActionManager, ObservationManager, ObstaclesManager, getPANTHERparamsAsCppStruct, readPANTHERparams
 from colorama import init, Fore, Back, Style
 # CAP the standard deviation of the actor
 LOG_STD_MAX = 2
@@ -73,6 +73,7 @@ class StudentPolicy(BasePolicy):
 
         self.om=ObservationManager()
         self.am=ActionManager()
+        self.obsm=ObstaclesManager()
         self.params = readPANTHERparams()
 
         self.features_dim=self.om.getObservationSize()
@@ -80,9 +81,10 @@ class StudentPolicy(BasePolicy):
         
         self.use_lstm = use_lstm
 
-        self.agent_input_dim, self.lstm_input_dim = self.om.getAgentAndObstacleObservationSize()
+        self.agent_input_dim = self.om.getAgentObservationSize()
+        self.lstm_each_obstacle_dim = self.obsm.getSizeEachObstacle()
 
-        self.lstm_output_dim = self.params["lstm_output_dim"] # this is an arbitray dimension of vector h. TODO: expose this
+        self.lstm_output_dim = self.params["lstm_output_dim"]
         print("use_lstm? ", self.use_lstm)
         if self.use_lstm:
             print("lstm_output_dim= ", self.lstm_output_dim)
@@ -101,7 +103,7 @@ class StudentPolicy(BasePolicy):
             # self.latent_pi = nn.Sequential(*latent_pi_net)
             # last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
 
-            self.lstm = nn.LSTM(self.lstm_input_dim, self.lstm_output_dim)
+            self.lstm = nn.LSTM(self.lstm_each_obstacle_dim, self.lstm_output_dim)
             latent_pi_net = create_mlp(self.agent_input_dim+self.lstm_output_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
             self.latent_pi = nn.Sequential(*latent_pi_net)
             last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
@@ -149,6 +151,8 @@ class StudentPolicy(BasePolicy):
 
         if self.use_lstm:
 
+            print("using LSTM")
+
             ##
             ## get features
             ##
@@ -156,19 +160,20 @@ class StudentPolicy(BasePolicy):
             features = self.extract_features(obs_n)
             
             ##
-            ## devide features into agent and obst
+            ## devide features into agent and obst and reshape obst_features for LSTM
             ##
 
-            agent_features = features[None, 0, :self.om.observation_size - 33] # TODO: pass # obstacles and change 30 #None is for keeping the same dimension
-            obst_features = features[None, 0, self.om.observation_size - 33:] # TODO: pass # obstacles and change 30
+            agent_features = features[None, 0, :self.agent_input_dim] # TODO: pass # obstacles and change 33 #None is for keeping the same dimension
+            obst_features = features[None, 0, self.agent_input_dim:] # TODO: pass # obstacles and change 33
+            num_of_obstacles = int(obst_features.shape[1]/self.lstm_each_obstacle_dim) # need to calculate here because num_of_obstacles depends on each simulation
+            lstm_input = th.reshape(obst_features, (num_of_obstacles, self.lstm_each_obstacle_dim))
             
-
             ##
             ## LSTM layer
             ##
 
-            lstm_out, _ = self.lstm(obst_features)
-            
+            lstm_out, _ = self.lstm(lstm_input)
+
             ##
             ## FC layers
             ##

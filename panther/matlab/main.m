@@ -41,8 +41,8 @@ make_plots=false;
 
 deg_pos=3; %The degree of the position polynomial
 deg_yaw=2; %The degree of the yaw polynomial
-num_seg =6; %The number of segments in the trajectory (the more segments the less conservative the trajectory is [also makes optimization problem harder])
-num_max_of_obst=1; %This is the maximum num of the obstacles 
+num_seg=6; %The number of segments in the trajectory (the more segments the less conservative the trajectory is [also makes optimization problem harder])
+num_max_of_obst=2; %This is the maximum num of the obstacles 
 
 %Constants for spline fitted to the obstacle trajectory
 fitter.deg_pos=3; %The degree of the fit past obstacle trajectory
@@ -403,7 +403,13 @@ for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
   
     w_T_b=[w_R_b w_t_b; zeros(1,3) 1];     w_T_c=w_T_b*b_T_c;     c_T_b=invPose(b_T_c);     b_T_w=invPose(w_T_b);
     
-    %Take the center of the obstacle and get the position of the obstacle in the world frame
+    % Take the center of the obstacle and get the position of the obstacle in the world frame
+
+    % 
+
+
+
+
     w_fevar=obst{1}.centers(:,simpson_index); %TODO: For now, only choosing one obstacle
     
     c_P=c_T_b*b_T_w*[w_fevar;1]; %Position of the feature (the center of the obstacle) in the camera frame

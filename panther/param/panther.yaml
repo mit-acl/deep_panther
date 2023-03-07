@@ -29,6 +29,7 @@ max_dist2BSPoscPoint: 30.0
 # LSTM
 #############################################
 use_lstm: False # use LSTM?
+num_of_obstacles_in_training: 2 # this needs to be the same as num_max_of_obst defined in main.m
 lstm_output_dim: 30
 
 # FOV setting

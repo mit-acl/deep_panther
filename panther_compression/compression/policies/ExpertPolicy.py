@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import copy
 from random import random, shuffle
-from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed, computeTotalTime
+from compression.utils.other import ActionManager, ObservationManager, ObstaclesManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed, computeTotalTime
 from colorama import init, Fore, Back, Style
 import py_panther
 import math 
@@ -24,8 +24,9 @@ class ExpertPolicy(object):
     my_SolverIpopt=py_panther.SolverIpopt(getPANTHERparamsAsCppStruct())
 
     def __init__(self):
-        self.am=ActionManager();
-        self.om=ObservationManager();
+        self.am=ActionManager()
+        self.om=ObservationManager()
+        self.obsm=ObstaclesManager()
 
         self.action_shape=self.am.getActionShape();
         self.observation_shape=self.om.getObservationShape();
@@ -34,6 +35,7 @@ class ExpertPolicy(object):
         self.observation_space = spaces.Box(low = -1.0, high = 1.0, shape=self.observation_shape)
 
         par=getPANTHERparamsAsCppStruct()
+        self.num_max_of_obst = par.num_max_of_obst
         self.par_v_max=par.v_max
         self.par_a_max=par.a_max
         self.par_factor_alloc=par.factor_alloc
@@ -45,7 +47,6 @@ class ExpertPolicy(object):
         self.reset()
 
     def printwithName(self,data):
-        
         print(self.name+data)
 
     def printFailedOpt(self, info):
@@ -68,8 +69,8 @@ class ExpertPolicy(object):
 
         # print(f"self.observation_shape={self.observation_shape}")
         # obs_n=obs_n.reshape((-1,*self.observation_shape)) #Not sure why this is needed
-        obs_n=obs_n.reshape(self.observation_shape) #Not sure why this is needed
-        assert obs_n.shape==self.observation_shape, self.name+f"ERROR: obs.shape={obs_n.shape} but self.observation_shape={self.observation_shape}"
+        # obs_n=obs_n.reshape(self.observation_shape) #Not sure why this is needed
+        # assert obs_n.shape==self.observation_shape, self.name+f"ERROR: obs.shape={obs_n.shape} but self.observation_shape={self.observation_shape}"
         
         # self.printwithName(f"Got Normalized obs={obs_n}")
 
@@ -78,13 +79,22 @@ class ExpertPolicy(object):
         # self.printwithName(f"Got obs={obs}")
         # self.printwithName(f"Got the following observation")
         # self.om.printObservation(obs)
-        # self.printwithName(f"Got obs shape={obs.shape}")
 
-        # self.om.printObs(obs)
+        ##
+        ## Replicate obstacles to meet num_max_of_obst defined in main.m
+        ## Not sure why but if we have a fewer obstacles in training environment thatn num_max_of_obst, then we get error
+        ## So we need to work this around by replicating obstacles
+        ##
 
 
+        while obs.shape[1] < self.om.getAgentObservationSize() + self.num_max_of_obst * self.obsm.getSizeEachObstacle():
+            obs = np.append(obs, obs[0, self.om.getAgentObservationSize():self.om.getAgentObservationSize()+self.obsm.getSizeEachObstacle()])
+            obs = np.reshape(obs, (1, obs.shape[0]))
 
-        # ## Call the optimization
+        ##
+        ## Call the optimization
+        ##
+        
         init_state=self.om.getInit_f_StateFromObservation(obs);        
         final_state=self.om.getFinal_f_StateFromObservation(obs);        
 
@@ -94,15 +104,18 @@ class ExpertPolicy(object):
 
         ExpertPolicy.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
         ExpertPolicy.my_SolverIpopt.setFocusOnObstacle(True);
-        obstacles=self.om.getObstacles(obs)
-        ####
+        obstacles=self.om.getObstaclesForCasadi(obs)
+
         for i in range(len(obstacles)):
             obstacles[i].bbox_inflated = obstacles[i].bbox_inflated  +  self.drone_extra_radius_for_NN*np.ones_like(obstacles[i].bbox_inflated)
+        
+        # in panther.cpp, we already chose the most-likely-colliding obs, and the obstacles vector has one element 
+
         ExpertPolicy.my_SolverIpopt.setObstaclesForOpt(obstacles);
 
         # with nostdout():
-        succeed=ExpertPolicy.my_SolverIpopt.optimize(True);
-        info=ExpertPolicy.my_SolverIpopt.getInfoLastOpt();
+        succeed=ExpertPolicy.my_SolverIpopt.optimize(True)
+        info=ExpertPolicy.my_SolverIpopt.getInfoLastOpt()
 
         
         if(succeed==False):
@@ -190,6 +203,7 @@ class ExpertPolicy(object):
             return self.predict( obs_n[thread_index,:,:], deterministic=deterministic)[0]
 
         num_jobs=min(multiprocessing.cpu_count(),len(obs_n)); #Note that the class variable my_SolverIpopt will be created once per job created (but only in the first call to predictSeveral I think)
+
         acts = Parallel(n_jobs=num_jobs)(map(delayed(my_func), list(range(len(obs_n))))) #, prefer="threads"
         acts=np.stack(acts, axis=0)
         return acts

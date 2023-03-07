@@ -115,6 +115,8 @@ if __name__ == "__main__":
     ## Parameters
     ##
 
+    params=readPANTHERparams()
+
     # when you want to collect data and not train student
     only_collect_data=False
 
@@ -137,7 +139,6 @@ if __name__ == "__main__":
     num_envs = 16
     log_interval=200
 
-    params=readPANTHERparams()
 
     assert args.total_demos_per_round>=batch_size #If not, round_{k+1} will train on the same dataset as round_{k} (until enough rounds are taken to generate a new batch of demos)
 
