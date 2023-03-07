@@ -18,8 +18,8 @@ training_obst_x_max: 15.0
 training_obst_x_min: -15.0
 training_obst_y_max: 15.0
 training_obst_y_min: -15.0
-training_obst_z_max: 4.0 # note that agent initial pos_z = 1.0
-training_obst_z_min: -2.0 # it is important to have negative z since planning is in agent frame # note that agent initial pos_z = 1.0
+training_obst_z_max: 6.0 # note that agent initial pos_z = 1.0
+training_obst_z_min: -4.0 # it is important to have negative z since planning is in agent frame # note that agent initial pos_z = 1.0
 
 # LSTM
 #############################################
