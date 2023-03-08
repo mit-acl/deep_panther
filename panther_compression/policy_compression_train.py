@@ -105,10 +105,10 @@ if __name__ == "__main__":
     parser.set_defaults(use_only_last_coll_ds=False)
 
     ##
-    ## Los calculation
+    ## Loss calculation
     ##
 
-    parser.add_argument("--only_test_loss", type=str2bool, default=True)
+    parser.add_argument("--only_test_loss", type=str2bool, default=False)
     parser.add_argument("--type_loss", type=str, default="Hung") 
 
     ##
@@ -361,7 +361,7 @@ if __name__ == "__main__":
             ## Evaluate the reward of the expert
             ##
 
-            expert_stats = evaluate_policy( expert_policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/teacher")
+            expert_stats = evaluate_policy(expert_policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/teacher")
             print("[Evaluation] Expert reward: {}, len: {}.\n".format( expert_stats["return_mean"], expert_stats["len_mean"]))
 
             ##

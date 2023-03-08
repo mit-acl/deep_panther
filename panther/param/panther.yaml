@@ -12,7 +12,7 @@ replanning_lookahead_time: 3.0 #[seconds] #distance in time space = t_in - t_1 i
 max_runtime_octopus_search: 0.5 #[seconds]
 use_closed_form_yaw_student: false #If false, the NN will predict this closed form for the yaw angle
 make_yaw_NN: false
-prob_choose_cross: 0.3 # how much you wanna choose cross obstacle in training [0.1]
+prob_choose_cross: 0.8 # how much you wanna choose cross obstacle in training [0.1]
 # training env space size
 training_obst_x_max: 5.0
 training_obst_x_min: -5.0
@@ -26,6 +26,7 @@ max_dist2obs: 15.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
 training_dt: 2.0 #Training timestep in seconds (how much you proceed as a step in an episode)
+yaw_scaling: 4000.0
 
 # LSTM
 #############################################
@@ -57,7 +58,6 @@ use_delaycheck: false
 use_panther_star: true # read the comment above
 obstacle_edge_cb_duration: 1.0 #seconds
 look_teammates: false
-yaw_scaling: 4000.0
 dist_from_gterm_to_dummy: 5.0 #[m]
 obstacle_share_cb_duration: 1.0 #seconds
 use_obstacle_share: true
