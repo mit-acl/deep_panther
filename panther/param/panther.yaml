@@ -4,7 +4,7 @@ num_of_trajs_per_replan: 6 # num of students' traj (n_s in Table I in deep panth
 max_num_of_initial_guesses: 10 # (n_runs in Table I)
 drone_extra_radius_for_NN: 0.0  #(m) Used for collision checking
 Ra: 15.0           # [m] Radius of my planning sphere (planning horizon)
-impose_FOV_in_trajCB: false # if true, it allows communication betw obstacle that is in FOV
+impose_FOV_in_trajCB: false # if True, it allows communication betw obstacle that is in FOV
 pause_time_when_replanning: false
 replanning_trigger_time_student: 0.01 #[seconds] 
 replanning_trigger_time_expert: 0.5 #[seconds] 
@@ -25,6 +25,7 @@ max_dist2goal: 15.0
 max_dist2obs: 15.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
+training_dt: 2.0 #Training timestep in seconds (how much you proceed as a step in an episode)
 
 # LSTM
 #############################################
