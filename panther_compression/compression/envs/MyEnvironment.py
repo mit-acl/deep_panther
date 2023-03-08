@@ -37,43 +37,31 @@ class MyEnvironment(gym.Env):
     print("Creating new environment!")
     
     self.verbose = False
-
-    self.len_episode = 200     # Time steps [-]
-
-    self.am=ActionManager();
-    self.om=ObservationManager();
-    self.obsm=ObstaclesManager();
-    self.gm=GTermManager();
-    self.cfys=ClosedFormYawSubstituter();
+    self.len_episode = 50     # Time steps [-] # is overwritten in policy_compression_train.py
+    self.am=ActionManager()
+    self.om=ObservationManager()
+    self.obsm=ObstaclesManager()
+    self.gm=GTermManager()
+    self.cfys=ClosedFormYawSubstituter()
     self.cost_computer=CostComputer()
-
-    self.action_shape=self.am.getActionShape();
-    self.observation_shape=self.om.getObservationShape();
-
+    self.action_shape=self.am.getActionShape()
+    self.observation_shape=self.om.getObservationShape()
     self.action_space = spaces.Box(low = -1.0, high = 1.0, shape=self.action_shape)
     self.observation_space = spaces.Box(low = -1.0, high = 1.0, shape=self.observation_shape)
-
-    self.dt=0.5     #Timestep in seconds
-    self.time=0.0
-
     self.color=Style.BRIGHT+Fore.YELLOW
-    
     self.name=""
-
-    self.par=getPANTHERparamsAsCppStruct();
-    # self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
-
+    self.par=getPANTHERparamsAsCppStruct()
+    self.training_dt = self.par.training_dt
     self.constant_obstacle_pos=None
     self.constant_gterm_pos=None
-
     self.record_bag=False
-    self.time_rosbag=0;
+    self.time_rosbag=0
     self.name_bag=None
-
     self.force_done=False
-
     self.id=0
-
+    self.num_goal_reached = 0
+    self.time = 0.0
+    # self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
     # self.reset()
 
   def __del__(self):
@@ -128,8 +116,15 @@ class MyEnvironment(gym.Env):
 
   def step(self, f_action_n):
 
+    """
+      Take normalized actions and update the environments
+    """
+
+    ##
+    ## Check for normalization
+    ##
+
     if(self.am.isNanAction(f_action_n)):
-      #f_observation_n, reward, done, info
       return self.om.getNanObservation(), 0.0, True, {} #This line is added to make generate_trajectories() of rollout.py work when the expert fails 
 
     f_action_n=f_action_n.reshape(self.action_shape)
@@ -144,22 +139,19 @@ class MyEnvironment(gym.Env):
     if(self.par.use_closed_form_yaw_student==True):
       f_action_n=self.cfys.substituteWithClosedFormYaw(f_action_n, self.w_state, self.w_obstacles) #f_action_n, w_init_state, w_obstacles
 
-    ### to have bigger loss, we magnified yaw actions (look at bc.py's expert_yaw_i assignment)
-    ### before convert actions to B-spline, we need to revert this change
+    ##
+    ## Yaw scaling correctoin
+    ## to have bigger loss, we magnified yaw actions (look at bc.py's expert_yaw_i assignment)
+    ## before convert actions to B-spline, we need to revert this change
+    ##
     
-    ### note f_action_n needs to be scaled down by yaw_scaling param
     f_action_n[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts] = f_action_n[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts]/self.par.yaw_scaling
 
-    # self.printwithName(f"Received actionN={f_action_n}")
+    ##
+    ## Check for normalization
+    ##
+
     f_action= self.am.denormalizeAction(f_action_n);
-    # self.printwithName(f"Received action size={action.shape}")
-
-    # self.printwithName(f"Timestep={self.timestep}")
-    # self.printwithName(f"w_state.w_pos={self.w_state.w_pos.T}")
-
-    # self.am.printAction(f_action)
-    ####################################
-
 
     ##
     ##  if total time that student produced is 0.0, BS function gives you an error so let's just make it bigger than 0
@@ -176,23 +168,15 @@ class MyEnvironment(gym.Env):
 
     index_smallest_augmented_cost=self.cost_computer.getIndexBestTraj(self.previous_f_obs_n, f_action_n)
 
-    self.printwithNameAndColor(f"Choosing traj_{index_smallest_augmented_cost}")
+    # self.printwithNameAndColor(f"Choosing traj_{index_smallest_augmented_cost}")
     f_traj=self.am.getTrajFromAction(f_action, index_smallest_augmented_cost)
     f_traj_n=self.am.getTrajFromAction(f_action_n, index_smallest_augmented_cost)
     w_posBS, w_yawBS= self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
 
 
-    ####################################
-    ####### MOVE THE ENVIRONMENT #######
-    ####################################
-
-
-    # if(dist2goal<0.5):
-    #   # actual_dt=self.am.getTotalTime(f_action) #Advance to the end of that trajectory
-    #   self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos);   #DONT DO THIS HERE!(the observation will change with no correlation with the action sent)
-    #   self.printwithNameAndColor(f"New goal at {self.gm.get_w_GTermPos()}") 
-    # # else:
-    # #   actual_dt=self.dt
+    ###
+    ### MOVE THE ENVIRONMENT
+    ###
 
     ##
     ## Print State before update
@@ -207,67 +191,71 @@ class MyEnvironment(gym.Env):
     ## Update state
     ##
 
-    self.w_state= State(w_posBS.getPosT(self.dt), w_posBS.getVelT(self.dt), w_posBS.getAccelT(self.dt), \
-                        w_yawBS.getPosT(self.dt), w_yawBS.getVelT(self.dt));
+    self.w_state= State(w_posBS.getPosT(self.training_dt), w_posBS.getVelT(self.training_dt), w_posBS.getAccelT(self.training_dt), \
+                        w_yawBS.getPosT(self.training_dt), w_yawBS.getVelT(self.training_dt));
 
     ##
     ## Print State after update
     ##
 
     # self.printwithName("w and f state AFTER UPDATE")
-    self.w_state.print_w_frameHorizontal(self.name);
+    # self.w_state.print_w_frameHorizontal(self.name)
     # print(f"Matrix w_T_f=\n{self.w_state.w_T_f.T}")
     # self.w_state.print_f_frameHorizontal(self.name);
 
-    #Update time and timestep
-    self.time = self.time + self.dt;
+    ##
+    ## Update time and timestep
+    ##
+
+    self.time = self.time + self.training_dt;
     self.timestep = self.timestep + 1
 
-    ####################################
-    ####### CONSTRUCT OBS        #######
-    ####################################
+    ##
+    ## Construct Obstacles
+    ##
 
-    # w_obstacles=self.obsm.getFutureWPosStaticObstacles()
+    # w_obstacles=self.obsm.getFutureWPosStaticObstacles() # if you use static obstacles
     self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
     f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles);
     f_observation_n=self.om.normalizeObservation(f_observation);
 
+    ##
+    ## Calculate distance 
+    ##
 
     dist_current_2gterm=np.linalg.norm(self.w_state.w_pos-self.gm.get_w_GTermPos()) #From the current position to the goal
     dist_endtraj_2gterm=np.linalg.norm(w_posBS.getLastPos()-self.gm.get_w_GTermPos()) #From the end of the current traj to the goal
 
+    # self.printwithName(f"Timestep={self.timestep}, dist_current_2gterm={round(dist_current_2gterm,2)}, w_state.w_pos={self.w_state.w_pos.T}")
 
-    goal_reached=(dist_current_2gterm<2.0 and dist_endtraj_2gterm<self.par.goal_radius) 
+    goal_reached = (dist_current_2gterm<2.0 and dist_endtraj_2gterm<self.par.goal_radius and self.om.obsIsNormalized(f_observation_n)==False) 
+    if(goal_reached):
+      self.num_goal_reached += 1
+      self.printwithNameAndColor("Goal reached!")
+    self.printwithNameAndColor(f"Timestep={self.timestep}, dist2gterm={round(dist_current_2gterm,2)}, total # of goal reached: {self.num_goal_reached}")
 
-    self.printwithName(f"Timestep={self.timestep}, dist_current_2gterm={dist_current_2gterm}, w_state.w_pos={self.w_state.w_pos.T}")
-
-    # if(goal_reached):
-    #   self.printwithNameAndColor("Goal reached!")
-
+    ##
+    ## Check for violation and terminate condition
+    ##
     
     info = {}
     if(self.om.obsIsNormalized(f_observation_n)==False):
-      # self.printwithName(f"f_observation_n={f_observation_n} is not normalized (i.e., constraints are not satisfied). Terminating")
-      # self.printwithName(f"f_observation={f_observation} is not normalized (i.e., constraints are not satisfied). Terminating")
-      # exit();
       self.printwithName(Style.BRIGHT+Fore.RED +"f_observation_n is not normalized (i.e., constraints are not satisfied). Terminating" + Style.RESET_ALL)
-      # self.om.printObservation(f_observation)
-    
-      # print(f"[Env] Terminated due to constraint violation: obs: {self.x}, act: {u}, steps: {self.timestep}")
       done = True
       info["constraint_violation"] = True
     elif ( (self.timestep >= self.len_episode) or goal_reached or self.force_done):
       done = True
       info["constraint_violation"] = False
       self.printwithNameAndColor(f"Done, self.timestep={self.timestep}, goal_reached={goal_reached}, force_done={self.force_done}")
-
     else:
       done=False
 
-    self.printwithNameAndColor(f"done={done}")
+    # self.printwithNameAndColor(f"done={done}")
 
+    ##
+    ## Reward (not used)
+    ##
 
-    #####################
     # init_state=self.om.getInit_f_StateFromObservation(self.previous_f_observation)
     # final_state=self.om.getFinal_f_StateFromObservation(self.previous_f_observation)
     # total_time=computeTotalTime(init_state, final_state, self.par.v_max, self.par.a_max, self.par.factor_alloc)
@@ -281,10 +269,9 @@ class MyEnvironment(gym.Env):
     # self.printwithNameAndColor(f"augmented cost={augmented_cost}")
 
     # print(f"constraints_violation={constraints_violation}")
-    # reward=-augmented_cost;
-    reward=0.0;
-    # # print(reward)
-    ###################
+    # reward=-augmented_cost
+    reward=0.0
+    # print(f"reward: {reward}")
 
     # self.printwithName("THIS IS THE OBSERVATION:")
     # self.om.printObservation(f_observation_n)
@@ -294,9 +281,9 @@ class MyEnvironment(gym.Env):
     # print("self.gm.get_w_GTermPos()=", self.gm.get_w_GTermPos().T)
     # print("observation=", f_observation_n)
 
-    # print("w_yawBS.getPosT(self.dt)= ", w_yawBS.getPosT(self.dt))
+    # print("w_yawBS.getPosT(self.training_dt)= ", w_yawBS.getPosT(self.training_dt))
         # self.printwithName(f"w_obstacles={w_obstacles[0].ctrl_pts}")
-    # print("w_posBS.getAccelT(self.dt)= ", w_posBS.getAccelT(self.dt).T)
+    # print("w_posBS.getAccelT(self.training_dt)= ", w_posBS.getAccelT(self.training_dt).T)
     # self.printwithName(f"returning reward={reward}")
     # self.printwithName(f"returning obsN={observation}")
     # self.printwithName(f"returning obs size={observation.shape}")
@@ -497,51 +484,4 @@ class MyEnvironment(gym.Env):
       self.bag.write('/tf', tf_msg, time_now)
 
       #When using multiple environments, opening bag in constructor and closing it in _del leads to unindexed bags
-      self.bag.close();
-      ########################
-
-
-
-
-    #Debugging
-    # print("\n\n\n\n\n")
-
-    # p0=np.array([[0],[0],[0]]);
-    # v0=np.array([[0],[0],[0]]);
-    # a0=np.array([[2],[0],[0]]);
-    # y0=np.array([[0]]);
-    # y_dot0=np.array([[0]]);
-    # self.w_state= State(p0, v0, a0, y0, y_dot0)
-    # w_posBS, w_yawBS= self.am.f_actionAnd_w_State2wBS(f_action, self.w_state)
-
-    # p0=np.array([[0],[0],[0]]);
-    # v0=np.array([[0],[0],[0]]);
-    # a0=np.array([[0],[0],[0]]);
-    # y0=np.array([[0]]);
-    # y_dot0=np.array([[0]]);
-    # my_state_zero=State(p0, v0, a0, y0, y_dot0)
-    # f_posBS, f_yawBS= self.am.f_actionAnd_w_State2wBS(f_action, my_state_zero)
-
-    # f_accelBuena=f_posBS.getAccelT(self.dt);
-    # w_posdtBuena=(self.w_state.w_T_f*f_posBS.getPosT(self.dt));
-    # # print("[BUENA] f_state.accel= ", f_accelBuena.T)
-    # # print("[BUENA] w_state.accel= ", (np.linalg.inv(self.w_state.f_T_w.rot())@f_accelBuena).T)
-    # print("[BUENA] f_posBS.pos(self.dt)= ", (f_posBS.getPosT(self.dt)).T)
-    # print("[BUENA] w_posdt= ", w_posdtBuena.T)
-
-
-    # # print("w_state.accel= ",self.w_state.w_accel.T)
-    # print("w_T_f=\n", self.w_state.w_T_f.T)
-
-    # # print("f_state.accel2= ", self.w_state.f_accel().T)
-    # # print("w_state.accel= ", w_posBS.getAccelT(self.dt).T)
-    # w_posdt=w_posBS.getPosT(self.dt);
-    # print("w_posdt= ", w_posdt.T)
-
-    # np.set_printoptions(edgeitems=30, linewidth=100000, 
-    # formatter=dict(float=lambda x: "%.3g" % x))
-    # print("w_posBS.ctrl_pts= \n", w_posBS.ctrl_pts)
-    # print("f_posBS.ctrl_pts= \n", f_posBS.ctrl_pts)
-
-    # assert np.linalg.norm(w_posdtBuena-w_posdt)<1e-6 
-    #####
+      self.bag.close()

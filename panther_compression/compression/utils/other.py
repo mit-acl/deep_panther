@@ -371,32 +371,37 @@ class State():
 		ez=np.array([[0.0],[0.0],[1.0]]);
 		np.testing.assert_allclose(self.w_T_f.T[0:3,2].reshape(3,1)-ez, 0, atol=1e-07)
 		self.f_T_w= self.w_T_f.inv()
+
 	def f_pos(self):
 		return self.f_T_w*self.w_pos;
+
 	def f_vel(self):
 		f_vel=self.f_T_w.rot()@self.w_vel;
 		# assert (np.linalg.norm(f_vel)-np.linalg.norm(self.w_vel)) == pytest.approx(0.0), f"f_vel={f_vel} (norm={np.linalg.norm(f_vel)}), w_vel={self.w_vel} (norm={np.linalg.norm(self.w_vel)}), f_R_w={self.f_T_w.rot()}, "
 		return f_vel;
+
 	def f_accel(self):
 		self.f_T_w.debug();
 		f_accel=self.f_T_w.rot()@self.w_accel;
 		# assert (np.linalg.norm(f_accel)-np.linalg.norm(self.w_accel)) == pytest.approx(0.0), f"f_accel={f_accel} (norm={np.linalg.norm(f_accel)}), w_accel={self.w_accel} (norm={np.linalg.norm(self.w_accel)}), f_R_w={self.f_T_w.rot()}, " 
 		return f_accel;
+
 	def f_yaw(self):
-		return np.array([[0.0]]);
+		return np.array([[0.0]])
+
 	def print_w_frameHorizontal(self, msg_before=""):
 		np.set_printoptions(precision=3, suppress=True)
 		print(msg_before + "(In w frame)"+ \
 		Fore.RED +f"pos, "+ \
 		Fore.BLUE +f"vel, "+ \
 		Fore.GREEN +f"accel, "+ \
-		Fore.YELLOW +f"yaw, "+ \
-		Fore.MAGENTA +f"dyaw: "+ \
+		Fore.YELLOW +f"yaw [deg], "+ \
+		Fore.MAGENTA +f"dyaw [deg/s]: "+ \
 		Fore.RED +f"{self.w_pos.T}"+Style.RESET_ALL+ \
 		Fore.BLUE +f"{self.w_vel.T}"+Style.RESET_ALL+ \
 		Fore.GREEN +f"{self.w_accel.T}"+Style.RESET_ALL+ \
-		Fore.YELLOW +f"{self.w_yaw}"+Style.RESET_ALL+ \
-		Fore.MAGENTA +f"{self.yaw_dot}"+Style.RESET_ALL)
+		Fore.YELLOW +f"{self.w_yaw*180/np.pi}"+Style.RESET_ALL+ \
+		Fore.MAGENTA +f"{self.yaw_dot*180/np.pi}"+Style.RESET_ALL)
 
 	def print_f_frameHorizontal(self, msg_before=""):
 		np.set_printoptions(precision=3, suppress=True)
@@ -404,13 +409,13 @@ class State():
 		Fore.RED +f"pos, "+ \
 		Fore.BLUE +f"vel, "+ \
 		Fore.GREEN +f"accel, "+ \
-		Fore.YELLOW +f"yaw, "+ \
-		Fore.MAGENTA +f"dyaw: "+ \
+		Fore.YELLOW +f"yaw [deg], "+ \
+		Fore.MAGENTA +f"dyaw [deg/s]: "+ \
 		Fore.RED +f"{self.f_pos().T}"+Style.RESET_ALL+ \
 		Fore.BLUE +f"{self.f_vel().T}"+Style.RESET_ALL+ \
 		Fore.GREEN +f"{self.f_accel().T}"+Style.RESET_ALL+ \
-		Fore.YELLOW +f"{self.f_yaw()}"+Style.RESET_ALL+ \
-		Fore.MAGENTA +f"{self.yaw_dot}"+Style.RESET_ALL)
+		Fore.YELLOW +f"{self.f_yaw()*180/np.pi}"+Style.RESET_ALL+ \
+		Fore.MAGENTA +f"{self.yaw_dot*180/np.pi}"+Style.RESET_ALL)
 
 def generateKnotsForClampedUniformBspline(t0, tf, deg, num_seg):
 	
