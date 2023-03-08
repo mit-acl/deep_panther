@@ -79,12 +79,6 @@ Visualization Manager:
           Value: true
         SQ01s/camera_link:
           Value: true
-        SQ02s:
-          Value: true
-        SQ02s/camera_depth_optical_frame:
-          Value: true
-        SQ02s/camera_link:
-          Value: true
         obs_4000:
           Value: false
         vicon:
@@ -105,10 +99,6 @@ Visualization Manager:
             SQ01s:
               SQ01s/camera_link:
                 SQ01s/camera_depth_optical_frame:
-                  {}
-            SQ02s:
-              SQ02s/camera_link:
-                SQ02s/camera_depth_optical_frame:
                   {}
       Update Interval: 0
       Value: true
@@ -191,7 +181,7 @@ Visualization Manager:
       Marker Topic: /SQ02s/panther/fov
       Name: FOV
       Namespaces:
-        marker_fov: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -335,7 +325,12 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/best_solutions_student
       Name: BestSolutionsStu
       Namespaces:
-        {}
+        SQ01s_best_solutions_student0: true
+        SQ01s_best_solutions_student1: true
+        SQ01s_best_solutions_student2: true
+        SQ01s_best_solutions_student3: true
+        SQ01s_best_solutions_student4: true
+        SQ01s_best_solutions_student5: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -475,7 +470,15 @@ Visualization Manager:
       Marker Topic: /SQ02s/panther/obstacles
       Name: Marker
       Namespaces:
-        markertacles: true
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /SQ01s/panther/actual_traj
+      Name: SQ01sActualTraj
+      Namespaces:
+        ActualTraj_SQ01s: true
       Queue Size: 100
       Value: true
   Enabled: true

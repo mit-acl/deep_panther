@@ -25,7 +25,6 @@ from geometry_msgs.msg import PointStamped
 
 import uuid
 
-
 class MyEnvironment(gym.Env):
   """
     Custom Environment that follows gym interface
@@ -35,6 +34,8 @@ class MyEnvironment(gym.Env):
   def __init__(self):
     super().__init__() #Equivalently, we could also write super(MyEnvironment, self).__init__()    , see 2nd paragraph of https://stackoverflow.com/a/576183
 
+    print("Creating new environment!")
+    
     self.verbose = False
 
     self.len_episode = 200     # Time steps [-]
@@ -44,8 +45,6 @@ class MyEnvironment(gym.Env):
     self.obsm=ObstaclesManager();
     self.gm=GTermManager();
     self.cfys=ClosedFormYawSubstituter();
-
-
     self.cost_computer=CostComputer()
 
     self.action_shape=self.am.getActionShape();
@@ -54,22 +53,15 @@ class MyEnvironment(gym.Env):
     self.action_space = spaces.Box(low = -1.0, high = 1.0, shape=self.action_shape)
     self.observation_space = spaces.Box(low = -1.0, high = 1.0, shape=self.observation_shape)
 
-    self.dt=0.5; #Timestep in seconds
-    self.time=0.0;
+    self.dt=0.5     #Timestep in seconds
+    self.time=0.0
 
     self.color=Style.BRIGHT+Fore.YELLOW
     
     self.name=""
-    # print (self.params)
 
-    # print("self.am.getActionShape()= ", self.am.getActionShape())
-
-
-    ######
     self.par=getPANTHERparamsAsCppStruct();
     # self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
-    ######
-    print("Creating new environment!")
 
     self.constant_obstacle_pos=None
     self.constant_gterm_pos=None
@@ -82,7 +74,7 @@ class MyEnvironment(gym.Env):
 
     self.id=0
 
-    self.reset()
+    # self.reset()
 
   def __del__(self):
     # if(self.record_bag==True):
@@ -135,8 +127,6 @@ class MyEnvironment(gym.Env):
     self.reset()
 
   def step(self, f_action_n):
-
-    # self.printwithName(f"Received actionN={f_action_n}")
 
     if(self.am.isNanAction(f_action_n)):
       #f_observation_n, reward, done, info
@@ -203,25 +193,34 @@ class MyEnvironment(gym.Env):
     #   self.printwithNameAndColor(f"New goal at {self.gm.get_w_GTermPos()}") 
     # # else:
     # #   actual_dt=self.dt
-    actual_dt=self.dt
 
+    ##
+    ## Print State before update
+    ##
 
     # self.printwithName("w and f state BEFORE UPDATE")
     # self.w_state.print_w_frameHorizontal(self.name);
     # # print(f"Matrix w_T_f=\n{self.w_state.w_T_f.T}")
     # self.w_state.print_f_frameHorizontal(self.name);
 
-    #Update state
-    self.w_state= State(w_posBS.getPosT(actual_dt), w_posBS.getVelT(actual_dt), w_posBS.getAccelT(actual_dt), \
-                        w_yawBS.getPosT(actual_dt), w_yawBS.getVelT(actual_dt));
+    ##
+    ## Update state
+    ##
 
-    self.printwithName("w and f state AFTER UPDATE")
+    self.w_state= State(w_posBS.getPosT(self.dt), w_posBS.getVelT(self.dt), w_posBS.getAccelT(self.dt), \
+                        w_yawBS.getPosT(self.dt), w_yawBS.getVelT(self.dt));
+
+    ##
+    ## Print State after update
+    ##
+
+    # self.printwithName("w and f state AFTER UPDATE")
     self.w_state.print_w_frameHorizontal(self.name);
     # print(f"Matrix w_T_f=\n{self.w_state.w_T_f.T}")
     # self.w_state.print_f_frameHorizontal(self.name);
 
     #Update time and timestep
-    self.time = self.time + actual_dt;
+    self.time = self.time + self.dt;
     self.timestep = self.timestep + 1
 
     ####################################
@@ -328,8 +327,8 @@ class MyEnvironment(gym.Env):
       # prob_choose_cross=0.6
 
       if np.random.uniform(0, 1) < 1 - self.par.prob_choose_cross:
-        self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos); # this will set goal away from the starting point
-        # self.gm.newRandomPos();
+          # self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos)
+          self.gm.newRandomPos()
       else:
         w_pos_obstacle, w_pos_g_term = getObsAndGtermToCrossPath();
         self.obsm.setPos(w_pos_obstacle)

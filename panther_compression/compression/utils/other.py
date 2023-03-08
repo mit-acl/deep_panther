@@ -223,7 +223,7 @@ class GTermManager():
 
 	def newRandomPosFarFrom_w_Position(self, w_position):
 		dist=0.0
-		while dist<0.1: #Goal at least 3 meters away from the current position
+		while dist<0.1: #Goal at least 0.1 meters away from the current position
 			self.newRandomPos()
 			dist=np.linalg.norm(self.w_gterm-w_position)
 
