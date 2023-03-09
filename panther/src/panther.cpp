@@ -777,8 +777,8 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
 
   mtx_trajs_.lock();
 
-  std::vector<mt::obstacleForOpt> obstacles_for_opt =
-      getObstaclesForOpt(t_start, t_start + par_.fitter_total_time, splines_fitted);
+  std::vector<mt::obstacleForOpt> obstacles_for_opt = getObstaclesForOpt(
+      t_start, t_start + par_.fitter_total_time, splines_fitted);  // basically converts trajs_ to obstacles_for_opt
 
   /////////////////////////////////////////////////////////////////////////
   ////////////////////////Compute trajectory to focus on //////////////////
@@ -852,6 +852,11 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     verify(argmax_prob_collision >= 0, "argmax_prob_collision should be >=0");
     verify(argmax_prob_collision <= (obstacles_for_opt.size() - 1), "argmax_prob_collision should be <= "
                                                                     "(obstacles_for_opt.size() - 1)");
+
+    // Big TODO
+    // We can choose one obstacle to track in FOV, but need to incorporate other obsts/agents in optimization as
+    // constraints Right now, we just only care about one obst/agent, which is not good
+
     // keep only the obstacle that has the highest probability of collision
     auto tmp = obstacles_for_opt[argmax_prob_collision];
     obstacles_for_opt.clear();
@@ -1017,6 +1022,18 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     mtx_trajs_.unlock();
 
     edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
+
+    std::cout << "obstacles_for_opt.size() " << obstacles_for_opt.size() << std::endl;
+
+    if (obstacles_for_opt.size() == 0)
+    {
+      addDummyObstacle(t_start, t_final, obstacles_for_opt, A, splines_fitted);
+    }
+    else if (obstacles_for_opt.size() == 1 && obstacles_for_opt[0].is_dummy == true)
+    {
+      obstacles_for_opt.clear();
+      addDummyObstacle(t_start, t_final, obstacles_for_opt, A, splines_fitted);
+    }
 
     log_ptr_->tim_initial_setup.toc();
     std::cout << "Calling the student!" << std::endl;
