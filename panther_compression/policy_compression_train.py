@@ -83,7 +83,7 @@ if __name__ == "__main__":
     parser.add_argument("--use-DAgger", dest='on_policy_trainer', action='store_true') # Use DAgger when true, BC when false
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
-    parser.add_argument("--n_rounds", default=1, type=int) 
+    parser.add_argument("--n_rounds", default=50, type=int) 
     parser.add_argument("--total_demos_per_round", default=256*5, type=int) 
     # parser.add_argument("--total_demos_per_round", default=1, type=int)
     parser.add_argument("--rampdown_rounds", default=1, type=int) # Dagger properties
