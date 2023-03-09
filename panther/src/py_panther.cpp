@@ -62,6 +62,9 @@ PYBIND11_MODULE(py_panther, m)
       // This part below should be copied/pasted from parameters of panther_types.hpp
       // clang-format off
 
+      .def_readwrite("margin_v_factor", &mt::parameters::margin_v_factor)
+      .def_readwrite("margin_a_factor", &mt::parameters::margin_a_factor)
+      .def_readwrite("margin_ydot_factor", &mt::parameters::margin_ydot_factor)
       .def_readwrite("training_dt", &mt::parameters::training_dt)
       .def_readwrite("num_of_obstacles_in_training", &mt::parameters::num_of_obstacles_in_training)
       .def_readwrite("lstm_output_dim", &mt::parameters::lstm_output_dim)

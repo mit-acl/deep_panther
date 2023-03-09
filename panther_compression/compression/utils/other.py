@@ -528,21 +528,24 @@ class ObservationManager():
 		# Where f_ctrl_pts_oi = [cp0.transpose(), cp1.transpose(), ...]
 		self.observation_size= 3 + 3 + 1 + 3 + self.obsm.getSizeAllObstacles()
 
-		params=readPANTHERparams();
-		self.v_max=np.array(params["v_max"]).reshape(3,1);
-		self.a_max=np.array(params["a_max"]).reshape(3,1);
-		self.j_max=np.array(params["j_max"]).reshape(3,1);
-		self.ydot_max=params["ydot_max"];
-		# self.max_dist2goal=params["max_dist2goal"];
-		self.max_dist2obs=params["max_dist2obs"];
-		self.max_side_bbox_obs=params["max_side_bbox_obs"];
+		params=readPANTHERparams()
+		self.v_max=np.array(params["v_max"]).reshape(3,1)
+		self.a_max=np.array(params["a_max"]).reshape(3,1)
+		self.j_max=np.array(params["j_max"]).reshape(3,1)
+		self.ydot_max=params["ydot_max"]
+		# self.max_dist2goal=params["max_dist2goal"]
+		self.max_dist2obs=params["max_dist2obs"]
+		self.max_side_bbox_obs=params["max_side_bbox_obs"]
 		self.Ra=params["Ra"]
 		self.num_max_of_obst = params["num_max_of_obst"] # from casadi
-		ones13=np.ones((1,3));
+		ones13=np.ones((1,3))
 		#Note that the sqrt(3) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
-		margin_v=math.sqrt(3) #math.sqrt(3)
-		margin_a=math.sqrt(3) #math.sqrt(3)
-		margin_ydot=1.5 
+		margin_v_factor = params["margin_v_factor"]
+		margin_a_factor = params["margin_a_factor"]
+		margin_ydot_factor = params["margin_ydot_factor"]
+		margin_v=margin_v_factor * math.sqrt(3) #math.sqrt(3)
+		margin_a=margin_a_factor * math.sqrt(3) #math.sqrt(3)
+		margin_ydot=margin_ydot_factor * 1.0
 		self.normalization_constant=np.concatenate((margin_v*self.v_max.T*ones13, margin_a*self.a_max.T*ones13, margin_ydot*self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
 		for i in range(self.obsm.getNumObs()):
 			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)

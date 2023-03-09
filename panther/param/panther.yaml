@@ -6,7 +6,7 @@ drone_extra_radius_for_NN: 0.0  #(m) Used for collision checking
 Ra: 15.0           # [m] Radius of my planning sphere (planning horizon)
 impose_FOV_in_trajCB: false # if True, it allows communication betw obstacle that is in FOV
 pause_time_when_replanning: false
-replanning_trigger_time_student: 0.01 #[seconds] 
+replanning_trigger_time_student: 0.1 #[seconds] 
 replanning_trigger_time_expert: 0.5 #[seconds] 
 replanning_lookahead_time: 3.0 #[seconds] #distance in time space = t_in - t_1 in Table I
 max_runtime_octopus_search: 0.5 #[seconds]
@@ -27,6 +27,9 @@ max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
 training_dt: 2.0 #Training timestep in seconds (how much you proceed as a step in an episode)
 yaw_scaling: 4000.0
+margin_v_relaxation_factor: 1.5 #relazation factor for training constraints used in ObservationManager()
+margin_a_relaxation_factor: 1.5 #relazation factor for training constraints used in ObservationManager()
+margin_ydot_relaxation_factor: 1.5 #relazation factor for training constraints used in ObservationManager()
 
 # LSTM
 #############################################
@@ -68,8 +71,8 @@ use_obstacle_shareCB: false # if it's False and use_obstacle_share is True, then
 #############################################
 agents_ids: ["01", "02", "03", "04", "05"]
 use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
-goal_radius: 0.3   #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
-drone_bbox: [0.8, 0.8, 0.8]  #(m) Used for collision checking
+goal_radius: 0.5   #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
+drone_bbox: [0.01, 0.01, 0.01]  #(m) Used for collision checking
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
 # flight space size
