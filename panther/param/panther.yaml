@@ -12,7 +12,7 @@ replanning_lookahead_time: 3.0 #[seconds] #distance in time space = t_in - t_1 i
 max_runtime_octopus_search: 0.5 #[seconds]
 use_closed_form_yaw_student: false #If false, the NN will predict this closed form for the yaw angle
 make_yaw_NN: false
-prob_choose_cross: 0.8 # how much you wanna choose cross obstacle in training [0.1]
+prob_choose_cross: 0.2 # how much you wanna choose cross obstacle in training [0.1]
 # training env space size
 training_obst_x_max: 5.0
 training_obst_x_min: -5.0
