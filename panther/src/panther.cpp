@@ -642,11 +642,18 @@ bool Panther::isReplanningNeeded()
     exists_previous_pwp_ = false;
   }
 
+  //
   // Check if we have seen the goal in the last replan
+  //
+
   mtx_plan_.lock();
   double dist_last_plan_to_goal = (G_term.pos - plan_.back().pos).norm();
-  // std::cout << "dist_last_plan_to_goal= " << dist_last_plan_to_goal << std::endl;
   mtx_plan_.unlock();
+
+  //
+  // Check if goal is seen
+  //
+
   if (dist_last_plan_to_goal < par_.goal_radius && drone_status_ == DroneStatus::TRAVELING)
   {
     changeDroneStatus(DroneStatus::GOAL_SEEN);
@@ -654,7 +661,10 @@ bool Panther::isReplanningNeeded()
     exists_previous_pwp_ = false;
   }
 
+  //
   // Don't plan if drone is not traveling
+  //
+
   if (drone_status_ == DroneStatus::GOAL_REACHED || (drone_status_ == DroneStatus::YAWING) ||
       (drone_status_ == DroneStatus::GOAL_SEEN))
   {

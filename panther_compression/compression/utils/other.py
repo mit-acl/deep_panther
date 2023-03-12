@@ -538,6 +538,7 @@ class ObservationManager():
 		self.max_side_bbox_obs=params["max_side_bbox_obs"]
 		self.Ra=params["Ra"]
 		self.num_max_of_obst = params["num_max_of_obst"] # from casadi
+		
 		ones13=np.ones((1,3))
 		#Note that the sqrt(3) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
 		margin_v_factor = params["margin_v_factor"]

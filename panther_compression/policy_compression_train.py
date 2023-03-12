@@ -136,7 +136,7 @@ if __name__ == "__main__":
     params=readPANTHERparams()
 
     # use one zero beta in DAagger? if False, it will be LinearBetaSchedule()
-    use_one_zero_beta = True
+    use_one_zero_beta = False
 
     # when you want to collect data and not train student
     only_collect_data = False
