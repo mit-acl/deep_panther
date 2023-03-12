@@ -215,9 +215,9 @@ class MyEnvironment(gym.Env):
 
     # static or dynamic obstacles
     if self.par.use_dynamic_obst_in_training:
-      self.w_obstacles=self.obsm.getFutureWPosStaticObstacles()
-    else:
       self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
+    else:
+      self.w_obstacles=self.obsm.getFutureWPosStaticObstacles()
     f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles);
     f_observation_n=self.om.normalizeObservation(f_observation)
 
