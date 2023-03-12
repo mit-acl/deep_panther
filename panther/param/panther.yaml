@@ -14,12 +14,12 @@ use_closed_form_yaw_student: false #If false, the NN will predict this closed fo
 make_yaw_NN: false
 prob_choose_cross: 0.2 # how much you wanna choose cross obstacle in training [0.1]
 # training env space size
-training_obst_x_max: 5.0
-training_obst_x_min: -5.0
-training_obst_y_max: 5.0
-training_obst_y_min: -5.0
-training_obst_z_max: 4.0 # note that agent initial pos_z = 1.0
-training_obst_z_min: -2.0 # it is important to have negative z since planning is in agent frame # note that agent initial pos_z = 1.0
+training_env_x_max: 5.0
+training_env_x_min: -5.0
+training_env_y_max: 5.0
+training_env_y_min: -5.0
+training_env_z_max: 4.0 # note that agent initial pos_z = 1.0
+training_env_z_min: -2.0 # it is important to have negative z since planning is in agent frame # note that agent initial pos_z = 1.0
 # used for normalizatoin
 max_dist2goal: 15.0
 max_dist2obs: 15.0

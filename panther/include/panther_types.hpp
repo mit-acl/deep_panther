@@ -812,12 +812,12 @@ struct parameters
   double          training_dt;
   int             num_of_obstacles_in_training;
   int             lstm_output_dim;
-  double          training_obst_x_max;
-  double          training_obst_x_min;
-  double          training_obst_y_max;
-  double          training_obst_y_min;
-  double          training_obst_z_max;
-  double          training_obst_z_min;
+  double          training_env_x_max;
+  double          training_env_x_min;
+  double          training_env_y_max;
+  double          training_env_y_min;
+  double          training_env_z_max;
+  double          training_env_z_min;
   bool            use_lstm;
   double          prob_choose_cross;
   bool            make_yaw_NN;

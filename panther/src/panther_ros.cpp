@@ -69,12 +69,12 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "training_dt", par_.training_dt);
   safeGetParam(nh1_, "num_of_obstacles_in_training", par_.num_of_obstacles_in_training);
   safeGetParam(nh1_, "lstm_output_dim", par_.lstm_output_dim);
-  safeGetParam(nh1_, "training_obst_x_max", par_.training_obst_x_max);
-  safeGetParam(nh1_, "training_obst_x_min", par_.training_obst_x_min);
-  safeGetParam(nh1_, "training_obst_y_max", par_.training_obst_y_max);
-  safeGetParam(nh1_, "training_obst_y_min", par_.training_obst_y_min);
-  safeGetParam(nh1_, "training_obst_z_max", par_.training_obst_z_max);
-  safeGetParam(nh1_, "training_obst_z_min", par_.training_obst_z_min);
+  safeGetParam(nh1_, "training_env_x_max", par_.training_env_x_max);
+  safeGetParam(nh1_, "training_env_x_min", par_.training_env_x_min);
+  safeGetParam(nh1_, "training_env_y_max", par_.training_env_y_max);
+  safeGetParam(nh1_, "training_env_y_min", par_.training_env_y_min);
+  safeGetParam(nh1_, "training_env_z_max", par_.training_env_z_max);
+  safeGetParam(nh1_, "training_env_z_min", par_.training_env_z_min);
   safeGetParam(nh1_, "use_lstm", par_.use_lstm);
   safeGetParam(nh1_, "is_multiagent", par_.is_multiagent);
   safeGetParam(nh1_, "use_delaycheck", par_.use_delaycheck);
