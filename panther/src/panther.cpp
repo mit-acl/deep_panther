@@ -374,7 +374,7 @@ void Panther::addDummyObstacle(double t_start, double t_end, std::vector<mt::obs
   }
 
   dummy_obstacle_for_opt.ctrl_pts = fitter_->fit(samples);
-  dummy_obstacle_for_opt.bbox_inflated = dummy_traj_compiled.bbox + 2 * par_.drone_bbox;
+  dummy_obstacle_for_opt.bbox_inflated = dummy_traj_compiled.bbox + par_.drone_bbox;
   dummy_obstacle_for_opt.is_dummy = true;
 
   obstacles_for_opt.push_back(dummy_obstacle_for_opt);
@@ -427,7 +427,7 @@ std::vector<mt::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
 
     obstacle_for_opt.ctrl_pts = fitter_->fit(samples);
 
-    Eigen::Vector3d bbox_inflated = trajs_[i].bbox + 2 * par_.drone_bbox;
+    Eigen::Vector3d bbox_inflated = trajs_[i].bbox + par_.drone_bbox;
 
     obstacle_for_opt.bbox_inflated = bbox_inflated;
 
