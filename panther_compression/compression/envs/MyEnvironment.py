@@ -74,12 +74,12 @@ class MyEnvironment(gym.Env):
     self.constant_gterm_pos=gterm_pos
 
   def setID(self, data):
-    self.id=data;
+    self.id=data
     self.name=self.color+"  [Env "+str(self.id)+"]"+Style.RESET_ALL
 
   def startRecordBag(self):
     self.record_bag=True
-    self.name_bag="training"+str(self.id)+".bag";
+    self.name_bag="training"+str(self.id)+".bag"
 
     # name_bag="training_"+str(uuid.uuid1())+".bag"
     # if(exists(name_bag)):
@@ -150,7 +150,7 @@ class MyEnvironment(gym.Env):
     ## Check for normalization
     ##
 
-    f_action= self.am.denormalizeAction(f_action_n);
+    f_action= self.am.denormalizeAction(f_action_n)
 
     ##
     ##  if total time that student produced is 0.0, BS function gives you an error so let's just make it bigger than 0
@@ -191,7 +191,7 @@ class MyEnvironment(gym.Env):
     ##
 
     self.w_state= State(w_posBS.getPosT(self.training_dt), w_posBS.getVelT(self.training_dt), w_posBS.getAccelT(self.training_dt), \
-                        w_yawBS.getPosT(self.training_dt), w_yawBS.getVelT(self.training_dt));
+                        w_yawBS.getPosT(self.training_dt), w_yawBS.getVelT(self.training_dt))
 
     ##
     ## Print State after update
@@ -213,10 +213,13 @@ class MyEnvironment(gym.Env):
     ## Construct Obstacles
     ##
 
-    # w_obstacles=self.obsm.getFutureWPosStaticObstacles() # if you use static obstacles
-    self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
+    # static or dynamic obstacles
+    if self.par.use_static_obstacles:
+      self.w_obstacles=self.obsm.getFutureWPosStaticObstacles()
+    else:
+      self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
     f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles);
-    f_observation_n=self.om.normalizeObservation(f_observation);
+    f_observation_n=self.om.normalizeObservation(f_observation)
 
     ##
     ## Calculate distance 
@@ -316,14 +319,14 @@ class MyEnvironment(gym.Env):
           # self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos)
           self.gm.newRandomPos()
       else:
-        w_pos_obstacle, w_pos_g_term = getObsAndGtermToCrossPath();
+        w_pos_obstacle, w_pos_g_term = getObsAndGtermToCrossPath()
         self.obsm.setPos(w_pos_obstacle)
         self.gm.setPos(w_pos_g_term);        
         # self.printwithNameAndColor("Using cross!")
 
     else:
       self.obsm.setPos(self.constant_obstacle_pos)
-      self.gm.setPos(self.constant_gterm_pos);
+      self.gm.setPos(self.constant_gterm_pos)
 
 
     
@@ -332,7 +335,7 @@ class MyEnvironment(gym.Env):
     self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
     # print("w_obstacles[0].ctrl_pts=", w_obstacles[0].ctrl_pts)
     f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles);
-    f_observation_n=self.om.normalizeObservation(f_observation);
+    f_observation_n=self.om.normalizeObservation(f_observation)
 
     # self.printwithName("THIS IS THE OBSERVATION:")
     # self.om.printObservation(f_observation)
@@ -371,7 +374,7 @@ class MyEnvironment(gym.Env):
       w_state=self.w_state
       ########
 
-      f_action= self.am.denormalizeAction(f_action_n);
+      f_action= self.am.denormalizeAction(f_action_n)
 
       w_posBS_list=[]
       w_yawBS_list=[]
@@ -383,7 +386,7 @@ class MyEnvironment(gym.Env):
          w_yawBS_list.append(w_yawBS)
 
       time_now=rospy.Time.from_sec(self.time_rosbag)#rospy.Time.from_sec(time.time());
-      self.time_rosbag=self.time_rosbag+0.1;
+      self.time_rosbag=self.time_rosbag+0.1
 
       # with rosbag.Bag(name_file, option) as bag:
       f_v=self.om.getf_v(f_obs)
@@ -393,8 +396,8 @@ class MyEnvironment(gym.Env):
       obstacles=self.om.getObstacles(f_obs)
       point_msg=PointStamped()
 
-      point_msg.header.frame_id = "f";
-      point_msg.header.stamp = time_now;
+      point_msg.header.frame_id = "f"
+      point_msg.header.stamp = time_now
       point_msg.point.x=f_g[0,0]
       point_msg.point.y=f_g[1,0]
       point_msg.point.z=f_g[2,0]
@@ -413,35 +416,35 @@ class MyEnvironment(gym.Env):
         num_samples=20
         for t_interm in np.linspace(t0, tf, num=num_samples).tolist():
 
-          marker_msg=Marker();
-          marker_msg.header.frame_id = "f";
-          marker_msg.header.stamp = time_now;
-          marker_msg.ns = "ns";
-          marker_msg.id = id_sample;
-          marker_msg.type = marker_msg.CUBE;
-          marker_msg.action = marker_msg.ADD;
+          marker_msg=Marker()
+          marker_msg.header.frame_id = "f"
+          marker_msg.header.stamp = time_now
+          marker_msg.ns = "ns"
+          marker_msg.id = id_sample
+          marker_msg.type = marker_msg.CUBE
+          marker_msg.action = marker_msg.ADD
           pos=bspline_obs_i.getPosT(t_interm)
-          marker_msg.pose.position.x = pos[0];
-          marker_msg.pose.position.y = pos[1];
-          marker_msg.pose.position.z = pos[2];
-          marker_msg.pose.orientation.x = 0.0;
-          marker_msg.pose.orientation.y = 0.0;
-          marker_msg.pose.orientation.z = 0.0;
-          marker_msg.pose.orientation.w = 1.0;
-          marker_msg.scale.x = obstacles[0].bbox_inflated[0];
-          marker_msg.scale.y = obstacles[0].bbox_inflated[1];
-          marker_msg.scale.z = obstacles[0].bbox_inflated[2];
-          marker_msg.color.a = 1.0*(num_samples-id_sample)/num_samples; 
-          marker_msg.color.r = 0.0;
-          marker_msg.color.g = 1.0;
-          marker_msg.color.b = 0.0;
+          marker_msg.pose.position.x = pos[0]
+          marker_msg.pose.position.y = pos[1]
+          marker_msg.pose.position.z = pos[2]
+          marker_msg.pose.orientation.x = 0.0
+          marker_msg.pose.orientation.y = 0.0
+          marker_msg.pose.orientation.z = 0.0
+          marker_msg.pose.orientation.w = 1.0
+          marker_msg.scale.x = obstacles[0].bbox_inflated[0]
+          marker_msg.scale.y = obstacles[0].bbox_inflated[1]
+          marker_msg.scale.z = obstacles[0].bbox_inflated[2]
+          marker_msg.color.a = 1.0*(num_samples-id_sample)/num_samples
+          marker_msg.color.r = 0.0
+          marker_msg.color.g = 1.0
+          marker_msg.color.b = 0.0
 
           marker_array_msg.markers.append(marker_msg)
 
           id_sample=id_sample+1
 
 
-      tf_stamped=TransformStamped();
+      tf_stamped=TransformStamped()
       tf_stamped.header.frame_id="world"
       tf_stamped.header.stamp=time_now
       tf_stamped.child_frame_id="f"
@@ -458,15 +461,15 @@ class MyEnvironment(gym.Env):
         w_posBS=w_posBS_list[i]
         w_yawBS=w_yawBS_list[i]
 
-        t0=w_posBS.getT0();
-        tf=w_posBS.getTf();
+        t0=w_posBS.getT0()
+        tf=w_posBS.getTf()
 
         traj_msg=Path()
         traj_msg.header.frame_id="world"
         traj_msg.header.stamp=time_now
 
         for t_i in np.arange(t0, tf, (tf-t0)/10.0):
-          pose_stamped=PoseStamped();
+          pose_stamped=PoseStamped()
           pose_stamped.header.frame_id="world"
           pose_stamped.header.stamp=time_now
           tf_matrix=posAccelYaw2TfMatrix(w_posBS.getPosT(t_i),w_posBS.getAccelT(t_i),w_yawBS.getPosT(t_i))

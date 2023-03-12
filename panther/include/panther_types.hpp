@@ -806,6 +806,7 @@ struct parameters
 {
   //
   // clang-format off
+  bool            use_dynamic_obst_in_training;
   Eigen::Vector3d training_obst_size;
   double          margin_v_factor;
   double          margin_a_factor;

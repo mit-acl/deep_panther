@@ -62,6 +62,7 @@ PYBIND11_MODULE(py_panther, m)
       // This part below should be copied/pasted from parameters of panther_types.hpp
       // clang-format off
 
+      .def_readwrite("use_dynamic_obst_in_training", &mt::parameters::use_dynamic_obst_in_training)
       .def_readwrite("training_obst_size", &mt::parameters::training_obst_size)
       .def_readwrite("margin_v_factor", &mt::parameters::margin_v_factor)
       .def_readwrite("margin_a_factor", &mt::parameters::margin_a_factor)

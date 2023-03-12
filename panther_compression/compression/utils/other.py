@@ -299,16 +299,14 @@ class ObstaclesManager():
 	def getFutureWPosStaticObstacles(self):
 		w_obs=[]
 		for i in range(self.num_obs):
-			self.newRandomPos()
-			w_ctrl_pts_ob=np.array([[],[],[]]);
+			w_ctrl_pts_ob=np.array([[],[],[]])
 			for j in range(self.fitter_num_seg + self.fitter_deg_pos):
 				w_ctrl_pts_ob=np.concatenate((w_ctrl_pts_ob, self.random_pos), axis=1)
 				# w_ctrl_pts_ob.append(np.array([[2],[2],[2]]))
 
-			# bbox_ob=np.array([[0.5],[0.5], [0.5]]);
-			bbox_inflated=np.array(self.params["drone_bbox"])
+			bbox_inflated= np.array(self.params["training_obst_size"]) + np.array(self.params["drone_bbox"])
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
-		return w_obs;
+		return w_obs
 
 	def getFutureWPosDynamicObstacles(self,t):
 		w_obs=[]
@@ -322,7 +320,6 @@ class ObstaclesManager():
 		####################################
 
 		for i in range(self.num_obs):
-			self.newRandomPos()
 			trefoil=Trefoil(pos=self.random_pos, scale=self.random_scale, offset=self.random_offset, slower=1.5)
 			samples=[]
 			for t_interm in np.linspace(t, t + self.fitter_total_time, num=self.fitter_num_samples):#.tolist():
