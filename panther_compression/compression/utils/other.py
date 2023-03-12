@@ -204,12 +204,12 @@ def getObsAndGtermToCrossPath():
 class GTermManager():
 	def __init__(self):
 		self.params = readPANTHERparams()
-		self.x_max = self.params["training_obst_x_max"]
-		self.x_min = self.params["training_obst_x_min"]
-		self.y_max = self.params["training_obst_y_max"]
-		self.y_min = self.params["training_obst_y_min"]
-		self.z_max = self.params["training_obst_z_max"]
-		self.z_min = self.params["training_obst_z_min"]
+		self.x_max = self.params["training_env_x_max"]
+		self.x_min = self.params["training_env_x_min"]
+		self.y_max = self.params["training_env_y_max"]
+		self.y_min = self.params["training_env_y_min"]
+		self.z_max = self.params["training_env_z_max"]
+		self.z_min = self.params["training_env_z_min"]
 		self.newRandomPos()
 
 	def newRandomPos(self):
@@ -246,12 +246,12 @@ class ObstaclesManager():
 	def __init__(self):
 		self.params = readPANTHERparams()
 		self.num_obs = self.params["num_of_obstacles_in_training"]
-		self.x_max = self.params["training_obst_x_max"]
-		self.x_min = self.params["training_obst_x_min"]
-		self.y_max = self.params["training_obst_y_max"]
-		self.y_min = self.params["training_obst_y_min"]
-		self.z_max = self.params["training_obst_z_max"]
-		self.z_min = self.params["training_obst_z_min"]
+		self.x_max = self.params["training_env_x_max"]
+		self.x_min = self.params["training_env_x_min"]
+		self.y_max = self.params["training_env_y_max"]
+		self.y_min = self.params["training_env_y_min"]
+		self.z_max = self.params["training_env_z_max"]
+		self.z_min = self.params["training_env_z_min"]
 
 		# self.fitter_total_time=params["fitter_total_time"]s
 		self.fitter_num_seg=self.params["fitter_num_seg"]
@@ -266,7 +266,7 @@ class ObstaclesManager():
 			[random.uniform(self.x_min, self.x_max)],
 			[random.uniform(self.y_min, self.y_max)],
 			[random.uniform(self.z_min, self.z_max)]
-		]);
+		])
 
 		##
 		## randomized params
@@ -297,7 +297,7 @@ class ObstaclesManager():
 		return 3*self.getCPsPerObstacle() + 3
 
 	def getFutureWPosStaticObstacles(self):
-		w_obs=[];
+		w_obs=[]
 		for i in range(self.num_obs):
 			self.newRandomPos()
 			w_ctrl_pts_ob=np.array([[],[],[]]);
@@ -311,7 +311,7 @@ class ObstaclesManager():
 		return w_obs;
 
 	def getFutureWPosDynamicObstacles(self,t):
-		w_obs=[];
+		w_obs=[]
 		# trefoil=Trefoil(pos=self.random_pos, scale_x=1.0, scale_y=1.0, scale_z=1.0, offset=0.0, slower=1.5);
 		# novale=np.array([[4.0],[4.0],[1.0]]);
 		# print(f"Using offset={self.random_offset}")
@@ -323,16 +323,16 @@ class ObstaclesManager():
 
 		for i in range(self.num_obs):
 			self.newRandomPos()
-			trefoil=Trefoil(pos=self.random_pos, scale=self.random_scale, offset=self.random_offset, slower=1.5);
+			trefoil=Trefoil(pos=self.random_pos, scale=self.random_scale, offset=self.random_offset, slower=1.5)
 			samples=[]
 			for t_interm in np.linspace(t, t + self.fitter_total_time, num=self.fitter_num_samples):#.tolist():
 				samples.append(trefoil.getPosT(t_interm))
 
 			w_ctrl_pts_ob_list=ObstaclesManager.fitter.fit(samples)
 			w_ctrl_pts_ob=listOf3dVectors2numpy3Xmatrix(w_ctrl_pts_ob_list)
-			bbox_inflated=np.array(self.params["drone_bbox"])
+			bbox_inflated= np.array(self.params["training_obst_size"]) + np.array(self.params["drone_bbox"])
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
-		return w_obs;
+		return w_obs
 
 class Trefoil():
 	def __init__(self, pos, scale, offset, slower):

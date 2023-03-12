@@ -30,6 +30,7 @@ yaw_scaling: 4000.0
 margin_v_factor: 1.5 #relazation factor for training constraints used in ObservationManager()
 margin_a_factor: 1.5 #relazation factor for training constraints used in ObservationManager()
 margin_ydot_factor: 1.5 #relazation factor for training constraints used in ObservationManager()
+training_obst_size: [0.5, 0.5, 0.5] #obstacle size in training env
 
 # LSTM
 #############################################
@@ -72,7 +73,7 @@ use_obstacle_shareCB: false # if it's False and use_obstacle_share is True, then
 agents_ids: ["01", "02", "03", "04", "05"]
 use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
 goal_radius: 0.5   #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
-drone_bbox: [0.01, 0.01, 0.01]  #(m) Used for collision checking
+drone_bbox: [0.1, 0.1, 0.1]  #(m) Used for collision checking
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
 # flight space size

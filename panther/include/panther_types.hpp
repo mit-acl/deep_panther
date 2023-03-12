@@ -806,6 +806,7 @@ struct parameters
 {
   //
   // clang-format off
+  Eigen::Vector3d training_obst_size;
   double          margin_v_factor;
   double          margin_a_factor;
   double          margin_ydot_factor;

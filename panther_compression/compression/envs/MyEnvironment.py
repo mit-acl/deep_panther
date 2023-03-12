@@ -82,7 +82,6 @@ class MyEnvironment(gym.Env):
     self.name_bag="training"+str(self.id)+".bag";
 
     # name_bag="training_"+str(uuid.uuid1())+".bag"
-
     # if(exists(name_bag)):
     #     option='a'
     # else:
@@ -207,7 +206,7 @@ class MyEnvironment(gym.Env):
     ## Update time and timestep
     ##
 
-    self.time = self.time + self.training_dt;
+    self.time = self.time + self.training_dt
     self.timestep = self.timestep + 1
 
     ##
