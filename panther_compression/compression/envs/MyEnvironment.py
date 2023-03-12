@@ -214,6 +214,7 @@ class MyEnvironment(gym.Env):
     ##
 
     # static or dynamic obstacles
+    print("self.par.use_dynamic_obst_in_training: ", self.par.use_dynamic_obst_in_training)
     if self.par.use_dynamic_obst_in_training:
       self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
     else:
@@ -328,11 +329,11 @@ class MyEnvironment(gym.Env):
       self.obsm.setPos(self.constant_obstacle_pos)
       self.gm.setPos(self.constant_gterm_pos)
 
-
-    
     # observation = self.om.getRandomNormalizedObservation()
-    # w_obstacles=self.obsm.getFutureWPosStaticObstacles()
-    self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
+    if self.par.use_dynamic_obst_in_training:
+      self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
+    else:
+      self.w_obstacles=self.obsm.getFutureWPosStaticObstacles()
     # print("w_obstacles[0].ctrl_pts=", w_obstacles[0].ctrl_pts)
     f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles);
     f_observation_n=self.om.normalizeObservation(f_observation)
