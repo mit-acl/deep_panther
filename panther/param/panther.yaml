@@ -3,7 +3,7 @@
 num_of_trajs_per_replan: 6 # num of students' traj (n_s in Table I in deep panther paper)
 max_num_of_initial_guesses: 10 # (n_runs in Table I)
 drone_extra_radius_for_NN: 0.0  #(m) Used for collision checking
-Ra: 15.0           # [m] Radius of my planning sphere (planning horizon)
+Ra: 7.0           # [m] Radius of my planning sphere (planning horizon)
 impose_FOV_in_trajCB: false # if True, it allows communication betw obstacle that is in FOV
 pause_time_when_replanning: false
 replanning_trigger_time_student: 0.1 #[seconds] 
