@@ -214,7 +214,7 @@ class MyEnvironment(gym.Env):
     ##
 
     # static or dynamic obstacles
-    if self.par.use_static_obstacles:
+    if self.par.use_dynamic_obst_in_training:
       self.w_obstacles=self.obsm.getFutureWPosStaticObstacles()
     else:
       self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
