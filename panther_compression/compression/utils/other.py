@@ -566,7 +566,33 @@ class ObservationManager():
 		# print(observation_normalized.shape)
 		assert observation_normalized.shape == self.getObservationShape()
 
-		return np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
+		# check which elements are not in [-1,1]
+		# if first 3 elements are not in [-1,1] --> f_v is not normalized 
+		# if 4th to 6th elements are not in [-1,1] --> f_a is not normalized 
+		# if 7th element is not in [-1,1] --> yaw_dot is not normalized
+		# if 8th to 10th elements are not in [-1,1] --> f_g (the goal) is not normalized
+		# if 11th to end elements are not in [-1,1] --> obstacle is not normalized
+
+		# print(observation_normalized)
+
+		if not np.logical_and(observation_normalized[0][0:3] >= -1, observation_normalized[0][0:3] <= 1).all():
+			print("f_v is not normalized")
+			return False
+		elif not np.logical_and(observation_normalized[0][3:6] >= -1, observation_normalized[0][3:6] <= 1).all():
+			print("f_a is not normalized")
+			return False
+		elif not np.logical_and(observation_normalized[0][6] >= -1, observation_normalized[0][6] <= 1):
+			print("yaw_dot is not normalized")
+			return False
+		elif not np.logical_and(observation_normalized[0][7:10] >= -1, observation_normalized[0][7:10] <= 1).all():
+			print("f_g is not normalized")
+			return False
+		elif not np.logical_and(observation_normalized[0][10:] >= -1, observation_normalized[0][10:] <= 1).all():
+			print("obstacle is not normalized")
+			return False
+		else:
+			return True
+		# return np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
 
 	def assertObsIsNormalized(self, observation_normalized, msg_before=""):
 
@@ -741,7 +767,7 @@ class ObservationManager():
 
 		f_gterm_pos=w_state.f_T_w * w_gterm_pos
 
-		dist2gterm=np.linalg.norm(f_gterm_pos);
+		dist2gterm=np.linalg.norm(f_gterm_pos)
 		f_g= min(dist2gterm-1e-4, self.Ra)*normalize(f_gterm_pos)
 		#f_g= self.Ra*normalize(f_gterm_pos)
 		# print("w_state.f_vel().flatten()= ", w_state.f_vel().flatten())
