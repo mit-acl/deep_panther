@@ -181,28 +181,28 @@ classdef MyClampedUniformSpline < handle
         function result=getCPs_Be_Pos_ofInterval(obj,j)
             Q_Bs_matrix=obj.convertCellArrayCPsToMatrix(obj.getCPs_BS_Pos_ofInterval(j));
                                                    %Q_Bs_matrix*   A_BS*                         inv(A_MV)
-            result=obj.convertMatrixCPsToCellArray(Q_Bs_matrix*    obj.getA_BS_Pos_Interval(j)*  inv(getA_Be(obj.p, [0,1])));
+            result=obj.convertMatrixCPsToCellArray(Q_Bs_matrix*    obj.getA_BS_Pos_Interval(j)*  inv(double(getA_Be(obj.p, [0,1]))));
         end
         
         %returns the Be velocity control points of the interval j
         function result=getCPs_Be_Vel_ofInterval(obj,j)
             Q_Bs_matrix=obj.convertCellArrayCPsToMatrix(obj.getCPs_BS_Vel_ofInterval(j));
                                                    %Q_Bs_matrix*   A_BS*                         inv(A_MV)
-            result=obj.convertMatrixCPsToCellArray(Q_Bs_matrix*    obj.getA_BS_Vel_Interval(j)*  inv(getA_Be(obj.p-1, [0,1])));
+            result=obj.convertMatrixCPsToCellArray(Q_Bs_matrix*    obj.getA_BS_Vel_Interval(j)*  inv(double(getA_Be(obj.p-1, [0,1]))));
         end
         
         %returns the Be acceleration control points of the interval j
         function result=getCPs_Be_Accel_ofInterval(obj,j)
             Q_Bs_matrix=obj.convertCellArrayCPsToMatrix(obj.getCPs_BS_Accel_ofInterval(j));
                                                    %Q_Bs_matrix*   A_BS*                         inv(A_MV)
-            result=obj.convertMatrixCPsToCellArray(Q_Bs_matrix*    obj.getA_BS_Accel_Interval(j)*  inv(getA_Be(obj.p-2, [0,1])));
+            result=obj.convertMatrixCPsToCellArray(Q_Bs_matrix*    obj.getA_BS_Accel_Interval(j)*  inv(double(getA_Be(obj.p-2, [0,1]))));
         end
 
         %returns the Be jerk control points of the interval j
         function result=getCPs_Be_Jerk_ofInterval(obj,j)
             Q_Bs_matrix=obj.convertCellArrayCPsToMatrix(obj.getCPs_BS_Jerk_ofInterval(j));
                                                    %Q_Bs_matrix*   A_BS*                         inv(A_MV)
-            result=obj.convertMatrixCPsToCellArray(Q_Bs_matrix*    obj.getA_BS_Jerk_Interval(j)*  inv(getA_Be(obj.p-3, [0,1])));
+            result=obj.convertMatrixCPsToCellArray(Q_Bs_matrix*    obj.getA_BS_Jerk_Interval(j)*  inv(double(getA_Be(obj.p-3, [0,1]))));
         end
         %%%%%%%%%%%%%%%%%%%%%%
         
