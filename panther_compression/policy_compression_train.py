@@ -86,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_rounds", default=50, type=int) 
     # parser.add_argument("--n_rounds", default=1, type=int) 
     parser.add_argument("--total_demos_per_round", default=256*5, type=int) 
-    parser.add_argument("--total_demos_per_round", default=1, type=int)
+    # parser.add_argument("--total_demos_per_round", default=1, type=int)
     parser.add_argument("--rampdown_rounds", default=1, type=int) # Dagger properties
     parser.add_argument("--n_evals", default=1, type=int)
     parser.add_argument("--train_environment_max_steps", default=50, type=int)
