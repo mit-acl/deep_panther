@@ -84,8 +84,9 @@ if __name__ == "__main__":
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
     parser.add_argument("--n_rounds", default=50, type=int) 
+    # parser.add_argument("--n_rounds", default=1, type=int) 
     parser.add_argument("--total_demos_per_round", default=256*5, type=int) 
-    # parser.add_argument("--total_demos_per_round", default=1, type=int)
+    parser.add_argument("--total_demos_per_round", default=1, type=int)
     parser.add_argument("--rampdown_rounds", default=1, type=int) # Dagger properties
     parser.add_argument("--n_evals", default=1, type=int)
     parser.add_argument("--train_environment_max_steps", default=50, type=int)
@@ -100,7 +101,7 @@ if __name__ == "__main__":
     parser.add_argument("--no_eval", dest='eval', action='store_false')
     parser.set_defaults(eval=False)
     parser.add_argument("--no_init_and_final_eval", dest='init_and_final_eval', action='store_false')
-    parser.set_defaults(init_and_final_eval=False)
+    parser.set_defaults(init_and_final_eval=True)
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
 
@@ -160,7 +161,7 @@ if __name__ == "__main__":
     verbose_python_errors=False
 
     # batch size
-    batch_size = 256
+    batch_size = 265
 
     # epoch size
     N_EPOCHS = 50
@@ -471,4 +472,4 @@ if __name__ == "__main__":
 
         print("Elapsed time: {}".format(time.time() - t0))
 
-    my_func(0);
+    my_func(0)

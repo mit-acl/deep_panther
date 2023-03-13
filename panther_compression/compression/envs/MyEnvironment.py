@@ -61,7 +61,7 @@ class MyEnvironment(gym.Env):
     self.id=0
     self.num_goal_reached = 0
     self.time = 0.0
-    # self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
+    # self.my_SolverIpopt=py_panther.SolverIpopt(self.par)
     # self.reset()
 
   def __del__(self):
@@ -214,7 +214,6 @@ class MyEnvironment(gym.Env):
     ##
 
     # static or dynamic obstacles
-    print("self.par.use_dynamic_obst_in_training: ", self.par.use_dynamic_obst_in_training)
     if self.par.use_dynamic_obst_in_training:
       self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
     else:
@@ -262,19 +261,21 @@ class MyEnvironment(gym.Env):
     # init_state=self.om.getInit_f_StateFromObservation(self.previous_f_observation)
     # final_state=self.om.getFinal_f_StateFromObservation(self.previous_f_observation)
     # total_time=computeTotalTime(init_state, final_state, self.par.v_max, self.par.a_max, self.par.factor_alloc)
-    # self.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
-    # self.my_SolverIpopt.setFocusOnObstacle(True);
-    # self.my_SolverIpopt.setObstaclesForOpt(self.om.getObstacles(self.previous_f_observation));
-    # cost=self.my_SolverIpopt.computeCost(self.am.f_traj2f_ppSolOrGuess(f_traj)) #TODO: this cost does not take into accout the constraints right now
+    # self.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time)
+    # self.my_SolverIpopt.setFocusOnObstacle(True)
+    # self.my_SolverIpopt.setObstaclesForOpt(self.om.getObstacles(self.previous_f_observation))
+    # # cost=self.my_SolverIpopt.computeCost(self.am.f_traj2f_ppSolOrGuess(f_traj)) #TODO: this cost does not take into accout the constraints right now
+    # cost=self.my_SolverIpopt.computeCost(self.am.f_obs_f_traj_2f_ppSolOrGuess(f_traj)) #TODO: this cost does not take into accout the constraints right now
     # cost=self.cost_computer.computeCost(self.previous_f_obs_n, f_traj_n)
     # constraints_violation=self.cost_computer.computeConstraintsViolation(self.previous_f_obs_n, f_traj_n)
     # augmented_cost=self.cost_computer.computeAugmentedCost(self.previous_f_obs_n, f_traj_n)
-    # self.printwithNameAndColor(f"augmented cost={augmented_cost}")
 
+    cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.cost_computer.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(self.previous_f_obs_n, f_traj_n)
+    self.printwithNameAndColor(f"augmented cost={augmented_cost}")
     # print(f"constraints_violation={constraints_violation}")
-    # reward=-augmented_cost
-    reward=0.0
-    # print(f"reward: {reward}")
+    reward=-augmented_cost
+    # reward=0.0
+    print(f"reward: {reward}")
 
     # self.printwithName("THIS IS THE OBSERVATION:")
     # self.om.printObservation(f_observation_n)

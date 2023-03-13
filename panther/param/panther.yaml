@@ -12,7 +12,7 @@ replanning_lookahead_time: 3.0 #[seconds] #distance in time space = t_in - t_1 i
 max_runtime_octopus_search: 0.5 #[seconds]
 use_closed_form_yaw_student: false #If false, the NN will predict this closed form for the yaw angle
 make_yaw_NN: false
-prob_choose_cross: 0.2 # how much you wanna choose cross obstacle in training [0.1]
+prob_choose_cross: 1.0 # how much you wanna choose cross obstacle in training [0.1]
 # training env space size
 training_env_x_max: 5.0
 training_env_x_min: -5.0
@@ -25,7 +25,7 @@ max_dist2goal: 15.0
 max_dist2obs: 15.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
-training_dt: 0.2 #Training timestep in seconds (how much you proceed as a step in an episode)
+training_dt: 0.5 #Training timestep in seconds (how much you proceed as a step in an episode)
 yaw_scaling: 2000.0
 margin_v_factor: 1.0 #relazation factor for training constraints used in ObservationManager()
 margin_a_factor: 1.0 #relazation factor for training constraints used in ObservationManager()
