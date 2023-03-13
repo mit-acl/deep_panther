@@ -25,10 +25,10 @@ max_dist2goal: 15.0
 max_dist2obs: 15.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
-training_dt: 2.0 #Training timestep in seconds (how much you proceed as a step in an episode)
-yaw_scaling: 4000.0
-margin_v_factor: 1.5 #relazation factor for training constraints used in ObservationManager()
-margin_a_factor: 1.5 #relazation factor for training constraints used in ObservationManager()
+training_dt: 0.2 #Training timestep in seconds (how much you proceed as a step in an episode)
+yaw_scaling: 2000.0
+margin_v_factor: 1.0 #relazation factor for training constraints used in ObservationManager()
+margin_a_factor: 1.0 #relazation factor for training constraints used in ObservationManager()
 margin_ydot_factor: 1.5 #relazation factor for training constraints used in ObservationManager()
 training_obst_size: [0.5, 0.5, 0.5] #obstacle size in training env
 use_dynamic_obst_in_training: false
