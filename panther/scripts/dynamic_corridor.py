@@ -104,8 +104,8 @@ class DynCorridor:
 
         else:
             mesh=random.choice(self.available_meshes_static);
-            bbox=self.bbox_static_vert;
-            z=bbox[2]/2.0;
+            bbox=self.bbox_static_vert
+            z=bbox[2]/2.0
             [x_string, y_string, z_string] = self.wave_in_z(x, y, z, self.scale[2], offset, 1.0)
         return [x_string, y_string, z_string, x, y, z, mesh, bbox]
 
@@ -126,8 +126,8 @@ class DynCorridor:
         self.name = name[1:-1]
 
         print(total_num_obs)
-        self.total_num_obs=total_num_obs;
-        self.num_of_dyn_objects=int(1.0*total_num_obs);
+        self.total_num_obs=total_num_obs
+        self.num_of_dyn_objects=int(1.0*total_num_obs)
         self.num_of_stat_objects=total_num_obs-self.num_of_dyn_objects; 
         self.x_min= 2.0 
         self.x_max= 6.0
@@ -142,9 +142,9 @@ class DynCorridor:
         self.bbox_dynamic=[0.5, 0.5, 0.5] # this corresponds to training_obst_size defined in panther.yaml
         self.bbox_static_vert=[0.4, 0.4, 4]
         self.bbox_static_horiz=[0.4, 8, 0.4]
-        self.percentage_vert=0.0;
+        self.percentage_vert=0.0
         self.name_obs="obs_"
-        self.max_vel_obstacles=-10.0;
+        self.max_vel_obstacles=-10.0
 
         self.type_of_obst_traj=type_of_obst_traj #eightCurve, static, square, epitrochoid
    

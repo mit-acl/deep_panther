@@ -20,12 +20,8 @@ import tf.transformations
 from joblib import Parallel, delayed
 import multiprocessing
 
-
-
-
 class ExpertDidntSucceed(Exception):
 	  pass
-
 
 class TfMatrix():
 	def __init__(self, T):
@@ -60,10 +56,6 @@ class TfMatrix():
 		return self.T[0:3,0:3]
 	def translation(self): #Translational part
 		return self.T[0:3,3].reshape(3,1)
-
-
-
-
 
 def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
 	axis_z=[0,0,1]
@@ -168,8 +160,8 @@ def convertPPState2State(ppstate):
 
 	return State(p, v, a, yaw, dyaw)
 
+def getObsAndGtermToCrossPathDynObst():
 
-def getObsAndGtermToCrossPath():
 	# thetas=[-np.pi/4, np.pi/4]
 	# theta=random.choice(thetas)
 	theta=random.uniform(-np.pi, np.pi)
@@ -185,21 +177,22 @@ def getObsAndGtermToCrossPath():
 	w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[height_obstacle]])
 	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[height_g_term]])
 
-	# # Use this to train static obstacles
-	# theta=random.uniform(-np.pi/2, np.pi/2)
-	# radius_obstacle=random.uniform(1.5, 4.5)
-	# radius_gterm=radius_obstacle + random.uniform(1.0, 6.0)
-	# std_deg=10#30
-	# theta_g_term=theta + random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
-	# center=np.zeros((3,1))
-
-	# w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
-	# w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[random.uniform(1.0-1.5, 1.0+1.5)]])
-	########
-
-
 	return w_pos_obstacle, w_pos_g_term
 
+def getObsAndGtermToCrossPathStaObst():
+
+	# Use this to train static obstacles
+	theta=random.uniform(-np.pi/2, np.pi/2)
+	radius_obstacle=random.uniform(1.5, 4.5)
+	radius_gterm=radius_obstacle + random.uniform(1.0, 6.0)
+	std_deg=30 #10
+	theta_g_term=theta + random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
+	center=np.zeros((3,1))
+
+	w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
+	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[random.uniform(1.0-1.5, 1.0+1.5)]])
+
+	return w_pos_obstacle, w_pos_g_term
 
 class GTermManager():
 	def __init__(self):
@@ -213,12 +206,11 @@ class GTermManager():
 		self.newRandomPos()
 
 	def newRandomPos(self):
-
 		self.w_gterm = np.array([
-			[random.uniform(self.x_min, self.x_max)],
-			[random.uniform(self.y_min, self.y_max)],
+			[random.uniform(0, self.x_max)],
+			[0], # we will do YAWING in the beginning in actual sim/hw, so we will keep the Y coordinate fixed
 			[random.uniform(self.z_min, self.z_max)]
-		]);
+		])
 		# self.w_gterm=np.array([[2.0],[0.0],[1.0]]);
 
 	def newRandomPosFarFrom_w_Position(self, w_position):
@@ -231,7 +223,7 @@ class GTermManager():
 		self.w_gterm=pos
 
 	def get_w_GTermPos(self):
-		return self.w_gterm;
+		return self.w_gterm
 
 
 class ObstaclesManager():
@@ -385,6 +377,9 @@ class State():
 
 	def f_yaw(self):
 		return np.array([[0.0]])
+	
+	def getW_T_b(self):
+		return posAccelYaw2TfMatrix(self.w_pos, self.w_accel, self.w_yaw)
 
 	def print_w_frameHorizontal(self, msg_before=""):
 		np.set_printoptions(precision=3, suppress=True)
@@ -576,19 +571,19 @@ class ObservationManager():
 		# print(observation_normalized)
 
 		if not np.logical_and(observation_normalized[0][0:3] >= -1, observation_normalized[0][0:3] <= 1).all():
-			print("f_v is not normalized")
+			print(Fore.GREEN + "	f_v is not normalized" + Style.RESET_ALL)
 			return False
 		elif not np.logical_and(observation_normalized[0][3:6] >= -1, observation_normalized[0][3:6] <= 1).all():
-			print("f_a is not normalized")
+			print(Fore.GREEN + "	f_a is not normalized" + Style.RESET_ALL)
 			return False
 		elif not np.logical_and(observation_normalized[0][6] >= -1, observation_normalized[0][6] <= 1):
-			print("yaw_dot is not normalized")
+			print(Fore.GREEN + "	yaw_dot is not normalized" + Style.RESET_ALL)
 			return False
 		elif not np.logical_and(observation_normalized[0][7:10] >= -1, observation_normalized[0][7:10] <= 1).all():
-			print("f_g is not normalized")
+			print(Fore.GREEN + "	f_g is not normalized" + Style.RESET_ALL)
 			return False
 		elif not np.logical_and(observation_normalized[0][10:] >= -1, observation_normalized[0][10:] <= 1).all():
-			print("obstacle is not normalized")
+			print(Fore.GREEN + "	obstacle is not normalized" + Style.RESET_ALL)
 			return False
 		else:
 			return True
@@ -927,7 +922,7 @@ class ActionManager():
 		return action[index_traj,0:self.traj_size_pos_ctrl_pts].reshape((3,-1), order='F')
 
 	def getYawCtrlPts(self, action, index_traj):
-		return action[index_traj,self.traj_size_pos_ctrl_pts:-1].reshape((1,-1));
+		return action[index_traj,self.traj_size_pos_ctrl_pts:-1].reshape((1,-1))
 
 	# def getProbTraj(self,traj):
 	# 	return self.getProb(traj, 0)
@@ -939,7 +934,7 @@ class ActionManager():
 		return self.getPosCtrlPts(traj,0)
 
 	def getYawCtrlPtsTraj(self, traj):
-		return self.getYawCtrlPts(traj, 0);
+		return self.getYawCtrlPts(traj, 0)
 
 	def printAction(self, action):
 		print(f"Raw={action}")
@@ -992,31 +987,29 @@ class ActionManager():
 		assert type(w_state)==State
 
 		total_time=self.getTotalTimeTraj(f_traj)
-
 		knots_pos=generateKnotsForClampedUniformBspline(0.0, total_time, self.deg_pos, self.num_seg)
-
 		f_pos_ctrl_pts = self.getPosCtrlPtsTraj(f_traj)
 
 		#Convert to w frame
-		w_pos_ctrl_pts = w_state.w_T_f * f_pos_ctrl_pts;
+		w_pos_ctrl_pts = w_state.w_T_f * f_pos_ctrl_pts
 
-		pf=w_pos_ctrl_pts[:,-1].reshape((3,1)); #Assumming final vel and accel=0 
+		pf=w_pos_ctrl_pts[:,-1].reshape((3,1)) #Assumming final vel and accel=0 
 		p0=w_state.w_pos
 		v0=w_state.w_vel
 		a0=w_state.w_accel
 
-		p=self.deg_pos;
+		p=self.deg_pos
 
-		t1 = knots_pos[1];
-		t2 = knots_pos[2];
-		tpP1 = knots_pos[p + 1];
-		t1PpP1 = knots_pos[1 + p + 1];
+		t1 = knots_pos[1]
+		t2 = knots_pos[2]
+		tpP1 = knots_pos[p + 1]
+		t1PpP1 = knots_pos[1 + p + 1]
 
 		# See Mathematica Notebook
 		# the first three control points are already set with the initial conditions
-		q0_pos = p0;
-		q1_pos = p0 + (-t1 + tpP1) * v0 / p;
-		q2_pos = (p * p * q1_pos - (t1PpP1 - t2) * (a0 * (t2 - tpP1) + v0) - p * (q1_pos + (-t1PpP1 + t2) * v0)) / ((-1 + p) * p);
+		q0_pos = p0
+		q1_pos = p0 + (-t1 + tpP1) * v0 / p
+		q2_pos = (p * p * q1_pos - (t1PpP1 - t2) * (a0 * (t2 - tpP1) + v0) - p * (q1_pos + (-t1PpP1 + t2) * v0)) / ((-1 + p) * p)
 
 		w_pos_ctrl_pts=np.concatenate((q0_pos, q1_pos, q2_pos, w_pos_ctrl_pts, pf, pf), axis=1) #Assumming final vel and accel=0
 
@@ -1024,24 +1017,24 @@ class ActionManager():
 
 
 	def f_trajAnd_w_State2_w_yaw_ctrl_pts_and_knots(self, f_traj, w_state):
+
+		assert type(w_state)==State
+
 		total_time=self.getTotalTimeTraj(f_traj)
-
 		knots_yaw=generateKnotsForClampedUniformBspline(0.0, total_time, self.deg_yaw, self.num_seg)
-
 		f_yaw_ctrl_pts= self.getYawCtrlPtsTraj(f_traj)
 
-		w_yaw_ctrl_pts =  f_yaw_ctrl_pts + w_state.w_yaw*np.ones(f_yaw_ctrl_pts.shape);
-
+		w_yaw_ctrl_pts =  f_yaw_ctrl_pts + w_state.w_yaw*np.ones(f_yaw_ctrl_pts.shape)
 
 		y0=w_state.w_yaw
 		y_dot0=w_state.yaw_dot
 		yf=w_yaw_ctrl_pts[0,-1].reshape((1,1)); #Assumming final vel =0
 
-		p=self.deg_yaw;
-		t1 = knots_yaw[1];
-		tpP1 = knots_yaw[p + 1];
-		q0_yaw = y0;
-		q1_yaw = y0 + (-t1 + tpP1) * y_dot0 / p;
+		p=self.deg_yaw
+		t1 = knots_yaw[1]
+		tpP1 = knots_yaw[p + 1]
+		q0_yaw = y0
+		q1_yaw = y0 + (-t1 + tpP1) * y_dot0 / p
 
 		w_yaw_ctrl_pts=np.concatenate((q0_yaw, q1_yaw, w_yaw_ctrl_pts, yf), axis=1) #Assumming final vel and accel=0
 
@@ -1094,7 +1087,6 @@ class ActionManager():
 		w_pos_ctrl_pts,_=self.f_trajAnd_w_State2_w_pos_ctrl_pts_and_knots(f_traj, w_state)
 		w_yaw_ctrl_pts,_=self.f_trajAnd_w_State2_w_yaw_ctrl_pts_and_knots(f_traj, w_state)
 		total_time=self.getTotalTimeTraj(f_traj)
-
 
 		# print(f"f_action={f_action}")
 		# print(f"total_time={total_time}")
@@ -1264,13 +1256,13 @@ class StudentCaller():
 
 def TfMatrix2RosQuatAndVector3(tf_matrix):
 
-  translation_ros=geometry_msgs.msg.Vector3();
-  rotation_ros=geometry_msgs.msg.Quaternion();
+  translation_ros=geometry_msgs.msg.Vector3()
+  rotation_ros=geometry_msgs.msg.Quaternion()
 
-  translation=tf_matrix.translation();
-  translation_ros.x=translation[0];
-  translation_ros.y=translation[1];
-  translation_ros.z=translation[2];
+  translation=tf_matrix.translation()
+  translation_ros.x=translation[0]
+  translation_ros.y=translation[1]
+  translation_ros.z=translation[2]
   # q=tr.quaternion_from_matrix(w_state.w_T_f.T)
   quaternion=tf.transformations.quaternion_from_matrix(tf_matrix.T) #See https://github.com/ros/geometry/issues/64
   rotation_ros.x=quaternion[0] #See order at http://docs.ros.org/en/jade/api/tf/html/python/transformations.html

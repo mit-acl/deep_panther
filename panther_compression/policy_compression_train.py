@@ -146,7 +146,7 @@ if __name__ == "__main__":
     train_only_supervised = False
 
     # use the existing data?
-    reuse_previous_samples = True
+    reuse_previous_samples = False
 
     # reuse the latest_policy?
     reuse_latest_policy=False
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     verbose_python_errors=False
 
     # batch size
-    batch_size = 265
+    batch_size = 256
 
     # epoch size
     N_EPOCHS = 50

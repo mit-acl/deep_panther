@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import copy
 from gym import spaces
-from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager, getPANTHERparamsAsCppStruct, computeTotalTime, getObsAndGtermToCrossPath, posAccelYaw2TfMatrix
+from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager, getPANTHERparamsAsCppStruct, computeTotalTime, getObsAndGtermToCrossPathDynObst, getObsAndGtermToCrossPathStaObst, posAccelYaw2TfMatrix
 from compression.utils.other import TfMatrix2RosQuatAndVector3, TfMatrix2RosPose
 from compression.utils.other import CostComputer
 from compression.utils.other import MyClampedUniformBSpline
@@ -22,6 +22,7 @@ from nav_msgs.msg import Path
 from tf2_msgs.msg import TFMessage
 from geometry_msgs.msg import PointStamped
 #############################################
+from imitation.util import logger, util
 
 import uuid
 
@@ -173,6 +174,8 @@ class MyEnvironment(gym.Env):
     w_posBS, w_yawBS= self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
 
 
+
+
     ###
     ### MOVE THE ENVIRONMENT
     ###
@@ -230,7 +233,7 @@ class MyEnvironment(gym.Env):
 
     # self.printwithName(f"Timestep={self.timestep}, dist_current_2gterm={round(dist_current_2gterm,2)}, w_state.w_pos={self.w_state.w_pos.T}")
 
-    goal_reached = (dist_current_2gterm<2.0 and dist_endtraj_2gterm<self.par.goal_radius and self.om.obsIsNormalized(f_observation_n)==False) 
+    goal_reached = (dist_current_2gterm<self.par.goal_radius+0.1 and dist_endtraj_2gterm<self.par.goal_radius) 
     if(goal_reached):
       self.num_goal_reached += 1
       self.printwithNameAndColor("Goal reached!")
@@ -255,7 +258,7 @@ class MyEnvironment(gym.Env):
     # self.printwithNameAndColor(f"done={done}")
 
     ##
-    ## Reward (not used)
+    ## Reward
     ##
 
     # init_state=self.om.getInit_f_StateFromObservation(self.previous_f_observation)
@@ -271,11 +274,11 @@ class MyEnvironment(gym.Env):
     # augmented_cost=self.cost_computer.computeAugmentedCost(self.previous_f_obs_n, f_traj_n)
 
     cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.cost_computer.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(self.previous_f_obs_n, f_traj_n)
-    self.printwithNameAndColor(f"augmented cost={augmented_cost}")
+    # self.printwithNameAndColor(f"augmented cost={augmented_cost}")
     # print(f"constraints_violation={constraints_violation}")
     reward=-augmented_cost
     # reward=0.0
-    print(f"reward: {reward}")
+    # print(f"reward: {reward}")
 
     # self.printwithName("THIS IS THE OBSERVATION:")
     # self.om.printObservation(f_observation_n)
@@ -313,7 +316,7 @@ class MyEnvironment(gym.Env):
 
     if(isinstance(self.constant_obstacle_pos, type(None)) and isinstance(self.constant_gterm_pos, type(None))):
 
-      self.obsm.newRandomPos();
+      self.obsm.newRandomPos()
 
       # prob_choose_cross=0.6
 
@@ -321,9 +324,13 @@ class MyEnvironment(gym.Env):
           # self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos)
           self.gm.newRandomPos()
       else:
-        w_pos_obstacle, w_pos_g_term = getObsAndGtermToCrossPath()
+        if self.par.use_dynamic_obst_in_training:
+          w_pos_obstacle, w_pos_g_term = getObsAndGtermToCrossPathDynObst()
+        else:
+          w_pos_obstacle, w_pos_g_term = getObsAndGtermToCrossPathStaObst()
+
         self.obsm.setPos(w_pos_obstacle)
-        self.gm.setPos(w_pos_g_term);        
+        self.gm.setPos(w_pos_g_term)  
         # self.printwithNameAndColor("Using cross!")
 
     else:
@@ -371,10 +378,8 @@ class MyEnvironment(gym.Env):
       self.bag=rosbag.Bag(self.name_bag, option)
       ######################
 
-      #####
       f_obs=self.previous_f_observation
       w_state=self.w_state
-      ########
 
       f_action= self.am.denormalizeAction(f_action_n)
 
@@ -457,14 +462,18 @@ class MyEnvironment(gym.Env):
       tf_msg=TFMessage()
       tf_msg.transforms.append(tf_stamped)
 
-
       for i in range(len(w_posBS_list)):
 
         w_posBS=w_posBS_list[i]
         w_yawBS=w_yawBS_list[i]
 
-        t0=w_posBS.getT0()
-        tf=w_posBS.getTf()
+        pos_t0=w_posBS.getT0()
+        pos_tf=w_posBS.getTf()
+        yaw_t0=w_yawBS.getT0()
+        yaw_tf=w_yawBS.getTf()
+
+        t0 = max(pos_t0, yaw_t0)
+        tf = min(pos_tf, yaw_tf)
 
         traj_msg=Path()
         traj_msg.header.frame_id="world"
@@ -474,6 +483,7 @@ class MyEnvironment(gym.Env):
           pose_stamped=PoseStamped()
           pose_stamped.header.frame_id="world"
           pose_stamped.header.stamp=time_now
+
           tf_matrix=posAccelYaw2TfMatrix(w_posBS.getPosT(t_i),w_posBS.getAccelT(t_i),w_yawBS.getPosT(t_i))
 
           pose_stamped.pose=TfMatrix2RosPose(tf_matrix)
@@ -481,7 +491,6 @@ class MyEnvironment(gym.Env):
           traj_msg.poses.append(pose_stamped)
 
         self.bag.write('/path'+str(i), traj_msg, time_now)
-
 
       self.bag.write('/g', point_msg, time_now)
       self.bag.write('/obs', marker_array_msg, time_now)
