@@ -87,7 +87,7 @@ if __name__ == "__main__":
     # parser.add_argument("--n_rounds", default=1, type=int) 
     parser.add_argument("--total_demos_per_round", default=256*5, type=int) 
     # parser.add_argument("--total_demos_per_round", default=1, type=int)
-    parser.add_argument("--rampdown_rounds", default=1, type=int) # Dagger properties
+    parser.add_argument("--rampdown_rounds", default=5, type=int) # Dagger properties
     parser.add_argument("--n_evals", default=1, type=int)
     parser.add_argument("--train_environment_max_steps", default=50, type=int)
     parser.add_argument("--test_environment_max_steps", default=1, type=int)
@@ -146,10 +146,10 @@ if __name__ == "__main__":
     train_only_supervised = False
 
     # use the existing data?
-    reuse_previous_samples = False
+    reuse_previous_samples = True
 
     # reuse the latest_policy?
-    reuse_latest_policy=False
+    reuse_latest_policy=True
 
     # record bags?
     record_bag = True
