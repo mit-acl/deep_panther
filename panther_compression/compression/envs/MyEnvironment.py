@@ -237,7 +237,7 @@ class MyEnvironment(gym.Env):
     goal_reached = (dist_current_2gterm<self.par.goal_seen_radius and dist_endtraj_2gterm<self.par.goal_radius)
     if(goal_reached):
       self.num_goal_reached += 1
-      self.print(Style.BRIGHT + Fore.GREEN + "Goal reached!" + Style.RESET_ALL)
+      print(Style.BRIGHT + Fore.GREEN + "Goal reached!" + Style.RESET_ALL)
     self.printwithNameAndColor(f"Timestep={self.timestep}, dist2gterm={round(dist_current_2gterm,2)}, total # of goal reached: {self.num_goal_reached}")
 
     ##
