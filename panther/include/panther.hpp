@@ -146,7 +146,7 @@ private:
 
   std::mutex mtx_planner_status_;
   std::mutex mtx_initial_cond;
-  std::mutex mtx_state;
+  std::mutex mtx_state_;
   std::mutex mtx_offsets;
   std::mutex mtx_plan_;
   // std::mutex mtx_factors;

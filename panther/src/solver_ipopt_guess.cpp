@@ -76,7 +76,7 @@ bool SolverIpopt::generateAStarGuess(std::vector<os::solution>& p_guesses)
   octopusSolver_ptr_->setq0q1q2(q0, q1, q2);
   octopusSolver_ptr_->setGoal(final_state_.pos);
 
-  double goal_size = 0.05;  //[meters]
+  double goal_size = par_.goal_radius;  //[meters]
 
   octopusSolver_ptr_->setXYZMinMaxAndRa(par_.x_min, par_.x_max, par_.y_min, par_.y_max, par_.z_min, par_.z_max,
                                         par_.Ra);             // limits for the search, in world frame

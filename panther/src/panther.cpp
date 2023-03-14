@@ -496,9 +496,9 @@ void Panther::getG(mt::state& G)
 
 void Panther::getState(mt::state& data)
 {
-  mtx_state.lock();
+  mtx_state_.lock();
   data = state_;
-  mtx_state.unlock();
+  mtx_state_.unlock();
 }
 
 void Panther::getG_term(mt::state& data)

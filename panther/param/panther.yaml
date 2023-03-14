@@ -1,23 +1,23 @@
 # Training setting
 #############################################
 num_of_trajs_per_replan: 6 # num of students' traj (n_s in Table I in deep panther paper)
-max_num_of_initial_guesses: 10 # (n_runs in Table I)
+max_num_of_initial_guesses: 5 # (n_runs in Table I)
 drone_extra_radius_for_NN: 0.0  #(m) Used for collision checking
-Ra: 7.0           # [m] Radius of my planning sphere (planning horizon)
+Ra: 15.0           # [m] Radius of my planning sphere (planning horizon)
 impose_FOV_in_trajCB: false # if True, it allows communication betw obstacle that is in FOV
 pause_time_when_replanning: false
 replanning_trigger_time_student: 0.1 #[seconds] 
 replanning_trigger_time_expert: 0.5 #[seconds] 
 replanning_lookahead_time: 3.0 #[seconds] #distance in time space = t_in - t_1 in Table I
-max_runtime_octopus_search: 0.5 #[seconds]
+max_runtime_octopus_search: 1.0 #[seconds]
 use_closed_form_yaw_student: false #If false, the NN will predict this closed form for the yaw angle
 make_yaw_NN: false
 prob_choose_cross: 0.8 # how much you wanna choose cross obstacle in training [0.1]
 # training env space size
-training_env_x_max: 5.0
-training_env_x_min: -5.0
-training_env_y_max: 5.0
-training_env_y_min: -5.0
+training_env_x_max: 10.0
+training_env_x_min: -10.0
+training_env_y_max: 10.0
+training_env_y_min: -10.0
 training_env_z_max: 4.0 # note that agent initial pos_z = 1.0
 training_env_z_min: -2.0 # it is important to have negative z since planning is in agent frame # note that agent initial pos_z = 1.0
 # used for normalizatoin
@@ -25,8 +25,8 @@ max_dist2goal: 15.0
 max_dist2obs: 15.0
 max_side_bbox_obs: 2.0
 max_dist2BSPoscPoint: 10.0
-training_dt: 1.0 #Training timestep in seconds (how much you proceed as a step in an episode)
-yaw_scaling: 2000.0
+training_dt: 0.25 #Training timestep in seconds (how much you proceed as a step in an episode)
+yaw_scaling: 4000.0
 margin_v_factor: 1.0 #relazation factor for training constraints used in ObservationManager()
 margin_a_factor: 1.0 #relazation factor for training constraints used in ObservationManager()
 margin_ydot_factor: 1.5 #relazation factor for training constraints used in ObservationManager()
@@ -74,6 +74,7 @@ use_obstacle_shareCB: false # if it's False and use_obstacle_share is True, then
 agents_ids: ["01", "02", "03", "04", "05"]
 use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
 goal_radius: 0.5   #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
+goal_seen_radius: 2.5 #(m) no more replanning needed sphere (when drone gets close to goal OS fails a lot, so we introduced this)
 drone_bbox: [0.1, 0.1, 0.1]  #(m) Used for collision checking
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
@@ -99,7 +100,7 @@ use_student: true
 a_star_samp_x: 5
 a_star_samp_y: 5 
 a_star_samp_z: 5 
-a_star_fraction_voxel_size: 0.1 #\in [0,1] The higher, the bigger the voxel size in A* is(i.e. more prunning)
+a_star_fraction_voxel_size: 0.0 #\in [0,1] The higher, the bigger the voxel size in A* is(i.e. more prunning)
 a_star_bias: 1.0 #Bias (cost=g+bias*h) in the A* search 
 disc_pts_per_interval_oct_search: 4
 

@@ -160,40 +160,6 @@ def convertPPState2State(ppstate):
 
 	return State(p, v, a, yaw, dyaw)
 
-def getObsAndGtermToCrossPathDynObst():
-
-	# thetas=[-np.pi/4, np.pi/4]
-	# theta=random.choice(thetas)
-	theta=random.uniform(-np.pi, np.pi)
-	radius_obstacle=random.uniform(0.0, 5.0)
-	radius_gterm=random.uniform(0.0, 8.0) #radius_obstacle + random.uniform(2.0, 10.0)
-	std_deg=30
-	theta_g_term=theta + random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
-	center=np.zeros((3,1))
-
-	height_g_term = random.uniform(1.0, 3.0)
-	height_obstacle = height_g_term + random.uniform(-0.25, 0.25)
-
-	w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[height_obstacle]])
-	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[height_g_term]])
-
-	return w_pos_obstacle, w_pos_g_term
-
-def getObsAndGtermToCrossPathStaObst():
-
-	# Use this to train static obstacles
-	theta=random.uniform(-np.pi/2, np.pi/2)
-	radius_obstacle=random.uniform(1.5, 4.5)
-	radius_gterm=radius_obstacle + random.uniform(1.0, 6.0)
-	std_deg=30 #10
-	theta_g_term=theta + random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
-	center=np.zeros((3,1))
-
-	w_pos_obstacle = center + np.array([[radius_obstacle*math.cos(theta)],[radius_obstacle*math.sin(theta)],[1.0]])
-	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[random.uniform(1.0-1.5, 1.0+1.5)]])
-
-	return w_pos_obstacle, w_pos_g_term
-
 class GTermManager():
 	def __init__(self):
 		self.params = readPANTHERparams()
@@ -203,11 +169,12 @@ class GTermManager():
 		self.y_min = self.params["training_env_y_min"]
 		self.z_max = self.params["training_env_z_max"]
 		self.z_min = self.params["training_env_z_min"]
+		self.goal_seen_radius = self.params["goal_seen_radius"]
 		self.newRandomPos()
 
 	def newRandomPos(self):
 		self.w_gterm = np.array([
-			[random.uniform(0, self.x_max)],
+			[random.uniform(self.goal_seen_radius, self.x_max)],
 			[0], # we will do YAWING in the beginning in actual sim/hw, so we will keep the Y coordinate fixed
 			[random.uniform(self.z_min, self.z_max)]
 		])
@@ -215,7 +182,7 @@ class GTermManager():
 
 	def newRandomPosFarFrom_w_Position(self, w_position):
 		dist=0.0
-		while dist<0.1: #Goal at least 0.1 meters away from the current position
+		while dist < self.goal_seen_radius: #Goal at least goal_seen_radius meters away from the current position
 			self.newRandomPos()
 			dist=np.linalg.norm(self.w_gterm-w_position)
 
@@ -244,6 +211,7 @@ class ObstaclesManager():
 		self.y_min = self.params["training_env_y_min"]
 		self.z_max = self.params["training_env_z_max"]
 		self.z_min = self.params["training_env_z_min"]
+		self.goal_seen_radius = self.params["goal_seen_radius"]
 
 		# self.fitter_total_time=params["fitter_total_time"]s
 		self.fitter_num_seg=self.params["fitter_num_seg"]
@@ -288,6 +256,20 @@ class ObstaclesManager():
 	def getSizeEachObstacle(self):
 		return 3*self.getCPsPerObstacle() + 3
 
+	def getObsAndGtermToCrossPath(self):
+
+		radius_obstacle_pos = random.uniform(self.goal_seen_radius, self.x_max*0.8)
+		std_deg = 30
+		theta_obs = random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
+		center = np.zeros((3,1))
+		height_g_term = random.uniform(self.params["training_env_z_min"], self.params["training_env_z_max"])
+		height_obstacle = height_g_term + random.uniform(-0.25, 0.25)
+
+		w_pos_obstacle = center + np.array([[radius_obstacle_pos*math.cos(theta_obs)],[radius_obstacle_pos*math.sin(theta_obs)],[height_obstacle]])
+		w_pos_g_term = center + np.array([[random.uniform(0, self.x_max)], [0], [random.uniform(self.z_min, self.z_max)]])
+
+		return w_pos_obstacle, w_pos_g_term
+	
 	def getFutureWPosStaticObstacles(self):
 		w_obs=[]
 		for i in range(self.num_obs):
@@ -596,7 +578,7 @@ class ObservationManager():
 			print(f"NORMALIZED VALUE={observation_normalized}")
 			observation=self.denormalizeObservation(observation_normalized)
 			print(f"VALUE={observation}")
-			self.printObservation(observation);
+			self.printObservation(observation)
 			raise AssertionError()
 
 	def printObservation(self, obs):
@@ -726,18 +708,18 @@ class ObservationManager():
 		# print("Shape normalization_constant=", self.normalization_constant.shape)
 		# print("obsm.getSizeAllObstacles()=", self.obsm.getSizeAllObstacles())
 
-		observation_normalized=observation/self.normalization_constant;
+		observation_normalized=observation/self.normalization_constant
 		# assertIsNormalized(observation_normalized)
 		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
-		return observation_normalized;
+		return observation_normalized
 
 	def denormalizeObservation(self,observation_normalized):
 		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
 
 		# assertIsNormalized(observation_normalized)
 		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all(), f"observation_normalized= {observation_normalized}" 
-		observation=observation_normalized*self.normalization_constant;
-		return observation;
+		observation=observation_normalized*self.normalization_constant
+		return observation
 
 	# def denormalize(self, )
 
@@ -768,24 +750,20 @@ class ObservationManager():
 		# print("w_state.f_vel().flatten()= ", w_state.f_vel().flatten())
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
-		observation=np.concatenate((w_state.f_vel().flatten(), w_state.f_accel().flatten(), w_state.yaw_dot.flatten(), f_g.flatten()));
+		observation=np.concatenate((w_state.f_vel().flatten(), w_state.f_accel().flatten(), w_state.yaw_dot.flatten(), f_g.flatten()))
 		
 		#Convert obs to f frame and append ethem to observation
 		for w_obstacle in w_obstacles:
 			assert type(w_obstacle.ctrl_pts).__module__ == np.__name__, "the ctrl_pts should be a numpy matrix, not a list"
 			observation=np.concatenate((observation, (w_state.f_T_w*w_obstacle.ctrl_pts).flatten(order='F'), (w_obstacle.bbox_inflated).flatten()))
-
 		observation=observation.reshape(self.getObservationShape())
-
 		assert observation.shape == self.getObservationShape()
-
-		return observation;
+		return observation
 
 	def getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self, w_state, w_gterm_pos, w_obstacles):
 		f_observation=self.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_state, w_gterm_pos, w_obstacles)
 		f_observationn=self.normalizeObservation(f_observation) #Observation normalized
 		return f_observationn
-
 
 def numpy3XmatrixToListOf3dVectors(data):
 	data_list=[]

@@ -102,8 +102,8 @@ class ExpertPolicy(object):
         # total_time=self.par.factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, self.par.v_max*invsqrt3_vector, self.par.a_max*invsqrt3_vector)
         total_time=computeTotalTime(init_state, final_state, self.par_v_max, self.par_a_max, self.par_factor_alloc)
 
-        ExpertPolicy.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
-        ExpertPolicy.my_SolverIpopt.setFocusOnObstacle(True);
+        ExpertPolicy.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time)
+        ExpertPolicy.my_SolverIpopt.setFocusOnObstacle(True)
         obstacles=self.om.getObstaclesForCasadi(obs)
 
         for i in range(len(obstacles)):
@@ -111,7 +111,7 @@ class ExpertPolicy(object):
         
         # in panther.cpp, we already chose the most-likely-colliding obs, and the obstacles vector has one element 
 
-        ExpertPolicy.my_SolverIpopt.setObstaclesForOpt(obstacles);
+        ExpertPolicy.my_SolverIpopt.setObstaclesForOpt(obstacles)
 
         # with nostdout():
         succeed=ExpertPolicy.my_SolverIpopt.optimize(True)
@@ -119,14 +119,15 @@ class ExpertPolicy(object):
 
         
         if(succeed==False):
-            self.printFailedOpt(info);
+            self.printFailedOpt(info)
             # exit();
             # raise ExpertDidntSucceed()
+            print("ExpertDidntSucceed (note that optimizers success/fail prompt is not ordered with env. (because it's parallelized)")
             return self.am.getNanAction(), {"Q": 0.0} 
         else:
-            self.printSucessOpt(info);
+            self.printSucessOpt(info)
 
-        best_solutions=ExpertPolicy.my_SolverIpopt.getBestSolutions();
+        best_solutions=ExpertPolicy.my_SolverIpopt.getBestSolutions()
 
 
         ##############################################################
@@ -180,7 +181,6 @@ class ExpertPolicy(object):
 
         Q=0.0; #Not used right now I think
 
-
         self.am.assertAction(action_normalized)
 
         return action_normalized, {"Q": Q}
@@ -206,6 +206,9 @@ class ExpertPolicy(object):
 
         acts = Parallel(n_jobs=num_jobs)(map(delayed(my_func), list(range(len(obs_n))))) #, prefer="threads"
         acts=np.stack(acts, axis=0)
+
+        # print(acts)
+
         return acts
 
         #Other options: 

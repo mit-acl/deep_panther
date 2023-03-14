@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import copy
 from gym import spaces
-from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager, getPANTHERparamsAsCppStruct, computeTotalTime, getObsAndGtermToCrossPathDynObst, getObsAndGtermToCrossPathStaObst, posAccelYaw2TfMatrix
+from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager, getPANTHERparamsAsCppStruct, computeTotalTime, posAccelYaw2TfMatrix
 from compression.utils.other import TfMatrix2RosQuatAndVector3, TfMatrix2RosPose
 from compression.utils.other import CostComputer
 from compression.utils.other import MyClampedUniformBSpline
@@ -62,6 +62,7 @@ class MyEnvironment(gym.Env):
     self.id=0
     self.num_goal_reached = 0
     self.time = 0.0
+    self.prev_dist_current2goal = 0.0
     # self.my_SolverIpopt=py_panther.SolverIpopt(self.par)
     # self.reset()
 
@@ -125,12 +126,14 @@ class MyEnvironment(gym.Env):
     ##
 
     if(self.am.isNanAction(f_action_n)):
+      print(f"Nan action! Previous dist to goal: {self.prev_dist_current2goal}")
       return self.om.getNanObservation(), 0.0, True, {} #This line is added to make generate_trajectories() of rollout.py work when the expert fails 
 
     f_action_n=f_action_n.reshape(self.action_shape)
 
-    self.am.assertAction(f_action_n)
-    self.am.assertActionIsNormalized(f_action_n)
+    if(self.am.actionIsNormalized(f_action_n)==False):
+      print("Action is not normalized!")
+      return self.am.getNanAction(), 0.0, True, {}
 
     ##
     ## USE CLOSED FORM FOR YAW
@@ -160,7 +163,7 @@ class MyEnvironment(gym.Env):
     for i, (f_act, f_act_n) in enumerate(zip(f_action, f_action_n)):
       if f_act[-1] <= 0.0:
         print(f"total time {f_act[-1]}, so increase it up to 1e-5")
-        f_act[-1] = 1e-5
+        f_act[-1] = 1e-10
 
     ##
     ## Choose the trajectory with smallest cost:
@@ -172,9 +175,6 @@ class MyEnvironment(gym.Env):
     f_traj=self.am.getTrajFromAction(f_action, index_smallest_augmented_cost)
     f_traj_n=self.am.getTrajFromAction(f_action_n, index_smallest_augmented_cost)
     w_posBS, w_yawBS= self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
-
-
-
 
     ###
     ### MOVE THE ENVIRONMENT
@@ -221,7 +221,8 @@ class MyEnvironment(gym.Env):
       self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
     else:
       self.w_obstacles=self.obsm.getFutureWPosStaticObstacles()
-    f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles);
+
+    f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles)
     f_observation_n=self.om.normalizeObservation(f_observation)
 
     ##
@@ -230,10 +231,10 @@ class MyEnvironment(gym.Env):
 
     dist_current_2gterm=np.linalg.norm(self.w_state.w_pos-self.gm.get_w_GTermPos()) #From the current position to the goal
     dist_endtraj_2gterm=np.linalg.norm(w_posBS.getLastPos()-self.gm.get_w_GTermPos()) #From the end of the current traj to the goal
-
+    self.prev_dist_current2goal = dist_current_2gterm
     # self.printwithName(f"Timestep={self.timestep}, dist_current_2gterm={round(dist_current_2gterm,2)}, w_state.w_pos={self.w_state.w_pos.T}")
 
-    goal_reached = (dist_current_2gterm<self.par.goal_radius+0.1 and dist_endtraj_2gterm<self.par.goal_radius) 
+    goal_reached = (dist_current_2gterm<self.par.goal_seen_radius and dist_endtraj_2gterm<self.par.goal_radius)
     if(goal_reached):
       self.num_goal_reached += 1
       self.printwithNameAndColor("Goal reached!")
@@ -318,17 +319,11 @@ class MyEnvironment(gym.Env):
 
       self.obsm.newRandomPos()
 
-      # prob_choose_cross=0.6
-
       if np.random.uniform(0, 1) < 1 - self.par.prob_choose_cross:
-          # self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos)
-          self.gm.newRandomPos()
+        self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos)
+        # self.gm.newRandomPos()
       else:
-        if self.par.use_dynamic_obst_in_training:
-          w_pos_obstacle, w_pos_g_term = getObsAndGtermToCrossPathDynObst()
-        else:
-          w_pos_obstacle, w_pos_g_term = getObsAndGtermToCrossPathStaObst()
-
+        w_pos_obstacle, w_pos_g_term = self.obsm.getObsAndGtermToCrossPath()
         self.obsm.setPos(w_pos_obstacle)
         self.gm.setPos(w_pos_g_term)  
         # self.printwithNameAndColor("Using cross!")
