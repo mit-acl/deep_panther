@@ -9,13 +9,13 @@ from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
 from compression.utils.other import ExpertDidntSucceed, ActionManager
 
-def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, expert_policy, type_loss, net_arch, use_lstm, use_one_zero_beta, only_test_loss=False, epsilon_RWTA=0.05, reuse_latest_policy=True,):
+def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, expert_policy, type_loss, net_arch, use_lstm, use_one_zero_beta, only_test_loss=False, epsilon_RWTA=0.05, reuse_latest_policy=True, use_lr_scheduler=True):
     
     if use_one_zero_beta:
         beta_schedule=dagger.OneZeroBetaSchedule()
     else:
         beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
-
+    
     am=ActionManager()
 
     if reuse_latest_policy:
@@ -27,6 +27,7 @@ def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr,
         observation_space=venv.observation_space,
         action_space=venv.action_space,
         optimizer_kwargs=dict(lr=lr),
+        use_lr_scheduler = use_lr_scheduler,
         custom_logger=custom_logger,
         policy=policy,
         batch_size=batch_size,

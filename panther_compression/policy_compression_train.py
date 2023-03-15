@@ -166,7 +166,10 @@ if __name__ == "__main__":
     # epoch size
     N_EPOCHS = 50
 
-    # learning rate
+    # use learning rate schedule?
+    use_lr_scheduler = True
+
+    # constant learning rate (if use_lr_scheduler is False)
     lr=1e-3
 
     # probably not used
@@ -341,7 +344,7 @@ if __name__ == "__main__":
         ##
 
         printInBoldBlue("----------------------- Making Student Policy: -------------------")
-        trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA, net_arch=args.net_arch, reuse_latest_policy=reuse_latest_policy, use_lstm=params["use_lstm"], use_one_zero_beta=use_one_zero_beta)
+        trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, use_lr_scheduler=use_lr_scheduler, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA, net_arch=args.net_arch, reuse_latest_policy=reuse_latest_policy, use_lstm=params["use_lstm"], use_one_zero_beta=use_one_zero_beta)
 
         ##
         ## Preliminiary evaluation
