@@ -125,16 +125,12 @@ class MyEnvironment(gym.Env):
     ## Check for normalization
     ##
 
-    if(self.am.isNanAction(f_action_n)):
+    if(self.am.isNanAction(f_action_n) or self.am.actionIsNormalized(f_action_n)==False):
       print(f"Nan action! Previous dist to goal: {self.prev_dist_current2goal}")
       return self.om.getNanObservation(), 0.0, True, {} #This line is added to make generate_trajectories() of rollout.py work when the expert fails 
 
     f_action_n=f_action_n.reshape(self.action_shape)
-
-    if(self.am.actionIsNormalized(f_action_n)==False):
-      print("Action is not normalized!")
-      return self.am.getNanAction(), 0.0, True, {}
-
+    
     ##
     ## USE CLOSED FORM FOR YAW
     ##

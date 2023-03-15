@@ -118,7 +118,7 @@ class TermGoalSender:
         #print("dist=", dist)
 
         # check distance and if it's close enough publish new term_goal
-        if (dist < self.goal_radius):
+        if (dist < self.goal_radius + 0.1):
             if not self.is_home:
                 print("goal reached")
                 self.sendGoal()
