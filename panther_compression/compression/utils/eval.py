@@ -33,7 +33,7 @@ def evaluate_policy(policy, venv, log_path, eval_episodes = 50):
     )
     stats, descriptors = rollout_stats(trajectories)
     descriptors["success"] = compute_success(trajectories, venv)
-    stats["success_rate"] = float(sum(descriptors["success"]))/float(eval_episodes)
+    stats["success_rate"] = float(sum(descriptors["success"]))/float(stats['n_traj'])
     
     logs = pd.DataFrame(descriptors)
     # logs = logs.assign(disturbance = disturbance)

@@ -84,12 +84,12 @@ if __name__ == "__main__":
     parser.add_argument("--use-DAgger", dest='on_policy_trainer', action='store_true') # Use DAgger when true, BC when false
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
-    parser.add_argument("--n_rounds", default=50, type=int) 
-    # parser.add_argument("--n_rounds", default=1, type=int) 
-    parser.add_argument("--total_demos_per_round", default=256, type=int) 
-    # parser.add_argument("--total_demos_per_round", default=1, type=int)
+    # parser.add_argument("--n_rounds", default=50, type=int) 
+    parser.add_argument("--n_rounds", default=1, type=int) 
+    # parser.add_argument("--total_demos_per_round", default=256, type=int) 
+    parser.add_argument("--total_demos_per_round", default=1, type=int)
     parser.add_argument("--rampdown_rounds", default=5, type=int) # Dagger properties
-    parser.add_argument("--n_evals", default=1, type=int)
+    parser.add_argument("--n_evals", default=100, type=int)
     parser.add_argument("--train_environment_max_steps", default=50, type=int)
     parser.add_argument("--test_environment_max_steps", default=1, type=int)
     
@@ -97,12 +97,14 @@ if __name__ == "__main__":
     ## Method changes
     ##
 
-    parser.add_argument("--no_train", dest='train', action='store_false')
-    parser.set_defaults(train=True)
+    parser.add_argument("--train", dest='train', action='store_false')
+    parser.set_defaults(train=False)
     parser.add_argument("--no_eval", dest='eval', action='store_false')
     parser.set_defaults(eval=False)
-    parser.add_argument("--no_init_and_final_eval", dest='init_and_final_eval', action='store_false')
-    parser.set_defaults(init_and_final_eval=False)
+    parser.add_argument("--init_eval", dest='init_eval', action='store_false')
+    parser.set_defaults(init_eval=False)
+    parser.add_argument("--final_eval", dest='final_eval', action='store_true')
+    parser.set_defaults(final_eval=True)
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
     parser.add_argument("--evaluation_data_collection", dest='evaluation_data_collection', action='store_true')
@@ -143,7 +145,7 @@ if __name__ == "__main__":
     use_one_zero_beta = False
 
     # when you want to collect data and not train student
-    only_collect_data = False
+    only_collect_data = True
 
     # when you want to train student only from existing data
     train_only_supervised = False
@@ -271,11 +273,10 @@ if __name__ == "__main__":
         print(f"train_environment_max_steps: {args.train_environment_max_steps}")
         print(f"test_environment_max_steps: {args.test_environment_max_steps}")
         print(f"use_only_last_coll_ds: {args.use_only_last_coll_ds}")
-        print(f"train: {args.train}, eval: {args.eval}, init_and_final_eval: {args.init_and_final_eval}")
         print(f"DAgger rampdown_rounds: {args.rampdown_rounds}.")
         print(f"total_demos_per_round: {args.total_demos_per_round}.")
 
-        assert args.eval == True or args.train == True, "eval = True or train = True!"
+        # assert args.eval == True or args.train == True, "eval = True or train = True!"
 
         ##
         ## Params
@@ -320,7 +321,7 @@ if __name__ == "__main__":
             for i in range(num_envs):
                 train_venv.env_method("startRecordBag", indices=[i]) 
 
-        if (args.init_and_final_eval or args.eval):
+        if (args.init_eval or args.final_eval or args.eval):
             # Create and set properties for EVALUATION environment
             print("[Test Env] Making test environment...")
             test_venv = util.make_vec_env(env_name=ENV_NAME, n_envs=num_envs, seed=args.seed, parallel=False)#Note that parallel applies to the environment step, not to the expert step
@@ -353,7 +354,7 @@ if __name__ == "__main__":
             evaluation_data_size=evaluation_data_size, weight_prob=weight_prob, expert_policy=expert_policy, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA, net_arch=args.net_arch, reuse_latest_policy=reuse_latest_policy, use_lstm=params["use_lstm"], use_one_zero_beta=use_one_zero_beta)
 
         ##
-        ## Create policy for evaluation
+        ## Create policy for evaluation data set
         ##
 
         printInBoldBlue("----------------------- Making Policy for Evaluation: -------------------")
@@ -364,12 +365,22 @@ if __name__ == "__main__":
                                                             type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA, net_arch=args.net_arch, 
                                                             reuse_latest_policy=reuse_latest_policy, use_lstm=params["use_lstm"], use_one_zero_beta=True)
 
+        ##
+        ## Collect evaluation data
+        ##
 
+        if args.evaluation_data_collection and not os.listdir(EVALUATION_DATA_POLICY_PATH):
+            printInBoldBlue("----------------------- Collecting Evaluation Data: --------------------")
+            evaluation_policy_path = os.path.join(EVALUATION_DATA_POLICY_PATH, "evaluation_policy.pt") # Where to save curr policy
+            evaluation_trainer.train(n_rounds=1, total_demos_per_round=evaluation_data_size, only_collect_data=True, 
+                                     bc_train_kwargs=dict(n_epochs=N_EPOCHS, save_full_policy_path=evaluation_policy_path, 
+                                                          log_interval=log_interval))
+            
         ##
         ## Preliminiary evaluation
         ##
 
-        if args.init_and_final_eval:
+        if args.init_eval:
             printInBoldBlue("----------------------- Preliminary Evaluation: --------------------")
 
             test_venv.env_method("changeConstantObstacleAndGtermPos", gterm_pos=np.array([[6.0],[0.0],[1.0]]), obstacle_pos=np.array([[2.0],[0.0],[1.0]])) 
@@ -395,17 +406,6 @@ if __name__ == "__main__":
             print("[Evaluation] Student reward: {}, len: {}.".format(pre_train_stats["return_mean"], pre_train_stats["len_mean"]))
 
             del expert_stats
-        
-        ##
-        ## Collect evaluation data
-        ##
-
-        if args.evaluation_data_collection and not os.listdir(EVALUATION_DATA_POLICY_PATH):
-            printInBoldBlue("----------------------- Collecting Evaluation Data: --------------------")
-            evaluation_policy_path = os.path.join(EVALUATION_DATA_POLICY_PATH, "evaluation_policy.pt") # Where to save curr policy
-            evaluation_trainer.train(n_rounds=1, total_demos_per_round=evaluation_data_size, only_collect_data=True, 
-                                     bc_train_kwargs=dict(n_epochs=N_EPOCHS, save_full_policy_path=evaluation_policy_path, 
-                                                          log_interval=log_interval))
 
 
         ##
@@ -426,12 +426,13 @@ if __name__ == "__main__":
         ## Train
         ##
 
-        stats = {"training":list(), "eval_no_dist":list()}
-        if args.on_policy_trainer == True:
-            assert trainer.round_num == 0
+        if args.train:
+            stats = {"training":list(), "eval_no_dist":list()}
+            if args.on_policy_trainer == True:
+                assert trainer.round_num == 0
 
-        policy_path = os.path.join(DATA_POLICY_PATH, "intermediate_policy.pt") # Where to save curr policy
-        trainer.train(n_rounds=args.n_rounds, total_demos_per_round=args.total_demos_per_round, only_collect_data=only_collect_data, bc_train_kwargs=dict(n_epochs=N_EPOCHS, save_full_policy_path=policy_path, log_interval=log_interval))
+            policy_path = os.path.join(DATA_POLICY_PATH, "intermediate_policy.pt") # Where to save curr policy
+            trainer.train(n_rounds=args.n_rounds, total_demos_per_round=args.total_demos_per_round, only_collect_data=only_collect_data, bc_train_kwargs=dict(n_epochs=N_EPOCHS, save_full_policy_path=policy_path, log_interval=log_interval))
 
         ##
         ## Store the final policy.
@@ -446,7 +447,7 @@ if __name__ == "__main__":
         ## Evaluation 
         ##
 
-        if args.init_and_final_eval:
+        if args.final_eval:
             printInBoldBlue("----------------------- Evaluation After Training: --------------------")
 
             ##
@@ -459,27 +460,31 @@ if __name__ == "__main__":
             ## Note: no disturbance
             ##
 
-            post_train_stats = evaluate_policy(trainer.policy, test_venv,eval_episodes=args.n_evals, log_path=LOG_PATH + "/student_post_train" )
-            print("[Complete] Reward: Pre: {}, Post: {}.".format( pre_train_stats["return_mean"], post_train_stats["return_mean"]))
-
             ##
             ## Print
             ##
 
-            if(abs(pre_train_stats["return_mean"])>0):
-                student_improvement=(post_train_stats["return_mean"]-pre_train_stats["return_mean"])/abs(pre_train_stats["return_mean"]);
-                if(student_improvement>0):
-                    printInBoldGreen(f"Student improvement: {student_improvement*100}%")
-                else:
-                    printInBoldRed(f"Student improvement: {student_improvement*100}%")
-            
-            print("[Complete] Episode length: Pre: {}, Post: {}.".format( pre_train_stats["len_mean"], post_train_stats["len_mean"]))
+            if args.init_eval:
 
-            ##
-            ## Clean up
-            ##
+                post_train_stats = evaluate_policy(trainer.policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH + "/student_post_train" )
+                print("[Complete] Reward: Pre: {}, Post: {}.".format( pre_train_stats["return_mean"], post_train_stats["return_mean"]))
 
-            del pre_train_stats, post_train_stats
+                printInBoldBlue("----------------------- Improvement: --------------------")
+
+                if(abs(pre_train_stats["return_mean"])>0):
+                    student_improvement=(post_train_stats["return_mean"]-pre_train_stats["return_mean"])/abs(pre_train_stats["return_mean"]);
+                    if(student_improvement>0):
+                        printInBoldGreen(f"Student improvement: {student_improvement*100}%")
+                    else:
+                        printInBoldRed(f"Student improvement: {student_improvement*100}%")
+                
+                print("[Complete] Episode length: Pre: {}, Post: {}.".format( pre_train_stats["len_mean"], post_train_stats["len_mean"]))
+
+                ##
+                ## Clean up
+                ##
+
+                del pre_train_stats, post_train_stats
 
             ##
             ## Load and evaluate the saved DAgger policy
@@ -487,15 +492,22 @@ if __name__ == "__main__":
 
             load_full_policy_path = os.path.join(DATA_POLICY_PATH, FINAL_POLICY_NAME)
             final_student_policy = bc.reconstruct_policy(load_full_policy_path)
-            rwrd = evaluate_policy(final_student_policy, test_venv,eval_episodes=args.n_evals, log_path=None)
-            print("[Evaluation Loaded Policy] Policy: {}, Reward: {}, Len: {}.".format(load_full_policy_path, rwrd["return_mean"], rwrd["len_mean"]))
+            rwrd = evaluate_policy(final_student_policy, test_venv, eval_episodes=args.n_evals, log_path=None)
 
             ##
             ## Evaluate the reward of the expert as a sanity check
             ##
 
             expert_reward = evaluate_policy(expert_policy, test_venv, eval_episodes=args.n_evals, log_path=None)
-            print("[Evaluation] Expert reward: {}\n".format(expert_reward))
+
+            ##
+            ## Print
+            ##
+
+            printInBoldRed("----------------------- TEST RESULTS: --------------------")
+            
+            print("[Test] Student Policy: Reward: {}, Success Rate: {}".format(rwrd["return_mean"], rwrd["success_rate"]))
+            print("[Test] Expert Policy: Reward: {}, Success Rate: {}".format(expert_reward["return_mean"], expert_reward["success_rate"]))
 
             ##
             ## Plot
