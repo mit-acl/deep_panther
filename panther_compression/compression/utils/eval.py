@@ -23,7 +23,7 @@ def compute_success(trajectories, venv):
             success.append(False)
     return success
 
-def evaluate_policy(policy, venv, log_path, eval_episodes = 30):
+def evaluate_policy(policy, venv, log_path, eval_episodes = 50):
     # venv.env_method(env_dist_f_call, (disturbance))
     trajectories = generate_trajectories(
         policy,

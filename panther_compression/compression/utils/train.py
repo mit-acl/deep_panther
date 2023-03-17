@@ -9,7 +9,7 @@ from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
 from compression.utils.other import ExpertDidntSucceed, ActionManager
 
-def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, expert_policy, type_loss, net_arch, use_lstm, use_one_zero_beta, only_test_loss=False, epsilon_RWTA=0.05, reuse_latest_policy=True, use_lr_scheduler=True):
+def make_simple_dagger_trainer(tmpdir, eval_dir, venv, rampdown_rounds, custom_logger, lr, batch_size, evaluation_data_size, weight_prob, expert_policy, type_loss, net_arch, use_lstm, use_one_zero_beta, only_test_loss=False, epsilon_RWTA=0.05, reuse_latest_policy=True, use_lr_scheduler=True):
     
     if use_one_zero_beta:
         beta_schedule=dagger.OneZeroBetaSchedule()
@@ -31,6 +31,7 @@ def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr,
         custom_logger=custom_logger,
         policy=policy,
         batch_size=batch_size,
+        evaluation_data_size=evaluation_data_size,
         traj_size_pos_ctrl_pts=am.traj_size_pos_ctrl_pts,
         traj_size_yaw_ctrl_pts=am.traj_size_yaw_ctrl_pts,
         use_closed_form_yaw_student=am.use_closed_form_yaw_student,
@@ -44,6 +45,7 @@ def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr,
     return dagger.SimpleDAggerTrainer(
         venv=venv,
         scratch_dir=tmpdir,
+        eval_dir=eval_dir,
         expert_policy=expert_policy,
         beta_schedule=beta_schedule,
         bc_trainer=bc_trainer,
@@ -54,7 +56,6 @@ def make_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_
     beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
 
     am=ActionManager()
-
 
     bc_trainer = bc.BC(
         observation_space=venv.observation_space,

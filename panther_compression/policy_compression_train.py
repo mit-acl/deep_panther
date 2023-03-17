@@ -79,13 +79,14 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=2)
     parser.add_argument("--log_dir", type=str, default="evals/log_dagger") # usually "log"
     parser.add_argument("--policy_dir", type=str, default="evals/tmp_dagger") # usually "tmp"
+    parser.add_argument("--evaluation_data_dir", type=str, default="evals/evalations") # usually "tmp"
     parser.add_argument("--planner-params", type=str) # Contains details on the tasks to be learnt (ref. trajectories)
     parser.add_argument("--use-DAgger", dest='on_policy_trainer', action='store_true') # Use DAgger when true, BC when false
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
     parser.add_argument("--n_rounds", default=50, type=int) 
     # parser.add_argument("--n_rounds", default=1, type=int) 
-    parser.add_argument("--total_demos_per_round", default=256*5, type=int) 
+    parser.add_argument("--total_demos_per_round", default=256, type=int) 
     # parser.add_argument("--total_demos_per_round", default=1, type=int)
     parser.add_argument("--rampdown_rounds", default=5, type=int) # Dagger properties
     parser.add_argument("--n_evals", default=1, type=int)
@@ -101,9 +102,11 @@ if __name__ == "__main__":
     parser.add_argument("--no_eval", dest='eval', action='store_false')
     parser.set_defaults(eval=False)
     parser.add_argument("--no_init_and_final_eval", dest='init_and_final_eval', action='store_false')
-    parser.set_defaults(init_and_final_eval=True)
+    parser.set_defaults(init_and_final_eval=False)
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
+    parser.add_argument("--evaluation_data_collection", dest='evaluation_data_collection', action='store_true')
+    parser.set_defaults(evaluation_data_collection=True)
 
     ##
     ## Loss calculation
@@ -161,7 +164,10 @@ if __name__ == "__main__":
     verbose_python_errors=False
 
     # batch size
-    batch_size = 256
+    batch_size = 1
+
+    # evaluation batch size
+    evaluation_data_size = 1000
 
     # epoch size
     N_EPOCHS = 50
@@ -276,12 +282,17 @@ if __name__ == "__main__":
         ##
 
         DATA_POLICY_PATH = os.path.join(args.policy_dir, str(args.seed))
+        EVALUATION_DATA_POLICY_PATH = os.path.join(args.evaluation_data_dir, str(args.seed))
         LOG_PATH = os.path.join(args.log_dir, str(args.seed))
         FINAL_POLICY_NAME = "final_policy.pt"
         ENV_NAME = "my-environment-v1"
 
         if not os.path.exists(LOG_PATH):
             os.makedirs(LOG_PATH)
+
+        if not os.path.exists(EVALUATION_DATA_POLICY_PATH):
+            os.makedirs(EVALUATION_DATA_POLICY_PATH)
+
         t0 = time.time()
 
         ##
@@ -320,17 +331,11 @@ if __name__ == "__main__":
             for i in range(num_envs):
                 test_venv.env_method("setID", i, indices=[i]) 
 
-            # test_venv = gym.make(ENV_NAME)
-            # test_venv.seed(args.seed)
-            # test_venv.action_space.seed(args.seed)
-            # test_venv.set_len_ep(args.test_environment_max_steps)
-            # print(f"[Train Env] Ep. Len:  {test_venv.get_len_ep()} [steps].")
-
         # Init logging
         tempdir = tempfile.TemporaryDirectory(prefix="quickstart")
         tempdir_path = LOG_PATH#"evals/log_tensorboard"#LOG_PATH#pathlib.Path(tempdir.name)
         print( f"All Tensorboards and logging are being written inside {tempdir_path}/.")
-        custom_logger=logger.configure(tempdir_path,  format_strs=["log", "csv", "tensorboard"])  # "stdout"
+        custom_logger=logger.configure(tempdir_path,  format_strs=["log", "csv", "tensorboard"])
 
         ##
         ## Create expert policy 
@@ -344,13 +349,27 @@ if __name__ == "__main__":
         ##
 
         printInBoldBlue("----------------------- Making Student Policy: -------------------")
-        trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, use_lr_scheduler=use_lr_scheduler, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA, net_arch=args.net_arch, reuse_latest_policy=reuse_latest_policy, use_lstm=params["use_lstm"], use_one_zero_beta=use_one_zero_beta)
+        trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, eval_dir=EVALUATION_DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, use_lr_scheduler=use_lr_scheduler, batch_size=batch_size, \
+            evaluation_data_size=evaluation_data_size, weight_prob=weight_prob, expert_policy=expert_policy, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA, net_arch=args.net_arch, reuse_latest_policy=reuse_latest_policy, use_lstm=params["use_lstm"], use_one_zero_beta=use_one_zero_beta)
+
+        ##
+        ## Create policy for evaluation
+        ##
+
+        printInBoldBlue("----------------------- Making Policy for Evaluation: -------------------")
+
+        evaluation_trainer = make_simple_dagger_trainer(tmpdir=EVALUATION_DATA_POLICY_PATH, eval_dir=EVALUATION_DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, 
+                                                        custom_logger=None, lr=lr, use_lr_scheduler=use_lr_scheduler, batch_size=batch_size, 
+                                                            evaluation_data_size=evaluation_data_size, weight_prob=weight_prob, expert_policy=expert_policy, 
+                                                            type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA, net_arch=args.net_arch, 
+                                                            reuse_latest_policy=reuse_latest_policy, use_lstm=params["use_lstm"], use_one_zero_beta=True)
+
 
         ##
         ## Preliminiary evaluation
         ##
 
-        if(args.init_and_final_eval):
+        if args.init_and_final_eval:
             printInBoldBlue("----------------------- Preliminary Evaluation: --------------------")
 
             test_venv.env_method("changeConstantObstacleAndGtermPos", gterm_pos=np.array([[6.0],[0.0],[1.0]]), obstacle_pos=np.array([[2.0],[0.0],[1.0]])) 
@@ -377,6 +396,18 @@ if __name__ == "__main__":
 
             del expert_stats
         
+        ##
+        ## Collect evaluation data
+        ##
+
+        if args.evaluation_data_collection and not os.listdir(EVALUATION_DATA_POLICY_PATH):
+            printInBoldBlue("----------------------- Collecting Evaluation Data: --------------------")
+            evaluation_policy_path = os.path.join(EVALUATION_DATA_POLICY_PATH, "evaluation_policy.pt") # Where to save curr policy
+            evaluation_trainer.train(n_rounds=1, total_demos_per_round=evaluation_data_size, only_collect_data=True, 
+                                     bc_train_kwargs=dict(n_epochs=N_EPOCHS, save_full_policy_path=evaluation_policy_path, 
+                                                          log_interval=log_interval))
+
+
         ##
         ## Train and evaluate
         ##
