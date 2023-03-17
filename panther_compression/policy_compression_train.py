@@ -504,10 +504,12 @@ if __name__ == "__main__":
             ## Print
             ##
 
+            print("\n")
             printInBoldRed("----------------------- TEST RESULTS: --------------------")
+            print("\n")
             
-            print("[Test] Student Policy: Reward: {}, Success Rate: {}".format(rwrd["return_mean"], rwrd["success_rate"]))
-            print("[Test] Expert Policy: Reward: {}, Success Rate: {}".format(expert_reward["return_mean"], expert_reward["success_rate"]))
+            print("[Test] Student Policy: Avg. Cost: {}, Success Rate: {}".format(-rwrd["return_mean"], rwrd["success_rate"]))
+            print("[Test] Expert Policy: Avg. Cost: {}, Success Rate: {}".format(-expert_reward["return_mean"], expert_reward["success_rate"]))
 
             ##
             ## Plot
