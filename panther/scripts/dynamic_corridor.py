@@ -72,17 +72,19 @@ def getColorJet(v, vmin, vmax):
 class DynCorridor:
 
     def getTrajectoryPosMeshBBox(self, i):
-        delta_beginning=2.0;
-        delta=(self.x_max-self.x_min-delta_beginning)/(self.total_num_obs);
-        # x=delta_beginning + self.x_min + i*delta #random.uniform(self.x_min, self.x_max);
-        # y=random.uniform(self.y_min, self.y_max);
-        # z=random.uniform(self.z_min, self.z_max);
-        # offset=random.uniform(-2*math.pi, 2*math.pi);
+        delta_beginning=2.0
 
-        x = 5
-        y = 0
-        z = 1
-        offset = 0
+        delta=(self.x_max-self.x_min-delta_beginning)/(self.total_num_obs)
+        x=delta_beginning + self.x_min + i*delta #random.uniform(self.x_min, self.x_max);
+        y=random.uniform(self.y_min, self.y_max)
+        z=random.uniform(self.z_min, self.z_max)
+        offset=random.uniform(-2*math.pi, 2*math.pi)
+
+        # x = 5
+        # y = 0
+        # z = 1
+        # offset = 0
+
         slower=random.uniform(self.slower_min, self.slower_max);
         s=self.scale
         if(self.getType(i)=="dynamic"):
@@ -125,7 +127,6 @@ class DynCorridor:
         name = rospy.get_namespace()
         self.name = name[1:-1]
 
-        print(total_num_obs)
         self.total_num_obs=total_num_obs
         self.num_of_dyn_objects=int(1.0*total_num_obs)
         self.num_of_stat_objects=total_num_obs-self.num_of_dyn_objects; 
@@ -184,7 +185,7 @@ class DynCorridor:
             dynamic_trajectory_msg.pos.x=x #Current position, will be updated later
             dynamic_trajectory_msg.pos.y=y #Current position, will be updated later
             dynamic_trajectory_msg.pos.z=z #Current position, will be updated later
-            dynamic_trajectory_msg.id = 4000+ i #Current id 4000 to avoid interference with ids from agents #TODO
+            dynamic_trajectory_msg.id = 4000 + i #Current id 4000 to avoid interference with ids from agents #TODO
 
             self.all_dyn_traj.append(dynamic_trajectory_msg);
 

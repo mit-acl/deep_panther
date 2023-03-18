@@ -68,7 +68,6 @@ obstacle_share_cb_duration: 1.0 #seconds
 use_obstacle_share: true
 use_obstacle_shareCB: false # if it's False and use_obstacle_share is True, then an agent will publish whenever it receives obstacle's traj from tracking predictor. (which could be too frequent, so I intoroduced publishObstacleCB) 
 
-
 # PANTHER setting 
 #############################################
 agents_ids: ["01", "02", "03", "04", "05"]
@@ -92,8 +91,8 @@ j_max: [30.0, 30.0, 30.0]   #[m/s3]
 factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
 max_seconds_keeping_traj: 30.0     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
 gamma: 0.1 #[seconds] >0 Time step between discretization points
-use_expert: false
-use_student: true
+use_expert: true
+use_student: false
 
 # Octopus Search
 #############################################

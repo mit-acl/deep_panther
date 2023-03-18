@@ -9,20 +9,24 @@
 close all; clc;clear;
 doSetup();
 import casadi.*
-
 const_p={};    const_y={};
 opti = casadi.Opti();
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CONSTANTS! %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%If the position trajectory is also generated, if set to false only a yaw trajectory wil be made (leave as false because we want both!)
+
+%%
+%% If the position trajectory is also generated, if set to false only a yaw trajectory wil be made (leave as false because we want both!)
+%%
+
 pos_is_fixed=false; %you need to run this file twice to produce the necessary casadi files: both with pos_is_fixed=false and pos_is_fixed=true. 
 
-%Variables to determine what should be part of the optimization problems
+%%
+%% Variables to determine what should be part of the optimization problems
+%%
 
 use_panther_star=true;
-
 if use_panther_star
     optimize_n_planes=true;     %Optimize the normal vector "n" of the planes (the "tilt") (see Panther paper diagram)
     optimize_d_planes=true;     %Optimize the scalar "d" of the planes (the distance) (see Panther paper diagram)
@@ -33,24 +37,47 @@ else
     optimize_time_alloc=false;
 end
 
-%Whether or not the dynamic limits and obstacle avoidance constraints are formulated as hard constraints (as equalities/inequalities) or soft constraints (in the objective function)
+%%
+%% Whether or not the dynamic limits and obstacle avoidance constraints are formulated as hard constraints (as equalities/inequalities) or soft constraints (in the objective function)
+%%
+
 soft_dynamic_limits_constraints=false;
 soft_obstacle_avoid_constraint=false;
 
+%%
+%% Plots?
+%%
+
 make_plots=false;
+
+%%
+%% Problem formulatio parameters
+%%
 
 deg_pos=3; %The degree of the position polynomial
 deg_yaw=2; %The degree of the yaw polynomial
 num_seg=6; %The number of segments in the trajectory (the more segments the less conservative the trajectory is [also makes optimization problem harder])
-num_max_of_obst=1; %This is the maximum num of the obstacles 
+num_max_of_obst = 5; %This is the maximum num of the obstacles that will be considered in the constraints
+num_obst_in_FOV = 2; % this is different from max_num_obst, which is the max number of obst that an agent includes for constraints
 
-%Constants for spline fitted to the obstacle trajectory
+dim_pos=3; %The dimension of the position trajectory (R3)
+dim_yaw=1; %The dimension of the yaw trajectory (R1)
+offset_vel=0.1;
+
+basis="MINVO"; %MINVO OR B_SPLINE or BEZIER. This is the basis used for collision checking (in position, velocity, accel and jerk space), both in Matlab and in C++
+linear_solver_name='ma27'; %mumps [default, comes when installing casadi], ma27, ma57, ma77, ma86, ma97 
+print_level=0; %From 0 (no verbose) to 12 (very verbose), default is 5
+jit=false;
+
+%%
+%% Constants for spline fitted to the obstacle trajectory
+%%
+
 fitter.deg_pos=3; %The degree of the fit past obstacle trajectory
 fitter.num_seg=7; %The number of segments in the fit in the past obstacle trajectory
 fitter.dim_pos=3; %The dimension of the fit past obstacle (3 for R3)
 fitter.num_samples=20; %The number of samples used to fit the past obstacle trajectory
 fitter_num_of_cps= fitter.num_seg + fitter.deg_pos; %The number of control points of fit past obstacle trajectory (B-spline)
-%Used to define the output of the fitter that is the input to the optimization problem
 for i=1:num_max_of_obst
     fitter.ctrl_pts{i}=opti.parameter(fitter.dim_pos,fitter_num_of_cps); %This comes from C++
     fitter.bbox_inflated{i}=opti.parameter(fitter.dim_pos,1); %This comes from C++
@@ -59,43 +86,45 @@ end
 fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti);
 %The total time of the fit past obstacle trajectory (horizon length[NOTE: This is also the max horizon length of the drone's trajectory])
 fitter.total_time=6.0; %Time from (time at point d) to end of the fitted spline
-%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%NOTE: Everything uses B-Spline control points except for obstacle constraints which use the set basis (usually MINVO)
 
-%The number of segments used to discritize the past obstacle trajectory in the collision avoidance constraints 
+%%%%
+%%%% NOTE: Everything uses B-Spline control points except for obstacle constraints which use the set basis (usually MINVO)
+%%%%
+
+%%
+%% The number of segments used to discritize the past obstacle trajectory in the collision avoidance constraints 
+%%
+
 sampler.num_samples_obstacle_per_segment = 4;                    %This is used for both the feature sampling (simpson), and the obstacle avoidance sampling
 sampler.num_samples=sampler.num_samples_obstacle_per_segment*num_seg;    %This will also be the num_of_layers in the graph yaw search of C++
-                                                             
-%The number of yaw points used by astar in the yaw initialization search
-num_of_yaw_per_layer=40; %This will be used in the graph yaw search of C++
-                         %Note that the initial layer will have only one yaw (which is given) 
-basis="MINVO"; %MINVO OR B_SPLINE or BEZIER. This is the basis used for collision checking (in position, velocity, accel and jerk space), both in Matlab and in C++
-linear_solver_name='ma27'; %mumps [default, comes when installing casadi], ma27, ma57, ma77, ma86, ma97 
-print_level=0; %From 0 (no verbose) to 12 (very verbose), default is 5
-jit=false;
 
-%The trajectory is optimized from t=0 to t=1 then the total time is scaled by the decision variable alpha
+%%
+%% The number of yaw points used by astar in the yaw initialization search
+%%
+
+num_of_yaw_per_layer = 40; %This will be used in the graph yaw search of C++ %Note that the initial layer will have only one yaw (which is given) 
+
+%%
+%% The trajectory is optimized from t=0 to t=1 then the total time is scaled by the decision variable alpha
+%%
+
 t0_n=0.0;
 tf_n=1.0;
 
-dim_pos=3; %The dimension of the position trajectory (R3)
-dim_yaw=1; %The dimension of the yaw trajectory (R1)
-
-offset_vel=0.1;
-
 assert(tf_n>t0_n);
-
 assert(t0_n==0.0); %This must be 0! (assumed in the C++ and MATLAB code)
 assert(tf_n==1.0); %This must be 1! (assumed in the C++ and MATLAB code)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%% PARAMETERS! %%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%% PARAMETERS! %%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %NOTE: All of the opti.parameter values are set by the C++ code by panther.yaml
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%% DEFINITION
-%%%%% factors for the cost
+%%
+%% factors for the cost
+%%
+
 c_pos_smooth= opti.parameter(1,1); %Position smoothing cost factor
 c_yaw_smooth= opti.parameter(1,1); %Yaw smoothing cost factor
 c_fov=        opti.parameter(1,1); %FOV cost factor
@@ -105,10 +134,16 @@ c_total_time = opti.parameter(1,1); %Total time cost factor
 % c_dyn_lim= opti.parameter(1,1);
 % c_costs.dist_im_cost=         opti.parameter(1,1);
 
-%The radius of the planning horizon sphere
+%%
+%% The radius of the planning horizon sphere
+%%
+
 Ra=opti.parameter(1,1);
 
-%FOV is cone
+%%
+%% FOV is cone
+%%
+
 thetax_FOV_deg=opti.parameter(1,1);    %total angle of the FOV in the x direction
 thetay_FOV_deg=opti.parameter(1,1);    %total angle of the FOV in the y direction
 
@@ -118,10 +153,16 @@ thetax_half_FOV_rad=thetax_half_FOV_deg*pi/180.0;
 thetay_half_FOV_deg=thetay_FOV_deg/2.0; %half of the angle of the cone
 thetay_half_FOV_rad=thetay_half_FOV_deg*pi/180.0;
 
-%%%%% Transformation matrix camera/body b_T_c
+%%
+%% Transformation matrix camera/body b_T_c
+%%
+
 b_T_c=opti.parameter(4,4);
 
-%If we are optimizing the total time (time allocation) then setup alpha as a decision variable, else it is a parameter read from panther.yaml
+%%
+%% If we are optimizing the total time (time allocation) then setup alpha as a decision variable, else it is a parameter read from panther.yaml
+%%
+
 if(optimize_time_alloc)
     alpha=opti.variable(1,1); 
 else
@@ -129,10 +170,10 @@ else
 end
 total_time=alpha*(tf_n-t0_n); %Total time is (tf_n-t0_n)*alpha. (should be 1 * alpha)
 
+%%
+%% Initial and final conditions, and max values
+%%
 
-%%%%% Initial and final conditions, and max values
-%These parameters are also set by panther.yaml
-%FOR POSITION
 p0=opti.parameter(3,1); v0=opti.parameter(3,1); a0=opti.parameter(3,1);
 pf=opti.parameter(3,1); vf=opti.parameter(3,1); af=opti.parameter(3,1);
 
@@ -142,6 +183,7 @@ j_max=opti.parameter(3,1);
 
 %https://github.com/mit-acl/deep_panther/blob/master/panther/matlab/other/explanation_normalization.svg
 %Normalized v0, a0, v_max,... (Normalized values for time 0 to 1 * alpha, non-normalized are for time 0 to 1)
+
 v0_n=v0*alpha;
 a0_n=a0*(alpha^2);
 vf_n=vf*alpha;
@@ -150,7 +192,6 @@ v_max_n=v_max*alpha;
 a_max_n=a_max*(alpha^2); 
 j_max_n=j_max*(alpha^3);
 
-%FOR YAW
 y0=opti.parameter(1,1); ydot0=opti.parameter(1,1); 
 yf=opti.parameter(1,1); ydotf=opti.parameter(1,1);
 ydot_max=opti.parameter(1,1);
@@ -159,10 +200,13 @@ ydot0_n=ydot0*alpha;
 ydotf_n=ydotf*alpha;
 ydot_max_n=ydot_max*alpha; %v_max for yaw
 
+%%
+%% Planes
+%%
 
-%%%%% Planes
 n={}; d={};
 for i=1:(num_max_of_obst*num_seg)
+
     %If we are optimizing the plane normals, add them as decision variables, else they are parameters
     if(optimize_n_planes)
         n{i}=opti.variable(3,1); 
@@ -178,18 +222,16 @@ for i=1:(num_max_of_obst*num_seg)
     end    
 end
 
-% obstacle_bbox_inflated={};
-% for i=1:num_max_of_obst
-%     obstacle_bbox_inflated{i}=opti.parameter(3,1); %It has three elements: hx, hy, hz (bbox_inflated of size hx x hy x hz)
-% end
+%%
+%% Min/max x, y, z (in flight space)
+%%
 
-%%% Min/max x, y, z (in flight space)
 x_lim=opti.parameter(2,1); %[min max]
 y_lim=opti.parameter(2,1); %[min max]
 z_lim=opti.parameter(2,1); %[min max]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%% CREATION OF THE SPLINES! %%%%%%%%%%%
+%%%%%%%%%%%%%%%% CREATION OF THE SPLINES! %%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 sy=MyClampedUniformSpline(t0_n,tf_n,deg_yaw, dim_yaw, num_seg, opti); %spline yaw.
@@ -200,21 +242,6 @@ else
     sp=MyClampedUniformSpline(t0_n,tf_n,deg_pos, dim_pos, num_seg, opti); %spline position.
 end
 
-
-
-%%%%%%%% Trajectory of the obstacle
-% N=num_seg+deg_pos+1;
-% deg_obstacle=deg_pos;
-% dim_obstacle=dim_pos;
-
-% p=deg_obstacle;
-% t_obs=linspace(0,1,num_seg+1);
-% knots_obstacle=[zeros(1,p+1)      t_obs(2:end-1)          ones(1,p+1)];
-
-
-
-
-
 %This part below uses the Casadi implementation of a BSpline. However, that
 %implementation does not allow SX variables (which means that it cannot be
 %expanded). See more at https://github.com/jtorde/useful_things/blob/master/casadi/bspline_example/bspline_example.m
@@ -223,93 +250,75 @@ end
 % my_bs_parametric_tmp=casadi.bspline(t_eval_sym, fitter.ctrl_pts(:), {knots_obstacle}, {[deg_obstacle]}, dim_obstacle); %Note that here we use casadi.bspline, NOT casadi.Function.bspline
 % my_bs_parametric = Function('my_bs_parametric',{t_eval_sym,fitter.ctrl_pts},{my_bs_parametric_tmp});
 
-% beta1 =opti.parameter(1,1); %deltat_fromInitTrajObs_toPointD
-
 deltaT=total_time/num_seg; %Time allocated for each segment
-
 obst={}; %Obs{i}{j} Contains the vertexes (as columns) of the obstacle i in the interval j
 
-%Creates points (centers of the obstacles and verticies) used for obstacle constraints
-for i=1:num_max_of_obst
+%%
+%% Creates points (centers of the obstacles and verticies) used for obstacle constraints
+%%
 
+for i=1:num_max_of_obst
     all_centers=[];
     for j=1:num_seg
-
         all_vertexes_segment_j=[];
-        
         for k=1:sampler.num_samples_obstacle_per_segment
-            %This takes a sample at the end, but not at the beginning
-%             t_obs = beta1 + deltaT*(j-1) + (k/sampler.num_samples_obstacle_per_segment)*deltaT;
             t_obs = deltaT*(j-1) + (k/sampler.num_samples_obstacle_per_segment)*deltaT;
-            
             t_nobs= max( t_obs/fitter.total_time,  1.0 );  %Note that fitter.bs_casadi{i}.knots=[0...1]
-            
             pos_center_obs=fitter.bs_casadi{i}.getPosT(t_nobs);
-            
             all_centers=[all_centers pos_center_obs];
-
             all_vertexes_segment_j=[all_vertexes_segment_j vertexesOfBox(pos_center_obs, fitter.bbox_inflated{i}) ];
-
         end
-
         obst{i}.vertexes{j}=all_vertexes_segment_j;
-        
     end  
-    
     obst{i}.centers=all_centers;
-    
 end
 
 t_opt_n_samples=linspace(0,1,sampler.num_samples);
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CONSTRAINTS! %%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Set the total time and calculate alpha
-total_time_n=(tf_n-t0_n);
 
+%%
+%% Set the total time and calculate alpha
+%%
+
+total_time_n=(tf_n-t0_n);
 alpha=total_time/total_time_n;  %Please read explanation_normalization.svg
 
-% TODO: Possibly repeats, check later
-v0_n=v0*alpha;
-a0_n=a0*(alpha^2);
-ydot0_n=ydot0*alpha;
+%%
+%% Initial conditions
+%%
 
-
-vf_n=vf*alpha;
-af_n=af*(alpha^2);
-ydotf_n=ydotf*alpha;
-
-v_max_n=v_max*alpha;
-a_max_n=a_max*(alpha^2);
-j_max_n=j_max*(alpha^3);
-
-ydot_max_n=ydot_max*alpha;
-
-%Initial conditions
 const_p{end+1}= sp.getPosT(t0_n)== p0 ;
 const_p{end+1}= sp.getVelT(t0_n)== v0_n ;
 const_p{end+1}= sp.getAccelT(t0_n)== a0_n ;
 const_y{end+1}= sy.getPosT(t0_n)== y0 ;
 const_y{end+1}= sy.getVelT(t0_n)== ydot0_n ;
 
-%Final conditions
+%%
+%% Final conditions
+%%
+
 % opti.subject_to( sp.getPosT(tf)== pf );
 const_p{end+1}= sp.getVelT(tf_n)== vf_n ;
 const_p{end+1}= sp.getAccelT(tf_n)== af_n ;
 const_y{end+1}= sy.getVelT(tf_n)==ydotf_n ; % Needed: if not (and if you are minimizing ddyaw), dyaw=cte --> yaw will explode
 
+%%
+%% Need to ensure total time of trajectory being optimized is less than the predicted time of th obstacles
+%%
 
-
-%Need to ensure total time of trajectory being optimized is less than the predicted time of th obstacles
 if(optimize_time_alloc)
     const_p{end+1}= total_time<=fitter.total_time; %Samples for visibility/obs_avoidance are only taken for t<fitter.total_time
 end
 
 const_p_obs_avoid={}
 
-%One plane per segment per obstacle
+%%
+%% One plane per segment per obstacle
+%%
+
 % epsilon=1;
 for j=1:(sp.num_seg)
 
@@ -335,35 +344,17 @@ for j=1:(sp.num_seg)
       
       end
       
-      
       %and the control points on the other side
       for kk=1:size(Q,2)
         const_p_obs_avoid{end+1}= n{ip}'*Q{kk} + d{ip} <= -1;
       end
     end  
- 
-%     %Sphere constraints
-%     for kk=1:size(Q,2) 
-%         tmp=(Q{kk}-p0);
-%         const_p{end+1}= (tmp'*tmp)<=(Ra*Ra) ;
-%     end
     
     %Min max xyz constraints
     for kk=1:size(Q,2) 
         t_obs=Q{kk};
-%         const_p{end+1}= x_lim(1)<=tmp(1) ;
-%         const_p{end+1}= x_lim(2)>=tmp(1) ;
-%         
-%         const_p{end+1}= y_lim(1)<=t_obs(2) ;
-%         const_p{end+1}= y_lim(2)>=t_obs(2) ;
-% 
-%         const_p{end+1}= z_lim(1)<=t_obs(3) ; 
-%         const_p{end+1}= z_lim(2)>=t_obs(3) ;
     end
 end
-
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% OBJECTIVE! %%%%%%%%%%%%%%%%%%%%%%%%%
@@ -374,80 +365,84 @@ clear i
 % u=MX.sym('u',1,1); %it must be defined outside the loop (so that then I can use substitute it regardless of the interval
 % w_fevar=MX.sym('w_fevar',3,1); %it must be defined outside the loop (so that then I can use substitute it regardless of the interval
 % w_velfewrtworldvar=MX.sym('w_velfewrtworld',3,1);
-yaw= MX.sym('yaw',1,1);  
-simpson_index=1;
-simpson_coeffs=[];
 
-% all_target_isInFOV=[];
-all_fov_costs=[];
 
-% s_logged={};
-
-all_simpson_constants=[];
-all_is_in_FOV_smooth=[];
-fov_cost=0;
-%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% Construct the FOV term in objective function
+%%
 
 h=alpha*(t_opt_n_samples(2)-t_opt_n_samples(1));
 
-for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
-    
-    w_t_b = sp.getPosT(t_opt_n); %Translation between the body and the world frame
-    a=sp.getAccelT(t_opt_n)/(alpha^(2));
-    
-    %Definition 3 (hopf fibration) in the Panther paper table 3
-    qpsi=[cos(yaw/2), 0, 0, sin(yaw/2)]; %Note that qpsi has norm=1 (qyaw)
-    qabc=qabcFromAccel(a,9.81);
-    q=multquat(qabc,qpsi); %Note that q is guaranteed to have norm=1
-    w_R_b=toRotMat(q); %Rotation between the body and the world frame
-  
-    w_T_b=[w_R_b w_t_b; zeros(1,3) 1];     w_T_c=w_T_b*b_T_c;     c_T_b=invPose(b_T_c);     b_T_w=invPose(w_T_b);
-    
-    % Take the center of the obstacle and get the position of the obstacle in the world frame
+%%
+%% Loop for each obstacle to keep in FOV
+%%
 
-    % 
+for i = 1:num_obst_in_FOV
+    
+    %%
+    %% Get FOV term for each obstacle
+    %%
+    yaw= MX.sym('yaw',1,1);  
+    simpson_index=1;
+    simpson_coeffs=[];
+    
+    % all_target_isInFOV=[];
+    all_fov_costs=[];
+    % s_logged={};
+    
+    all_simpson_constants=[];
+    all_is_in_FOV_smooth=[];
+    fov_cost=0;
 
+    for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
+        
+        w_t_b = sp.getPosT(t_opt_n); %Translation between the body and the world frame
+        a=sp.getAccelT(t_opt_n)/(alpha^(2));
+        
+        %Definition 3 (hopf fibration) in the Panther paper table 3
+        qpsi=[cos(yaw/2), 0, 0, sin(yaw/2)]; %Note that qpsi has norm=1 (qyaw)
+        qabc=qabcFromAccel(a,9.81);
+        q=multquat(qabc,qpsi); %Note that q is guaranteed to have norm=1
+        w_R_b=toRotMat(q); %Rotation between the body and the world frame
+    
+        w_T_b=[w_R_b w_t_b; zeros(1,3) 1];     w_T_c=w_T_b*b_T_c;     c_T_b=invPose(b_T_c);     b_T_w=invPose(w_T_b);
+        
+        % Take the center of the obstacle and get the position of the obstacle in the world frame
 
+        % w_fevar=obst{1}.centers(:,simpson_index); %TODO: For now, only choosing one obstacle
+        w_fevar=obst{i}.centers(:,simpson_index); % Choose the top num_obst_in_FOV obstacles
+        
+        c_P=c_T_b*b_T_w*[w_fevar;1]; %Position of the feature (the center of the obstacle) in the camera frame
+        s=c_P(1:2)/(c_P(3));  %Note that here we are not using f (the focal length in meters) because it will simply add a constant factor in ||s|| and in ||s_dot||
+        
+        %FOV is a cone:  (See more possible versions of this constraint at the end of this file) (inFOV in Panther paper table 2)
+        is_in_FOV_tmp=-cos(thetax_half_FOV_deg*pi/180.0) + (c_P(1:3)'/norm(c_P((1:3))))*[0;0;1]; % Constraint is is_in_FOV1>=0
+        
+        gamma=100; %Weight on the field of view soft-constriant
+        all_is_in_FOV_smooth=[all_is_in_FOV_smooth  (   1/(1+exp(-gamma*is_in_FOV_tmp))  ) ];
+        
+        is_in_FOV=substitute(is_in_FOV_tmp,yaw,sy.getPosT(t_opt_n)); %Yaw was a symbolic variable so now we substitute it with an actually variable (the zeorth derivative [the yaw value] from the yaw spline)
+        
+        f=-is_in_FOV; % Constraint is f<=0
+        
+        fov_cost_j=f^3;           %This will try to put the obstacle in the center of the FOV
+        
+        simpson_constant=(h/3.0)*getSimpsonCoeff(simpson_index,sampler.num_samples);
+        
+        fov_cost=fov_cost + simpson_constant*fov_cost_j; %See https://en.wikipedia.org/wiki/Simpson%27s_rule#Composite_Simpson's_rule
+        
+        all_fov_costs=[all_fov_costs fov_cost_j];
+        
+        simpson_index=simpson_index+1;
+        all_simpson_constants=[all_simpson_constants simpson_constant];
+    end
 
-
-    w_fevar=obst{1}.centers(:,simpson_index); %TODO: For now, only choosing one obstacle
-    
-    c_P=c_T_b*b_T_w*[w_fevar;1]; %Position of the feature (the center of the obstacle) in the camera frame
-    s=c_P(1:2)/(c_P(3));  %Note that here we are not using f (the focal length in meters) because it will simply add a constant factor in ||s|| and in ||s_dot||
-    
-    %FOV is a cone:  (See more possible versions of this constraint at the end of this file) (inFOV in Panther paper table 2)
-    is_in_FOV_tmp=-cos(thetax_half_FOV_deg*pi/180.0) + (c_P(1:3)'/norm(c_P((1:3))))*[0;0;1]; % Constraint is is_in_FOV1>=0
-    
-
-    gamma=100; %Weight on the field of view soft-constriant
-    all_is_in_FOV_smooth=[all_is_in_FOV_smooth  (   1/(1+exp(-gamma*is_in_FOV_tmp))  ) ];
-    
-    is_in_FOV=substitute(is_in_FOV_tmp,yaw,sy.getPosT(t_opt_n)); %Yaw was a symbolic variable so now we substitute it with an actually variable (the zeorth derivative [the yaw value] from the yaw spline)
-    
-    f=-is_in_FOV; % Constraint is f<=0
-    
-    %Penalty associated with the constraint
-    %Note that that is_in_FOV_tmp \in [-2,2]
-%     fov_cost_j=max(0,f)^3;  %This will try to put the obstacle in the FOV 
-    %N=30;
-    %fov_cost_j=log(1+exp(f*N))/N; %This is a smooth approximation of max(0,f), see https://math.stackexchange.com/a/517741/564801
-    fov_cost_j=f^3;           %This will try to put the obstacle in the center of the FOV
-    
-    simpson_constant=(h/3.0)*getSimpsonCoeff(simpson_index,sampler.num_samples);
-    
-    fov_cost=fov_cost + simpson_constant*fov_cost_j; %See https://en.wikipedia.org/wiki/Simpson%27s_rule#Composite_Simpson's_rule
-    
-    all_fov_costs=[all_fov_costs fov_cost_j];
-    
-    
-    
-    simpson_index=simpson_index+1;
-    all_simpson_constants=[all_simpson_constants simpson_constant];
-    
 end
 
+%%
+%% Cost
+%%
 
-%Cost
 pos_smooth_cost=sp.getControlCost()/(alpha^(sp.p-1));
 final_pos_cost=(sp.getPosT(tf_n)- pf)'*(sp.getPosT(tf_n)- pf);
 total_time_cost=alpha*(tf_n-t0_n);
@@ -461,14 +456,18 @@ total_cost=c_pos_smooth*pos_smooth_cost+...
            c_final_yaw*final_yaw_cost+...
            c_total_time*total_time_cost;
 
+%%
+%% First option: Hard constraints
+%%
 
-%First option: Hard constraints
 const_p_dyn_limits={};
 const_y_dyn_limits={};
 [const_p_dyn_limits,const_y_dyn_limits]=addDynLimConstraints(const_p_dyn_limits, const_y_dyn_limits, sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n);
 
+%%
+%% Determines violation of constraints used for training by python
+%%
 
-%Determines violation of constraints used for training by python
 opti_tmp=opti.copy;
 opti_tmp.subject_to(); %Clear constraints
 opti_tmp.subject_to([const_p_dyn_limits, const_y_dyn_limits]);
@@ -480,7 +479,10 @@ opti_tmp.subject_to(); %Clear constraints
 opti_tmp.subject_to([const_p_obs_avoid]);
 violation_obs_avoid=getViolationConstraints(opti_tmp);
 
-%Add all the constraints
+%%
+%% Add all the constraints
+%%
+
 if(soft_dynamic_limits_constraints==true)
     total_cost = total_cost + (1/numel(violation_dyn_limits))*sum(violation_dyn_limits.^2);
 else
@@ -505,23 +507,18 @@ opti.minimize(simplify(total_cost));
 %%%%%%%%%%%%%%%%%%%%%%%%%%% SOLVE! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
 all_nd=[];
 for i=1:(num_max_of_obst*num_seg)
     all_nd=[all_nd [n{i};d{i}]];
 end
-
 
 % all_obstacle_bbox_inflated=[];
 % for i=1:num_max_of_obst
 %     all_obstacle_bbox_inflated=[all_obstacle_bbox_inflated obstacle_bbox_inflated{i}]; %The i-th column contains the bbox_inflated of the obstacle i
 % end
 
-
-
 pCPs=sp.getCPsAsMatrix();
 yCPs=sy.getCPsAsMatrix();
-
 
 % for i=1:num_samples
 %     x0_feature=[1;1;1];
@@ -535,7 +532,10 @@ yCPs=sy.getCPsAsMatrix();
 % all_w_fe_value=cell2mat(all_w_fe_value);
 % all_w_velfewrtworld_value=cell2mat(all_w_velfewrtworld_value);
 
-%Setting all of the parameters for testing
+%%
+%% Setting all of the parameters for testing
+%%
+
 v_max_value=1.6*ones(3,1);
 a_max_value=5*ones(3,1);
 j_max_value=50*ones(3,1);
@@ -582,15 +582,11 @@ tmp1=[ p0_value(1)*ones(1,sp.p-1)   linspace(p0_value(1),pf_value(1), sp.N+1-2*(
    
 tmp2=[ y0_value(1)*ones(1,sy.p-1)   linspace(y0_value(1),yf_value(1), sy.N+1-2*(sy.p-1))       yf_value(1)*ones(1,sy.p-1) ];
 
-
-
 alpha_value = 3.53467;
 tmp1=[0, 0, 0, 1.64678, 2.85231, 4.05784, 5.70462, 5.70462, 5.70462; 
       0, 0, 0, -0.378827, -1.05089, -1.71629, -2.08373, -2.08373, -2.08373; 
       0, 0, 0, 5.62017e-05, 0.00192903, 0.00290378, 0.00011499, 0.00011499, 0.00011499];
 tmp2=[0, 0, 0.281832, 0.888652, 1.82877, 2.19427, 2.34944, 2.34944];
-
-
 
 % all_obstacle_bbox_inflated_value= ones(size(all_obstacle_bbox_inflated));
 
@@ -627,10 +623,7 @@ par_and_init_guess= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV
              {createStruct('yCPs', yCPs, tmp2)},...
              createCellArrayofStructsForObstacles(fitter)];   
               
-
-
 [par_and_init_guess_exprs, par_and_init_guess_names, names_value]=toExprsNamesAndNamesValue(par_and_init_guess);
-
 
 opts = struct;
 opts.expand=true; %When this option is true, it goes WAY faster!
@@ -655,12 +648,8 @@ else
     opti.subject_to([const_p, const_y]);
 end
 
-
 results_expresion={pCPs,yCPs, all_nd, total_cost, yaw_smooth_cost, pos_smooth_cost, alpha, fov_cost, final_yaw_cost, final_pos_cost}; %Note that this containts both parameters, variables, and combination of both. If they are parameters, the corresponding value will be returned
 results_names={'pCPs','yCPs','all_nd','total_cost', 'yaw_smooth_cost', 'pos_smooth_cost','alpha','fov_cost','final_yaw_cost','final_pos_cost'};
-
-
-%%%%
 
 %Used for other things
 compute_cost = Function('compute_cost', par_and_init_guess_exprs ,{total_cost},...
@@ -673,9 +662,6 @@ if use_panther_star
 else
     compute_cost.save('./casadi_generated_files/panther_compute_cost.casadi') %The file generated is quite big
 end
-
-%%%%%%%%%
-%%
 
 %Used for other things
 % opti.subject_to([const_p, const_y]);
@@ -742,6 +728,7 @@ fprintf(my_file,'deg_pos: %d\n',deg_pos);
 fprintf(my_file,'deg_yaw: %d\n',deg_yaw);
 fprintf(my_file,'num_seg: %d\n',num_seg);
 fprintf(my_file,'num_max_of_obst: %d\n',num_max_of_obst);
+fprintf(my_file,'num_obst_in_FOV: %d\n',num_obst_in_FOV);
 fprintf(my_file,'sampler_num_samples: %d\n',sampler.num_samples);
 fprintf(my_file,'fitter_num_samples: %d\n',fitter.num_samples);
 fprintf(my_file,'fitter_total_time: %d\n',fitter.total_time);

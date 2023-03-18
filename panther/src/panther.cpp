@@ -58,6 +58,10 @@ Panther::Panther(mt::parameters par) : par_(par)
   // std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
   // cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
 
+  //
+  // If Using Student for Planning
+  //
+
   if (par_.use_student == true)
   {
     pybind11::initialize_interpreter();
@@ -70,6 +74,7 @@ Panther::Panther(mt::parameters par) : par_(par)
     // because of having declared the variables just after class CostComputer(): (see python file), and not inside
     // init()
     // We put those calls here to avoid this overhead while actually planning
+
     for (int i = 1; i < 10; i++)
     {
       std::cout << "Calling the student!" << std::endl;
@@ -700,18 +705,16 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
                      std::vector<si::solOrGuess>& splines_fitted, std::vector<Hyperplane3D>& planes, mt::log& log,
                      int& k_index_end)
 {
-  //////////
+  //
+  // Initialization
+  //
+
   bool this_replan_uses_new_gterm = false;
   if (is_new_g_term_ == true)
   {
     this_replan_uses_new_gterm = true;
   }
-  // else
-  // {
-  //   return false;
-  // }
   is_new_g_term_ = false;
-  //////////
 
   (*log_ptr_) = {};  // Reset the struct with the default values
 
@@ -798,7 +801,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
   double t_final = t_start + par_.factor_alloc * time_allocated;
   double max_prob_collision = -std::numeric_limits<double>::max();  // it's actually a heuristics of the probability
                                                                     // (we are summing below --> can be >1)
-  int argmax_prob_collision = -1;  // will contain the index of the trajectory to focus on
+  // reorder the obstacles_for_opt so that the one with the highest probability of collision is first
 
   int num_samplesp1 = 20;
   double delta = 1.0 / num_samplesp1;
@@ -808,13 +811,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
 
   for (int i = 0; i < trajs_.size(); i++)
   {
-    if (!par_.look_teammates)
-    {
-      if (trajs_[i].is_agent)
-      {
-        continue;
-      }
-    }
 
     double prob_i = 0.0;
     for (int j = 0; j <= num_samplesp1; j++)
@@ -827,18 +823,9 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
       // std::cout << "pos_obs_std= " << pos_obs_std << std::endl;
       prob_i += probMultivariateNormalDist(-R, R, pos_obs_mean - pos_drone, pos_obs_std);
     }
-
     all_probs.push_back(prob_i);
-    // std::cout << "[Selection] Trajectory " << i << " has P(collision)= " << prob_i * pow(10, 15) << "e-15" <<
-    // std::endl;
-
-    if (prob_i > max_prob_collision)
-    {
-      max_prob_collision = prob_i;
-      argmax_prob_collision = i;
-      std::cout << bold << red << "argmax_prob_collision's id is: " << trajs_[i].id << std::endl;
-    }
   }
+  
   mtx_trajs_.unlock();
 
   std::cout << "[Selection] Probs of coll --> ";
@@ -849,92 +836,153 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
   std::cout << std::endl;
 
   // std::cout.precision(30);
-  std::cout << bold << "[Selection] Chosen Trajectory " << argmax_prob_collision
-            << ", P(collision)= " << max_prob_collision * pow(10, 5) << "e-5" << std::endl;
+  // std::cout << bold << "[Selection] Chosen Trajectory " << argmax_prob_collision
+  //           << ", P(collision)= " << max_prob_collision * pow(10, 5) << "e-5" << std::endl;
+
+  //
+  // check if the only trajectory it has is dummy or not
+  //
 
   if (obstacles_for_opt.size() == 0)
   {
-    std::cout << bold << "No obstacle found" << std::endl;
+    // if it is empty, add a dummy obstacle
+    addDummyObstacle(t_start, t_final, obstacles_for_opt, A, splines_fitted);
+  }
+  else if (obstacles_for_opt.size() == 1 && obstacles_for_opt[0].is_dummy == true)
+  {
+    // if it is not empty, but it is a dummy, remove it and add a new dummy
+    obstacles_for_opt.clear();
+    addDummyObstacle(t_start, t_final, obstacles_for_opt, A, splines_fitted);
   }
   else
   {
+    //
+    // check obstacles_for_opt is not empty
+    //
+
     verify(obstacles_for_opt.size() >= 1, "obstacles_for_opt should have at least 1 element");
-    verify(argmax_prob_collision >= 0, "argmax_prob_collision should be >=0");
-    verify(argmax_prob_collision <= (obstacles_for_opt.size() - 1), "argmax_prob_collision should be <= "
-                                                                    "(obstacles_for_opt.size() - 1)");
 
-    // Big TODO
-    // We can choose one obstacle to track in FOV, but need to incorporate other obsts/agents in optimization as
-    // constraints Right now, we just only care about one obst/agent, which is not good
+    //
+    // define argmax_prob_collisions vector which is the list of indices of the hiest probability of collision stored in all_probs
+    //
 
-    // keep only the obstacle that has the highest probability of collision
-    auto tmp = obstacles_for_opt[argmax_prob_collision];
+    std::vector<int> argmax_prob_collisions(all_probs.size());
+    iota(argmax_prob_collisions.begin(), argmax_prob_collisions.end(), 0);
+    stable_sort(argmax_prob_collisions.begin(), argmax_prob_collisions.end(),
+        [&all_probs](int i1, int i2) {return all_probs[i1] < all_probs[i2];});
+
+    //
+    // check argmax_prob_collisions is within range
+    //
+
+    for (int i = 0; i < argmax_prob_collisions.size(); i++)
+    {
+      verify(argmax_prob_collisions[i] >= 0, "argmax_prob_collisions should be >=0");
+    }
+
+    // We can choose a small number of obsts to track in FOV, and incorporate other obsts/agents in optimization as
+    // constraints.
+    // Reorder obstacles_for_opt so that the first elements are the ones with the highest probability of collision
+    // Example:
+    // trajs_ =                 [obs1, obs2, obs3, obs4]
+    // all_probs =              [ 0.5,  0.1,    1,    0]
+    // argmax_prob_collisions = [   2,    1,    3,    0]
+    // tmp_obstacles_for_opt =  [obs4, obs3, obs1, obs2]
+    // obstacles_for_opt =      [obs4, obs3, obs1, obs2]
+    // if num_obst_in_FOV in main.m is 2, then an agent will consider [obs4, obs3] as FOV constraints
+
+    std::vector<mt::obstacleForOpt> tmp_obstacles_for_opt;
+
+    for (int i = 0; i < all_probs.size(); i++)
+    {
+      tmp_obstacles_for_opt.push_back(obstacles_for_opt[all_probs[i]]);
+    }
+
+    //
+    // assign tmp_obstacles_for_opt to obstacles_for_opt
+    //
+
     obstacles_for_opt.clear();
-    obstacles_for_opt.push_back(tmp);
+    for (int i = 0; i < tmp_obstacles_for_opt.size(); i++)
+    {
+      obstacles_for_opt.push_back(tmp_obstacles_for_opt[i]);
+    }
 
-    ////////////////////////////////////////
-    ////////////////////////////////////////
-    ////////////////////////////////////////
+    //
+    // delete tmp_obstacles_for_opt
+    //
 
-    verify(obstacles_for_opt.size() == 1, "obstacles_for_opt should have only 1 element");
+    tmp_obstacles_for_opt.clear();
   }
+
+  //
+  // If obstacles_for_opt is too small, then we need to add some dummy obstacles, which is the copy of the last obstacle
+  //
+
+  std::cout << "obstacles_for_opt.size()= " << obstacles_for_opt.size() << std::endl;
+
+  if (obstacles_for_opt.size() < par_.num_max_of_obst)
+  {
+    std::cout << bold << "Too few obstacles. duplicate and add the last obstacles" << std::endl;
+    for (int i = obstacles_for_opt.size(); i < par_.num_max_of_obst; i++)
+    {
+      mt::obstacleForOpt dummy_obst;
+      dummy_obst = obstacles_for_opt.back();
+      obstacles_for_opt.push_back(dummy_obst);
+    }
+  }
+
+  //
+  // If obstacles_for_opt is too large, then we need to delete some of them
+  //
 
   if (obstacles_for_opt.size() > par_.num_max_of_obst)
   {
     std::cout << red << bold << "Too many obstacles. Run Matlab again with a higher num_max_of_obst" << reset
               << std::endl;
-    abort();
+    for (int i = obstacles_for_opt.size(); i > par_.num_max_of_obst; i--)
+    {
+      obstacles_for_opt.pop_back();
+    }
   }
+
+  //
+  // Print 
+  //
+
+  std::cout << "the size of obstacles_for_opt is " << obstacles_for_opt.size() << std::endl;
+
+  //
+  // Initialize variables
+  //
 
   int n_safe_trajs_expert = 0;
   int n_safe_trajs_student = 0;
   int n_safe_trajs = 0;
+  
+  //
+  // Get edges_obstacles
+  //
 
-  // si::solOrGuess best_solution;
+  mtx_trajs_.lock();
+
+  ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
+
+  mtx_trajs_.unlock();
+
+  edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
+
   if (par_.use_expert)
   {
-    //////////////////////////////////////////////////////////////////////////
-    ///////////////////////// Set Times in optimization //////////////////////
-    //////////////////////////////////////////////////////////////////////////
 
-    // solver_->setMaxRuntimeOctopusSearch(par_.max_runtime_octopus_search);  //, par_.kappa, par_.mu);
-
-    //////////////////////
-
-    // Eigen::Vector3d invsqrt3Vector = (1.0 / sqrt(3)) * Eigen::Vector3d::Ones();
-
-    mtx_trajs_.lock();
-    double angle = 3.14;
-    if (argmax_prob_collision >= 0)
-    {
-      Eigen::Vector3d A2G = G_term.pos - A.pos;
-      Eigen::Vector3d A2Obstacle = evalMeanDynTrajCompiled(trajs_[argmax_prob_collision], t_start) - A.pos;
-      angle = angleBetVectors(A2G, A2Obstacle);
-    }
-
-    double angle_deg = angle * 180 / 3.14;
-
-    if (fabs(angle_deg) > par_.angle_deg_focus_front)
-    {  //
-      std::cout << bold << yellow << "[Selection] Focusing on front of me, angle=" << angle_deg << " deg" << reset
-                << std::endl;
-      solver_->par_.c_final_yaw = 0.0;
-      solver_->par_.c_fov = 0.0;
-      solver_->par_.c_yaw_smooth = 0.0;
-      solver_->setFocusOnObstacle(false);
-      G.yaw = atan2(G_term_.pos[1] - A.pos[1], G_term_.pos[0] - A.pos[0]);
-    }
-    else
-    {
-      std::cout << bold << yellow << "[Selection] Focusing on obstacle, angle=" << angle_deg << " deg" << reset
-                << std::endl;
-      solver_->setFocusOnObstacle(true);
-      solver_->par_.c_fov = par_.c_fov;
-      solver_->par_.c_final_yaw = par_.c_final_yaw;
-      solver_->par_.c_yaw_smooth = par_.c_yaw_smooth;
-    }
-
-    mtx_trajs_.unlock();
+    //
+    // Use Expert
+    //
+    
+    solver_->setFocusOnObstacle(true);
+    solver_->par_.c_fov = par_.c_fov;
+    solver_->par_.c_final_yaw = par_.c_final_yaw;
+    solver_->par_.c_yaw_smooth = par_.c_yaw_smooth;
 
     //////////////////////////////////////////////////////////////////////////
     ///////////////////////// Set init and final states //////////////////////
@@ -949,52 +997,15 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
       return false;
     }
 
-    //
-    // Get edges_obstacles
-    //
-
-    // mtx_trajs_.lock();
-
-    // ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
-
-    // mtx_trajs_.unlock();
-
-    // edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
-
     //////////////////////////////////////////////////////////////////////////
     ///////////////////////// Solve optimization! ////////////////////////////
     //////////////////////////////////////////////////////////////////////////
 
     // removeTrajsThatWillNotAffectMe(A, t_start, t_final);  // TODO: Commented (4-Feb-2021)
 
-    //
-    // if there's not obstacle detected, add a dummy one
-    //
-
-    std::cout << "obstacles_for_opt.size() " << obstacles_for_opt.size() << std::endl;
-
-    //
-    // check if the only trajectory it has is dummy or not
-    //
-
-    // if (obstacles_for_opt.size() == 1 && obstacles_for_opt[0].is_dummy)
-    // {
-    //   obstacles_for_opt.pop_back();
-    // }
-
-    if (obstacles_for_opt.size() == 0)
-    {
-      addDummyObstacle(t_start, t_final, obstacles_for_opt, A, splines_fitted);
-    }
-    else if (obstacles_for_opt.size() == 1 && obstacles_for_opt[0].is_dummy == true)
-    {
-      obstacles_for_opt.clear();
-      addDummyObstacle(t_start, t_final, obstacles_for_opt, A, splines_fitted);
-    }
 
     solver_->setObstaclesForOpt(obstacles_for_opt);
 
-    //////////////////////
     std::cout << on_cyan << bold << "Solved so far" << solutions_found_ << "/" << total_replannings_ << reset
               << std::endl;
 
@@ -1019,31 +1030,9 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
 
     best_solution_expert = solver_->fillTrajBestSolutionAndGetIt();
   }
+
   if (par_.use_student)
   {
-    //
-    // Get edges_obstacles
-    //
-
-    mtx_trajs_.lock();
-
-    ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
-
-    mtx_trajs_.unlock();
-
-    edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
-
-    std::cout << "obstacles_for_opt.size() " << obstacles_for_opt.size() << std::endl;
-
-    if (obstacles_for_opt.size() == 0)
-    {
-      addDummyObstacle(t_start, t_final, obstacles_for_opt, A, splines_fitted);
-    }
-    else if (obstacles_for_opt.size() == 1 && obstacles_for_opt[0].is_dummy == true)
-    {
-      obstacles_for_opt.clear();
-      addDummyObstacle(t_start, t_final, obstacles_for_opt, A, splines_fitted);
-    }
 
     log_ptr_->tim_initial_setup.toc();
     std::cout << "Calling the student!" << std::endl;

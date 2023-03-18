@@ -11,8 +11,11 @@
 #define PANTHER_HPP
 
 #include <vector>
-#include "cgal_utils.hpp"
 #include <mutex>
+#include <numeric>
+#include <algorithm>
+
+#include "cgal_utils.hpp"
 
 #include "panther_types.hpp"
 
