@@ -57,8 +57,8 @@ make_plots=false;
 deg_pos=3; %The degree of the position polynomial
 deg_yaw=2; %The degree of the yaw polynomial
 num_seg=6; %The number of segments in the trajectory (the more segments the less conservative the trajectory is [also makes optimization problem harder])
-num_max_of_obst = 5; %This is the maximum num of the obstacles that will be considered in the constraints
-num_obst_in_FOV = 2; % this is different from max_num_obst, which is the max number of obst that an agent includes for constraints
+num_max_of_obst = 2; %This is the maximum num of the obstacles that will be considered in the constraints
+num_obst_in_FOV = 1; % this is different from max_num_obst, which is the max number of obst that an agent includes for constraints
 
 dim_pos=3; %The dimension of the position trajectory (R3)
 dim_yaw=1; %The dimension of the yaw trajectory (R1)
@@ -1159,10 +1159,11 @@ plot(all_t_n,full(result.all_yaw_corrected),'o')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%
 %% Functions
-
+%%
          
- function result=createCellArrayofStructsForObstacles(fitter)
+function result=createCellArrayofStructsForObstacles(fitter)
          
      num_obs=size(fitter.bbox_inflated,2);
 
@@ -1180,24 +1181,28 @@ plot(all_t_n,full(result.all_yaw_corrected),'o')
 
     end
          
- end
+end
+
+%%
+%%
+%%
 
 function [par_and_init_guess_exprs, par_and_init_guess_names, names_value]=toExprsNamesAndNamesValue(par_and_init_guess)
+    par_and_init_guess_exprs=[]; %expressions
+    par_and_init_guess_names=[]; %guesses
+    names_value={};
+    for i=1:numel(par_and_init_guess)
+        par_and_init_guess_exprs=[par_and_init_guess_exprs {par_and_init_guess{i}.expression}];
+        par_and_init_guess_names=[par_and_init_guess_names {par_and_init_guess{i}.name}];
 
-par_and_init_guess_exprs=[]; %expressions
-par_and_init_guess_names=[]; %guesses
-names_value={};
-for i=1:numel(par_and_init_guess)
-    par_and_init_guess_exprs=[par_and_init_guess_exprs {par_and_init_guess{i}.expression}];
-    par_and_init_guess_names=[par_and_init_guess_names {par_and_init_guess{i}.name}];
-
-    names_value{end+1}=par_and_init_guess{i}.name;
-    names_value{end+1}=double2DM(par_and_init_guess{i}.value); 
-
+        names_value{end+1}=par_and_init_guess{i}.name;
+        names_value{end+1}=double2DM(par_and_init_guess{i}.value); 
+    end
 end
 
-end
-
+%%
+%%
+%%
 
 function result=substituteWithSolution(expression, all_var_solved, all_params_and_init_guesses)
 

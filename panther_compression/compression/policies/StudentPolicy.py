@@ -91,11 +91,16 @@ class StudentPolicy(BasePolicy):
 
         action_dim = get_action_dim(self.action_space)
 
-        ###
+        ##
+        ## If using closed form yaw
+        ##
+
         if(self.am.use_closed_form_yaw_student==True):
             action_dim = action_dim - self.am.traj_size_yaw_ctrl_pts*self.am.num_traj_per_action
 
-        ####
+        ##
+        ## If using LSTM
+        ##
 
         if self.use_lstm:
 
@@ -150,8 +155,6 @@ class StudentPolicy(BasePolicy):
         """
 
         if self.use_lstm:
-
-            print("using LSTM")
 
             ##
             ## get features

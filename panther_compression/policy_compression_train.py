@@ -84,10 +84,10 @@ if __name__ == "__main__":
     parser.add_argument("--use-DAgger", dest='on_policy_trainer', action='store_true') # Use DAgger when true, BC when false
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
-    # parser.add_argument("--n_rounds", default=50, type=int) 
-    parser.add_argument("--n_rounds", default=1, type=int) 
-    # parser.add_argument("--total_demos_per_round", default=256, type=int) 
-    parser.add_argument("--total_demos_per_round", default=1, type=int)
+    parser.add_argument("--n_rounds", default=50, type=int) 
+    # parser.add_argument("--n_rounds", default=1, type=int) 
+    parser.add_argument("--total_demos_per_round", default=256*5, type=int) 
+    # parser.add_argument("--total_demos_per_round", default=1, type=int)
     parser.add_argument("--rampdown_rounds", default=5, type=int) # Dagger properties
     parser.add_argument("--n_evals", default=100, type=int)
     parser.add_argument("--train_environment_max_steps", default=50, type=int)
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     ##
 
     parser.add_argument("--train", dest='train', action='store_false')
-    parser.set_defaults(train=False)
+    parser.set_defaults(train=True)
     parser.add_argument("--no_eval", dest='eval', action='store_false')
     parser.set_defaults(eval=False)
     parser.add_argument("--init_eval", dest='init_eval', action='store_false')
@@ -145,16 +145,16 @@ if __name__ == "__main__":
     use_one_zero_beta = False
 
     # when you want to collect data and not train student
-    only_collect_data = True
+    only_collect_data = False
 
     # when you want to train student only from existing data
     train_only_supervised = False
 
     # use the existing data?
-    reuse_previous_samples = True
+    reuse_previous_samples = False
 
     # reuse the latest_policy?
-    reuse_latest_policy = True
+    reuse_latest_policy = False
 
     # record bags?
     record_bag = True
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     verbose_python_errors=False
 
     # batch size
-    batch_size = 1
+    batch_size = 256
 
     # evaluation batch size
     evaluation_data_size = 1000

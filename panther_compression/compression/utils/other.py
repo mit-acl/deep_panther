@@ -244,14 +244,16 @@ class ObstaclesManager():
 		self.random_pos=pos
 
 	def getNumObs(self):
-		return self.num_obs
+		# return self.num_obs
+		return self.params["num_max_of_obst"]
 
 	def getCPsPerObstacle(self):
 		return self.fitter_num_seg + self.fitter_deg_pos # 7 + 3
 
 	def getSizeAllObstacles(self):
-		#Size of the ctrl_pts + bbox
-		return self.num_obs*(3*self.getCPsPerObstacle() + 3)
+		# Size of the ctrl_pts + bbox
+		# return self.num_obs*(3*self.getCPsPerObstacle() + 3)
+		return self.params["num_max_of_obst"]*(3*self.getCPsPerObstacle() + 3)
 
 	def getSizeEachObstacle(self):
 		return 3*self.getCPsPerObstacle() + 3
@@ -280,6 +282,12 @@ class ObstaclesManager():
 
 			bbox_inflated= np.array(self.params["training_obst_size"]) + np.array(self.params["drone_bbox"])
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
+		
+		# if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
+		if self.num_obs < self.params["num_max_of_obst"]:
+			for i in range(self.params["num_max_of_obst"] - self.num_obs):
+				w_obs.append(w_obs[-1])
+
 		return w_obs
 
 	def getFutureWPosDynamicObstacles(self,t):
@@ -303,6 +311,12 @@ class ObstaclesManager():
 			w_ctrl_pts_ob=listOf3dVectors2numpy3Xmatrix(w_ctrl_pts_ob_list)
 			bbox_inflated= np.array(self.params["training_obst_size"]) + np.array(self.params["drone_bbox"])
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
+
+		# if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
+		if self.num_obs < self.params["num_max_of_obst"]:
+			for i in range(self.params["num_max_of_obst"] - self.num_obs):
+				w_obs.append(w_obs[-1])
+
 		return w_obs
 
 class Trefoil():
@@ -679,17 +693,17 @@ class ObservationManager():
 		return obstacles
 
 	def getInit_f_StateFromObservation(self, obs):
-		init_state=py_panther.state();  #Everything initialized as zero
-		init_state.pos= np.array([[0.0],[0.0],[0.0]]);#Because it's in f frame
-		init_state.vel= self.getf_v(obs);
-		init_state.accel= self.getf_a(obs);
+		init_state=py_panther.state()  #Everything initialized as zero
+		init_state.pos= np.array([[0.0],[0.0],[0.0]]) #Because it's in f frame
+		init_state.vel= self.getf_v(obs)
+		init_state.accel= self.getf_a(obs)
 		init_state.yaw= 0.0  #Because it's in f frame
-		init_state.dyaw = self.getyaw_dot(obs);
+		init_state.dyaw = self.getyaw_dot(obs)
 		return init_state
 
 	def getFinal_f_StateFromObservation(self, obs):
-		final_state=py_panther.state();  #Everything initialized as zero
-		final_state.pos= self.getf_g(obs);
+		final_state=py_panther.state()  #Everything initialized as zero
+		final_state.pos= self.getf_g(obs)
 		# final_state.vel= 
 		# final_state.accel= 
 		# final_state.yaw= 
@@ -704,24 +718,13 @@ class ObservationManager():
 
 	#Normalize in [-1,1]
 	def normalizeObservation(self, observation):
-		# print("Shape observation=", observation.shape)
-		# print("Shape normalization_constant=", self.normalization_constant.shape)
-		# print("obsm.getSizeAllObstacles()=", self.obsm.getSizeAllObstacles())
-
 		observation_normalized=observation/self.normalization_constant
-		# assertIsNormalized(observation_normalized)
 		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
 		return observation_normalized
 
 	def denormalizeObservation(self,observation_normalized):
-		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
-
-		# assertIsNormalized(observation_normalized)
-		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all(), f"observation_normalized= {observation_normalized}" 
 		observation=observation_normalized*self.normalization_constant
 		return observation
-
-	# def denormalize(self, )
 
 	def getObservationSize(self):
 		return self.observation_size
@@ -1293,8 +1296,8 @@ class CostComputer():
 	def setUpSolverIpoptAndGetppSolOrGuess(self, f_obs_n, f_traj_n):
 
 		#Denormalize observation and action
-		f_obs = CostComputer.om.denormalizeObservation(f_obs_n);
-		f_traj = CostComputer.am.denormalizeTraj(f_traj_n);
+		f_obs = CostComputer.om.denormalizeObservation(f_obs_n)
+		f_traj = CostComputer.am.denormalizeTraj(f_traj_n)
 
 		#Set up SolverIpopt
 		# print("\n========================")
@@ -1306,8 +1309,8 @@ class CostComputer():
 		# print(f"final_state=")
 		# final_state.printHorizontal();
 		# print(f"total_time={total_time}")
-		CostComputer.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
-		CostComputer.my_SolverIpopt.setFocusOnObstacle(True);
+		CostComputer.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time)
+		CostComputer.my_SolverIpopt.setFocusOnObstacle(True)
 		obstacles=CostComputer.om.getObstacles(f_obs)
 
 		# print(f"obstacles=")
@@ -1315,7 +1318,7 @@ class CostComputer():
 		# for obs in obstacles:
 		# 	obs.printInfo()
 
-		CostComputer.my_SolverIpopt.setObstaclesForOpt(obstacles);
+		CostComputer.my_SolverIpopt.setObstaclesForOpt(obstacles)
 
 		###############################
 		f_state=CostComputer.om.get_f_StateFromf_obs(f_obs)
@@ -1406,7 +1409,6 @@ class CostComputer():
 		obst_avoidance_violation = self.computeObstAvoidanceConstraintsViolation(f_obs_n, f_traj_n)
 		# print(f"--- computeObstAvoidanceConstraintsViolation took {(time.time() - start)*(1e3)} ms")
 
-
 		# start=time.time();
 		dyn_lim_violation = self.computeDynLimitsConstraintsViolation(f_obs_n, f_traj_n)
 		# print(f"--- computeDynLimitsConstraintsViolation took {(time.time() - start)*(1e3)} ms")
@@ -1414,16 +1416,13 @@ class CostComputer():
 		# start=time.time();
 		augmented_cost = self.computeAugmentedCost(cost, obst_avoidance_violation, dyn_lim_violation)
 		# print(f" computeAugmentedCost took {(time.time() - start)*(1e3)} ms")
-
-		
 		# print(f" compute ALL COSTS {(time.time() - start1)*(1e3)} ms")
-
-
 		return cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost
 
 	def computeCost(self, f_obs_n, f_traj_n): 
 		
 		f_ppSolOrGuess=self.setUpSolverIpoptAndGetppSolOrGuess(f_obs_n, f_traj_n)
+
 		tmp=CostComputer.my_SolverIpopt.computeCost(f_ppSolOrGuess) 
 
 		return tmp   
@@ -1448,7 +1447,7 @@ class CostComputer():
 		# for i in range(f_action_n.shape[0]):
 		# 	f_traj_n = self.am.getTrajFromAction(f_action_n, i)
 
-		# 	_, _, _, augmented_cost = self.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_observation_n, traj_n)
+		# 	_, _, _, augmented_cost = self.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_obs_n, traj_n)
 
 		# 	# self.printwithNameAndColor(f"augmented cost traj_{i}={augmented_cost}")
 		# 	if(augmented_cost < smallest_augmented_cost):
@@ -1462,16 +1461,14 @@ class CostComputer():
 		costs=[]
 		obst_avoidance_violations=[]
 		dyn_lim_violations=[]
-		augmented_costs=[];
+		augmented_costs=[]
 
-		alls=[];
-
+		alls=[]
 
 		smallest_augmented_safe_cost = float('inf')
 		smallest_augmented_unsafe_cost = float('inf')
 		index_best_safe_traj = None
 		index_best_unsafe_traj = None
-
 
 		######### PARALLEL OPTION
 		# start=time.time();

@@ -4,4 +4,5 @@ __pycache__/
 *$py.class
 
 /evals
+/evals_for_single_obs
 /.ipynb_checkpoints
