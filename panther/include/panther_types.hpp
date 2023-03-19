@@ -806,6 +806,7 @@ struct parameters
 {
   //
   // clang-format off
+  double          num_obst_in_FOV;
   double          goal_seen_radius;
   bool            use_dynamic_obst_in_training;
   Eigen::Vector3d training_obst_size;
