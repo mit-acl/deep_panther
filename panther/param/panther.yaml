@@ -32,7 +32,7 @@ margin_a_factor: 1.0 #relazation factor for training constraints used in Observa
 margin_ydot_factor: 1.5 #relazation factor for training constraints used in ObservationManager()
 training_obst_size: [0.5, 0.5, 0.5] #obstacle size in training env
 use_dynamic_obst_in_training: false
-num_of_obstacles_in_training: 1 # this needs to be the same as num_max_of_obst defined in main.m
+num_of_obstacles_in_training: 2 
 
 # LSTM
 #############################################

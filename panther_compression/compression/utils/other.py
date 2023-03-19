@@ -258,6 +258,13 @@ class ObstaclesManager():
 	def getSizeEachObstacle(self):
 		return 3*self.getCPsPerObstacle() + 3
 
+	def renewwObstaclePos(self):
+		if np.random.uniform(0, 1) < 1 - self.params["prob_choose_cross"]:
+			self.newRandomPos()
+		else:
+			w_pos_obstacle, _ = self.getObsAndGtermToCrossPath()
+			self.setPos(w_pos_obstacle)
+
 	def getObsAndGtermToCrossPath(self):
 
 		radius_obstacle_pos = random.uniform(self.goal_seen_radius, self.x_max*0.8)
@@ -282,6 +289,7 @@ class ObstaclesManager():
 
 			bbox_inflated= np.array(self.params["training_obst_size"]) + np.array(self.params["drone_bbox"])
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
+			self.renewwObstaclePos() # renew the position of the obstacle so that we have several obstacles with different positions
 		
 		# if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
 		if self.num_obs < self.params["num_max_of_obst"]:
@@ -311,6 +319,7 @@ class ObstaclesManager():
 			w_ctrl_pts_ob=listOf3dVectors2numpy3Xmatrix(w_ctrl_pts_ob_list)
 			bbox_inflated= np.array(self.params["training_obst_size"]) + np.array(self.params["drone_bbox"])
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
+			self.renewwObstaclePos() # renew the position of the obstacle so that we have several obstacles with different positions
 
 		# if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
 		if self.num_obs < self.params["num_max_of_obst"]:
@@ -621,14 +630,13 @@ class ObservationManager():
 		state=State(pos, vel, accel, yaw, yaw_dot)
 		return state
 
-
 	def getIndexStartObstacleI(self,i):
-		return 10+(self.obsm.getCPsPerObstacle()+3)*i
+		return 10+(3*self.obsm.getCPsPerObstacle()+3)*i
 
 	def getCtrlPtsObstacleI(self,obs,i):
 		index_start_obstacle_i=self.getIndexStartObstacleI(i)
 		ctrl_pts=[]; 
-		num_cps_per_obstacle=self.obsm.getCPsPerObstacle();
+		num_cps_per_obstacle=self.obsm.getCPsPerObstacle()
 		for j in range(num_cps_per_obstacle):
 			index_start_cpoint=index_start_obstacle_i+3*j
 			cpoint_j=obs[0,index_start_cpoint:index_start_cpoint+3].reshape(3,1)
@@ -638,8 +646,7 @@ class ObservationManager():
 
 	def getBboxInflatedObstacleI(self,obs,i):
 		index_start_obstacle_i=self.getIndexStartObstacleI(i)
-
-		tmp=index_start_obstacle_i+3*self.obsm.getCPsPerObstacle()
+		tmp=index_start_obstacle_i+(3*self.obsm.getCPsPerObstacle())
 
 		bbox_inflated=obs[0,tmp:tmp+3].reshape(3,1)
 
@@ -658,21 +665,18 @@ class ObservationManager():
 		return obs[0,7:10].reshape((3,1)) #Column vector
 
 	def getObstacles(self, obs):
-		# print("obs is= ", obs)
 
 		obstacles=[]
 		for i in range(self.obsm.getNumObs()):
 
-			ctrl_pts=self.getCtrlPtsObstacleI(obs,i) 
+			ctrl_pts=self.getCtrlPtsObstacleI(obs,i)
 			bbox_inflated=self.getBboxInflatedObstacleI(obs,i)
-
 			obstacle=py_panther.obstacleForOpt()
 
 			obstacle.ctrl_pts=ctrl_pts
 			obstacle.bbox_inflated=bbox_inflated
 
 			obstacles.append(obstacle)
-
 		return obstacles
 
 	def getObstaclesForCasadi(self, obs):

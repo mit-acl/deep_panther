@@ -9,6 +9,8 @@ Panels:
         - /PointStamped1
         - /TF1
         - /Path1
+        - /Obstacle01
+        - /Obstacle11
       Splitter Ratio: 0.5
     Tree Height: 719
   - Class: rviz/Selection
@@ -226,10 +228,18 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /obs
-      Name: Obstacles
+      Marker Topic: /obs0
+      Name: Obstacle0
       Namespaces:
-        ns: true
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /obs1
+      Name: Obstacle1
+      Namespaces:
+        {}
       Queue Size: 100
       Value: true
   Enabled: true
@@ -278,7 +288,7 @@ Visualization Manager:
       Near Clip Distance: 0.009999999776482582
       Pitch: 0.654796838760376
       Target Frame: <Fixed Frame>
-      Yaw: 3.778181791305542
+      Yaw: 3.768181562423706
     Saved: ~
 Window Geometry:
   Displays:

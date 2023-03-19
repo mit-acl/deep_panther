@@ -313,11 +313,9 @@ class MyEnvironment(gym.Env):
 
     if(isinstance(self.constant_obstacle_pos, type(None)) and isinstance(self.constant_gterm_pos, type(None))):
 
-      self.obsm.newRandomPos()
-
       if np.random.uniform(0, 1) < 1 - self.par.prob_choose_cross:
         self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos)
-        # self.gm.newRandomPos()
+        self.gm.newRandomPos()
       else:
         w_pos_obstacle, w_pos_g_term = self.obsm.getObsAndGtermToCrossPath()
         self.obsm.setPos(w_pos_obstacle)
@@ -334,7 +332,7 @@ class MyEnvironment(gym.Env):
     else:
       self.w_obstacles=self.obsm.getFutureWPosStaticObstacles()
     # print("w_obstacles[0].ctrl_pts=", w_obstacles[0].ctrl_pts)
-    f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles);
+    f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles)
     f_observation_n=self.om.normalizeObservation(f_observation)
 
     # self.printwithName("THIS IS THE OBSERVATION:")
@@ -400,10 +398,10 @@ class MyEnvironment(gym.Env):
       point_msg.point.y=f_g[1,0]
       point_msg.point.z=f_g[2,0]
 
-      marker_array_msg=MarkerArray()
 
       for i in range(len(obstacles)):
 
+        marker_array_msg=MarkerArray()
         t0=self.time
         tf=self.time + np.max(f_action[:,-1]) #self.am.getTotalTime()#self.par.fitter_total_time
 
@@ -429,10 +427,11 @@ class MyEnvironment(gym.Env):
           marker_msg.pose.orientation.y = 0.0
           marker_msg.pose.orientation.z = 0.0
           marker_msg.pose.orientation.w = 1.0
-          marker_msg.scale.x = obstacles[0].bbox_inflated[0]
-          marker_msg.scale.y = obstacles[0].bbox_inflated[1]
-          marker_msg.scale.z = obstacles[0].bbox_inflated[2]
-          marker_msg.color.a = 1.0*(num_samples-id_sample)/num_samples
+          marker_msg.scale.x = obstacles[i].bbox_inflated[0]
+          marker_msg.scale.y = obstacles[i].bbox_inflated[1]
+          marker_msg.scale.z = obstacles[i].bbox_inflated[2]
+          # marker_msg.color.a = 1.0*(num_samples-id_sample)/num_samples
+          marker_msg.color.a = 1.0
           marker_msg.color.r = 0.0
           marker_msg.color.g = 1.0
           marker_msg.color.b = 0.0
@@ -440,6 +439,8 @@ class MyEnvironment(gym.Env):
           marker_array_msg.markers.append(marker_msg)
 
           id_sample=id_sample+1
+
+        self.bag.write(f'/obs{i}', marker_array_msg, time_now)
 
 
       tf_stamped=TransformStamped()
@@ -484,7 +485,6 @@ class MyEnvironment(gym.Env):
         self.bag.write('/path'+str(i), traj_msg, time_now)
 
       self.bag.write('/g', point_msg, time_now)
-      self.bag.write('/obs', marker_array_msg, time_now)
       self.bag.write('/tf', tf_msg, time_now)
 
       #When using multiple environments, opening bag in constructor and closing it in _del leads to unindexed bags
