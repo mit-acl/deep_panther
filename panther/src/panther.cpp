@@ -94,7 +94,9 @@ Panther::Panther(mt::parameters par) : par_(par)
 
       tmp.ctrl_pts = fitter_->fit(samples);
       obstacles_for_opt.push_back(tmp);
-
+      adjustObstaclesForOptimization(obstacles_for_opt);
+      verify(obstacles_for_opt.size() == par_.num_max_of_obst, "obstacles_for_opt.size() should be equal to par_.num_max_of_obst");
+      solver_->setObstaclesForOpt(obstacles_for_opt);
       pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos);
       std::cout << "Called the student!" << std::endl;
     }
@@ -699,6 +701,38 @@ void Panther::pubObstacleEdge(mt::Edges& edges_obstacles_out)
   edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
 }
 
+void Panther::adjustObstaclesForOptimization(std::vector<mt::obstacleForOpt>& obstacles_for_opt)
+{
+  //
+  // If obstacles_for_opt is too small, then we need to add some dummy obstacles, which is the copy of the last obstacle
+  //
+
+  if (obstacles_for_opt.size() < par_.num_max_of_obst)
+  {
+    std::cout << bold << "Too few obstacles. duplicate and add the last obstacles" << std::endl;
+    for (int i = obstacles_for_opt.size(); i < par_.num_max_of_obst; i++)
+    {
+      mt::obstacleForOpt dummy_obst;
+      dummy_obst = obstacles_for_opt.back();
+      obstacles_for_opt.push_back(dummy_obst);
+    }
+  }
+
+  //
+  // If obstacles_for_opt is too large, then we need to delete some of them
+  //
+
+  if (obstacles_for_opt.size() > par_.num_max_of_obst)
+  {
+    std::cout << red << bold << "Too many obstacles. Run Matlab again with a higher num_max_of_obst" << reset
+              << std::endl;
+    for (int i = obstacles_for_opt.size(); i > par_.num_max_of_obst; i--)
+    {
+      obstacles_for_opt.pop_back();
+    }
+  }
+}
+
 bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_solution_expert,
                      std::vector<si::solOrGuess>& best_solutions_expert, si::solOrGuess& best_solution_student,
                      std::vector<si::solOrGuess>& best_solutions_student, std::vector<si::solOrGuess>& guesses,
@@ -915,42 +949,14 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     tmp_obstacles_for_opt.clear();
   }
 
-  //
-  // If obstacles_for_opt is too small, then we need to add some dummy obstacles, which is the copy of the last obstacle
-  //
-
-  std::cout << "obstacles_for_opt.size()= " << obstacles_for_opt.size() << std::endl;
-
-  if (obstacles_for_opt.size() < par_.num_max_of_obst)
-  {
-    std::cout << bold << "Too few obstacles. duplicate and add the last obstacles" << std::endl;
-    for (int i = obstacles_for_opt.size(); i < par_.num_max_of_obst; i++)
-    {
-      mt::obstacleForOpt dummy_obst;
-      dummy_obst = obstacles_for_opt.back();
-      obstacles_for_opt.push_back(dummy_obst);
-    }
-  }
+  adjustObstaclesForOptimization(obstacles_for_opt);
+  solver_->setObstaclesForOpt(obstacles_for_opt);
 
   //
-  // If obstacles_for_opt is too large, then we need to delete some of them
+  // Verify that obstacles_for_opt.size() is equal to par_.num_max_of_obst
   //
 
-  if (obstacles_for_opt.size() > par_.num_max_of_obst)
-  {
-    std::cout << red << bold << "Too many obstacles. Run Matlab again with a higher num_max_of_obst" << reset
-              << std::endl;
-    for (int i = obstacles_for_opt.size(); i > par_.num_max_of_obst; i--)
-    {
-      obstacles_for_opt.pop_back();
-    }
-  }
-
-  //
-  // Print 
-  //
-
-  std::cout << "the size of obstacles_for_opt is " << obstacles_for_opt.size() << std::endl;
+  verify(obstacles_for_opt.size() == par_.num_max_of_obst, "obstacles_for_opt.size() should be equal to par_.num_max_of_obst");
 
   //
   // Initialize variables
@@ -1004,7 +1010,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     // removeTrajsThatWillNotAffectMe(A, t_start, t_final);  // TODO: Commented (4-Feb-2021)
 
 
-    solver_->setObstaclesForOpt(obstacles_for_opt);
 
     std::cout << on_cyan << bold << "Solved so far" << solutions_found_ << "/" << total_replannings_ << reset
               << std::endl;
@@ -1034,10 +1039,13 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
   if (par_.use_student)
   {
 
+    //
+    // Use Student 
+    //
+
     log_ptr_->tim_initial_setup.toc();
     std::cout << "Calling the student!" << std::endl;
     pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos);
-    std::cout << "Called the student!" << std::endl;
     best_solutions_student = result.cast<std::vector<si::solOrGuess>>();
 
     pybind11::object tmp = student_caller_ptr_->attr("getIndexBestTraj")();

@@ -71,7 +71,7 @@ struct solOrGuess
     return (obst_avoidance_violation > 1e-5);
   }
 
-  void printInfo()  // avoid  naming it print() [for compatibility with pybind11]
+  void printInfo()  // avoid naming it print() [for compatibility with pybind11]
   {
     using namespace termcolor;
     std::cout << "Pos Control points:" << std::endl;

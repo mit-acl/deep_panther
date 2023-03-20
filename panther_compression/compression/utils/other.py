@@ -19,6 +19,7 @@ import tf.transformations
 # from geometry_msgs.msg import PointStamped, TransformStamped, PoseStamped, Vector3, Quaternion, Pose
 from joblib import Parallel, delayed
 import multiprocessing
+import gym
 
 class ExpertDidntSucceed(Exception):
 	  pass
@@ -93,14 +94,14 @@ def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
 
 def getPANTHERparamsAsCppStruct():
 
-	params_yaml=readPANTHERparams();
+	params_yaml=readPANTHERparams()
 
 	params_yaml["b_T_c"]=np.array([[0, 0, 1, 0],
 								  [-1, 0, 0, 0],
 								  [0, -1, 0, 0],
 								  [0, 0, 0, 1]])
 
-	par=py_panther.parameters();
+	par=py_panther.parameters()
 
 	for key in params_yaml:
 		exec('%s = %s' % ('par.'+key, 'params_yaml["'+key+'"]')) #See https://stackoverflow.com/a/60487422/6057617 and https://www.pythonpool.com/python-string-to-variable-name/
@@ -110,14 +111,14 @@ def getPANTHERparamsAsCppStruct():
 
 def readPANTHERparams():
 
-	params_yaml_1=[];
+	params_yaml_1=[]
 	with open(os.path.dirname(os.path.abspath(__file__)) + '/../../../panther/param/panther.yaml', "r") as stream:
 		try:
 			params_yaml_1=yaml.safe_load(stream)
 		except yaml.YAMLError as exc:
 			print(exc)
 
-	params_yaml_2=[];
+	params_yaml_2=[]
 	with open(os.path.dirname(os.path.abspath(__file__)) + '/../../../panther/matlab/casadi_generated_files/params_casadi.yaml', "r") as stream:
 		try:
 			params_yaml_2=yaml.safe_load(stream)
@@ -126,7 +127,7 @@ def readPANTHERparams():
 	# params_yaml = dict(params_yaml_1.items() + params_yaml_2.items()) #Doesn't work in Python 3
 	params_yaml = {**params_yaml_1, **params_yaml_2}                        # NOTE: Python 3.5+ ONLY
 
-	return params_yaml;
+	return params_yaml
 
 class Obstacle():
 	def __init__(self, ctrl_pts, bbox_inflated):
@@ -452,7 +453,7 @@ class MyClampedUniformBSpline():
 			print(f"self.knots={self.knots}")
 		#######
 
-		self.ctrl_pts=ctrl_pts;
+		self.ctrl_pts=ctrl_pts
 		for i in range(dim):
 			self.pos_bs.append( BSpline(self.knots, self.ctrl_pts[i,:], self.deg) )
 			if(no_deriv==False):
@@ -535,6 +536,7 @@ class ObservationManager():
 		self.max_side_bbox_obs=params["max_side_bbox_obs"]
 		self.Ra=params["Ra"]
 		self.num_max_of_obst = params["num_max_of_obst"] # from casadi
+		self.use_lstm = params["use_lstm"] 
 		
 		ones13=np.ones((1,3))
 		#Note that the sqrt(3) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
@@ -544,9 +546,16 @@ class ObservationManager():
 		margin_v=margin_v_factor * math.sqrt(3) #math.sqrt(3)
 		margin_a=margin_a_factor * math.sqrt(3) #math.sqrt(3)
 		margin_ydot=margin_ydot_factor * 1.0
+
+		# for agent's own state
 		self.normalization_constant=np.concatenate((margin_v*self.v_max.T*ones13, margin_a*self.a_max.T*ones13, margin_ydot*self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
-		for i in range(self.obsm.getNumObs()):
-			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)
+		
+		# for obstacles
+		self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)
+		
+		# self.normalization_constant is tiled in self.getNormalizationVector() for each obstacle depending on the number of obstacles, so no need to do this anymore
+		# for i in range(self.obsm.getNumObs()):
+		# 	self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)
 
 		# assert print("Shape observation=", observation.shape==)
 
@@ -667,15 +676,15 @@ class ObservationManager():
 	def getObstacles(self, obs):
 
 		obstacles=[]
-		for i in range(self.obsm.getNumObs()):
 
+		num_obs = int((obs.shape[1]-10)/(3*self.obsm.getCPsPerObstacle()+3))
+
+		for i in range(num_obs):
 			ctrl_pts=self.getCtrlPtsObstacleI(obs,i)
 			bbox_inflated=self.getBboxInflatedObstacleI(obs,i)
 			obstacle=py_panther.obstacleForOpt()
-
 			obstacle.ctrl_pts=ctrl_pts
 			obstacle.bbox_inflated=bbox_inflated
-
 			obstacles.append(obstacle)
 		return obstacles
 
@@ -720,14 +729,22 @@ class ObservationManager():
 	def isNanObservation(self, obs):
 		return np.isnan(np.sum(obs))
 
-	#Normalize in [-1,1]
+	def getNormalizationVector(self, obs):
+		num_obs = int((obs.shape[1] - 10) / (3*self.obsm.getCPsPerObstacle()+3))
+		normalization_vector = self.normalization_constant
+		for i in range(num_obs-1):
+			normalization_vector = np.concatenate((normalization_vector, self.normalization_constant[0, 10:].reshape(1, -1)), axis=1)
+		return normalization_vector
+	
 	def normalizeObservation(self, observation):
-		observation_normalized=observation/self.normalization_constant
+		""" Normalize in [-1,1] """
+		observation_normalized = observation / self.getNormalizationVector(observation)
 		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
 		return observation_normalized
 
 	def denormalizeObservation(self,observation_normalized):
-		observation=observation_normalized*self.normalization_constant
+		""" Denormalize from [-1,1] to original range """
+		observation=observation_normalized*self.getNormalizationVector(observation_normalized)
 		return observation
 
 	def getObservationSize(self):
@@ -750,21 +767,23 @@ class ObservationManager():
 	def get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self,w_state, w_gterm_pos, w_obstacles):
 
 		f_gterm_pos=w_state.f_T_w * w_gterm_pos
-
 		dist2gterm=np.linalg.norm(f_gterm_pos)
 		f_g= min(dist2gterm-1e-4, self.Ra)*normalize(f_gterm_pos)
-		#f_g= self.Ra*normalize(f_gterm_pos)
-		# print("w_state.f_vel().flatten()= ", w_state.f_vel().flatten())
-		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
-		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
 		observation=np.concatenate((w_state.f_vel().flatten(), w_state.f_accel().flatten(), w_state.yaw_dot.flatten(), f_g.flatten()))
 		
-		#Convert obs to f frame and append ethem to observation
+		##
+		## Convert obs to f frame and append them to observation
+		##
+
 		for w_obstacle in w_obstacles:
 			assert type(w_obstacle.ctrl_pts).__module__ == np.__name__, "the ctrl_pts should be a numpy matrix, not a list"
 			observation=np.concatenate((observation, (w_state.f_T_w*w_obstacle.ctrl_pts).flatten(order='F'), (w_obstacle.bbox_inflated).flatten()))
-		observation=observation.reshape(self.getObservationShape())
-		assert observation.shape == self.getObservationShape()
+		
+		##
+		## Reshape observation
+		##
+
+		observation=observation.reshape((1,-1))
 		return observation
 
 	def getNormalized_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self, w_state, w_gterm_pos, w_obstacles):
@@ -796,37 +815,37 @@ def getZeroState():
 
 class ActionManager():
 	def __init__(self):
-		params=readPANTHERparams();
-		self.deg_pos=params["deg_pos"];
-		self.deg_yaw=params["deg_yaw"];
-		self.num_seg=params["num_seg"];
-		self.use_closed_form_yaw_student=params["use_closed_form_yaw_student"];
-		self.make_yaw_NN=params["make_yaw_NN"];
+		params=readPANTHERparams()
+		self.deg_pos=params["deg_pos"]
+		self.deg_yaw=params["deg_yaw"]
+		self.num_seg=params["num_seg"]
+		self.use_closed_form_yaw_student=params["use_closed_form_yaw_student"]
+		self.make_yaw_NN=params["make_yaw_NN"]
 
-		# Define action and observation space
+		""" Define action and observation space
 
-		# action = np.array([ctrl_points_pos   ctrl_points_yaw  total time, prob that traj])
-		#
-		# --> where ctrlpoints_pos has the ctrlpoints that are not determined by init pos/vel/accel, and final vel/accel
-		#     i.e., len(ctrlpoints_pos)= (num_seg_pos + deg_pos - 1 + 1) - 3 - 2 = num_seg_pos + deg_pos - 5;
-		#	  and ctrl_points_pos=[cp3.transpose(), cp4.transpose(),...]
-		#
-		# --> where ctrlpoints_yaw has the ctrlpoints that are not determined by init pos/vel, and final vel
-		#     i.e., len(ctrlpoints_yaw)= (num_seg_yaw + deg_yaw - 1 + 1) - 2 - 1 = num_seg_yaw + deg_yaw - 3;
+		 action = np.array([ctrl_points_pos   ctrl_points_yaw  total time, prob that traj])
+		
+		 --> where ctrlpoints_pos has the ctrlpoints that are not determined by init pos/vel/accel, and final vel/accel
+		     i.e., len(ctrlpoints_pos)= (num_seg_pos + deg_pos - 1 + 1) - 3 - 2 = num_seg_pos + deg_pos - 5;
+			  and ctrl_points_pos=[cp3.transpose(), cp4.transpose(),...]
+		
+		 --> where ctrlpoints_yaw has the ctrlpoints that are not determined by init pos/vel, and final vel
+		     i.e., len(ctrlpoints_yaw)= (num_seg_yaw + deg_yaw - 1 + 1) - 2 - 1 = num_seg_yaw + deg_yaw - 3; """
 
-		self.num_traj_per_action=params["num_of_trajs_per_replan"];
+		self.num_traj_per_action=params["num_of_trajs_per_replan"]
 
 		self.total_num_pos_ctrl_pts = self.num_seg + self.deg_pos
-		self.traj_size_pos_ctrl_pts = 3*(self.total_num_pos_ctrl_pts - 5);
-		self.traj_size_yaw_ctrl_pts = (self.num_seg + self.deg_yaw - 3);
+		self.traj_size_pos_ctrl_pts = 3*(self.total_num_pos_ctrl_pts - 5)
+		self.traj_size_yaw_ctrl_pts = (self.num_seg + self.deg_yaw - 3)
 		# self.traj_size = self.traj_size_pos_ctrl_pts + self.traj_size_yaw_ctrl_pts + 1 + 1; # Last two numbers are time and prob that traj is real
 		self.traj_size = self.traj_size_pos_ctrl_pts + self.traj_size_yaw_ctrl_pts + 1; # Last number is time
-		self.action_size = self.num_traj_per_action*self.traj_size;
-		self.Npos = self.num_seg + self.deg_pos-1;
+		self.action_size = self.num_traj_per_action*self.traj_size
+		self.Npos = self.num_seg + self.deg_pos-1
 
-		self.max_dist2BSPoscPoint=params["max_dist2BSPoscPoint"];
-		self.max_yawcPoint=4e3*math.pi;
-		self.fitter_total_time=params["fitter_total_time"];
+		self.max_dist2BSPoscPoint=params["max_dist2BSPoscPoint"]
+		self.max_yawcPoint=4e3*math.pi
+		self.fitter_total_time=params["fitter_total_time"]
 
 		# print("self.max_dist2BSPoscPoint= ", self.max_dist2BSPoscPoint)
 		# print("self.max_yawcPoint= ", self.max_yawcPoint)
@@ -962,10 +981,10 @@ class ActionManager():
 		return random_normalized_action
 
 	def getDegPos(self):
-		return self.deg_pos;
+		return self.deg_pos
 
 	def getDegYaw(self):
-		return self.deg_yaw;
+		return self.deg_yaw
 
 	def f_trajAnd_w_State2_w_pos_ctrl_pts_and_knots(self, f_traj, w_state):
 
@@ -1030,7 +1049,7 @@ class ActionManager():
 		w_y_ctrl_pts,knots_y=self.f_trajAnd_w_State2_w_yaw_ctrl_pts_and_knots(f_traj, w_state)
 
 		#Create and fill solOrGuess object
-		w_sol_or_guess=py_panther.solOrGuess();
+		w_sol_or_guess=py_panther.solOrGuess()
 
 		w_sol_or_guess.qp=numpy3XmatrixToListOf3dVectors(w_p_ctrl_pts)
 		w_sol_or_guess.qy=numpy3XmatrixToListOf3dVectors(w_y_ctrl_pts)
@@ -1087,7 +1106,7 @@ class ActionManager():
 		return f_posBS, f_yawBS
 
 	def solOrGuess2traj(self, sol_or_guess):
-		traj=np.array([[]]);
+		traj=np.array([[]])
 
 		#Append position control points
 		for i in range(3,len(sol_or_guess.qp)-2):
@@ -1125,8 +1144,8 @@ class ActionManager():
 
 class ClosedFormYawSubstituter():
 	def __init__(self):
-		self.cy=py_panther.ClosedFormYawSolver();
-		self.am=ActionManager();
+		self.cy=py_panther.ClosedFormYawSolver()
+		self.am=ActionManager()
 
 
 
@@ -1140,9 +1159,9 @@ class ClosedFormYawSubstituter():
 
 		#####
 		for i in range( np.shape(f_action)[0]): #For each row of action
-			traj=f_action[i,:].reshape(1,-1);
+			traj=f_action[i,:].reshape(1,-1)
 
-			my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state);
+			my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state)
 
 			my_solOrGuess.qy=self.cy.getyCPsfrompCPSUsingClosedForm(my_solOrGuess.qp, my_solOrGuess.getTotalTime(), numpy3XmatrixToListOf3dVectors(w_obstacles[0].ctrl_pts),   w_init_state.w_yaw,   w_init_state.yaw_dot, 0.0)
 
@@ -1164,11 +1183,13 @@ class StudentCaller():
 	def __init__(self, policy_path):
 		# self.student_policy=bc.reconstruct_policy(policy_path)
 		self.student_policy=policy = th.load(policy_path, map_location=utils.get_device("auto")) #Same as doing bc.reconstruct_policy(policy_path) 
-		self.om=ObservationManager();
-		self.am=ActionManager();
-		self.cc=CostComputer();
-		self.cfys=ClosedFormYawSubstituter();
+		self.om=ObservationManager()
+		self.am=ActionManager()
+		self.obsm=ObstaclesManager()
+		self.cc=CostComputer()
+		self.cfys=ClosedFormYawSubstituter()
 		self.yaw_scaling = getPANTHERparamsAsCppStruct().yaw_scaling
+		self.params = readPANTHERparams()
 		# self.index_smallest_augmented_cost = 0
 		# self.index_best_safe_traj = None
 		# self.index_best_unsafe_traj = None
@@ -1178,14 +1199,14 @@ class StudentCaller():
 
 	def predict(self, w_init_ppstate, w_ppobstacles, w_gterm): #pp stands for py_panther
 
-
 		w_init_state=convertPPState2State(w_init_ppstate)
-
 		w_gterm=w_gterm.reshape(3,1)
-
 		w_obstacles=convertPPObstacles2Obstacles(w_ppobstacles)
 
-		#Construct observation
+		## 
+		## Construct observation
+		##
+		
 		f_obs=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_init_state, w_gterm, w_obstacles)
 		f_obs_n=self.om.normalizeObservation(f_obs)
 
@@ -1194,15 +1215,27 @@ class StudentCaller():
 		# self.om.printObservation(f_obs)
 
 		start = time.time()
-		action_normalized,info = self.student_policy.predict(f_obs_n, deterministic=True) 
+
+		##
+        ## To work around the problem of the following error:
+        ##     ValueError: Error: Unexpected observation shape (1, 43) for Box environment, please use (1, 76) or (n_env, 1, 76) for the observation shape.
+        ## This is bascially comparing the observation size to the fixed size of self.observation_space.shape
+        ## 
+
+		self.student_policy.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=f_obs_n.shape)
+		self.student_policy.features_extractor = self.student_policy.features_extractor_class(self.student_policy.observation_space)
+
+		action_normalized, info = self.student_policy.predict(f_obs_n, deterministic=True) 
 
 		action_normalized=action_normalized.reshape(self.am.getActionShape())
 
-		#################################
-		#### USE CLOSED FORM FOR YAW #####
+		##
+		## USE CLOSED FORM FOR YAW
+		##
+
 		if(self.am.use_closed_form_yaw_student==True):
 			action_normalized=self.cfys.substituteWithClosedFormYaw(action_normalized, w_init_state, w_obstacles) #f_action_n, w_init_state, w_obstacles
-		##################################
+
 		end = time.time()
 		print(f" Calling the NN + Closed form yaw took {(end - start)*(1e3)} ms")
 
@@ -1211,33 +1244,39 @@ class StudentCaller():
 		# scale back down the acts_student
 		action[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts] = action[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts]/self.yaw_scaling
 
-		# print("action.shape= ", action.shape)
-		# print("action=", action)   
+		##
+		## This funciton uses Casadi, and it needs a fixed size of obstacles
+		## The work around is to add dummy obstacles, which is the last element of f_obs_n
+		## 
 
-		all_solOrGuess=[]
+		num_obs = int((f_obs_n.shape[1] - 10) / (3*self.obsm.getCPsPerObstacle()+3))
+		for i in range(num_obs, self.params["num_max_of_obst"]):
+			f_obs_n = np.concatenate((f_obs_n, f_obs_n[:,-3*self.obsm.getCPsPerObstacle()-3:]), axis=1)
 
 		self.costs_and_violations_of_action=self.cc.getCostsAndViolationsOfActionFromObsnAndActionn(f_obs_n, action_normalized)
+		
+		all_solOrGuess=[]
 
 		self.index_best_safe_traj = None
 		self.index_best_unsafe_traj = None
+
 		for i in range( np.shape(action)[0]): #For each row of action
-			traj=action[i,:].reshape(1,-1);
+			traj=action[i,:].reshape(1,-1)
 
-			my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state);
-
+			my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state)
 			my_solOrGuess.cost = self.costs_and_violations_of_action.costs[i]
 			my_solOrGuess.obst_avoidance_violation = self.costs_and_violations_of_action.obst_avoidance_violations[i]
 			my_solOrGuess.dyn_lim_violation = self.costs_and_violations_of_action.dyn_lim_violations[i]
 			my_solOrGuess.aug_cost = self.cc.computeAugmentedCost(my_solOrGuess.cost, my_solOrGuess.obst_avoidance_violation, my_solOrGuess.dyn_lim_violation)
 
-			all_solOrGuess.append(my_solOrGuess)
+			my_solOrGuess= self.am.f_trajAnd_w_State2w_ppSolOrGuess(traj,w_init_state)
 
+			all_solOrGuess.append(my_solOrGuess)
 
 		return all_solOrGuess   
 
 	def getIndexBestTraj(self):
 		return self.costs_and_violations_of_action.index_best_traj
-
 
 def TfMatrix2RosQuatAndVector3(tf_matrix):
 
@@ -1259,9 +1298,9 @@ def TfMatrix2RosQuatAndVector3(tf_matrix):
 
 def TfMatrix2RosPose(tf_matrix):
 
-  rotation_ros, translation_ros=TfMatrix2RosQuatAndVector3(tf_matrix);
+  rotation_ros, translation_ros=TfMatrix2RosQuatAndVector3(tf_matrix)
 
-  pose_ros=geometry_msgs.msg.Pose();
+  pose_ros=geometry_msgs.msg.Pose()
   pose_ros.position.x=translation_ros.x
   pose_ros.position.y=translation_ros.y
   pose_ros.position.z=translation_ros.z
@@ -1269,7 +1308,6 @@ def TfMatrix2RosPose(tf_matrix):
   pose_ros.orientation=rotation_ros
 
   return pose_ros
-
 
 class CostsAndViolationsOfAction():
 	def __init__(self, costs, obst_avoidance_violations, dyn_lim_violations, index_best_traj):
@@ -1285,16 +1323,15 @@ class CostComputer():
     #Note that, even though the class variables are not thread safe (see https://stackoverflow.com/a/1073230/6057617), we are using multiprocessing here, not multithreading
     #Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
 
-	my_SolverIpopt=py_panther.SolverIpopt(getPANTHERparamsAsCppStruct());
-	am=ActionManager();
-	om=ObservationManager();
-	par=getPANTHERparamsAsCppStruct();
-	obsm=ObstaclesManager();
+	my_SolverIpopt=py_panther.SolverIpopt(getPANTHERparamsAsCppStruct())
+	am=ActionManager()
+	om=ObservationManager()
+	par=getPANTHERparamsAsCppStruct()
+	obsm=ObstaclesManager()
 
 
 	def __init__(self):
 		# self.par=getPANTHERparamsAsCppStruct();
-
 		self.num_obstacles=CostComputer.obsm.getNumObs()
 
 	def setUpSolverIpoptAndGetppSolOrGuess(self, f_obs_n, f_traj_n):
@@ -1304,39 +1341,24 @@ class CostComputer():
 		f_traj = CostComputer.am.denormalizeTraj(f_traj_n)
 
 		#Set up SolverIpopt
-		# print("\n========================")
 		init_state=CostComputer.om.getInit_f_StateFromObservation(f_obs)
 		final_state=CostComputer.om.getFinal_f_StateFromObservation(f_obs)
 		total_time=computeTotalTime(init_state, final_state, CostComputer.par.v_max, CostComputer.par.a_max, CostComputer.par.factor_alloc)
-		# print(f"init_state=")
-		# init_state.printHorizontal();
-		# print(f"final_state=")
-		# final_state.printHorizontal();
-		# print(f"total_time={total_time}")
 		CostComputer.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time)
 		CostComputer.my_SolverIpopt.setFocusOnObstacle(True)
 		obstacles=CostComputer.om.getObstacles(f_obs)
 
-		# print(f"obstacles=")
-
-		# for obs in obstacles:
-		# 	obs.printInfo()
-
 		CostComputer.my_SolverIpopt.setObstaclesForOpt(obstacles)
-
-		###############################
 		f_state=CostComputer.om.get_f_StateFromf_obs(f_obs)
 		f_ppSolOrGuess=CostComputer.am.f_trajAnd_f_State2f_ppSolOrGuess(f_traj, f_state)
-		###############################
 
-		return f_ppSolOrGuess;		
-
+		return f_ppSolOrGuess	
 
 	def computeObstAvoidanceConstraintsViolation(self, f_obs_n, f_traj_n):
 
 		#Denormalize observation and action
-		f_obs = CostComputer.om.denormalizeObservation(f_obs_n);
-		f_traj = CostComputer.am.denormalizeTraj(f_traj_n);
+		f_obs = CostComputer.om.denormalizeObservation(f_obs_n)
+		f_traj = CostComputer.am.denormalizeTraj(f_traj_n)
 
 		total_time=CostComputer.am.getTotalTimeTraj(f_traj)
 
@@ -1345,7 +1367,7 @@ class CostComputer():
 			print(f"total_time={total_time}")
 			print(f"f_traj_n={f_traj_n}")
 			print(f"f_traj={f_traj}")
-		######
+		###
 
 		f_state = CostComputer.om.get_f_StateFromf_obs(f_obs)
 		f_posBS, f_yawBS = CostComputer.am.f_trajAnd_f_State2fBS(f_traj, f_state, no_deriv=True)
@@ -1372,8 +1394,8 @@ class CostComputer():
 			#TODO: move num to a parameter
 			for t in np.linspace(start=0.0, stop=total_time, num=15).tolist():
 
-				obs = f_posObstBS.getPosT(t);
-				drone = f_posBS.getPosT(t);
+				obs = f_posObstBS.getPosT(t)
+				drone = f_posBS.getPosT(t)
 
 				obs_drone = drone - obs #position of the drone wrt the obstacle
 
@@ -1404,10 +1426,7 @@ class CostComputer():
 	def computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(self, f_obs_n, f_traj_n):
 
 		# start1=time.time();
-
-		# start=time.time();
 		cost =  self.computeCost(f_obs_n, f_traj_n)
-		# print(f"--- computeCost took {(time.time() - start)*(1e3)} ms")
 		
 		# start=time.time();
 		obst_avoidance_violation = self.computeObstAvoidanceConstraintsViolation(f_obs_n, f_traj_n)
@@ -1426,7 +1445,6 @@ class CostComputer():
 	def computeCost(self, f_obs_n, f_traj_n): 
 		
 		f_ppSolOrGuess=self.setUpSolverIpoptAndGetppSolOrGuess(f_obs_n, f_traj_n)
-
 		tmp=CostComputer.my_SolverIpopt.computeCost(f_ppSolOrGuess) 
 
 		return tmp   
@@ -1466,7 +1484,6 @@ class CostComputer():
 		obst_avoidance_violations=[]
 		dyn_lim_violations=[]
 		augmented_costs=[]
-
 		alls=[]
 
 		smallest_augmented_safe_cost = float('inf')
@@ -1477,12 +1494,12 @@ class CostComputer():
 		######### PARALLEL OPTION
 		# start=time.time();
 		def my_func(thread_index):
-			traj_n=f_action_n[thread_index,:].reshape(1,-1);
+			traj_n=f_action_n[thread_index,:].reshape(1,-1)
 			cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_obs_n, traj_n)
 			return [cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost] 
 
 		num_of_trajs=np.shape(f_action_n)[0]
-		num_jobs=multiprocessing.cpu_count()#min(multiprocessing.cpu_count(),num_of_trajs); #Note that the class variable my_SolverIpopt will be created once per job created (but only in the first call to predictSeveral I think)
+		num_jobs=multiprocessing.cpu_count() #min(multiprocessing.cpu_count(),num_of_trajs); #Note that the class variable my_SolverIpopt will be created once per job created (but only in the first call to predictSeveral I think)
 		alls = Parallel(n_jobs=num_jobs)(map(delayed(my_func), list(range(num_of_trajs)))) #, prefer="threads"
 
 		for i in range( np.shape(f_action_n)[0]): #For each row of action
@@ -1535,8 +1552,7 @@ class CostComputer():
 
 		result=CostsAndViolationsOfAction(costs=costs, obst_avoidance_violations=obst_avoidance_violations, dyn_lim_violations=dyn_lim_violations, index_best_traj=index_best_traj)
 
-
-		return result;
+		return result
 
 
 

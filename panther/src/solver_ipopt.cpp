@@ -362,8 +362,6 @@ bool SolverIpopt::isInCollision(mt::state state, double t)
     Eigen::Array<double, 3, 1> distance = (state_obs.pos - state.pos).array().abs();
     Eigen::Vector3d delta = obstacle_i.bbox_inflated / 2.0;
 
-    // std::cout << "obstacle_i.bbox_inflated= " << obstacle_i.bbox_inflated.transpose() << std::endl;
-
     if ((distance < delta.array()).all())
     {
       std::cout << "state_obs.pos= " << state_obs.pos.transpose() << std::endl;
@@ -623,6 +621,7 @@ std::vector<si::solOrGuess> SolverIpopt::getGuesses()
 
 double SolverIpopt::computeCost(si::solOrGuess sol_or_guess)
 {
+
   std::map<std::string, casadi::DM> map_arguments = getMapConstantArguments();
 
   casadi::DM matrix_qp = stdVectorEigen3d2CasadiMatrix(sol_or_guess.qp);
@@ -631,6 +630,15 @@ double SolverIpopt::computeCost(si::solOrGuess sol_or_guess)
   map_arguments["alpha"] = sol_or_guess.getTotalTime();
   map_arguments["pCPs"] = matrix_qp;
   map_arguments["yCPs"] = matrix_qy;
+
+  for (int i = 0; i < par_.num_max_of_obst; i++)
+  {
+    map_arguments["obs_" + std::to_string(i) + "_ctrl_pts"] =
+        stdVectorEigen3d2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
+    map_arguments["obs_" + std::to_string(i) + "_bbox_inflated"] =
+        eigen3d2CasadiMatrix(obstacles_for_opt_[i].bbox_inflated);
+  }
+
   // map_arguments["all_nd"] = all_nd;                                 // Only appears in the constraints
 
   std::map<std::string, casadi::DM> result = cf_compute_cost_(map_arguments);
@@ -703,14 +711,6 @@ std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
   map_arguments["x_lim"] = std::vector<double>{ par_.x_min, par_.x_max };
   map_arguments["y_lim"] = std::vector<double>{ par_.y_min, par_.y_max };
   map_arguments["z_lim"] = std::vector<double>{ par_.z_min, par_.z_max };
-
-  for (int i = 0; i < par_.num_max_of_obst; i++)
-  {
-    map_arguments["obs_" + std::to_string(i) + "_ctrl_pts"] =
-        stdVectorEigen3d2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
-    map_arguments["obs_" + std::to_string(i) + "_bbox_inflated"] =
-        eigen3d2CasadiMatrix(obstacles_for_opt_[i].bbox_inflated);
-  }
 
   map_arguments["c_pos_smooth"] = par_.c_pos_smooth;
   map_arguments["c_yaw_smooth"] = par_.c_yaw_smooth;

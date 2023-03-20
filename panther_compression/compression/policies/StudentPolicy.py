@@ -4,6 +4,7 @@ import gym
 import torch as th
 from torch import nn
 import numpy as np
+from gym import spaces
 
 from stable_baselines3.common.distributions import SquashedDiagGaussianDistribution
 from stable_baselines3.common.policies import BasePolicy
@@ -19,7 +20,6 @@ from colorama import init, Fore, Back, Style
 # CAP the standard deviation of the actor
 LOG_STD_MAX = 2
 LOG_STD_MIN = -20
-
 
 class StudentPolicy(BasePolicy):
     """
@@ -46,7 +46,6 @@ class StudentPolicy(BasePolicy):
         optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
         optimizer_kwargs: Optional[Dict[str, Any]] = None,
         use_lstm: bool = False,
-        
     ):
         if optimizer_kwargs is None:
             optimizer_kwargs = {}
@@ -68,26 +67,21 @@ class StudentPolicy(BasePolicy):
         # Save arguments to re-create object at loading
         self.net_arch = net_arch
         self.activation_fn = activation_fn
-
         self.name=Style.BRIGHT+Fore.WHITE+"  [Stu]"+Style.RESET_ALL
-
         self.om=ObservationManager()
         self.am=ActionManager()
         self.obsm=ObstaclesManager()
         par = getPANTHERparamsAsCppStruct()
-
         self.features_dim=self.om.getObservationSize()
         print("features_dim= ", self.features_dim)
-        
         self.use_lstm = use_lstm
-
         self.agent_input_dim = self.om.getAgentObservationSize()
         self.lstm_each_obstacle_dim = self.obsm.getSizeEachObstacle()
-
         self.lstm_output_dim = par.lstm_output_dim
+        self.features_extractor_class = features_extractor_class
         print("use_lstm? ", self.use_lstm)
         if self.use_lstm:
-            print("lstm_output_dim= ", self.lstm_output_dim)
+            print("lstm_output_dim=", self.lstm_output_dim)
 
         action_dim = get_action_dim(self.action_space)
 
@@ -143,7 +137,6 @@ class StudentPolicy(BasePolicy):
 
     def printwithName(self,data):
         print(self.name+data)
-
 
     def get_action_dist_params(self, obs_n: th.Tensor) -> Tuple[th.Tensor, th.Tensor, Dict[str, th.Tensor]]:
         """
@@ -208,7 +201,6 @@ class StudentPolicy(BasePolicy):
         # self.printwithName(f"In forward, output before reshaping={output.shape}")
         before_shape=list(output.shape)
 
-        ###
         if(self.am.use_closed_form_yaw_student==True):
             tmp=(before_shape[0],) + (self.am.num_traj_per_action, self.am.traj_size_pos_ctrl_pts + 1)
 
@@ -219,9 +211,6 @@ class StudentPolicy(BasePolicy):
         else:
             output=th.reshape(output, (before_shape[0],) + self.am.getActionShape())
 
-
-        # self.printwithName(f"In forward, returning shape={output.shape}")
-        
         return output
 
     # def action_log_prob(self, obs: th.Tensor) -> Tuple[th.Tensor, th.Tensor]:
@@ -230,33 +219,31 @@ class StudentPolicy(BasePolicy):
     #     return self.action_dist.log_prob_from_params(mean_actions, log_std, **kwargs)
 
     def _predict(self, obs_n: th.Tensor, deterministic: bool = False) -> th.Tensor:
-        self.printwithName(f"Calling student")
-        # self.printwithName(f"Received obs={obs_n}")
-        # obs=self.om.denormalizeObservation(obs_n.cpu().numpy().reshape(self.om.getObservationShape()))
-        # self.om.printObservation(obs)
-
-        # self.printwithName(f"Received obs={observation.numpy()}")
-        # assertIsNormalized(observation.cpu().numpy())
-        # self.printwithName(f"Received obs shape={observation.shape}")
+        self.printwithName(f"Calling student in _predict() in StudentPolicy.py")
         action = self.forward(obs_n, deterministic)
-        # self.printwithName(f"action={action}")
-
-        #Sort each of the trajectories from highest to lowest probability
-        # indexes=th.argsort(action[:,:,-1], dim=1, descending=True) #TODO: Assumming here that the last number is the probability!
-        # action = action[:,indexes,:]
-        # self.printwithName(f"indexes={indexes}")     
-        # self.printwithName(f"After sorting, action={action}")
-        #############
-
         self.am.assertActionIsNormalized(action.cpu().numpy().reshape(self.am.getActionShape()), self.name)
 
-        # self.printwithName(f"In predict_, returning shape={action.shape}")
         return action
 
     def predictSeveral(self, obs_n, deterministic: bool = False):
 
         #Note that here below we call predict, not _predict
+
+        ##
+        ## To work around the problem of the following error:
+        ##     ValueError: Error: Unexpected observation shape (1, 43) for Box environment, please use (1, 76) or (n_env, 1, 76) for the observation shape.
+        ## This is bascially comparing the observation size to the fixed size of self.observation_space.shape
+        ## 
+
+        print(self.observation_space.shape)
+        print(obs_n.shape)
+        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=obs_n.shape)
+        print(self.observation_space.shape)
+        self.features_extractor = self.features_extractor_class(self.observation_space)
+        exit()
+
         acts=[self.predict( obs_n[i,:], deterministic=deterministic)[0].reshape(self.am.getActionShape()) for i in range(len(obs_n))] #Note that len() returns the size along the first axis
+        
         acts=np.stack(acts, axis=0)
         return acts
 

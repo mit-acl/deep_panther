@@ -63,6 +63,7 @@ public:
   bool IsTranslating();
   void updateTrajObstacles(mt::dynTraj traj);
   void convertsolOrGuess2pwp(mt::PieceWisePol& pwp_p, si::solOrGuess& solorguess, double dc);
+  void adjustObstaclesForOptimization(std::vector<mt::obstacleForOpt>& obstacles_for_opt);
 
 private:
   // pybind11::module calc_;

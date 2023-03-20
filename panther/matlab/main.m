@@ -671,13 +671,6 @@ tmp=compute_dyn_limits_constraints_violation(names_value{:});
 compute_dyn_limits_constraints_violation=compute_dyn_limits_constraints_violation.expand();
 compute_dyn_limits_constraints_violation.save('./casadi_generated_files/compute_dyn_limits_constraints_violation.casadi'); 
 
-
-
-
-%%
-
-
-
 %%%%%%%%%
 
 %%%%%
@@ -757,8 +750,6 @@ pCPs=sp.getCPsAsMatrix();
 
 
 %%
-
-
 
 par_and_init_guess= [ {createStruct('pCPs', pCPs, full(sol.pCPs))},...
                       {createStruct('alpha', alpha, alpha_value)},...
