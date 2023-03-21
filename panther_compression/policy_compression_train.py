@@ -169,7 +169,10 @@ if __name__ == "__main__":
     batch_size = 256
 
     # evaluation batch size
-    evaluation_data_size = 10
+    evaluation_data_size = 100
+
+    # reset evaluation data
+    reset_evaluation_data = True
 
     # epoch size
     N_EPOCHS = 50
@@ -195,13 +198,14 @@ if __name__ == "__main__":
         train_only_supervised=False
         launch_tensorboard=False
 
+    if reset_evaluation_data:
+        evals_dir=args.evaluation_data_dir+"/2/demos/"
+        os.system("rm -rf "+evals_dir+"/round*")
+
     if(train_only_supervised==True):
         reuse_previous_samples=True
         only_collect_data=False 
         log_interval=15 
-        num_envs=1
-
-    if(train_only_supervised==True):
         num_envs=1
         demos_dir=args.policy_dir+"/2/demos/"
 
