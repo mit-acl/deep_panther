@@ -84,10 +84,10 @@ if __name__ == "__main__":
     parser.add_argument("--use-DAgger", dest='on_policy_trainer', action='store_true') # Use DAgger when true, BC when false
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
-    parser.add_argument("--n_rounds", default=50, type=int) 
-    # parser.add_argument("--n_rounds", default=1, type=int) 
-    parser.add_argument("--total_demos_per_round", default=256*5, type=int) 
-    # parser.add_argument("--total_demos_per_round", default=1, type=int)
+    # parser.add_argument("--n_rounds", default=50, type=int)
+    parser.add_argument("--n_rounds", default=1, type=int) 
+    # parser.add_argument("--total_demos_per_round", default=256*5, type=int) 
+    parser.add_argument("--total_demos_per_round", default=1, type=int)
     parser.add_argument("--rampdown_rounds", default=5, type=int) # Dagger properties
     parser.add_argument("--n_evals", default=100, type=int)
     parser.add_argument("--train_environment_max_steps", default=50, type=int)
@@ -166,10 +166,10 @@ if __name__ == "__main__":
     verbose_python_errors=False
 
     # batch size
-    batch_size = 256
+    batch_size = 1
 
     # evaluation batch size
-    evaluation_data_size = 1000
+    evaluation_data_size = 10
 
     # epoch size
     N_EPOCHS = 50
@@ -369,7 +369,7 @@ if __name__ == "__main__":
         ## Collect evaluation data
         ##
 
-        if args.evaluation_data_collection and not os.listdir(EVALUATION_DATA_POLICY_PATH):
+        if args.evaluation_data_collection and not len(os.listdir(EVALUATION_DATA_POLICY_PATH + '/demos/round-000/')) > 1:
             printInBoldBlue("----------------------- Collecting Evaluation Data: --------------------")
             evaluation_policy_path = os.path.join(EVALUATION_DATA_POLICY_PATH, "evaluation_policy.pt") # Where to save curr policy
             evaluation_trainer.train(n_rounds=1, total_demos_per_round=evaluation_data_size, only_collect_data=True, 
