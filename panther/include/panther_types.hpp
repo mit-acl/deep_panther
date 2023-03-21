@@ -817,6 +817,8 @@ struct parameters
   double          training_dt;
   int             num_of_obstacles_in_training;
   int             lstm_output_dim;
+  int             lstm_num_layers;
+  bool            lstm_bidirectional;
   double          training_env_x_max;
   double          training_env_x_min;
   double          training_env_y_max;

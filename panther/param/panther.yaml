@@ -3,7 +3,6 @@
 num_of_trajs_per_replan: 6 # num of students' traj (n_s in Table I in deep panther paper)
 max_num_of_initial_guesses: 10 # (n_runs in Table I)
 drone_extra_radius_for_NN: 0.0  #(m) Used for collision checking
-Ra: 15.0           # [m] Radius of my planning sphere (planning horizon)
 impose_FOV_in_trajCB: false # if True, it allows communication betw obstacle that is in FOV
 pause_time_when_replanning: false
 replanning_trigger_time_student: 0.1 #[seconds] 
@@ -38,6 +37,8 @@ num_of_obstacles_in_training: 2
 #############################################
 use_lstm: true # use LSTM?
 lstm_output_dim: 30
+lstm_num_layers: 2 # if it's more than 1, it is stacked LSTM
+lstm_bidirectional: false
 
 # FOV setting
 #############################################
@@ -74,6 +75,7 @@ agents_ids: ["01", "02", "03", "04", "05"]
 use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
 goal_radius: 0.5   #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
 goal_seen_radius: 2.5 #(m) no more replanning needed sphere (when drone gets close to goal OS fails a lot, so we introduced this)
+Ra: 15.0           # [m] Radius of my planning sphere (planning horizon)
 drone_bbox: [0.1, 0.1, 0.1]  #(m) Used for collision checking
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
