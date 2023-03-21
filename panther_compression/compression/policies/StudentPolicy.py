@@ -4,8 +4,6 @@ import gym
 import torch as th
 from torch import nn
 import numpy as np
-from gym import spaces
-
 from stable_baselines3.common.distributions import SquashedDiagGaussianDistribution
 from stable_baselines3.common.policies import BasePolicy
 from stable_baselines3.common.preprocessing import get_action_dim
@@ -196,7 +194,7 @@ class StudentPolicy(BasePolicy):
     def forward(self, obs_n: th.Tensor, deterministic: bool = False) -> th.Tensor:
         mean_actions, log_std, kwargs = self.get_action_dist_params(obs_n)
         # Note: the action is squashed
-        output=self.action_dist.actions_from_params(mean_actions, log_std, deterministic=deterministic, **kwargs);
+        output=self.action_dist.actions_from_params(mean_actions, log_std, deterministic=deterministic, **kwargs)
 
         # self.printwithName(f"In forward, output before reshaping={output.shape}")
         before_shape=list(output.shape)
@@ -219,7 +217,6 @@ class StudentPolicy(BasePolicy):
     #     return self.action_dist.log_prob_from_params(mean_actions, log_std, **kwargs)
 
     def _predict(self, obs_n: th.Tensor, deterministic: bool = False) -> th.Tensor:
-        self.printwithName(f"Calling student in _predict() in StudentPolicy.py")
         action = self.forward(obs_n, deterministic)
         self.am.assertActionIsNormalized(action.cpu().numpy().reshape(self.am.getActionShape()), self.name)
 
@@ -228,80 +225,8 @@ class StudentPolicy(BasePolicy):
     def predictSeveral(self, obs_n, deterministic: bool = False):
 
         #Note that here below we call predict, not _predict
-
-        ##
-        ## To work around the problem of the following error:
-        ##     ValueError: Error: Unexpected observation shape (1, 43) for Box environment, please use (1, 76) or (n_env, 1, 76) for the observation shape.
-        ## This is bascially comparing the observation size to the fixed size of self.observation_space.shape
-        ## 
-
-        print(self.observation_space.shape)
-        print(obs_n.shape)
-        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=obs_n.shape)
-        print(self.observation_space.shape)
         self.features_extractor = self.features_extractor_class(self.observation_space)
-        exit()
-
         acts=[self.predict( obs_n[i,:], deterministic=deterministic)[0].reshape(self.am.getActionShape()) for i in range(len(obs_n))] #Note that len() returns the size along the first axis
         
         acts=np.stack(acts, axis=0)
         return acts
-
-
-    # def predictAndDenormalize(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
-    #     action =self._predict(observation, deterministic)
-    #     return self.am.denormalizeAction(action)
-    
-    # def create_lstm_mlp(
-    #     lstm_input_dim: int,
-    #     lstm_output_dim: int,
-    #     mlp_input_dim: int,
-    #     mlp_output_dim: int,
-    #     mlp_net_arch: List[int],
-    #     activation_fn: Type[nn.Module] = nn.ReLU,
-    #     squash_output: bool = False,
-    #     with_bias: bool = True,
-    # ) -> List[nn.Module]:
-    #     """
-    #     refered to https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/torch_layers.py
-
-    #     Create a LSTM layer followd by multi layer perceptron (MLP), which is
-    #     a collection of fully-connected layers each followed by an activation function.
-
-    #     Note that Agent current state goes into MLP, but observations first go into LSTM, and then it will generates a fixed
-    #     size vector, h, which will then go into MLP together with the agent current state
-
-    #     :param lstm_input_dim: Dimension of the input vector
-    #     :param lstm_output_dim:
-    #     :param mlp_input_dim: this is equal to agent's state dim + lstm_output_dim
-    #     :param mlp_output_dim:
-    #     :param mlp_net_arch: Architecture of the neural net
-    #     :param activation_fn: The activation function to use after each layer.
-    #     :param squash_output: Whether to squash the output using a Tanh
-    #         activation function
-    #     :param with_bias: If set to False, the layers will not learn an additive bias
-    #     :return:
-    #     """
-
-    #     ##
-    #     ## lstm layer
-    #     ##
-
-    #     modules = [nn.LSTM(lstm_input_dim, lstm_output_dim, bias=with_bias), activation_fn()]
-
-    #     ##
-    #     ## FC
-    #     ##
-
-    #     modules.append(nn.Linear(mlp_input_dim, net_arch[0], bias=with_bias))
-
-    #     for idx in range(len(mlp_net_arch) - 1):
-    #         modules.append(nn.Linear(mlp_net_arch[idx], mlp_net_arch[idx + 1], bias=with_bias))
-    #         modules.append(activation_fn())
-
-    #     last_layer_dim = mlp_net_arch[-1] if len(mlp_net_arch) > 0 else input_dim
-    #     modules.append(nn.Linear(last_layer_dim, output_dim, bias=with_bias))
-
-    #     if squash_output:
-    #         modules.append(nn.Tanh())
-    #     return modules

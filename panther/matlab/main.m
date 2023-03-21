@@ -1153,7 +1153,7 @@ plot(all_t_n,full(result.all_yaw_corrected),'o')
 %%
 %% Functions
 %%
-         
+
 function result=createCellArrayofStructsForObstacles(fitter)
          
      num_obs=size(fitter.bbox_inflated,2);

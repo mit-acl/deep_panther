@@ -712,6 +712,14 @@ std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
   map_arguments["y_lim"] = std::vector<double>{ par_.y_min, par_.y_max };
   map_arguments["z_lim"] = std::vector<double>{ par_.z_min, par_.z_max };
 
+  for (int i = 0; i < par_.num_max_of_obst; i++)
+  {
+    map_arguments["obs_" + std::to_string(i) + "_ctrl_pts"] =
+        stdVectorEigen3d2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
+    map_arguments["obs_" + std::to_string(i) + "_bbox_inflated"] =
+        eigen3d2CasadiMatrix(obstacles_for_opt_[i].bbox_inflated);
+  }
+
   map_arguments["c_pos_smooth"] = par_.c_pos_smooth;
   map_arguments["c_yaw_smooth"] = par_.c_yaw_smooth;
   map_arguments["c_fov"] = par_.c_fov;

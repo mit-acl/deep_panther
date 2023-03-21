@@ -971,11 +971,8 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
   //
 
   mtx_trajs_.lock();
-
   ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
-
   mtx_trajs_.unlock();
-
   edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
 
   if (par_.use_expert)
@@ -1008,8 +1005,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     //////////////////////////////////////////////////////////////////////////
 
     // removeTrajsThatWillNotAffectMe(A, t_start, t_final);  // TODO: Commented (4-Feb-2021)
-
-
 
     std::cout << on_cyan << bold << "Solved so far" << solutions_found_ << "/" << total_replannings_ << reset
               << std::endl;

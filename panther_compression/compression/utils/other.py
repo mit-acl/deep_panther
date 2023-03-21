@@ -62,14 +62,14 @@ def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
 	axis_z=[0,0,1]
 
 	#Hopf fibration approach
-	thrust=w_accel + np.array([[0.0], [0.0], [9.81]]); 
-	thrust_normalized=thrust/np.linalg.norm(thrust);
+	thrust=w_accel + np.array([[0.0], [0.0], [9.81]])
+	thrust_normalized=thrust/np.linalg.norm(thrust)
 
-	a=thrust_normalized[0];
-	b=thrust_normalized[1];
-	c=thrust_normalized[2];
+	a=thrust_normalized[0]
+	b=thrust_normalized[1]
+	c=thrust_normalized[2]
 
-	tmp=(1/math.sqrt(2*(1+c)));
+	tmp=(1/math.sqrt(2*(1+c)))
 	q_w = tmp*(1+c) #w
 	q_x = tmp*(-b)  #x
 	q_y = tmp*(a)   #y
@@ -85,7 +85,7 @@ def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
 
 	w_q_b=qabc * qpsi
 
-	w_T_b = w_q_b.transformation_matrix;
+	w_T_b = w_q_b.transformation_matrix
 	
 	w_T_b[0:3,3]=w_pos.flatten()
 	# print(w_T_b)
@@ -644,7 +644,7 @@ class ObservationManager():
 
 	def getCtrlPtsObstacleI(self,obs,i):
 		index_start_obstacle_i=self.getIndexStartObstacleI(i)
-		ctrl_pts=[]; 
+		ctrl_pts=[]
 		num_cps_per_obstacle=self.obsm.getCPsPerObstacle()
 		for j in range(num_cps_per_obstacle):
 			index_start_cpoint=index_start_obstacle_i+3*j
@@ -674,11 +674,8 @@ class ObservationManager():
 		return obs[0,7:10].reshape((3,1)) #Column vector
 
 	def getObstacles(self, obs):
-
 		obstacles=[]
-
 		num_obs = int((obs.shape[1]-10)/(3*self.obsm.getCPsPerObstacle()+3))
-
 		for i in range(num_obs):
 			ctrl_pts=self.getCtrlPtsObstacleI(obs,i)
 			bbox_inflated=self.getBboxInflatedObstacleI(obs,i)
@@ -689,20 +686,14 @@ class ObservationManager():
 		return obstacles
 
 	def getObstaclesForCasadi(self, obs):
-
 		obstacles=[]
 		for i in range(self.num_max_of_obst): # num_max_of_obst is Casadi
-
 			ctrl_pts=self.getCtrlPtsObstacleI(obs,i) 
 			bbox_inflated=self.getBboxInflatedObstacleI(obs,i)
-
 			obstacle=py_panther.obstacleForOpt()
-
 			obstacle.ctrl_pts=ctrl_pts
 			obstacle.bbox_inflated=bbox_inflated
-
 			obstacles.append(obstacle)
-
 		return obstacles
 
 	def getInit_f_StateFromObservation(self, obs):

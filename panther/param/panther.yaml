@@ -9,7 +9,6 @@ pause_time_when_replanning: false
 replanning_trigger_time_student: 0.1 #[seconds] 
 replanning_trigger_time_expert: 0.5 #[seconds] 
 replanning_lookahead_time: 1.0 #[seconds] #distance in time space = t_in - t_1 in Table I
-max_runtime_octopus_search: 1.0 #[seconds]
 use_closed_form_yaw_student: false #If false, the NN will predict this closed form for the yaw angle
 make_yaw_NN: false
 prob_choose_cross: 0.8 # how much you wanna choose cross obstacle in training [0.1]
@@ -91,8 +90,8 @@ j_max: [30.0, 30.0, 30.0]   #[m/s3]
 factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
 max_seconds_keeping_traj: 30.0     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
 gamma: 0.1 #[seconds] >0 Time step between discretization points
-use_expert: false
-use_student: true
+use_expert: true
+use_student: false
 
 # Octopus Search
 #############################################
@@ -102,6 +101,7 @@ a_star_samp_z: 5
 a_star_fraction_voxel_size: 0.0 #\in [0,1] The higher, the bigger the voxel size in A* is(i.e. more prunning)
 a_star_bias: 1.0 #Bias (cost=g+bias*h) in the A* search 
 disc_pts_per_interval_oct_search: 4
+max_runtime_octopus_search: 1.0 #[seconds]
 
 # Visualization
 #############################################
