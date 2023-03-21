@@ -205,6 +205,7 @@ class ObstaclesManager():
 
 	def __init__(self):
 		self.params = readPANTHERparams()
+		self.random_num_of_obstacles_in_training = self.params["random_num_of_obstacles_in_training"]
 		self.num_obs = self.params["num_of_obstacles_in_training"]
 		self.x_max = self.params["training_env_x_max"]
 		self.x_min = self.params["training_env_x_min"]
@@ -224,6 +225,12 @@ class ObstaclesManager():
 		self.newRandomPos()
 
 	def newRandomPos(self):
+
+		##
+		## if random_num_of_obstacles_in_training is True, then we will have a random number of obstacles
+		##
+
+		self.num_obs = random.randint(1, self.num_obs) if self.random_num_of_obstacles_in_training else self.num_obs
 
 		##
 		## create self.random_pos with the size of (3xself.num_obs)

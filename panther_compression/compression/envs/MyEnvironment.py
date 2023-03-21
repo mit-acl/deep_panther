@@ -298,7 +298,12 @@ class MyEnvironment(gym.Env):
     return f_observation_n, reward, done, info
 
   def reset(self):
+
     self.printwithNameAndColor("Resetting environment")
+    
+    ##
+    ## Agent state  
+    ##
 
     self.time=0.0
     self.timestep = 0
@@ -311,8 +316,11 @@ class MyEnvironment(gym.Env):
     ydot0=np.array([[0.0]])
     self.w_state=State(p0, v0, a0, y0, ydot0)
 
-    if(isinstance(self.constant_obstacle_pos, type(None)) and isinstance(self.constant_gterm_pos, type(None))):
+    ##
+    ## Obstacles state
+    ##
 
+    if(isinstance(self.constant_obstacle_pos, type(None)) and isinstance(self.constant_gterm_pos, type(None))):
       if np.random.uniform(0, 1) < 1 - self.par.prob_choose_cross:
         self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos)
         self.gm.newRandomPos()
@@ -321,30 +329,20 @@ class MyEnvironment(gym.Env):
         self.obsm.setPos(w_pos_obstacle)
         self.gm.setPos(w_pos_g_term)  
         # self.printwithNameAndColor("Using cross!")
-
     else:
       self.obsm.setPos(self.constant_obstacle_pos)
       self.gm.setPos(self.constant_gterm_pos)
 
-    # observation = self.om.getRandomNormalizedObservation()
     if self.par.use_dynamic_obst_in_training:
       self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
     else:
       self.w_obstacles=self.obsm.getFutureWPosStaticObstacles()
-    # print("w_obstacles[0].ctrl_pts=", w_obstacles[0].ctrl_pts)
     f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles)
     f_observation_n=self.om.normalizeObservation(f_observation)
-
-    # self.printwithName("THIS IS THE OBSERVATION:")
-    # self.om.printObservation(f_observation)
-
     self.previous_f_observation=self.om.denormalizeObservation(f_observation_n)
     self.previous_f_obs_n=f_observation_n
-    # assert observation.shape == self.observation_shape
-    # self.printwithName(f"returning obs={observation}")
     return f_observation_n
 
- 
   def render(self, mode='human'):
     raise NotImplementedError()
     return
@@ -352,6 +350,7 @@ class MyEnvironment(gym.Env):
   def close (self):
     raise NotImplementedError()
     return
+  
   def forceDone(self):
     self.force_done=True
 
@@ -359,13 +358,15 @@ class MyEnvironment(gym.Env):
       if(self.record_bag==False or np.isnan(f_action_n).any()):
         return
 
-      #When using multiple environments, opening bag in constructor and closing it in _del leads to unindexed bags
+      ##
+      ## When using multiple environments, opening bag in constructor and closing it in _del leads to unindexed bags
+      ##
+
       if(exists(self.name_bag)):
           option='a'
       else:
           option='w'
       self.bag=rosbag.Bag(self.name_bag, option)
-      ######################
 
       f_obs=self.previous_f_observation
       w_state=self.w_state
