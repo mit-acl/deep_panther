@@ -112,7 +112,10 @@ if __name__ == "__main__":
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
     parser.add_argument("--evaluation_data_collection", dest='evaluation_data_collection', action='store_true')
-    parser.set_defaults(evaluation_data_collection=True)
+    if use_test_run_params:
+        parser.set_defaults(evaluation_data_collection=False)
+    else:
+        parser.set_defaults(evaluation_data_collection=True)
 
     ##
     ## Loss calculation
@@ -208,6 +211,7 @@ if __name__ == "__main__":
     if reset_evaluation_data:
         evals_dir=args.evaluation_data_dir+"/2/demos/"
         os.system("rm -rf "+evals_dir+"/round*")
+        os.system("mkdir "+evals_dir+"/round-000")
 
     if(train_only_supervised==True):
         reuse_previous_samples=True
