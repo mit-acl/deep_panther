@@ -84,10 +84,10 @@ if __name__ == "__main__":
     parser.add_argument("--use-DAgger", dest='on_policy_trainer', action='store_true') # Use DAgger when true, BC when false
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
-    # parser.add_argument("--n_rounds", default=50, type=int)
-    parser.add_argument("--n_rounds", default=1, type=int) 
-    # parser.add_argument("--total_demos_per_round", default=256*5, type=int) 
-    parser.add_argument("--total_demos_per_round", default=1, type=int)
+    parser.add_argument("--n_rounds", default=10, type=int)
+    # parser.add_argument("--n_rounds", default=1, type=int) 
+    parser.add_argument("--total_demos_per_round", default=256*5, type=int) 
+    # parser.add_argument("--total_demos_per_round", default=1, type=int)
     parser.add_argument("--rampdown_rounds", default=5, type=int) # Dagger properties
     parser.add_argument("--n_evals", default=100, type=int)
     parser.add_argument("--train_environment_max_steps", default=50, type=int)
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     verbose_python_errors=False
 
     # batch size
-    batch_size = 1
+    batch_size = 256
 
     # evaluation batch size
     evaluation_data_size = 10
@@ -472,7 +472,7 @@ if __name__ == "__main__":
                 printInBoldBlue("----------------------- Improvement: --------------------")
 
                 if(abs(pre_train_stats["return_mean"])>0):
-                    student_improvement=(post_train_stats["return_mean"]-pre_train_stats["return_mean"])/abs(pre_train_stats["return_mean"]);
+                    student_improvement=(post_train_stats["return_mean"]-pre_train_stats["return_mean"])/abs(pre_train_stats["return_mean"])
                     if(student_improvement>0):
                         printInBoldGreen(f"Student improvement: {student_improvement*100}%")
                     else:

@@ -219,25 +219,28 @@ class ObstaclesManager():
 		self.fitter_deg_pos=self.params["fitter_deg_pos"]
 		self.fitter_total_time=self.params["fitter_total_time"]
 		self.fitter_num_samples=self.params["fitter_num_samples"]
+
 		# self.fitter = py_panther.Fitter(self.fitter_num_samples)
 		self.newRandomPos()
 
 	def newRandomPos(self):
-		self.random_pos = np.array([
-			[random.uniform(self.x_min, self.x_max)],
-			[random.uniform(self.y_min, self.y_max)],
-			[random.uniform(self.z_min, self.z_max)]
-		])
 
 		##
-		## randomized params
+		## create self.random_pos with the size of (3xself.num_obs)
 		##
 
-		# self.random_offset=random.uniform(0.0, 10*math.pi)
-		# self.random_scale=np.array([[random.uniform(0.5, 3.0)],[random.uniform(0.5, 3.0)],[random.uniform(0.5, 3.0)]]);
-		
+		self.random_pos = []
+		for i in range(self.num_obs):
+			self.random_pos.append(np.array([
+				[random.uniform(self.x_min, self.x_max)],
+				[random.uniform(self.y_min, self.y_max)],
+				[random.uniform(self.z_min, self.z_max)]
+			]))
+
 		##
 		## ideal params (got from sim_base_station.launch)
+		##
+
 		self.random_offset=0
 		self.random_scale=np.array([[2],[2],[2]])
 
@@ -268,14 +271,16 @@ class ObstaclesManager():
 
 	def getObsAndGtermToCrossPath(self):
 
-		radius_obstacle_pos = random.uniform(self.goal_seen_radius, self.x_max*0.8)
-		std_deg = 30
-		theta_obs = random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
-		center = np.zeros((3,1))
-		height_g_term = random.uniform(self.params["training_env_z_min"], self.params["training_env_z_max"])
-		height_obstacle = height_g_term + random.uniform(-0.25, 0.25)
-
-		w_pos_obstacle = center + np.array([[radius_obstacle_pos*math.cos(theta_obs)],[radius_obstacle_pos*math.sin(theta_obs)],[height_obstacle]])
+		w_pos_obstacle = []
+		for i in range(self.num_obs):
+			radius_obstacle_pos = random.uniform(self.goal_seen_radius, self.x_max*0.8)
+			std_deg = 30
+			theta_obs = random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
+			center = np.zeros((3,1))
+			height_g_term = random.uniform(self.params["training_env_z_min"], self.params["training_env_z_max"])
+			height_obstacle = height_g_term + random.uniform(-0.25, 0.25)
+			w_pos_obstacle.append(center + np.array([[radius_obstacle_pos*math.cos(theta_obs)],[radius_obstacle_pos*math.sin(theta_obs)],[height_obstacle]]))
+		
 		w_pos_g_term = center + np.array([[random.uniform(0, self.x_max)], [0], [random.uniform(self.z_min, self.z_max)]])
 
 		return w_pos_obstacle, w_pos_g_term
@@ -285,12 +290,11 @@ class ObstaclesManager():
 		for i in range(self.num_obs):
 			w_ctrl_pts_ob=np.array([[],[],[]])
 			for j in range(self.fitter_num_seg + self.fitter_deg_pos):
-				w_ctrl_pts_ob=np.concatenate((w_ctrl_pts_ob, self.random_pos), axis=1)
+				w_ctrl_pts_ob=np.concatenate((w_ctrl_pts_ob, self.random_pos[i]), axis=1)
 				# w_ctrl_pts_ob.append(np.array([[2],[2],[2]]))
 
 			bbox_inflated= np.array(self.params["training_obst_size"]) + np.array(self.params["drone_bbox"])
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
-			self.renewwObstaclePos() # renew the position of the obstacle so that we have several obstacles with different positions
 		
 		# if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
 		if self.num_obs < self.params["num_max_of_obst"]:
@@ -301,17 +305,8 @@ class ObstaclesManager():
 
 	def getFutureWPosDynamicObstacles(self,t):
 		w_obs=[]
-		# trefoil=Trefoil(pos=self.random_pos, scale_x=1.0, scale_y=1.0, scale_z=1.0, offset=0.0, slower=1.5);
-		# novale=np.array([[4.0],[4.0],[1.0]]);
-		# print(f"Using offset={self.random_offset}")
-		# print(f"Using random_scale={self.random_scale}")
-
-		###HACK TO GENERATE A STATIC OBSTACLE
-		# self.random_scale=np.zeros((3,1))
-		####################################
-
 		for i in range(self.num_obs):
-			trefoil=Trefoil(pos=self.random_pos, scale=self.random_scale, offset=self.random_offset, slower=1.5)
+			trefoil=Trefoil(pos=self.random_pos[i], scale=self.random_scale, offset=self.random_offset, slower=1.5)
 			samples=[]
 			for t_interm in np.linspace(t, t + self.fitter_total_time, num=self.fitter_num_samples):#.tolist():
 				samples.append(trefoil.getPosT(t_interm))
@@ -320,7 +315,6 @@ class ObstaclesManager():
 			w_ctrl_pts_ob=listOf3dVectors2numpy3Xmatrix(w_ctrl_pts_ob_list)
 			bbox_inflated= np.array(self.params["training_obst_size"]) + np.array(self.params["drone_bbox"])
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
-			self.renewwObstaclePos() # renew the position of the obstacle so that we have several obstacles with different positions
 
 		# if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
 		if self.num_obs < self.params["num_max_of_obst"]:
