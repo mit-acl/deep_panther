@@ -1,13 +1,13 @@
 # Training setting
 #############################################
 num_of_trajs_per_replan: 6 # num of students' traj (n_s in Table I in deep panther paper)
-max_num_of_initial_guesses: 5 # (n_runs in Table I)
+max_num_of_initial_guesses: 10 # (n_runs in Table I)
 drone_extra_radius_for_NN: 0.0  #(m) Used for collision checking
 impose_FOV_in_trajCB: false # if True, it allows communication betw obstacle that is in FOV
 pause_time_when_replanning: false
 replanning_trigger_time_student: 0.1 #[seconds] 
 replanning_trigger_time_expert: 0.5 #[seconds] 
-replanning_lookahead_time: 1.0 #[seconds] #distance in time space = t_in - t_1 in Table I
+replanning_lookahead_time: 2.0 #[seconds] #distance in time space = t_in - t_1 in Table I
 use_closed_form_yaw_student: false #If false, the NN will predict this closed form for the yaw angle
 make_yaw_NN: false
 prob_choose_cross: 0.9 # how much you wanna choose cross obstacle in training [0.1]
@@ -36,8 +36,8 @@ num_of_obstacles_in_training: 2 # this should not be bigger than num_max_of_obst
 # LSTM
 #############################################
 use_lstm: true # use LSTM?
-lstm_output_dim: 30
-lstm_num_layers: 2 # if it's more than 1, it is stacked LSTM
+lstm_output_dim: 10
+lstm_num_layers: 1 # if it's more than 1, it is stacked LSTM
 lstm_bidirectional: false
 
 # FOV setting
@@ -93,8 +93,8 @@ j_max: [30.0, 30.0, 30.0]   #[m/s3]
 factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
 max_seconds_keeping_traj: 30.0     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
 gamma: 0.1 #[seconds] >0 Time step between discretization points
-use_expert: true
-use_student: false
+use_expert: false
+use_student: true
 
 # Octopus Search
 #############################################
