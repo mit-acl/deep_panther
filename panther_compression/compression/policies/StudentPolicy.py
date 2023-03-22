@@ -78,6 +78,7 @@ class StudentPolicy(BasePolicy):
         self.lstm_output_dim = par.lstm_output_dim
         self.lstm_num_layers = par.lstm_num_layers
         self.lstm_bidirectional = par.lstm_bidirectional
+        self.lstm_dropout = par.lstm_dropout
         self.features_extractor_class = features_extractor_class
         print("use_lstm=", self.use_lstm)
         if self.use_lstm:
@@ -103,7 +104,7 @@ class StudentPolicy(BasePolicy):
             # self.latent_pi = nn.Sequential(*latent_pi_net)
             # last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
 
-            self.lstm = nn.LSTM(input_size=self.lstm_each_obstacle_dim, hidden_size=self.lstm_output_dim, num_layers=self.lstm_num_layers, bidirectional=self.lstm_bidirectional)
+            self.lstm = nn.LSTM(input_size=self.lstm_each_obstacle_dim, hidden_size=self.lstm_output_dim, num_layers=self.lstm_num_layers, bidirectional=self.lstm_bidirectional, dropout=self.lstm_dropout)
             latent_pi_net = create_mlp(self.agent_input_dim+self.lstm_output_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
             self.latent_pi = nn.Sequential(*latent_pi_net)
             last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
