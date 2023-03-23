@@ -173,7 +173,7 @@ class StudentPolicy(BasePolicy):
             ## https://stackoverflow.com/questions/48302810/whats-the-difference-between-hidden-and-output-in-pytorch-lstm
             ##
 
-            lstm_input = th.empty((num_of_obstacles, batch_size, self.lstm_each_obstacle_dim))
+            lstm_input = th.empty((num_of_obstacles, batch_size, self.lstm_each_obstacle_dim)).to(self.device)
             for i in range(num_of_obstacles):
                 for j in range(batch_size):
                     lstm_input[i,j,:] = obst_features[0,j,i*self.lstm_each_obstacle_dim:(i+1)*self.lstm_each_obstacle_dim]
