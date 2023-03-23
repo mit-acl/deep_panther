@@ -806,6 +806,7 @@ struct parameters
 {
   //
   // clang-format off
+  bool            use_bn;
   double          lstm_dropout;
   bool            random_num_of_obstacles_in_training;
   double          num_obst_in_FOV;

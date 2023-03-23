@@ -88,7 +88,7 @@ if __name__ == "__main__":
     parser.set_defaults(on_policy_trainer=True) # Default will be to use DAgger
     if use_test_run_params:
         parser.add_argument("--n_rounds", default=1, type=int) 
-        parser.add_argument("--total_demos_per_round", default=1, type=int)
+        parser.add_argument("--total_demos_per_round", default=10, type=int)
     else:
         parser.add_argument("--n_rounds", default=50, type=int)
         parser.add_argument("--total_demos_per_round", default=256*5, type=int) 
@@ -112,10 +112,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_only_last_collected_dataset", dest='use_only_last_coll_ds', action='store_true')
     parser.set_defaults(use_only_last_coll_ds=False)
     parser.add_argument("--evaluation_data_collection", dest='evaluation_data_collection', action='store_true')
-    if use_test_run_params:
-        parser.set_defaults(evaluation_data_collection=False)
-    else:
-        parser.set_defaults(evaluation_data_collection=True)
+    parser.set_defaults(evaluation_data_collection=True)
 
     ##
     ## Loss calculation
@@ -173,13 +170,10 @@ if __name__ == "__main__":
     verbose_python_errors=False
 
     # batch size
-    if use_test_run_params:
-        batch_size = 1
-    else:
-        batch_size = 256
+    batch_size = 256 if not use_test_run_params else 5
 
     # evaluation batch size
-    evaluation_data_size = 100
+    evaluation_data_size = 100 if not use_test_run_params else 1
 
     # reset evaluation data
     reset_evaluation_data = True

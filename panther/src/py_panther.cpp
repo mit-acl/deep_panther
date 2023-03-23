@@ -62,6 +62,7 @@ PYBIND11_MODULE(py_panther, m)
       // This part below should be copied/pasted from parameters of panther_types.hpp
       // clang-format off
 
+      .def_readwrite("use_bn", &mt::parameters::use_bn)
       .def_readwrite("lstm_dropout", &mt::parameters::lstm_dropout)
       .def_readwrite("random_num_of_obstacles_in_training", &mt::parameters::random_num_of_obstacles_in_training)
       .def_readwrite("num_obst_in_FOV", &mt::parameters::num_obst_in_FOV)

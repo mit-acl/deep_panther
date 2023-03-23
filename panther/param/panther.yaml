@@ -36,6 +36,7 @@ num_of_obstacles_in_training: 2 # this should not be bigger than num_max_of_obst
 # LSTM
 #############################################
 use_lstm: true # use LSTM?
+use_bn: false # use batch normalization after LSTM
 lstm_dropout: 0.2
 lstm_output_dim: 64
 lstm_num_layers: 1 # if it's more than 1, it is stacked LSTM

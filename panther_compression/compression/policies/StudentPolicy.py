@@ -79,6 +79,7 @@ class StudentPolicy(BasePolicy):
         self.lstm_num_layers = par.lstm_num_layers
         self.lstm_bidirectional = par.lstm_bidirectional
         self.lstm_dropout = par.lstm_dropout
+        self.use_bn = par.use_bn
         self.features_extractor_class = features_extractor_class
         print("use_lstm=", self.use_lstm)
         if self.use_lstm:
@@ -100,11 +101,8 @@ class StudentPolicy(BasePolicy):
 
         if self.use_lstm:
 
-            # latent_pi_net = create_lstm_mlp(self.features_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
-            # self.latent_pi = nn.Sequential(*latent_pi_net)
-            # last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
-
             self.lstm = nn.LSTM(input_size=self.lstm_each_obstacle_dim, hidden_size=self.lstm_output_dim, num_layers=self.lstm_num_layers, bidirectional=self.lstm_bidirectional, dropout=self.lstm_dropout)
+            self.batch_norm = nn.BatchNorm1d(self.lstm_output_dim)
             latent_pi_net = create_mlp(self.agent_input_dim+self.lstm_output_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
             self.latent_pi = nn.Sequential(*latent_pi_net)
             last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
@@ -157,12 +155,19 @@ class StudentPolicy(BasePolicy):
 
             features = self.extract_features(obs_n)
             
+            print("obs_n.shape ", obs_n.shape)
+            print("features.shape ", features.shape)
+            
             ##
             ## devide features into agent and obst and reshape obst_features for LSTM
             ##
 
             agent_features = features[None, :, :self.agent_input_dim] # TODO: pass # obstacles and change 33 #None is for keeping the same dimension
             obst_features = features[None, :, self.agent_input_dim:] # TODO: pass # obstacles and change 33
+            
+            print("agent_features.shape ", agent_features.shape)
+            print("obst_features.shape ", obst_features.shape)
+            
             batch_size = features.shape[0]
             num_of_obstacles = int(obst_features.shape[2]/self.lstm_each_obstacle_dim) # need to calculate here because num_of_obstacles depends on each simulation
             
@@ -192,17 +197,23 @@ class StudentPolicy(BasePolicy):
             # assert h_n[-1] == lstm_out[-1] #this is true
 
             ##
+            ## Batch normalization
+            ## h_n.shape  ([lastm_num_layers, batch_size, lstm_hidden_size])
+            ##
+
+            if self.use_bn:
+                bn_out = self.batch_norm(h_n[-1])
+            else:
+                bn_out = h_n[-1]
+            ##
             ## FC layers
             ##
 
-            lstm_out_cat = th.cat((agent_features[0,0], h_n[-1,0]))
+            print("check bn_out.requires_grad_()", bn_out.requires_grad_())
 
-            print("agent_features[0,0] ", agent_features[0,0])
-            print("h_n[-1,0] ", h_n[-1,0])
-            print("h_n.requires_grad_()", h_n.requires_grad_())
-
-            latent_pi = self.latent_pi(lstm_out_cat[None,:]) #lstm_out_cat[None,:] -- None is added for dimension match
-
+            lstm_out_cat = th.cat((agent_features[-1], bn_out), dim=1)
+            latent_pi = self.latent_pi(lstm_out_cat) #lstm_out_cat[None,:] -- None is added for dimension match
+            
             ##
             ## Last layer
             ##
