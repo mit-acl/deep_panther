@@ -161,26 +161,43 @@ class StudentPolicy(BasePolicy):
             ## devide features into agent and obst and reshape obst_features for LSTM
             ##
 
-            agent_features = features[None, 0, :self.agent_input_dim] # TODO: pass # obstacles and change 33 #None is for keeping the same dimension
-            obst_features = features[None, 0, self.agent_input_dim:] # TODO: pass # obstacles and change 33
-            num_of_obstacles = int(obst_features.shape[1]/self.lstm_each_obstacle_dim) # need to calculate here because num_of_obstacles depends on each simulation
-            lstm_input = th.reshape(obst_features, (num_of_obstacles, self.lstm_each_obstacle_dim))
+            agent_features = features[None, :, :self.agent_input_dim] # TODO: pass # obstacles and change 33 #None is for keeping the same dimension
+            obst_features = features[None, :, self.agent_input_dim:] # TODO: pass # obstacles and change 33
+            batch_size = features.shape[0]
+            num_of_obstacles = int(obst_features.shape[2]/self.lstm_each_obstacle_dim) # need to calculate here because num_of_obstacles depends on each simulation
+            
+            ##
+            ## batch_first=False, so (sequence_length, batch_size, input_size) = (num_of_obstacles, batch_size, lstm_each_obstacle_dim)
+            ## reshape obst_features from (1, 20, 66) to (2, 20, 33) #FYI this doesn't work: lstm_input = th.reshape(obst_features, (num_of_obstacles, batch_size, self.lstm_each_obstacle_dim))
+            ## initliaze lstm_input as an empty tensor
+            ## https://stackoverflow.com/questions/48302810/whats-the-difference-between-hidden-and-output-in-pytorch-lstm
+            ##
+
+            lstm_input = th.empty((num_of_obstacles, batch_size, self.lstm_each_obstacle_dim))
+            for i in range(num_of_obstacles):
+                for j in range(batch_size):
+                    lstm_input[i,j,:] = obst_features[0,j,i*self.lstm_each_obstacle_dim:(i+1)*self.lstm_each_obstacle_dim]
             
             ##
             ## LSTM layer
             ##
 
-            lstm_out, _ = self.lstm(lstm_input)
+            lstm_out, (h_n, c_n) = self.lstm(lstm_input)
 
-            print("lstm_out[-1] ", lstm_out[-1])
+            # th.set_printoptions(profile="full")
+            # print("lstm_out ", lstm_out)
+            # print("lstm_out[-1] ", lstm_out[-1])
+            # print("h_n ", h_n)
+            # print("h_n[-1] ", h_n[-1])
+            # assert h_n[-1] == lstm_out[-1] #this is true
 
             ##
             ## FC layers
             ##
 
-            lstm_out_cat = th.cat((agent_features[0], lstm_out[-1])) #agent[0] for dimension match, lstm_out[-1] because we only need the last output from LSTM.
+            lstm_out_cat = th.cat((agent_features[0,0], h_n[-1,0])) 
             latent_pi = self.latent_pi(lstm_out_cat[None,:]) #lstm_out_cat[None,:] -- None is added for dimension match
-            
+
             ##
             ## Last layer
             ##

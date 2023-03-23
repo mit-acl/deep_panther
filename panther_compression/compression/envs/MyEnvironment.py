@@ -295,7 +295,6 @@ class MyEnvironment(gym.Env):
         w_pos_obstacle, w_pos_g_term = self.obsm.getObsAndGtermToCrossPath()
         self.obsm.setPos(w_pos_obstacle)
         self.gm.setPos(w_pos_g_term)  
-        # self.printwithNameAndColor("Using cross!")
     else:
       self.obsm.setPos(self.constant_obstacle_pos)
       self.gm.setPos(self.constant_gterm_pos)
