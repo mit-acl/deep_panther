@@ -195,7 +195,12 @@ class StudentPolicy(BasePolicy):
             ## FC layers
             ##
 
-            lstm_out_cat = th.cat((agent_features[0,0], h_n[-1,0])) 
+            lstm_out_cat = th.cat((agent_features[0,0], h_n[-1,0]))
+
+            print("agent_features[0,0] ", agent_features[0,0])
+            print("h_n[-1,0] ", h_n[-1,0])
+            print("h_n.requires_grad_()", h_n.requires_grad_())
+
             latent_pi = self.latent_pi(lstm_out_cat[None,:]) #lstm_out_cat[None,:] -- None is added for dimension match
 
             ##
