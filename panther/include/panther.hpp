@@ -38,7 +38,7 @@ public:
               std::vector<si::solOrGuess>& best_solutions_student, std::vector<si::solOrGuess>& guesses,
               std::vector<si::solOrGuess>& splines_fitted, std::vector<Hyperplane3D>& planes, mt::log& log,
               int& k_index_end);
-  void pubObstacleEdge(mt::Edges& edges_obstacles_out);
+  void pubObstacleEdge(mt::Edges& edges_obstacles_out, const Eigen::Affine3d& c_T_b, const Eigen::Affine3d& w_T_b);
   bool addTrajToPlan(const int& k_index_end, mt::log& log, const si::solOrGuess& best_solution,
                      mt::trajectory& X_safe_out);
   bool safetyCheck(mt::PieceWisePol& pwp);
@@ -81,6 +81,7 @@ private:
   mt::committedTrajectory plan_;
 
   ConvexHullsOfCurves convexHullsOfCurves(double t_start, double t_end);
+  ConvexHullsOfCurves convexHullsOfCurvesForObstacleEdge(double t_start, double t_end, const Eigen::Affine3d& c_T_b, const Eigen::Affine3d& w_T_b);
   ConvexHullsOfCurve convexHullsOfCurve(mt::dynTrajCompiled& traj, double t_start, double t_end);
   CGAL_Polyhedron_3 convexHullOfInterval(mt::dynTrajCompiled& traj, double t_start, double t_end);
 

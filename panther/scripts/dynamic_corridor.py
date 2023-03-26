@@ -165,7 +165,7 @@ class DynCorridor:
         self.available_meshes_static=["package://panther/meshes/ConcreteDamage01b/model3.dae", "package://panther/meshes/ConcreteDamage01b/model2.dae"]
         self.available_meshes_dynamic=["package://panther/meshes/ConcreteDamage01b/model4.dae"]
 
-        self.marker_array=MarkerArray();
+        self.marker_array=MarkerArray()
         self.all_dyn_traj=[]
         self.all_dyn_traj_zhejiang=[]
 
@@ -173,23 +173,23 @@ class DynCorridor:
 
         for i in range(self.total_num_obs): 
             [traj_x, traj_y, traj_z, x, y, z, mesh, bbox]=self.getTrajectoryPosMeshBBox(i);           
-            self.marker_array.markers.append(self.generateMarker(mesh, bbox, i));
+            self.marker_array.markers.append(self.generateMarker(mesh, bbox, i))
 
             dynamic_trajectory_msg=DynTraj(); 
-            dynamic_trajectory_msg.use_pwp_field=False;
-            dynamic_trajectory_msg.is_agent=False;
-            dynamic_trajectory_msg.header.stamp= rospy.Time.now();
+            dynamic_trajectory_msg.use_pwp_field=False
+            dynamic_trajectory_msg.is_agent=False
+            dynamic_trajectory_msg.header.stamp= rospy.Time.now()
             dynamic_trajectory_msg.s_mean = [traj_x, traj_y, traj_z]
             dynamic_trajectory_msg.s_var = ["0.001", "0.001", "0.001"] #TODO (a nonzero variance is needed to choose the obstacle to focus on, see panther.cpp)
-            dynamic_trajectory_msg.bbox = [bbox[0], bbox[1], bbox[2]];
+            dynamic_trajectory_msg.bbox = [bbox[0], bbox[1], bbox[2]]
             dynamic_trajectory_msg.pos.x=x #Current position, will be updated later
             dynamic_trajectory_msg.pos.y=y #Current position, will be updated later
             dynamic_trajectory_msg.pos.z=z #Current position, will be updated later
             dynamic_trajectory_msg.id = 4000 + i #Current id 4000 to avoid interference with ids from agents #TODO
 
-            self.all_dyn_traj.append(dynamic_trajectory_msg);
+            self.all_dyn_traj.append(dynamic_trajectory_msg)
 
-        self.all_dyn_traj_zhejiang=copy.deepcopy(self.all_dyn_traj);
+        self.all_dyn_traj_zhejiang=copy.deepcopy(self.all_dyn_traj)
 
         self.pubTraj = rospy.Publisher('/trajs', DynTraj, queue_size=1, latch=True)
         self.pubShapes_dynamic_mesh = rospy.Publisher('/obstacles_mesh', MarkerArray, queue_size=1, latch=True)

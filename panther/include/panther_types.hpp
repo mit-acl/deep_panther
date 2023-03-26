@@ -919,6 +919,7 @@ struct parameters
   double lambda_dyn_lim_violation;
   double gamma;
   bool use_delaycheck;
+  bool use_obstacle_edge_cb;
   double obstacle_edge_cb_duration;
   double obstacle_share_cb_duration;
   bool use_obstacle_share;

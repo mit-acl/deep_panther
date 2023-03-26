@@ -3,7 +3,6 @@
 num_of_trajs_per_replan: 6 # num of students' traj (n_s in Table I in deep panther paper)
 max_num_of_initial_guesses: 10 # (n_runs in Table I)
 drone_extra_radius_for_NN: 0.0  #(m) Used for collision checking
-impose_FOV_in_trajCB: false # if True, it allows communication betw obstacle that is in FOV
 pause_time_when_replanning: false
 replanning_trigger_time_student: 0.1 #[seconds] 
 replanning_trigger_time_expert: 0.5 #[seconds] 
@@ -64,6 +63,8 @@ use_delaycheck: false
 ### optimize_n_planes=false, optimize_d_planes=false, and optimize_time_alloc=false. (which is now done by use_panther_star=false)
 ### Don't forget to change the compute_cost.save() line from compute_cost.casadi to panther_compute_cost.casadi
 use_panther_star: true # read the comment above
+impose_FOV_in_trajCB: true # if True, it only allows communication betw obstacle that is in FOV
+use_obstacle_edge_cb: true
 obstacle_edge_cb_duration: 1.0 #seconds
 look_teammates: false
 dist_from_gterm_to_dummy: 5.0 #[m]

@@ -682,7 +682,7 @@ bool Panther::isReplanningNeeded()
   return true;
 }
 
-void Panther::pubObstacleEdge(mt::Edges& edges_obstacles_out)
+void Panther::pubObstacleEdge(mt::Edges& edges_obstacles_out, const Eigen::Affine3d& c_T_b, const Eigen::Affine3d& w_T_b)
 {
   //
   // Get edges_obstacles
@@ -692,11 +692,7 @@ void Panther::pubObstacleEdge(mt::Edges& edges_obstacles_out)
   double t_final =
       t_start + 5.0;  // 5.0 is just a duration into the future in which we want to visualize obstacle edges.
 
-  mtx_trajs_.lock();
-
-  ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
-
-  mtx_trajs_.unlock();
+  ConvexHullsOfCurves hulls = convexHullsOfCurvesForObstacleEdge(t_start, t_final, c_T_b, w_T_b);
 
   edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
 }
@@ -1681,6 +1677,46 @@ ConvexHullsOfCurves Panther::convexHullsOfCurves(double t_start, double t_end)
   {
     result.push_back(convexHullsOfCurve(traj, t_start, t_end));
   }
+
+  return result;
+}
+
+ConvexHullsOfCurves Panther::convexHullsOfCurvesForObstacleEdge(double t_start, double t_end, const Eigen::Affine3d& c_T_b, const Eigen::Affine3d& w_T_b)
+{
+  ConvexHullsOfCurves result;
+
+  mtx_trajs_.lock();
+  for (auto traj : trajs_)
+  {
+    //
+    // Check if the trajectory is in FOV
+    //
+
+    Eigen::Vector3d w_pos = evalMeanDynTrajCompiled(traj, t_start);
+
+    //
+    // Check if this trajectory is in FOV
+    //
+
+    if (par_.impose_FOV_in_trajCB)
+    {
+      Eigen::Vector3d c_pos = c_T_b * (w_T_b.inverse()) * w_pos;  // position of the obstacle in the camera frame
+                                                                    // (i.e., depth optical frame)
+      bool inFOV =                                                  // check if it's inside the field of view.
+          c_pos.z() < par_.fov_depth &&                             //////////////////////
+          fabs(atan2(c_pos.x(), c_pos.z())) <
+              ((par_.fov_x_deg * M_PI / 180.0) / 2.0) &&  ///// Note that fov_x_deg means x camera_depth_optical_frame
+          fabs(atan2(c_pos.y(), c_pos.z())) <
+              ((par_.fov_y_deg * M_PI / 180.0) / 2.0);  ///// Note that fov_y_deg means x camera_depth_optical_frame
+
+      if (inFOV == false)
+      {
+        continue;
+      }
+    }
+    result.push_back(convexHullsOfCurve(traj, t_start, t_end));
+  }
+  mtx_trajs_.unlock();
 
   return result;
 }

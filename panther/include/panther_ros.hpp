@@ -176,6 +176,7 @@ private:
 
   Eigen::Affine3d w_T_b_;
   Eigen::Affine3d c_T_b_;
+  std::mutex mtx_w_T_b_;
 
   mt::PieceWisePol pwp_last_;
 

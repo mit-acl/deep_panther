@@ -443,9 +443,9 @@ class MyClampedUniformBSpline():
 			self.accel_bs=[]; #BSpline of all the coordinates
 		if(deg>=3):
 			self.jerk_bs=[]; #BSpline of all the coordinates
-		self.deg=deg;
-		self.num_seg=num_seg;
-		self.dim=dim;
+		self.deg=deg
+		self.num_seg=num_seg
+		self.dim=dim
 		self.knots=generateKnotsForClampedUniformBspline(t0, tf, deg, num_seg)
 
 		###Debugging

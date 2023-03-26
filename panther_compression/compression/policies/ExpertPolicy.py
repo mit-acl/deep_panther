@@ -7,15 +7,10 @@ from colorama import init, Fore, Back, Style
 import py_panther
 import math 
 from gym import spaces
-
-
-###
 from joblib import Parallel, delayed
 import multiprocessing
-##
 
 class ExpertPolicy(object):
-
 
     #The reason to create this here (instead of in the constructor) is that C++ objects created with pybind11 cannot be pickled by default (pickled is needed when parallelizing)
     #See https://stackoverflow.com/a/68672/6057617

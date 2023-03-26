@@ -202,6 +202,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "lambda_obst_avoidance_violation", par_.lambda_obst_avoidance_violation);
   safeGetParam(nh1_, "lambda_dyn_lim_violation", par_.lambda_dyn_lim_violation);
   safeGetParam(nh1_, "gamma", par_.gamma);
+  safeGetParam(nh1_, "use_obstacle_edge_cb", par_.use_obstacle_edge_cb);
   safeGetParam(nh1_, "obstacle_edge_cb_duration", par_.obstacle_edge_cb_duration);
   safeGetParam(nh1_, "look_teammates", par_.look_teammates);
   safeGetParam(nh1_, "perfect_prediction", par_.perfect_prediction);
@@ -258,11 +259,11 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
 
   // verify((par_.fov_y_deg == par_.fov_x_deg), "par_.fov_y_deg == par_.fov_x_deg must hold");
 
-  if (par_.impose_FOV_in_trajCB)
-  {
-    verify((par_.fov_depth > (par_.Ra + par_.drone_bbox[0])), "(par_.fov_depth > (par_.Ra + par_.drone_radius) must "
-                                                              "hold");
-  }
+  // if (par_.impose_FOV_in_trajCB)
+  // {
+  //   verify((par_.fov_depth > (par_.Ra + par_.drone_bbox[0])), "(par_.fov_depth > (par_.Ra + par_.drone_radius) must "
+  //                                                             "hold");
+  // }
 
   std::cout << bold << "Parameters checked" << reset << std::endl;
 
@@ -364,7 +365,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
 
   replanCBTimer_ = nh3_.createTimer(ros::Duration(replan_timer_trigger_time), &PantherRos::replanCB, this);
 
-  if (par_.visual)
+  if (par_.visual && par_.use_obstacle_edge_cb)
   {
     obstacleEdgeCBTimer_ =
         nh4_.createTimer(ros::Duration(par_.obstacle_edge_cb_duration), &PantherRos::obstacleEdgeCB, this);
@@ -456,17 +457,27 @@ void PantherRos::obstacleTrajCB(const panther_msgs::DynTraj& msg)
 
 void PantherRos::trajCB(const panther_msgs::DynTraj& msg)
 {
+
+  //
+  // Check if the trajecotry is from myself
+  //
+
   if (msg.id == id_)
-  {  // This is my own trajectory
+  {
     return;
   }
 
+  //
+  // Check if we can should use this trajectory
+  //
+
   Eigen::Vector3d w_pos(msg.pos.x, msg.pos.y, msg.pos.z);  // position in world frame
   double dist = (state_.pos - w_pos).norm();
-
   bool can_use_its_info = (dist <= 4 * par_.Ra);  // See explanation of 4*Ra in Panther::updateTrajObstacles
 
-  //////
+  //
+  // Check if this trajectory is in FOV
+  //
 
   if (par_.impose_FOV_in_trajCB)
   {
@@ -479,22 +490,11 @@ void PantherRos::trajCB(const panther_msgs::DynTraj& msg)
         fabs(atan2(c_pos.y(), c_pos.z())) <
             ((par_.fov_y_deg * M_PI / 180.0) / 2.0);  ///// Note that fov_y_deg means x camera_depth_optical_frame
 
-    // inFOV_old_ = inFOV;
-    // inFOV_time_old_ = ros::Time::now().toSec();
-
     if (inFOV == false)
     {
-      // std::cout << "B_pos= " << B_pos.transpose() << " is NOT inFOV" << std::endl;
-      // std::cout << "w_pos= " << w_pos.transpose() << " is NOT inFOV" << std::endl;
-      // std::cout << "[inFOV] w_T_b_= " << w_T_b_.matrix() << std::endl;
       return;
     }
-    // else
-    // {
-    //   std::cout << "B_pos= " << B_pos.transpose() << " is inFOV!!!" << std::endl;
-    // }
   }
-  /////
 
   // if (can_use_its_info == false)
   // {
@@ -600,7 +600,9 @@ void PantherRos::unpauseTime()
 void PantherRos::obstacleEdgeCB(const ros::TimerEvent& e)
 {
   mt::Edges edges_obstacles;
-  panther_ptr_->pubObstacleEdge(edges_obstacles);
+  mtx_w_T_b_.lock();
+  panther_ptr_->pubObstacleEdge(edges_obstacles, c_T_b_, w_T_b_);
+  mtx_w_T_b_.unlock();
   pubObstacles(edges_obstacles);
 }
 
@@ -853,8 +855,10 @@ void PantherRos::stateCB(const snapstack_msgs::State& msg)
   // state_tmp.print();
   panther_ptr_->updateState(state_tmp);
 
+  mtx_w_T_b_.lock();
   w_T_b_ = Eigen::Translation3d(msg.pos.x, msg.pos.y, msg.pos.z) *
            Eigen::Quaterniond(msg.quat.w, msg.quat.x, msg.quat.y, msg.quat.z);
+  mtx_w_T_b_.unlock();
 
   if (published_initial_position_ == false)
   {
