@@ -897,7 +897,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     verify(obstacles_for_opt.size() >= 1, "obstacles_for_opt should have at least 1 element");
 
     //
-    // define argmax_prob_collisions vector which is the list of indices of the hiest probability of collision stored in all_probs
+    // define argmax_prob_collisions vector which is the list of indices of the highest probability of collision stored in all_probs
     //
 
     std::vector<int> argmax_prob_collisions(all_probs.size());
@@ -929,7 +929,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
 
     for (int i = 0; i < all_probs.size(); i++)
     {
-      tmp_obstacles_for_opt.push_back(obstacles_for_opt[all_probs[i]]);
+      tmp_obstacles_for_opt.push_back(obstacles_for_opt[argmax_prob_collisions[i]]);
     }
 
     //
@@ -949,6 +949,13 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     tmp_obstacles_for_opt.clear();
   }
 
+  //
+  // adjust obstacles_for_opt for expert
+  //
+
+  if (par_.use_expert)
+  {
+
   adjustObstaclesForOptimization(obstacles_for_opt);
   solver_->setObstaclesForOpt(obstacles_for_opt);
 
@@ -957,6 +964,8 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
   //
 
   verify(obstacles_for_opt.size() == par_.num_max_of_obst, "obstacles_for_opt.size() should be equal to par_.num_max_of_obst");
+
+  }
 
   //
   // Initialize variables
