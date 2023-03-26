@@ -37,7 +37,7 @@ num_of_obstacles_in_training: 2 # this should not be bigger than num_max_of_obst
 #############################################
 use_lstm: true # use LSTM?
 use_bn: false # use batch normalization after LSTM
-lstm_dropout: 0.2
+lstm_dropout: 0.0
 lstm_output_dim: 64
 lstm_num_layers: 1 # if it's more than 1, it is stacked LSTM
 lstm_bidirectional: false
@@ -124,7 +124,7 @@ c_visibility_yaw_search: 1.0  #weight for the yaw search
 c_maxydot_yaw_search: 0.0     #weight for the yaw search
 c_pos_smooth: 0.0003           #weight for the optimization
 c_yaw_smooth: 0.0            #weight for the optimization
-c_fov: 100.0                 #weight for the optimization
+c_fov: 500.0                 #weight for the optimization
 c_final_pos: 100.0           #weight for the optimization
 c_final_yaw: 0.01              #weight for the optimization
 c_total_time: 80             #weight for the optimization

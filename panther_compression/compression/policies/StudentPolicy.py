@@ -155,18 +155,12 @@ class StudentPolicy(BasePolicy):
 
             features = self.extract_features(obs_n)
             
-            print("obs_n.shape ", obs_n.shape)
-            print("features.shape ", features.shape)
-            
             ##
             ## devide features into agent and obst and reshape obst_features for LSTM
             ##
 
             agent_features = features[None, :, :self.agent_input_dim] # TODO: pass # obstacles and change 33 #None is for keeping the same dimension
             obst_features = features[None, :, self.agent_input_dim:] # TODO: pass # obstacles and change 33
-            
-            print("agent_features.shape ", agent_features.shape)
-            print("obst_features.shape ", obst_features.shape)
             
             batch_size = features.shape[0]
             num_of_obstacles = int(obst_features.shape[2]/self.lstm_each_obstacle_dim) # need to calculate here because num_of_obstacles depends on each simulation
@@ -208,8 +202,6 @@ class StudentPolicy(BasePolicy):
             ##
             ## FC layers
             ##
-
-            print("check bn_out.requires_grad_()", bn_out.requires_grad_())
 
             lstm_out_cat = th.cat((agent_features[-1], bn_out), dim=1)
             latent_pi = self.latent_pi(lstm_out_cat) #lstm_out_cat[None,:] -- None is added for dimension match

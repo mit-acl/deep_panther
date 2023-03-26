@@ -26,7 +26,7 @@ class ExpertDidntSucceed(Exception):
 
 class TfMatrix():
 	def __init__(self, T):
-		self.T=T;
+		self.T=T
 		##Debugging
 		self.debug()
 	def __mul__(self, data): #Overload multiplication operator
@@ -657,9 +657,7 @@ class ObservationManager():
 	def getBboxInflatedObstacleI(self,obs,i):
 		index_start_obstacle_i=self.getIndexStartObstacleI(i)
 		tmp=index_start_obstacle_i+(3*self.obsm.getCPsPerObstacle())
-
 		bbox_inflated=obs[0,tmp:tmp+3].reshape(3,1)
-
 		return bbox_inflated
 
 	def getf_v(self, obs):
@@ -1185,9 +1183,7 @@ class StudentCaller():
 		# self.index_smallest_augmented_cost = 0
 		# self.index_best_safe_traj = None
 		# self.index_best_unsafe_traj = None
-
 		self.costs_and_violations_of_action = None# CostsAndViolationsOfAction
-
 
 	def predict(self, w_init_ppstate, w_ppobstacles, w_gterm): #pp stands for py_panther
 
