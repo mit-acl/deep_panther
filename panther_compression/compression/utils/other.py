@@ -61,7 +61,10 @@ class TfMatrix():
 def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
 	axis_z=[0,0,1]
 
-	#Hopf fibration approach
+	##
+	## Hopf fibration approach
+	##
+
 	thrust=w_accel + np.array([[0.0], [0.0], [9.81]])
 	thrust_normalized=thrust/np.linalg.norm(thrust)
 
@@ -76,7 +79,6 @@ def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
 	q_z = 0         #z
 	qabc=pyquaternion.Quaternion(q_w, q_x, q_y, q_z)  #Constructor is Quaternion(w,x,y,z), see http://kieranwynn.github.io/pyquaternion/#object-initialisation
 
-
 	q_w = math.cos(yaw/2.0);  #w
 	q_x = 0;                  #x 
 	q_y = 0;                  #y
@@ -88,26 +90,20 @@ def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
 	w_T_b = w_q_b.transformation_matrix
 	
 	w_T_b[0:3,3]=w_pos.flatten()
-	# print(w_T_b)
 
 	return TfMatrix(w_T_b)
 
 def getPANTHERparamsAsCppStruct():
 
 	params_yaml=readPANTHERparams()
-
 	params_yaml["b_T_c"]=np.array([[0, 0, 1, 0],
 								  [-1, 0, 0, 0],
 								  [0, -1, 0, 0],
 								  [0, 0, 0, 1]])
-
 	par=py_panther.parameters()
-
 	for key in params_yaml:
 		exec('%s = %s' % ('par.'+key, 'params_yaml["'+key+'"]')) #See https://stackoverflow.com/a/60487422/6057617 and https://www.pythonpool.com/python-string-to-variable-name/
-
 	return par
-
 
 def readPANTHERparams():
 
@@ -117,7 +113,6 @@ def readPANTHERparams():
 			params_yaml_1=yaml.safe_load(stream)
 		except yaml.YAMLError as exc:
 			print(exc)
-
 	params_yaml_2=[]
 	with open(os.path.dirname(os.path.abspath(__file__)) + '/../../../panther/matlab/casadi_generated_files/params_casadi.yaml', "r") as stream:
 		try:
@@ -126,7 +121,6 @@ def readPANTHERparams():
 			print(exc)
 	# params_yaml = dict(params_yaml_1.items() + params_yaml_2.items()) #Doesn't work in Python 3
 	params_yaml = {**params_yaml_1, **params_yaml_2}                        # NOTE: Python 3.5+ ONLY
-
 	return params_yaml
 
 class Obstacle():
@@ -136,13 +130,10 @@ class Obstacle():
 
 def convertPPObstacle2Obstacle(ppobstacle): #pp stands for py_panther
 	assert type(ppobstacle.ctrl_pts) is list
-
-	ctrl_pts=np.array([[],[],[]]);
+	ctrl_pts=np.array([[],[],[]])
 	for ctrl_pt in ppobstacle.ctrl_pts:
 		ctrl_pts=np.concatenate((ctrl_pts, ctrl_pt.reshape(3,1)), axis=1)
-
-	obstacle=Obstacle(ctrl_pts, ppobstacle.bbox_inflated.reshape(3,1));
-
+	obstacle=Obstacle(ctrl_pts, ppobstacle.bbox_inflated.reshape(3,1))
 	return obstacle
 
 def convertPPObstacles2Obstacles(ppobstacles): #pp stands for py_panther
@@ -152,14 +143,18 @@ def convertPPObstacles2Obstacles(ppobstacles): #pp stands for py_panther
 	return obstacles
 
 def convertPPState2State(ppstate):
-
 	p=ppstate.pos.reshape(3,1)
 	v=ppstate.vel.reshape(3,1)
 	a=ppstate.accel.reshape(3,1)
 	yaw=np.array([[ppstate.yaw]])
 	dyaw=np.array([[ppstate.dyaw]])
-
 	return State(p, v, a, yaw, dyaw)
+
+##
+##
+## GTermManager
+##
+##
 
 class GTermManager():
 	def __init__(self):
@@ -179,7 +174,6 @@ class GTermManager():
 			[0], # we will do YAWING in the beginning in actual sim/hw, so we will keep the Y coordinate fixed
 			[random.uniform(self.z_min, self.z_max)]
 		])
-		# self.w_gterm=np.array([[2.0],[0.0],[1.0]]);
 
 	def newRandomPosFarFrom_w_Position(self, w_position):
 		dist=0.0
@@ -193,13 +187,20 @@ class GTermManager():
 	def get_w_GTermPos(self):
 		return self.w_gterm
 
+##
+##
+## ObstaclesManager
+##
+##
 
 class ObstaclesManager():
-
-    #The reason to create this here (instead of in the constructor) is that C++ objects created with pybind11 cannot be pickled by default (pickled is needed when parallelizing)
-    #See https://stackoverflow.com/a/68672/6057617
-    #Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
-    #Note that pickle is needed when saving the Student Policy (which has a ObservationManager, which has a ObstaclesManager, which has a Fitter )
+	"""
+	The reason to create this here (instead of in the constructor) is that C++ objects created with pybind11 cannot be pickled by default (pickled is needed when parallelizing)
+	See https://stackoverflow.com/a/68672/6057617
+	Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
+	Note that pickle is needed when saving the Student Policy (which has a ObservationManager, which has a ObstaclesManager, which has a Fitter )
+	"""	
+	
 	params=readPANTHERparams()
 	fitter = py_panther.Fitter(params["fitter_num_samples"])
 
@@ -215,7 +216,7 @@ class ObstaclesManager():
 		self.z_min = self.params["training_env_z_min"]
 		self.goal_seen_radius = self.params["goal_seen_radius"]
 
-		# self.fitter_total_time=params["fitter_total_time"]s
+		# self.fitter_total_time=params["fitter_total_time"]
 		self.fitter_num_seg=self.params["fitter_num_seg"]
 		self.fitter_deg_pos=self.params["fitter_deg_pos"]
 		self.fitter_total_time=self.params["fitter_total_time"]
@@ -330,6 +331,12 @@ class ObstaclesManager():
 
 		return w_obs
 
+##
+##
+## Trefoil
+##
+##
+
 class Trefoil():
 	def __init__(self, pos, scale, offset, slower):
 		self.x=pos[0,0]
@@ -343,13 +350,19 @@ class Trefoil():
 		#slower=1.0; #The higher, the slower the obstacles move" 
 
 	def getPosT(self,t):
-		tt=t/self.slower;
+		tt=t/self.slower
 
 		x_trefoil=(self.scale_x/6.0)*(math.sin(tt+self.offset) + 2*math.sin(2*tt+self.offset)) + self.x
 		y_trefoil=(self.scale_y/5.0)*(math.cos(tt+self.offset) - 2*math.cos(2*tt+self.offset)) + self.y
 		z_trefoil=(self.scale_z/2.0)*(-math.sin(3*tt+self.offset)) + self.z
 
 		return np.array([[x_trefoil], [y_trefoil], [z_trefoil]])
+
+##
+##
+## State
+##
+##
 
 class State():
 	def __init__(self, w_pos, w_vel, w_accel, w_yaw, yaw_dot):
@@ -364,23 +377,23 @@ class State():
 		self.w_yaw = w_yaw
 		self.yaw_dot = yaw_dot
 		self.w_T_f= posAccelYaw2TfMatrix(self.w_pos, np.array([[0.0],[0.0], [0.0]]), w_yaw) #pos, accel, yaw
-		ez=np.array([[0.0],[0.0],[1.0]]);
+		ez=np.array([[0.0],[0.0],[1.0]])
 		np.testing.assert_allclose(self.w_T_f.T[0:3,2].reshape(3,1)-ez, 0, atol=1e-07)
 		self.f_T_w= self.w_T_f.inv()
 
 	def f_pos(self):
-		return self.f_T_w*self.w_pos;
+		return self.f_T_w*self.w_pos
 
 	def f_vel(self):
-		f_vel=self.f_T_w.rot()@self.w_vel;
+		f_vel=self.f_T_w.rot()@self.w_vel
 		# assert (np.linalg.norm(f_vel)-np.linalg.norm(self.w_vel)) == pytest.approx(0.0), f"f_vel={f_vel} (norm={np.linalg.norm(f_vel)}), w_vel={self.w_vel} (norm={np.linalg.norm(self.w_vel)}), f_R_w={self.f_T_w.rot()}, "
-		return f_vel;
+		return f_vel
 
 	def f_accel(self):
-		self.f_T_w.debug();
-		f_accel=self.f_T_w.rot()@self.w_accel;
+		self.f_T_w.debug()
+		f_accel=self.f_T_w.rot()@self.w_accel
 		# assert (np.linalg.norm(f_accel)-np.linalg.norm(self.w_accel)) == pytest.approx(0.0), f"f_accel={f_accel} (norm={np.linalg.norm(f_accel)}), w_accel={self.w_accel} (norm={np.linalg.norm(self.w_accel)}), f_R_w={self.f_T_w.rot()}, " 
-		return f_accel;
+		return f_accel
 
 	def f_yaw(self):
 		return np.array([[0.0]])
@@ -418,14 +431,17 @@ class State():
 
 def generateKnotsForClampedUniformBspline(t0, tf, deg, num_seg):
 	
-	# print("t0*np.ones(deg)= ",t0*np.ones(deg))
-	# print("tf*np.ones(deg)= ",tf*np.ones(deg))
-	# print("t0*np.ones(deg)= ",t0*np.ones(deg))
 	result= np.concatenate((t0*np.ones(deg), \
 							np.linspace(t0, tf, num=num_seg+1),\
 							tf*np.ones(deg)))
 
 	return 	result
+
+##
+##
+## MyClampedUniformBSpline
+##
+##
 
 class MyClampedUniformBSpline():
 	def __init__(self,t0, tf, deg, dim, num_seg, ctrl_pts, no_deriv=False):
@@ -448,11 +464,17 @@ class MyClampedUniformBSpline():
 		self.dim=dim
 		self.knots=generateKnotsForClampedUniformBspline(t0, tf, deg, num_seg)
 
-		###Debugging
+		##
+		## Debugging
+		##
+
 		if (abs(tf-t0)<1e-5):
 			print(f"t0={t0}, tf={tf}, deg={deg}, num_seg={num_seg}")
 			print(f"self.knots={self.knots}")
-		#######
+
+		##
+		## Debugging End
+		##
 
 		self.ctrl_pts=ctrl_pts
 		for i in range(dim):
@@ -504,20 +526,26 @@ class MyClampedUniformBSpline():
 def normalize(v):
 	norm = np.linalg.norm(v)
 	if norm == 0: 
-		# print("The norm is zero, aborting!!")
-		# exit()
 		raise RuntimeError("The norm is zero")
 	return v / norm
 
 def computeTotalTime(init_state, final_state, par_vmax, par_amax, par_factor_alloc):
-	# invsqrt3_vector=math.sqrt(3)*np.ones((3,1));
+	# invsqrt3_vector=math.sqrt(3)*np.ones((3,1))
 	total_time=par_factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, par_vmax, par_amax)
 	return total_time
 
-#Wraps an angle in [-pi, pi)
-#Works also for np arrays
 def wrapInmPiPi(data): #https://stackoverflow.com/a/15927914
+	"""
+	Wraps an angle in [-pi, pi)
+	Works also for np arrays
+	"""
 	return (data + np.pi) % (2 * np.pi) - np.pi
+
+##
+##
+## ObservationManager
+##
+##
 
 class ObservationManager():
 	def __init__(self):
@@ -573,17 +601,16 @@ class ObservationManager():
 		return wrapInmPiPi(np.random.uniform(-np.pi,np.pi, size=(1,1)))
 
 	def obsIsNormalized(self, observation_normalized):
-		# print(observation_normalized.shape)
 		assert observation_normalized.shape == self.getObservationShape()
 
-		# check which elements are not in [-1,1]
-		# if first 3 elements are not in [-1,1] --> f_v is not normalized 
-		# if 4th to 6th elements are not in [-1,1] --> f_a is not normalized 
-		# if 7th element is not in [-1,1] --> yaw_dot is not normalized
-		# if 8th to 10th elements are not in [-1,1] --> f_g (the goal) is not normalized
-		# if 11th to end elements are not in [-1,1] --> obstacle is not normalized
-
-		# print(observation_normalized)
+		"""
+		check which elements are not in [-1,1]
+		if first 3 elements are not in [-1,1] --> f_v is not normalized 
+		if 4th to 6th elements are not in [-1,1] --> f_a is not normalized 
+		if 7th element is not in [-1,1] --> yaw_dot is not normalized
+		if 8th to 10th elements are not in [-1,1] --> f_g (the goal) is not normalized
+		if 11th to end elements are not in [-1,1] --> obstacle is not normalized
+		"""
 
 		if not np.logical_and(observation_normalized[0][0:3] >= -1, observation_normalized[0][0:3] <= 1).all():
 			print(Fore.GREEN + "	f_v is not normalized" + Style.RESET_ALL)
@@ -803,6 +830,12 @@ def getZeroState():
 
 	return zero_state
 
+##
+##
+## ActionManager
+##
+##
+
 class ActionManager():
 	def __init__(self):
 		params=readPANTHERparams()
@@ -811,6 +844,7 @@ class ActionManager():
 		self.num_seg=params["num_seg"]
 		self.use_closed_form_yaw_student=params["use_closed_form_yaw_student"]
 		self.make_yaw_NN=params["make_yaw_NN"]
+		self.margin_yaw_factor=params["margin_yaw_factor"]
 
 		""" Define action and observation space
 
@@ -833,7 +867,7 @@ class ActionManager():
 		self.Npos = self.num_seg + self.deg_pos-1
 
 		self.max_dist2BSPoscPoint=params["max_dist2BSPoscPoint"]
-		self.max_yawcPoint=1.5*math.pi # not sure why but this was 4e3*math.pi before (Kota's change)
+		self.max_yawcPoint=self.margin_yaw_factor*math.pi # not sure why but this was 4e3*math.pi before (Kota's change)
 		self.fitter_total_time=params["fitter_total_time"]
 
 		# print("self.max_dist2BSPoscPoint= ", self.max_dist2BSPoscPoint)
@@ -1069,7 +1103,6 @@ class ActionManager():
 # 		vel=np.zeros(3,1)
 # 		return self.f_trajAnd_w_State2w_ppSolOrGuess(f_traj, zero_state)
 
-
 	def getTrajFromAction(self, action, index_traj):
 		return action[index_traj,:].reshape(1,-1)
 
@@ -1113,14 +1146,12 @@ class ActionManager():
 		#Append prob of that traj
 		# traj=np.concatenate((traj, np.array( [[sol_or_guess.prob]]  )), axis=1)
 
-
 		assert traj.shape==self.getTrajShape()
-
 		return traj
 
 	def solsOrGuesses2action(self, sols_or_guesses):
 		assert len(sols_or_guesses)==self.num_traj_per_action
-		action=np.empty((0,self.traj_size));
+		action=np.empty((0,self.traj_size))
 		for sol_or_guess in sols_or_guesses:
 			traj=self.solOrGuess2traj(sol_or_guess)
 			action=np.concatenate((action, traj), axis=0)
@@ -1128,13 +1159,10 @@ class ActionManager():
 		assert action.shape==self.getActionShape()
 		return action
 
-
 class ClosedFormYawSubstituter():
 	def __init__(self):
 		self.cy=py_panther.ClosedFormYawSolver()
 		self.am=ActionManager()
-
-
 
 	def substituteWithClosedFormYaw(self, f_action_n, w_init_state, w_obstacles):
 
@@ -1143,8 +1171,6 @@ class ClosedFormYawSubstituter():
 		f_action=self.am.denormalizeAction(f_action_n)
 
 		#Compute w_ppobstacles
-
-		#####
 		for i in range( np.shape(f_action)[0]): #For each row of action
 			traj=f_action[i,:].reshape(1,-1)
 
@@ -1161,12 +1187,14 @@ class ClosedFormYawSubstituter():
 
 		return f_action_n
 
-
 ##
-## StudentCaller().predict() is called in panther.cpp
+##
+##	StudentCaller
+##
 ##
 
 class StudentCaller():
+	""" StudentCaller().predict() is called in panther.cpp """
 	def __init__(self, policy_path):
 		# self.student_policy=bc.reconstruct_policy(policy_path)
 		self.student_policy=policy = th.load(policy_path, map_location=utils.get_device("auto")) #Same as doing bc.reconstruct_policy(policy_path) 
@@ -1301,19 +1329,25 @@ class CostsAndViolationsOfAction():
 		self.dyn_lim_violations=dyn_lim_violations
 		self.index_best_traj=index_best_traj
 
-class CostComputer():
+##
+##
+## CostComputer
+##
+##
 
-    #The reason to create this here (instead of in the constructor) is that C++ objects created with pybind11 cannot be pickled by default (pickled is needed when parallelizing)
-    #See https://stackoverflow.com/a/68672/6057617
-    #Note that, even though the class variables are not thread safe (see https://stackoverflow.com/a/1073230/6057617), we are using multiprocessing here, not multithreading
-    #Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
+class CostComputer():
+	"""
+    The reason to create this here (instead of in the constructor) is that C++ objects created with pybind11 cannot be pickled by default (pickled is needed when parallelizing)
+    See https://stackoverflow.com/a/68672/6057617
+    Note that, even though the class variables are not thread safe (see https://stackoverflow.com/a/1073230/6057617), we are using multiprocessing here, not multithreading
+    Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
+	"""
 
 	my_SolverIpopt=py_panther.SolverIpopt(getPANTHERparamsAsCppStruct())
 	am=ActionManager()
 	om=ObservationManager()
 	par=getPANTHERparamsAsCppStruct()
 	obsm=ObstaclesManager()
-
 
 	def __init__(self):
 		# self.par=getPANTHERparamsAsCppStruct();
@@ -1476,8 +1510,10 @@ class CostComputer():
 		index_best_safe_traj = None
 		index_best_unsafe_traj = None
 
-		######### PARALLEL OPTION
-		# start=time.time();
+		##
+		## PARALLEL OPTION
+		##
+
 		def my_func(thread_index):
 			traj_n=f_action_n[thread_index,:].reshape(1,-1)
 			cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_obs_n, traj_n)
@@ -1493,22 +1529,24 @@ class CostComputer():
 			dyn_lim_violations.append(alls[i][2])
 			augmented_costs.append(alls[i][3])
 
-		# print(f" computeParallel took {(time.time() - start)*(1e3)} ms")
-		##########################
-
 		# start=time.time();
-
 
 		for i in range( np.shape(f_action_n)[0]): #For each row of action
 
-			######### NON-PARALLEL OPTION
+			##
+			## NON-PARALLEL OPTION
+			##
+
 			# traj_n=f_action_n[i,:].reshape(1,-1);
 			# cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_obs_n, traj_n)
 			# costs.append(cost)
 			# obst_avoidance_violations.append(obst_avoidance_violation)
 			# dyn_lim_violations.append(dyn_lim_violation)
 			# augmented_costs.append(augmented_cost)
-			##############################
+
+			##
+			## END NON-PARALLEL OPTION
+			##
 
 			is_in_collision = (obst_avoidance_violations[i]>1e-5)
 
@@ -1522,53 +1560,14 @@ class CostComputer():
 					index_best_unsafe_traj = i
 
 		if(index_best_safe_traj is not None):
-			# print(f"Choosing traj {index_best_safe_traj} ")
 			index_best_traj = index_best_safe_traj
 
 		elif(index_best_unsafe_traj is not None):
-			# print(f"Choosing traj {index_best_unsafe_traj} ")
 			index_best_traj= index_best_unsafe_traj
 		else:
 			print("This should never happen!!")
 			exit();		
 
-		# print(f" computeNOTParallel took {(time.time() - start)*(1e3)} ms")
-
-
 		result=CostsAndViolationsOfAction(costs=costs, obst_avoidance_violations=obst_avoidance_violations, dyn_lim_violations=dyn_lim_violations, index_best_traj=index_best_traj)
 
 		return result
-
-
-
-
-#You can check the previous function by using this Matlab script:
-# clc;
-# t0=0;
-# dim_yaw=1;
-# deg_yaw=2;
-# dim_pos=3;
-# deg_pos=3;
-# num_seg=6;
-
-# tf=0.07246680753723689;
-# pos_ctrl_pts=[[0.2022673  0.20524327 0.21123073 0.24623035 0.80351345 0.50678383 0.08125478 0.08125478 0.08125478];
-#  [0.57454454 0.57512383 0.5763065  0.34355742 0.63901906 0.5159091  0.01585657 0.01585657 0.01585657];
-#  [0.97750177 0.98143953 0.98935799 0.4940338  0.13587985 0.3554246  0.97093003 0.97093003 0.97093003]];
-# yaw_ctrl_pts=[0.56358052 0.565937   0.84083564 0.4594103  0.8658295  0.17317506 0.43348313 0.43348313];
-
-
-# sp=MyClampedUniformSpline(t0,tf,deg_pos, dim_pos, num_seg, opti); %spline yaw.
-# sp.updateCPsWithSolution(pos_ctrl_pts)
-
-# sp.getPosT(t0)
-# sp.getVelT(t0)
-# sp.getAccelT(t0)
-
-
-# sy=MyClampedUniformSpline(t0,tf,deg_yaw, dim_yaw, num_seg, opti); %spline yaw.
-# sy.updateCPsWithSolution(yaw_ctrl_pts)
-
-
-# sy.getPosT(t0)
-# sy.getVelT(t0)
