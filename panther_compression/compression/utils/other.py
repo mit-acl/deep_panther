@@ -817,14 +817,13 @@ class ActionManager():
 		 action = np.array([ctrl_points_pos   ctrl_points_yaw  total time, prob that traj])
 		
 		 --> where ctrlpoints_pos has the ctrlpoints that are not determined by init pos/vel/accel, and final vel/accel
-		     i.e., len(ctrlpoints_pos)= (num_seg_pos + deg_pos - 1 + 1) - 3 - 2 = num_seg_pos + deg_pos - 5;
+		     i.e., len(ctrlpoints_pos)= (num_seg_pos + deg_pos - 1 + 1) - 3 - 2 = num_seg_pos + deg_pos - 5
 			  and ctrl_points_pos=[cp3.transpose(), cp4.transpose(),...]
 		
 		 --> where ctrlpoints_yaw has the ctrlpoints that are not determined by init pos/vel, and final vel
-		     i.e., len(ctrlpoints_yaw)= (num_seg_yaw + deg_yaw - 1 + 1) - 2 - 1 = num_seg_yaw + deg_yaw - 3; """
+		     i.e., len(ctrlpoints_yaw)= (num_seg_yaw + deg_yaw - 1 + 1) - 2 - 1 = num_seg_yaw + deg_yaw - 3 """
 
 		self.num_traj_per_action=params["num_of_trajs_per_replan"]
-
 		self.total_num_pos_ctrl_pts = self.num_seg + self.deg_pos
 		self.traj_size_pos_ctrl_pts = 3*(self.total_num_pos_ctrl_pts - 5)
 		self.traj_size_yaw_ctrl_pts = (self.num_seg + self.deg_yaw - 3)
@@ -834,7 +833,7 @@ class ActionManager():
 		self.Npos = self.num_seg + self.deg_pos-1
 
 		self.max_dist2BSPoscPoint=params["max_dist2BSPoscPoint"]
-		self.max_yawcPoint=4e3*math.pi
+		self.max_yawcPoint=1.5*math.pi # not sure why but this was 4e3*math.pi before (Kota's change)
 		self.fitter_total_time=params["fitter_total_time"]
 
 		# print("self.max_dist2BSPoscPoint= ", self.max_dist2BSPoscPoint)
@@ -864,7 +863,7 @@ class ActionManager():
 
 
 	def getDummyOptimalNormalizedAction(self):
-		action=self.getDummyOptimalAction();
+		action=self.getDummyOptimalAction()
 		return self.normalizeAction(action)
 
 	def getDummyOptimalAction(self):
@@ -877,7 +876,6 @@ class ActionManager():
 				dummy[i,j]=i+j/10
 
 		return dummy
-
 
 	def getNanAction(self):
 		return np.full(self.getActionShape(), np.nan)
@@ -892,8 +890,8 @@ class ActionManager():
 		# action_normalized[:,-1]=(2.0/1.0)*action[:,-1]-1 #Note that action[0,-1] is in [0, 1]
 
 		for index_traj in range(self.num_traj_per_action):
-			time_normalized=self.getTotalTime(action_normalized, index_traj);
-			slack=1-abs(time_normalized);
+			time_normalized=self.getTotalTime(action_normalized, index_traj)
+			slack=1-abs(time_normalized)
 			if(slack<0):
 				if abs(slack)<1e-5: #Can happen due to the tolerances in the optimization
 					# print(f"Before= {action_normalized[0,-1]}")
@@ -902,9 +900,8 @@ class ActionManager():
 				else:
 					assert False, f"time_normalized={time_normalized}"
 
-
 		# assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}, last element={action_normalized[0,-1]}"
-		return action_normalized;
+		return action_normalized
 
 	# def getProb(self,action, index_traj):
 	# 	return action[index_traj,-1]
