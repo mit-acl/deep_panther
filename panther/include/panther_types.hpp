@@ -806,6 +806,7 @@ struct parameters
 {
   //
   // clang-format off
+  double          yaw_loss_weight;
   bool            use_bn;
   double          lstm_dropout;
   bool            random_num_of_obstacles_in_training;
