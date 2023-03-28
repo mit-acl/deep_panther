@@ -867,7 +867,7 @@ class ActionManager():
 		self.Npos = self.num_seg + self.deg_pos-1
 
 		self.max_dist2BSPoscPoint=params["max_dist2BSPoscPoint"]
-		self.max_yawcPoint=self.margin_yaw_factor*math.pi # not sure why but this was 4e3*math.pi before (Kota's change)
+		self.max_yawcPoint=self.margin_yaw_factor*2.0*math.pi # not sure why but this was 4e3*math.pi before (Kota's change)
 		self.fitter_total_time=params["fitter_total_time"]
 
 		# print("self.max_dist2BSPoscPoint= ", self.max_dist2BSPoscPoint)
