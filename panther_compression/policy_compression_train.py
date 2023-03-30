@@ -198,6 +198,8 @@ if __name__ == "__main__":
 
     assert args.total_demos_per_round>=batch_size #If not, round_{k+1} will train on the same dataset as round_{k} (until enough rounds are taken to generate a new batch of demos)
 
+    os.system("rm -rf "+args.log_dir) #Delete the logs
+    
     if(only_collect_data==True):
         train_only_supervised=False
         launch_tensorboard=False
@@ -241,7 +243,7 @@ if __name__ == "__main__":
 
     if(args.only_test_loss==False and reuse_latest_policy == False):
         os.system("find "+args.policy_dir+" -type f -name '*.pt' -delete") #Delete the policies
-    os.system("rm -rf "+args.log_dir) #Delete the logs
+    
 
     if(reuse_previous_samples==False):
         os.system("rm -rf "+args.policy_dir) #Delete the demos
