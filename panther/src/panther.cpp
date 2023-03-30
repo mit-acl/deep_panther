@@ -945,12 +945,13 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     tmp_obstacles_for_opt.clear();
   }
 
-  //
-  // adjust obstacles_for_opt for expert
-  //
 
   if (par_.use_expert)
   {
+
+  //
+  // adjust obstacles_for_opt for expert
+  //
 
   adjustObstaclesForOptimization(obstacles_for_opt);
   solver_->setObstaclesForOpt(obstacles_for_opt);
@@ -975,10 +976,12 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
   // Get edges_obstacles
   //
 
-  mtx_trajs_.lock();
-  ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
-  mtx_trajs_.unlock();
-  edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
+  if (par_.perfect_prediction){
+    mtx_trajs_.lock();
+    ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
+    mtx_trajs_.unlock();
+    edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
+  }
 
   if (par_.use_expert)
   {
