@@ -25,8 +25,8 @@ def quat2yaw(q):
 class Panther_Commands:
 
     def __init__(self):
-        self.whoplans=WhoPlans();
-        self.pose = Pose();
+        self.whoplans=WhoPlans()
+        self.pose = Pose()
         self.whoplans.value=self.whoplans.OTHER
         self.pubGoal = rospy.Publisher('goal', Goal, queue_size=1)
         self.pubWhoPlans = rospy.Publisher("who_plans",WhoPlans,queue_size=1,latch=True) 
@@ -77,10 +77,10 @@ class Panther_Commands:
 
 
     def takeOff(self):
-        goal=Goal();
-        goal.p.x = self.pose.position.x;
-        goal.p.y = self.pose.position.y;
-        goal.p.z = self.pose.position.z;
+        goal=Goal()
+        goal.p.x = self.pose.position.x
+        goal.p.y = self.pose.position.y
+        goal.p.z = self.pose.position.z
         goal.psi = quat2yaw(self.pose.orientation)
         goal.power= True; #Turn on the motors
 
@@ -97,24 +97,23 @@ class Panther_Commands:
         ######## 
         rospy.sleep(0.1) 
         self.whoplans.value=self.whoplans.PANTHER
-        self.sendWhoPlans();
+        self.sendWhoPlans()
 
     def land(self):
         self.whoplans.value=self.whoplans.OTHER
-        self.sendWhoPlans();
-        goal=Goal();
-        goal.p.x = self.pose.position.x;
-        goal.p.y = self.pose.position.y;
-        goal.p.z = self.pose.position.z;
+        self.sendWhoPlans()
+        goal=Goal()
+        goal.p.x = self.pose.position.x
+        goal.p.y = self.pose.position.y
+        goal.p.z = self.pose.position.z
         goal.power= True; #Motors still on
         print ("self.pose.orientation= ", self.pose.orientation)
-        goal.yaw = quat2yaw(self.pose.orientation)
+        goal.psi = quat2yaw(self.pose.orientation)
         print ("goal.yaw= ", goal.yaw)
-
 
         #Note that self.pose.position is being updated in the parallel callback
         while(abs(self.pose.position.z-self.alt_ground)>0.1):
-            goal.p.z = max(goal.p.z-0.0035, self.alt_ground);
+            goal.p.z = max(goal.p.z-0.0035, self.alt_ground)
             rospy.sleep(0.01)
             self.sendGoal(goal)
         #Kill motors once we are on the ground
@@ -123,10 +122,10 @@ class Panther_Commands:
     def kill(self):
         self.whoplans.value=self.whoplans.OTHER
         self.sendWhoPlans()
-        goal=Goal();
-        goal.p.x = self.pose.position.x;
-        goal.p.y = self.pose.position.y;
-        goal.p.z = self.pose.position.z;
+        goal=Goal()
+        goal.p.x = self.pose.position.x
+        goal.p.y = self.pose.position.y
+        goal.p.z = self.pose.position.z
         goal.psi = quat2yaw(self.pose.orientation)
         goal.power=False #Turn off the motors 
         self.sendGoal(goal) #TODO: due to race conditions, publishing whoplans.OTHER and then goal.power=False does NOT guarantee that the external planner doesn't publish a goal with power=true

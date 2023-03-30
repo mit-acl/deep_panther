@@ -376,7 +376,7 @@ class State():
 		self.w_accel = w_accel
 		self.w_yaw = w_yaw
 		self.yaw_dot = yaw_dot
-		self.w_T_f= posAccelYaw2TfMatrix(self.w_pos, np.array([[0.0],[0.0], [0.0]]), w_yaw) #pos, accel, yaw
+		self.w_T_f= posAccelYaw2TfMatrix(self.w_pos, np.array([[0.0],[0.0],[0.0]]), w_yaw) #pos, accel, yaw
 		ez=np.array([[0.0],[0.0],[1.0]])
 		np.testing.assert_allclose(self.w_T_f.T[0:3,2].reshape(3,1)-ez, 0, atol=1e-07)
 		self.f_T_w= self.w_T_f.inv()
@@ -574,7 +574,7 @@ class ObservationManager():
 		margin_ydot_factor = params["margin_ydot_factor"]
 		margin_v=margin_v_factor * math.sqrt(3) #math.sqrt(3)
 		margin_a=margin_a_factor * math.sqrt(3) #math.sqrt(3)
-		margin_ydot=margin_ydot_factor * 1.0
+		margin_ydot=margin_ydot_factor
 
 		# for agent's own state
 		self.normalization_constant=np.concatenate((margin_v*self.v_max.T*ones13, margin_a*self.a_max.T*ones13, margin_ydot*self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)

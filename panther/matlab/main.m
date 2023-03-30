@@ -576,11 +576,11 @@ end
 x_lim_value=[-100;100];    y_lim_value=[-100;100];    z_lim_value=[-100;100];
 
 
-tmp1=[ p0_value(1)*ones(1,sp.p-1)   linspace(p0_value(1),pf_value(1), sp.N+1-2*(sp.p-1))       pf_value(1)*ones(1,sp.p-1)
-       p0_value(2)*ones(1,sp.p-1)   linspace(p0_value(2),pf_value(2), sp.N+1-2*(sp.p-1))       pf_value(2)*ones(1,sp.p-1) 
-       p0_value(3)*ones(1,sp.p-1)   linspace(p0_value(3),pf_value(3), sp.N+1-2*(sp.p-1))       pf_value(3)*ones(1,sp.p-1) ];
+tmp1=[ p0_value(1)*ones(1,sp.p-1)  linspace(p0_value(1),pf_value(1), sp.N+1-2*(sp.p-1))  pf_value(1)*ones(1,sp.p-1)
+       p0_value(2)*ones(1,sp.p-1)  linspace(p0_value(2),pf_value(2), sp.N+1-2*(sp.p-1))  pf_value(2)*ones(1,sp.p-1) 
+       p0_value(3)*ones(1,sp.p-1)  linspace(p0_value(3),pf_value(3), sp.N+1-2*(sp.p-1))  pf_value(3)*ones(1,sp.p-1) ];
    
-tmp2=[ y0_value(1)*ones(1,sy.p-1)   linspace(y0_value(1),yf_value(1), sy.N+1-2*(sy.p-1))       yf_value(1)*ones(1,sy.p-1) ];
+tmp2=[ y0_value(1)*ones(1,sy.p-1)  linspace(y0_value(1),yf_value(1), sy.N+1-2*(sy.p-1))  yf_value(1)*ones(1,sy.p-1) ];
 
 alpha_value = 3.53467;
 tmp1=[0, 0, 0, 1.64678, 2.85231, 4.05784, 5.70462, 5.70462, 5.70462; 
@@ -969,7 +969,8 @@ samples=MX.sym('samples',fitter.dim_pos,fitter.num_samples);
 cost_function=0;
 i=1;
 for ti=linspace(fitter.bs.knots(1), fitter.bs.knots(end), fitter.num_samples)
-    dist=(fitter.bs.getPosT(ti)-samples(:,i));      cost_function = cost_function + dist'*dist; 
+    dist=(fitter.bs.getPosT(ti)-samples(:,i));
+    cost_function = cost_function + dist'*dist; 
     i=i+1;
 end
 
