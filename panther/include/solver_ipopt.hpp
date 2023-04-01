@@ -224,6 +224,7 @@ public:
   si::solOrGuess fillTrajBestSolutionAndGetIt();
   double computeCost(si::solOrGuess guess);
   double computeDynLimitsConstraintsViolation(si::solOrGuess guess);
+  // std::pair<double, double> computeTransAndYawDynLimitsConstraintsViolation(si::solOrGuess sol_or_guess);
 
   std::string getInfoLastOpt();
 
@@ -353,6 +354,7 @@ private:
   casadi::Function cf_visibility_;
   casadi::Function cf_compute_cost_;
   casadi::Function cf_compute_dyn_limits_constraints_violation_;
+  casadi::Function cf_compute_trans_and_yaw_dyn_limits_constraints_violatoin_;
 
   casadi::DM b_Tmatrixcasadi_c_;
   struct data
