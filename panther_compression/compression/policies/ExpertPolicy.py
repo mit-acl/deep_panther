@@ -1,5 +1,7 @@
 import sys
 import numpy as np
+import time
+from statistics import mean
 import copy
 from random import random, shuffle
 from compression.utils.other import ActionManager, ObservationManager, ObstaclesManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed, computeTotalTime
@@ -37,6 +39,8 @@ class ExpertPolicy(object):
         self.drone_extra_radius_for_NN=par.drone_extra_radius_for_NN
 
         # self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
+
+        self.computation_times_verbose = False
 
         self.name=Style.BRIGHT+Fore.BLUE+"  [Exp]"+Style.RESET_ALL
         self.reset()
@@ -83,7 +87,12 @@ class ExpertPolicy(object):
         ExpertPolicy.my_SolverIpopt.setFocusOnObstacle(True)
         obstacles=self.om.getObstaclesForCasadi(obs)
         ExpertPolicy.my_SolverIpopt.setObstaclesForOpt(obstacles)
+
+        start = time.time()
         succeed=ExpertPolicy.my_SolverIpopt.optimize(True)
+        end = time.time()
+        computation_time = end - start
+
         info=ExpertPolicy.my_SolverIpopt.getInfoLastOpt()
 
         ##
@@ -102,7 +111,12 @@ class ExpertPolicy(object):
         action_normalized=self.am.normalizeAction(action)
         Q=0.0; #Not used right now I think
         self.am.assertAction(action_normalized)
-        return action_normalized, {"Q": Q}
+
+        if self.computation_times_verbose:
+            print('here!')
+            return action_normalized, {"Q": Q}, computation_time
+        else:
+            return action_normalized, {"Q": Q}
 
     def predictSeveral(self, obs_n, deterministic=True):
 
@@ -130,3 +144,21 @@ class ExpertPolicy(object):
         # acts=pool.map(my_func, list(range(num_jobs)))
 
         # acts=[self.predict( obs_n[i,:,:], deterministic=deterministic)[0] for i in range(len(obs_n))] #Note that len() returns the size alon the first axis
+
+    def predictSeveralWithComputationTimeVerbose(self, obs_n, deterministic=True):
+
+        self.computation_times_verbose = True
+
+        def my_func(thread_index):
+            return self.predict(obs_n[thread_index,:,:], deterministic=deterministic)
+
+        num_jobs=min(multiprocessing.cpu_count(),len(obs_n)); #Note that the class variable my_SolverIpopt will be created once per job created (but only in the first call to predictSeveral I think)
+
+        output = Parallel(n_jobs=num_jobs)(map(delayed(my_func), list(range(len(obs_n))))) #, prefer="threads"
+        acts = np.array(output)[:,0]
+        computation_times = np.array(output)[:,2]
+
+        acts = np.stack(acts, axis=0)
+        computation_times=np.stack(computation_times, axis=0)
+
+        return acts, np.mean(computation_times)

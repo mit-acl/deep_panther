@@ -2,6 +2,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import gym
 import torch as th
+import time
+from statistics import mean
 from torch import nn
 import numpy as np
 from stable_baselines3.common.distributions import SquashedDiagGaussianDistribution
@@ -87,6 +89,7 @@ class StudentPolicy(BasePolicy):
             print("lstm_num_layers=", self.lstm_num_layers)
             print("lstm_bidirectional=", self.lstm_bidirectional)
         action_dim = get_action_dim(self.action_space)
+        self.computation_times = []
 
         ##
         ## If using closed form yaw
@@ -244,7 +247,10 @@ class StudentPolicy(BasePolicy):
     #     return self.action_dist.log_prob_from_params(mean_actions, log_std, **kwargs)
 
     def _predict(self, obs_n: th.Tensor, deterministic: bool = False) -> th.Tensor:
+        start = time.time()
         action = self.forward(obs_n, deterministic)
+        end = time.time()
+        self.computation_times.append(end - start)
         self.am.assertActionIsNormalized(action.cpu().numpy().reshape(self.am.getActionShape()), self.name)
 
         return action
@@ -257,3 +263,12 @@ class StudentPolicy(BasePolicy):
         
         acts=np.stack(acts, axis=0)
         return acts
+    
+    def predictSeveralWithComputationTimeVerbose(self, obs_n, deterministic: bool = False):
+
+        #Note that here below we call predict, not _predict
+        self.features_extractor = self.features_extractor_class(self.observation_space)
+        acts=[self.predict( obs_n[i,:], deterministic=deterministic)[0].reshape(self.am.getActionShape()) for i in range(len(obs_n))] #Note that len() returns the size along the first axis
+        acts=np.stack(acts, axis=0)
+
+        return acts, mean(self.computation_times)
