@@ -620,6 +620,7 @@ class ObservationManager():
 			return False
 		elif not np.logical_and(observation_normalized[0][6] >= -1, observation_normalized[0][6] <= 1):
 			print(Fore.GREEN + "	yaw_dot is not normalized" + Style.RESET_ALL)
+			print("yaw_dot=", observation_normalized[0][6])
 			return False
 		elif not np.logical_and(observation_normalized[0][7:10] >= -1, observation_normalized[0][7:10] <= 1).all():
 			print(Fore.GREEN + "	f_g is not normalized" + Style.RESET_ALL)
@@ -656,6 +657,7 @@ class ObservationManager():
 			which_dyn_limit_violated.append("f_a")
 		elif not np.logical_and(observation_normalized[0][6] >= -1, observation_normalized[0][6] <= 1):
 			print(Fore.GREEN + "	yaw_dot is not normalized" + Style.RESET_ALL)
+			print("yaw_dot=", observation_normalized[0][6])
 			is_normalized = False
 			which_dyn_limit_violated.append("yaw_dot")
 		elif not np.logical_and(observation_normalized[0][7:10] >= -1, observation_normalized[0][7:10] <= 1).all():
