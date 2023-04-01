@@ -806,6 +806,7 @@ struct parameters
 {
   //
   // clang-format off
+  bool            use_clipping;
   double          yaw_loss_weight;
   bool            use_bn;
   double          lstm_dropout;

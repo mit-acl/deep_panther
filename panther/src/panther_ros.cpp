@@ -66,6 +66,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   ROS_INFO("Found transform %s --> %s", name_drone_.c_str(), name_camera_depth_optical_frame_tf_.c_str());
   // std::cout << "par_.b_T_c.matrix()= " << par_.b_T_c.matrix() << std::endl;
 
+  safeGetParam(nh1_, "use_clipping", par_.use_clipping);
   safeGetParam(nh1_, "yaw_loss_weight", par_.yaw_loss_weight);
   safeGetParam(nh1_, "use_bn", par_.use_bn);
   safeGetParam(nh1_, "lstm_dropout", par_.lstm_dropout);
