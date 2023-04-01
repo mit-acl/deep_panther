@@ -91,7 +91,10 @@ Visualization Manager:
           obs_4000:
             {}
           vicon:
-            {}
+            SQ01s:
+              SQ01s/camera_link:
+                SQ01s/camera_depth_optical_frame:
+                  {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -165,7 +168,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/fov
       Name: FOV
       Namespaces:
-        {}
+        marker_fov: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -305,21 +308,21 @@ Visualization Manager:
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
-      Enabled: false
+      Enabled: true
       Marker Topic: /SQ01s/panther/best_solution_student
       Name: BestSolutionStu
       Namespaces:
         {}
       Queue Size: 100
-      Value: false
+      Value: true
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /SQ01s/panther/best_solutions_student
       Name: BestSolutionsStu
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/Marker
       Enabled: false
       Marker Topic: /SQ01s/marker
@@ -449,7 +452,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/obstacles
       Name: Marker
       Namespaces:
-        {}
+        markertacles: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -465,7 +468,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/actual_traj
       Name: SQ01sActualTraj
       Namespaces:
-        {}
+        ActualTraj_SQ01s: true
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -550,7 +553,7 @@ Visualization Manager:
       Near Clip Distance: 0.009999999776482582
       Pitch: 0.5497964024543762
       Target Frame: <Fixed Frame>
-      Yaw: 3.1331868171691895
+      Yaw: 3.1431868076324463
     Saved: ~
 Window Geometry:
   DepthImage:
