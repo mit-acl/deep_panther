@@ -62,6 +62,7 @@ PYBIND11_MODULE(py_panther, m)
       // This part below should be copied/pasted from parameters of panther_types.hpp
       // clang-format off
 
+      .def_readwrite("use_clipping", &mt::parameters::use_clipping)
       .def_readwrite("yaw_loss_weight", &mt::parameters::yaw_loss_weight)
       .def_readwrite("use_bn", &mt::parameters::use_bn)
       .def_readwrite("lstm_dropout", &mt::parameters::lstm_dropout)
