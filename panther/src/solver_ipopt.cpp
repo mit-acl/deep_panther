@@ -242,7 +242,7 @@ SolverIpopt::SolverIpopt(const mt::parameters &par)
   }
   cf_compute_dyn_limits_constraints_violation_ = casadi::Function::load(folder + "compute_dyn_limits_constraints_"
                                                                                  "violation.casadi");
-
+  cf_compute_trans_and_yaw_dyn_limits_constraints_violatoin_ = casadi::Function::load(folder + "compute_trans_and_yaw_dyn_limits_constraints_violation.casadi");
   // std::cout << bold << "__________" << reset << std::endl;
 
   b_Tmatrixcasadi_c_ = casadi::DM(4, 4);
@@ -659,13 +659,7 @@ double SolverIpopt::computeDynLimitsConstraintsViolation(si::solOrGuess sol_or_g
   map_arguments["yCPs"] = matrix_qy;
   // map_arguments["all_nd"] = all_nd;  //Does not appear in the dyn. limits constraints
 
-  // std::cout << "[alpha]" << map_arguments["alpha"] << std::endl;
-  // std::cout << "[pCPs]" << map_arguments["pCPs"] << std::endl;
-  // std::cout << "[yCPs]" << map_arguments["yCPs"] << std::endl;
-
   std::map<std::string, casadi::DM> result = cf_compute_dyn_limits_constraints_violation_(map_arguments);
-
-  // std::cout << "violation=\n" << result["violation"] << std::endl;
 
   std::vector<double> dyn_limits_constraints_violation = casadiMatrix2StdVectorDouble(result["violation"]);
 
@@ -675,6 +669,34 @@ double SolverIpopt::computeDynLimitsConstraintsViolation(si::solOrGuess sol_or_g
 
   return violation;
 }
+
+// std::pair<double, double> SolverIpopt::computeTransAndYawDynLimitsConstraintsViolation(si::solOrGuess sol_or_guess)
+// {
+//   std::map<std::string, casadi::DM> map_arguments = getMapConstantArguments();
+
+//   casadi::DM matrix_qp = stdVectorEigen3d2CasadiMatrix(sol_or_guess.qp);
+//   casadi::DM matrix_qy = stdVectorDouble2CasadiRowVector(sol_or_guess.qy);
+
+//   map_arguments["alpha"] = sol_or_guess.getTotalTime();
+//   map_arguments["pCPs"] = matrix_qp;
+//   map_arguments["yCPs"] = matrix_qy;
+//   // map_arguments["all_nd"] = all_nd;  //Does not appear in the dyn. limits constraints
+
+//   std::map<std::string, casadi::DM> result = cf_compute_trans_and_yaw_dyn_limits_constraints_violatoin_(map_arguments);
+
+//   std::vector<double> trans_dyn_limits_constraints_violation = casadiMatrix2StdVectorDouble(result["trans_violation"]);
+//   std::vector<double> yaw_dyn_limits_constraints_violation = casadiMatrix2StdVectorDouble(result["yaw_violation"]);
+
+//   double trans_violation = std::accumulate(
+//       trans_dyn_limits_constraints_violation.begin(), trans_dyn_limits_constraints_violation.end(),
+//       decltype(trans_dyn_limits_constraints_violation)::value_type(0));  // https://stackoverflow.com/a/3221813/6057617
+
+//   double yaw_violation = std::accumulate(
+//       yaw_dyn_limits_constraints_violation.begin(), yaw_dyn_limits_constraints_violation.end(),
+//       decltype(yaw_dyn_limits_constraints_violation)::value_type(0));  // https://stackoverflow.com/a/3221813/6057617
+
+//   return {trans_violation, yaw_violation};
+// }
 
 std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
 {
