@@ -630,6 +630,47 @@ class ObservationManager():
 		else:
 			return True
 		# return np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
+	
+	def obsIsNormalizedWithVerbose(self, observation_normalized):
+		assert observation_normalized.shape == self.getObservationShape()
+
+		"""
+		check which elements are not in [-1,1]
+		if first 3 elements are not in [-1,1] --> f_v is not normalized 
+		if 4th to 6th elements are not in [-1,1] --> f_a is not normalized 
+		if 7th element is not in [-1,1] --> yaw_dot is not normalized
+		if 8th to 10th elements are not in [-1,1] --> f_g (the goal) is not normalized
+		if 11th to end elements are not in [-1,1] --> obstacle is not normalized
+		"""
+
+		is_normalized = True
+		which_dyn_limit_violated = []
+
+		if not np.logical_and(observation_normalized[0][0:3] >= -1, observation_normalized[0][0:3] <= 1).all():
+			print(Fore.GREEN + "	f_v is not normalized" + Style.RESET_ALL)
+			is_normalized = False
+			which_dyn_limit_violated.append("f_v")
+		elif not np.logical_and(observation_normalized[0][3:6] >= -1, observation_normalized[0][3:6] <= 1).all():
+			print(Fore.GREEN + "	f_a is not normalized" + Style.RESET_ALL)
+			is_normalized = False
+			which_dyn_limit_violated.append("f_a")
+		elif not np.logical_and(observation_normalized[0][6] >= -1, observation_normalized[0][6] <= 1):
+			print(Fore.GREEN + "	yaw_dot is not normalized" + Style.RESET_ALL)
+			is_normalized = False
+			which_dyn_limit_violated.append("yaw_dot")
+		elif not np.logical_and(observation_normalized[0][7:10] >= -1, observation_normalized[0][7:10] <= 1).all():
+			print(Fore.GREEN + "	f_g is not normalized" + Style.RESET_ALL)
+			is_normalized = False
+			which_dyn_limit_violated.append("f_g")
+		elif not np.logical_and(observation_normalized[0][10:] >= -1, observation_normalized[0][10:] <= 1).all():
+			print(Fore.GREEN + "	obstacle is not normalized" + Style.RESET_ALL)
+			is_normalized = False
+			which_dyn_limit_violated.append("obstacle")
+		else:
+			is_normalized = True
+		
+		return is_normalized, which_dyn_limit_violated
+		# return np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
 
 	def assertObsIsNormalized(self, observation_normalized, msg_before=""):
 
@@ -895,7 +936,6 @@ class ActionManager():
 		assert action.shape==self.getActionShape(), f"[Env] ERROR: action.shape={action.shape} but should be={self.getActionShape()}"
 		assert not np.isnan(np.sum(action)), f"Action has nan"
 
-
 	def getDummyOptimalNormalizedAction(self):
 		action=self.getDummyOptimalAction()
 		return self.normalizeAction(action)
@@ -932,7 +972,8 @@ class ActionManager():
 					action_normalized[index_traj,-1]=np.clip(time_normalized, -1.0, 1.0) #Saturate within limits
 					# print(f"After= {action_normalized[0,-1]}")
 				else:
-					assert False, f"time_normalized={time_normalized}"
+					# assert False, f"time_normalized={time_normalized}"
+					print(Fore.GREEN + "time is not normalized" + Style.RESET_ALL)
 
 		# assert np.logical_and(action_normalized >= -1, action_normalized <= 1).all(), f"action_normalized={action_normalized}, last element={action_normalized[0,-1]}"
 		return action_normalized
@@ -1393,22 +1434,11 @@ class CostComputer():
 
 		violation=0
 
-
 		for i in range(self.num_obstacles):
 			f_posObs_ctrl_pts=listOf3dVectors2numpy3Xmatrix(CostComputer.om.getCtrlPtsObstacleI(f_obs, i))
 			bbox=CostComputer.om.getBboxInflatedObstacleI(f_obs, i)
-			# print(f"f_posObs_ctrl_pts={f_posObs_ctrl_pts}")
-			# print(f"f_posBS.ctrl_pts={f_posBS.ctrl_pts}")
-
-			# start=time.time();
 
 			f_posObstBS = MyClampedUniformBSpline(0.0, CostComputer.par.fitter_total_time, CostComputer.par.fitter_deg_pos, 3, CostComputer.par.fitter_num_seg, f_posObs_ctrl_pts, True) 
-
-			# print(f" compute MyClampedUniformBSpline creation took {(time.time() - start)*(1e3)} ms")
-
-
-			# print("\n============")
-			# start=time.time();
 
 			#TODO: move num to a parameter
 			for t in np.linspace(start=0.0, stop=total_time, num=15).tolist():
@@ -1424,10 +1454,7 @@ class CostComputer():
 						obs_dronecoord=obs_drone[i,0]
 						tmp = bbox[i,0]/2
 						violation+= min(abs(tmp - obs_dronecoord), abs(obs_dronecoord - (-tmp)) )
-
-					# print("THERE IS VIOLATION in obs avoid")
-					# exit()
-
+					
 		return violation
 
 	def computeDynLimitsConstraintsViolation(self, f_obs_n, f_traj_n):
@@ -1444,38 +1471,17 @@ class CostComputer():
 
 	def computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(self, f_obs_n, f_traj_n):
 
-		# start1=time.time();
-		cost =  self.computeCost(f_obs_n, f_traj_n)
-		
-		# start=time.time();
+		cost = self.computeCost(f_obs_n, f_traj_n)		
 		obst_avoidance_violation = self.computeObstAvoidanceConstraintsViolation(f_obs_n, f_traj_n)
-		# print(f"--- computeObstAvoidanceConstraintsViolation took {(time.time() - start)*(1e3)} ms")
-
-		# start=time.time();
 		dyn_lim_violation = self.computeDynLimitsConstraintsViolation(f_obs_n, f_traj_n)
-		# print(f"--- computeDynLimitsConstraintsViolation took {(time.time() - start)*(1e3)} ms")
-
-		# start=time.time();
 		augmented_cost = self.computeAugmentedCost(cost, obst_avoidance_violation, dyn_lim_violation)
-		# print(f" computeAugmentedCost took {(time.time() - start)*(1e3)} ms")
-		# print(f" compute ALL COSTS {(time.time() - start1)*(1e3)} ms")
 		return cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost
 
 	def computeCost(self, f_obs_n, f_traj_n): 
 		
 		f_ppSolOrGuess=self.setUpSolverIpoptAndGetppSolOrGuess(f_obs_n, f_traj_n)
 		tmp=CostComputer.my_SolverIpopt.computeCost(f_ppSolOrGuess) 
-
-		return tmp   
-
-	# def computeAugmentedCost(self, f_obs_n, f_traj_n):
-	# 	cost=self.computeCost(f_obs_n, f_traj_n)
-	# 	obst_avoidance_violation=self.computeObstAvoidanceConstraintsViolation(f_obs_n, f_traj_n)
-	# 	dyn_lim_violation=self.computeDynLimitsConstraintsViolation(f_obs_n, f_traj_n)
-
-	# 	print(f"cost={cost}, obst_avoidance_violation={obst_avoidance_violation}, dyn_lim_violation={dyn_lim_violation}")
-
-	# 	return cost + obst_avoidance_violation + dyn_lim_violation
+		return tmp
 
 	def computeAugmentedCost(self, cost, obst_avoidance_violation, dyn_lim_violation):
 		return cost + CostComputer.par.lambda_obst_avoidance_violation*obst_avoidance_violation + CostComputer.par.lambda_dyn_lim_violation*dyn_lim_violation
