@@ -53,6 +53,7 @@ class MyEnvironment(gym.Env):
     self.name=""
     self.par=getPANTHERparamsAsCppStruct()
     self.training_dt = self.par.training_dt
+    self.use_clipping = self.par.use_clipping
     self.constant_obstacle_pos=None
     self.constant_gterm_pos=None
     self.record_bag=False
@@ -130,7 +131,7 @@ class MyEnvironment(gym.Env):
       return self.om.getNanObservation(), 0.0, True, {} #This line is added to make generate_trajectories() of rollout.py work when the expert fails 
 
     f_action_n=f_action_n.reshape(self.action_shape)
-    
+
     ##
     ## USE CLOSED FORM FOR YAW
     ##
@@ -150,7 +151,7 @@ class MyEnvironment(gym.Env):
     ## Check for normalization
     ##
 
-    f_action= self.am.denormalizeAction(f_action_n)
+    f_action = self.am.denormalizeAction(f_action_n)
 
     ##
     ##  if total time that student produced is 0.0, BS function gives you an error so let's just make it bigger than 0
@@ -177,29 +178,11 @@ class MyEnvironment(gym.Env):
     ###
 
     ##
-    ## Print State before update
-    ##
-
-    # self.printwithName("w and f state BEFORE UPDATE")
-    # self.w_state.print_w_frameHorizontal(self.name);
-    # # print(f"Matrix w_T_f=\n{self.w_state.w_T_f.T}")
-    # self.w_state.print_f_frameHorizontal(self.name);
-
-    ##
     ## Update state
     ##
 
     self.w_state= State(w_posBS.getPosT(self.training_dt), w_posBS.getVelT(self.training_dt), w_posBS.getAccelT(self.training_dt), \
                         w_yawBS.getPosT(self.training_dt), w_yawBS.getVelT(self.training_dt))
-
-    ##
-    ## Print State after update
-    ##
-
-    # self.printwithName("w and f state AFTER UPDATE")
-    # self.w_state.print_w_frameHorizontal(self.name)
-    # print(f"Matrix w_T_f=\n{self.w_state.w_T_f.T}")
-    # self.w_state.print_f_frameHorizontal(self.name);
 
     ##
     ## Update time and timestep
@@ -237,17 +220,25 @@ class MyEnvironment(gym.Env):
     self.printwithNameAndColor(f"Timestep={self.timestep}, dist2gterm={round(dist_current_2gterm,2)}, total # of goal reached: {self.num_goal_reached}")
 
     ##
+    ## clip the observation
+    ##
+
+    if self.par.use_clipping:
+      f_observation_n = np.clip(f_observation_n, -1, 1)
+
+    ##
     ## Check for violation and terminate condition
     ##
     
     info = {}
-    if(self.om.obsIsNormalized(f_observation_n)==False):
+    is_normalized, which_dyn_limit_violated = self.om.obsIsNormalizedWithVerbose(f_observation_n)
+    if is_normalized == False:
       self.printwithName(Style.BRIGHT+Fore.RED +"f_observation_n is not normalized (i.e., constraints are not satisfied). Terminating" + Style.RESET_ALL)
       done = True
-      info["constraint_violation"] = True
+      info["obs_constraint_violation"] = True
     elif ( (self.timestep >= self.len_episode) or goal_reached or self.force_done):
       done = True
-      info["constraint_violation"] = False
+      info["obs_constraint_violation"] = False
       self.printwithNameAndColor(f"Done, self.timestep={self.timestep}, goal_reached={goal_reached}, force_done={self.force_done}")
     else:
       done=False
@@ -257,6 +248,11 @@ class MyEnvironment(gym.Env):
     ##
 
     cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.cost_computer.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(self.previous_f_obs_n, f_traj_n)
+    
+    info["obst_avoidance_violation"] = True if obst_avoidance_violation > 1e-5 else False
+    info["trans_dyn_lim_violation"] = True if any(f in which_dyn_limit_violated for f in ('f_v', 'f_a')) else False
+    info["yaw_dyn_lim_violation"] = True if 'yaw_dot' in which_dyn_limit_violated else False
+
     reward=-augmented_cost
 
     self.previous_f_observation=f_observation
@@ -319,6 +315,19 @@ class MyEnvironment(gym.Env):
   
   def forceDone(self):
     self.force_done=True
+
+  def get_best_action(self, f_obs, f_acts): #not used
+    """ 
+    get the best trajectory index from f_obs and f_acts
+    this is called for benchmarking
+    """
+    f_obs_n = self.om.normalizeObservation(f_obs)
+    f_acts_n = self.am.normalizeAction(f_acts)
+
+    print("f_obs_n: ", f_obs_n.shape)
+    print("f_acts_n: ", f_acts_n.shape)
+
+    return f_acts[self.cost_computer.getIndexBestTraj(f_obs_n, f_acts_n),:]
 
   def saveInBag(self, f_action_n):
       if(self.record_bag==False or np.isnan(f_action_n).any()):
