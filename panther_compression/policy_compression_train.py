@@ -78,10 +78,12 @@ if __name__ == "__main__":
     use_test_run_params = False
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--home_dir", type=str, default="")
+    args = parser.parse_args()
     parser.add_argument("--seed", type=int, default=2)
-    parser.add_argument("--log_dir", type=str, default="evals/log_dagger") # usually "log"
-    parser.add_argument("--policy_dir", type=str, default="evals/tmp_dagger") # usually "tmp"
-    parser.add_argument("--evaluation_data_dir", type=str, default="evals/evalations") # usually "tmp"
+    parser.add_argument("--log_dir", type=str, default=args.home_dir+"evals/log_dagger") # usually "log"
+    parser.add_argument("--policy_dir", type=str, default=args.home_dir+"evals/tmp_dagger") # usually "tmp"
+    parser.add_argument("--evaluation_data_dir", type=str, default=args.home_dir+"evals/evalations") # usually "tmp"
     parser.add_argument("--planner-params", type=str) # Contains details on the tasks to be learnt (ref. trajectories)
     parser.add_argument("--use-DAgger", dest='on_policy_trainer', action='store_true') # Use DAgger when true, BC when false
     parser.add_argument("--use-BC", dest='on_policy_trainer', action='store_false')
@@ -126,7 +128,7 @@ if __name__ == "__main__":
     ##
 
     parser.add_argument("--epsilon_RWTA", type=float, default=0.05)
-    parser.add_argument('--net_arch', type=int, nargs='+', help='<Required> Set flag')
+    net_arch = [512, 512, 512]
 
     args = parser.parse_args()
 
@@ -205,7 +207,7 @@ if __name__ == "__main__":
         launch_tensorboard=False
 
     if reset_evaluation_data:
-        evals_dir=args.evaluation_data_dir+"/2/demos/"
+        evals_dir=args.evaluation_data_dir+"/2/demos"
         os.system("rm -rf "+evals_dir+"/round*")
         os.system("mkdir "+evals_dir+"/round-000")
 
@@ -243,7 +245,6 @@ if __name__ == "__main__":
 
     if(args.only_test_loss==False and reuse_latest_policy == False):
         os.system("find "+args.policy_dir+" -type f -name '*.pt' -delete") #Delete the policies
-    
 
     if(reuse_previous_samples==False):
         os.system("rm -rf "+args.policy_dir) #Delete the demos
@@ -362,7 +363,7 @@ if __name__ == "__main__":
 
         printInBoldBlue("----------------------- Making Student Policy: -------------------")
         trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, eval_dir=EVALUATION_DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, use_lr_scheduler=use_lr_scheduler, batch_size=batch_size, \
-            evaluation_data_size=evaluation_data_size, weight_prob=weight_prob, expert_policy=expert_policy, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA, net_arch=args.net_arch, reuse_latest_policy=reuse_latest_policy, use_lstm=params["use_lstm"], use_one_zero_beta=use_one_zero_beta)
+            evaluation_data_size=evaluation_data_size, weight_prob=weight_prob, expert_policy=expert_policy, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA, net_arch=net_arch, reuse_latest_policy=reuse_latest_policy, use_lstm=params["use_lstm"], use_one_zero_beta=use_one_zero_beta)
 
         ##
         ## Create policy for evaluation data set
@@ -372,7 +373,7 @@ if __name__ == "__main__":
         evaluation_trainer = make_simple_dagger_trainer(tmpdir=EVALUATION_DATA_POLICY_PATH, eval_dir=EVALUATION_DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, 
                                                         custom_logger=None, lr=lr, use_lr_scheduler=use_lr_scheduler, batch_size=batch_size, 
                                                             evaluation_data_size=evaluation_data_size, weight_prob=weight_prob, expert_policy=expert_policy, 
-                                                            type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA, net_arch=args.net_arch, 
+                                                            type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA, net_arch=net_arch, 
                                                             reuse_latest_policy=reuse_latest_policy, use_lstm=params["use_lstm"], use_one_zero_beta=True)
 
         ##
