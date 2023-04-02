@@ -39,35 +39,34 @@ def getColorJet(v, vmin, vmax):
 
   c=ColorRGBA()
 
-  c.r = 1;
-  c.g = 1;
-  c.b = 1;
-  c.a = 1;
+  c.r = 1
+  c.g = 1
+  c.b = 1
+  c.a = 1
 
   if (v < vmin):
-    v = vmin;
+    v = vmin
   if (v > vmax):
-    v = vmax;
-  dv = vmax - vmin;
+    v = vmax
+  dv = vmax - vmin
 
   if (v < (vmin + 0.25 * dv)):
-    c.r = 0;
-    c.g = 4 * (v - vmin) / dv;
+    c.r = 0
+    c.g = 4 * (v - vmin) / dv
   
   elif (v < (vmin + 0.5 * dv)):
-    c.r = 0;
-    c.b = 1 + 4 * (vmin + 0.25 * dv - v) / dv;
+    c.r = 0
+    c.b = 1 + 4 * (vmin + 0.25 * dv - v) / dv
   
   elif (v < (vmin + 0.75 * dv)):
-    c.r = 4 * (v - vmin - 0.5 * dv) / dv;
-    c.b = 0;
+    c.r = 4 * (v - vmin - 0.5 * dv) / dv
+    c.b = 0
   
   else:
-    c.g = 1 + 4 * (vmin + 0.75 * dv - v) / dv;
-    c.b = 0;
+    c.g = 1 + 4 * (vmin + 0.75 * dv - v) / dv
+    c.b = 0
 
-  return c;
-
+  return c
 
 class DynCorridor:
 
@@ -80,15 +79,15 @@ class DynCorridor:
         z=random.uniform(self.z_min, self.z_max)
         offset=random.uniform(-2*math.pi, 2*math.pi)
 
-        # x = 5
-        # y = 0
-        # z = 1
-        # offset = 0
+        x = 3
+        y = 0
+        z = 1
+        offset = 0
 
-        slower=random.uniform(self.slower_min, self.slower_max);
+        slower=random.uniform(self.slower_min, self.slower_max)
         s=self.scale
         if(self.getType(i)=="dynamic"):
-            mesh=random.choice(self.available_meshes_dynamic);
+            mesh=random.choice(self.available_meshes_dynamic)
             bbox=self.bbox_dynamic; 
             if(self.type_of_obst_traj=="trefoil"):
                 [x_string, y_string, z_string] = self.trefoil(x,y,z, self.scale[0],self.scale[1],self.scale[2], offset, slower)
@@ -105,7 +104,7 @@ class DynCorridor:
                 exit();         
 
         else:
-            mesh=random.choice(self.available_meshes_static);
+            mesh=random.choice(self.available_meshes_static)
             bbox=self.bbox_static_vert
             z=bbox[2]/2.0
             [x_string, y_string, z_string] = self.wave_in_z(x, y, z, self.scale[2], offset, 1.0)
@@ -118,7 +117,6 @@ class DynCorridor:
             return "static"
 
     def __init__(self, total_num_obs,gazebo, type_of_obst_traj, alpha_scale_obst_traj, beta_faster_obst_traj):
-
 
         random.seed(datetime.now())
 
@@ -210,40 +208,40 @@ class DynCorridor:
         rospy.sleep(0.5)
 
     def generateMarker(self, mesh, bbox, i):
-        marker=Marker();
-        marker.id=i;
-        marker.ns="mesh";
+        marker=Marker()
+        marker.id=i
+        marker.ns="mesh"
         marker.header.frame_id="world"
-        marker.type=marker.MESH_RESOURCE;
-        marker.action=marker.ADD;
+        marker.type=marker.MESH_RESOURCE
+        marker.action=marker.ADD
 
         marker.pose.position.x=0.0 #Will be updated later
         marker.pose.position.y=0.0 #Will be updated later
         marker.pose.position.z=0.0 #Will be updated later
-        marker.pose.orientation.x=0.0;
-        marker.pose.orientation.y=0.0;
-        marker.pose.orientation.z=0.0;
-        marker.pose.orientation.w=1.0;
-        marker.lifetime = rospy.Duration.from_sec(0.0);
+        marker.pose.orientation.x=0.0
+        marker.pose.orientation.y=0.0
+        marker.pose.orientation.z=0.0
+        marker.pose.orientation.w=1.0
+        marker.lifetime = rospy.Duration.from_sec(0.0)
         marker.mesh_use_embedded_materials=True
         marker.mesh_resource=mesh
 
-        marker.scale.x=bbox[0];
-        marker.scale.y=bbox[1];
-        marker.scale.z=bbox[2];
+        marker.scale.x=bbox[0]
+        marker.scale.y=bbox[1]
+        marker.scale.z=bbox[2]
         return marker
 
     def pubTF(self, timer):
         br = tf.TransformBroadcaster()
 
-        marker_array_static_mesh=MarkerArray();
-        marker_array_dynamic_mesh=MarkerArray();
+        marker_array_static_mesh=MarkerArray()
+        marker_array_dynamic_mesh=MarkerArray()
 
         for i in range(self.total_num_obs): 
             t_ros=rospy.Time.now()
             t=rospy.get_time(); #Same as before, but it's float
 
-            marker=self.marker_array.markers[i];
+            marker=self.marker_array.markers[i]
  
             # #Hack to produce a static obstacle
             # x_string='2.5'
@@ -257,7 +255,7 @@ class DynCorridor:
             z = eval(self.all_dyn_traj[i].s_mean[2])
 
             # Set the stamp and the current pos
-            self.all_dyn_traj[i].header.stamp= t_ros;
+            self.all_dyn_traj[i].header.stamp= t_ros
             self.all_dyn_traj[i].pos.x=x #Current position
             self.all_dyn_traj[i].pos.y=y #Current position
             self.all_dyn_traj[i].pos.z=z #Current position
@@ -266,9 +264,9 @@ class DynCorridor:
             br.sendTransform((x, y, z), (0,0,0,1), t_ros, self.name_obs+str(self.all_dyn_traj[i].id), "world")
 
 
-            self.marker_array.markers[i].pose.position.x=x;
-            self.marker_array.markers[i].pose.position.y=y;
-            self.marker_array.markers[i].pose.position.z=z;
+            self.marker_array.markers[i].pose.position.x=x
+            self.marker_array.markers[i].pose.position.y=y
+            self.marker_array.markers[i].pose.position.z=z
 
 
 
@@ -449,7 +447,7 @@ class DynCorridor:
     def trefoil(self,x,y,z,scale_x, scale_y, scale_z, offset, slower):
 
         #slower=1.0; #The higher, the slower the obstacles move" 
-        tt='t/' + str(slower)+'+';
+        tt='t/' + str(slower)+'+'
 
         x_string=str(scale_x/6.0)+'*(sin('+tt +str(offset)+') + 2 * sin(2 * '+tt +str(offset)+'))' +'+' + str(x); #'2*sin(t)' 
         y_string=str(scale_y/5.0)+'*(cos('+tt +str(offset)+') - 2 * cos(2 * '+tt +str(offset)+'))' +'+' + str(y); #'2*cos(t)' 
@@ -464,18 +462,18 @@ class DynCorridor:
     def square(self,x,y,z,scale_x, scale_y, scale_z, offset, slower):
 
         #slower=1.0; #The higher, the slower the obstacles move" 
-        tt='t/' + str(slower)+'+';
+        tt='t/' + str(slower)+'+'
 
-        tt='(t+'+str(offset)+')'+'/' + str(slower);
-        cost='cos('+tt+')';
-        sint='sin('+tt+')';
+        tt='(t+'+str(offset)+')'+'/' + str(slower)
+        cost='cos('+tt+')'
+        sint='sin('+tt+')'
 
 
 
         #See https://math.stackexchange.com/questions/69099/equation-of-a-rectangle
-        x_string=str(scale_x)+'*0.5*(abs('+cost+')*'+cost + '+abs('+sint+')*'+sint+')';
-        y_string=str(scale_x)+'*0.5*(abs('+cost+')*'+cost + '-abs('+sint+')*'+sint+')';
-        z_string=x_string;
+        x_string=str(scale_x)+'*0.5*(abs('+cost+')*'+cost + '+abs('+sint+')*'+sint+')'
+        y_string=str(scale_x)+'*0.5*(abs('+cost+')*'+cost + '-abs('+sint+')*'+sint+')'
+        z_string=x_string
 
         ##Now let's rotate around the z axis
         ## Commented for now
@@ -492,17 +490,17 @@ class DynCorridor:
 
 
         #Without rotation
-        x_string=x_string+'+' + str(x);
-        y_string=y_string+'+' + str(y);
-        z_string=z_string+'+' + str(z);
+        x_string=x_string+'+' + str(x)
+        y_string=y_string+'+' + str(y)
+        z_string=z_string+'+' + str(z)
 
         return [x_string, y_string, z_string]
 
     def wave_in_z(self,x,y,z,scale, offset, slower):
 
-        tt='t/' + str(slower)+'+';
+        tt='t/' + str(slower)+'+'
 
-        x_string=str(x);
+        x_string=str(x)
         y_string=str(y)
         z_string=str(scale)+'*(-sin( '+tt +str(offset)+'))' + '+' + str(z);  
 
@@ -550,9 +548,6 @@ class DynCorridor:
         # z_string='1';
 
         return [x_string, y_string, z_string]
-
-
-
 
     def spawnGazeboObstacle(self, i):
 
