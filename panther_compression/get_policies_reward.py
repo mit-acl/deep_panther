@@ -32,10 +32,10 @@ test_venv.env_method("set_len_ep", (test_environment_max_steps))
 
 printInBoldRed("----------------------- Student Evaluation: --------------------")
 
-DATA_POLICY_PATH = "evals/tmp_dagger/2"
-# DATA_POLICY_PATH = "trained_policies"
-FINAL_POLICY_NAME = "intermediate_policy_round0_log6.pt"
-n_demos = 10
+# DATA_POLICY_PATH = "evals/tmp_dagger/2"
+DATA_POLICY_PATH = "trained_policies/policies"
+FINAL_POLICY_NAME = "test4.pt"
+n_demos = 100
 
 load_full_policy_path = os.path.join(DATA_POLICY_PATH, FINAL_POLICY_NAME)
 student_policy = bc.reconstruct_policy(load_full_policy_path)

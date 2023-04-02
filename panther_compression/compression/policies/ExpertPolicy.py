@@ -113,7 +113,6 @@ class ExpertPolicy(object):
         self.am.assertAction(action_normalized)
 
         if self.computation_times_verbose:
-            print('here!')
             return action_normalized, {"Q": Q}, computation_time
         else:
             return action_normalized, {"Q": Q}

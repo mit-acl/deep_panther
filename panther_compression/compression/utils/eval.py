@@ -49,8 +49,11 @@ def evaluate_policy_for_benchmark(policy, venv, log_path, eval_episodes = 50):
         policy,
         venv,
         deterministic_policy=True,
-        total_demos_per_round=eval_episodes
+        total_trajs_to_evaluate=eval_episodes
     )
+
+    print("len(trajectories): ", len(trajectories))
+
     stats, descriptors = rollout_stats(trajectories)
     stats["obs_avoidance_failure_rate"] = float(total_obs_avoidance_failure) / float(num_demos) * 100
     stats["trans_dyn_limit_failure_rate"] = float(total_trans_dyn_limit_failure) / float(num_demos) * 100
