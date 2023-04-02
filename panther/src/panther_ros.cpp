@@ -742,10 +742,10 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
           std::vector<si::solOrGuess> best_solution_student_vector;
           best_solution_student_vector.push_back(best_solution_student);
           // clang-format off
-        // clearMarkerArray(ma_best_solution_student_, pub_best_solution_student_);
-        // ma_best_solution_student_=pubVectorOfsolOrGuess(best_solution_student_vector, pub_best_solution_student_, name_drone_ + "_best_solution_student", par_.color_type_student);
-        clearMarkerArray(ma_best_solutions_student_, pub_best_solutions_student_);
-        ma_best_solutions_student_=pubVectorOfsolOrGuess(best_solutions_student, pub_best_solutions_student_, name_drone_ + "_best_solutions_student", par_.color_type_student);
+          clearMarkerArray(ma_best_solution_student_, pub_best_solution_student_);
+          ma_best_solution_student_=pubVectorOfsolOrGuess(best_solution_student_vector, pub_best_solution_student_, name_drone_ + "_best_solution_student", par_.color_type_student);
+          clearMarkerArray(ma_best_solutions_student_, pub_best_solutions_student_);
+          ma_best_solutions_student_=pubVectorOfsolOrGuess(best_solutions_student, pub_best_solutions_student_, name_drone_ + "_best_solutions_student", par_.color_type_student);
           // clang-format on
         }
 

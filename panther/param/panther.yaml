@@ -118,7 +118,7 @@ max_runtime_octopus_search: 1.0 #[seconds]
 visual: true #publish visualization stuff
 res_plot_traj: 30.0  #Higher --> More resolution when plotting the trajectory 
 color_type_student: "vel" #"vel" or "time" or "aug_cost" or "agent" or "black"
-color_type_expert: "black" #"vel" or "time" or "aug_cost" or "agent" or "black"
+color_type_expert: "vel" #"vel" or "time" or "aug_cost" or "agent" or "black"
 n_agents: 16 #only used for the color in the trajectory
 z_goal_when_using_rviz: 1.0 #[meters] 
 
