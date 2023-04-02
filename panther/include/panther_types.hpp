@@ -806,6 +806,7 @@ struct parameters
 {
   //
   // clang-format off
+  bool            use_hw_training_env;
   bool            use_clipping;
   double          yaw_loss_weight;
   bool            use_bn;

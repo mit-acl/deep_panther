@@ -13,6 +13,7 @@ from colorama import init, Fore, Back, Style
 import py_panther
 ##### For rosbag logging
 import rosbag
+import geometry_msgs.msg
 from geometry_msgs.msg import PointStamped, TransformStamped, PoseStamped, Vector3, Quaternion, Pose
 import time
 import rospy
@@ -374,7 +375,6 @@ class MyEnvironment(gym.Env):
       point_msg.point.y=f_g[1,0]
       point_msg.point.z=f_g[2,0]
 
-
       for i in range(len(obstacles)):
 
         marker_array_msg=MarkerArray()
@@ -417,7 +417,6 @@ class MyEnvironment(gym.Env):
           id_sample=id_sample+1
 
         self.bag.write(f'/obs{i}', marker_array_msg, time_now)
-
 
       tf_stamped=TransformStamped()
       tf_stamped.header.frame_id="world"

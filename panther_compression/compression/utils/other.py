@@ -221,7 +221,7 @@ class ObstaclesManager():
 		self.fitter_deg_pos=self.params["fitter_deg_pos"]
 		self.fitter_total_time=self.params["fitter_total_time"]
 		self.fitter_num_samples=self.params["fitter_num_samples"]
-
+		
 		# self.fitter = py_panther.Fitter(self.fitter_num_samples)
 		self.newRandomPos()
 
@@ -245,6 +245,18 @@ class ObstaclesManager():
 				[random.uniform(self.z_min, self.z_max)]
 			]))
 
+		##
+		## bbox size
+		##
+
+		if self.params["use_hw_training_env"]:
+			noised_obst_x = np.random.normal(loc=self.params["training_obst_size"][0], scale=0.2)
+			noised_obst_y = np.random.normal(loc=self.params["training_obst_size"][1], scale=0.2)
+			noised_obst_z = np.random.normal(loc=self.params["training_obst_size"][2], scale=0.2)
+			self.bbox_inflated= np.array([noised_obst_x + self.params["drone_bbox"][0], noised_obst_y + self.params["drone_bbox"][1], noised_obst_z + self.params["drone_bbox"][2]])
+		else:
+			self.bbox_inflated= np.array(self.params["training_obst_size"]) + np.array(self.params["drone_bbox"])
+		
 		##
 		## ideal params (got from sim_base_station.launch)
 		##
@@ -301,7 +313,7 @@ class ObstaclesManager():
 				w_ctrl_pts_ob=np.concatenate((w_ctrl_pts_ob, self.random_pos[i]), axis=1)
 				# w_ctrl_pts_ob.append(np.array([[2],[2],[2]]))
 
-			bbox_inflated= np.array(self.params["training_obst_size"]) + np.array(self.params["drone_bbox"])
+			bbox_inflated= self.bbox_inflated
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 		
 		# if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
@@ -321,7 +333,7 @@ class ObstaclesManager():
 
 			w_ctrl_pts_ob_list=ObstaclesManager.fitter.fit(samples)
 			w_ctrl_pts_ob=listOf3dVectors2numpy3Xmatrix(w_ctrl_pts_ob_list)
-			bbox_inflated= np.array(self.params["training_obst_size"]) + np.array(self.params["drone_bbox"])
+			bbox_inflated= self.bbox_inflated
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 
 		# if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
