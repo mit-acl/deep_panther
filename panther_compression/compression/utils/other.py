@@ -1486,8 +1486,8 @@ class CostComputer():
 					abs(obs_drone[2,0]) < inflated_bbox[2,0]/2:
 
 					print("COLLISION")
-					print("obs_drone: ", obs_drone)
-					print("")
+					print("f_obs", f_obs)
+					print("f_traj", f_traj)
 					exit()
 					# print(f"f_traj={np.array(f_traj)}")
 					# print(f"f_obs={np.array(f_obs)}")

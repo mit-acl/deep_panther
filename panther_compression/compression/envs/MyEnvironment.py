@@ -249,7 +249,7 @@ class MyEnvironment(gym.Env):
     ##
 
     cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.cost_computer.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(self.previous_f_obs_n, f_traj_n)
-    
+
     info["obst_avoidance_violation"] = True if obst_avoidance_violation > 1e-3 else False
     info["trans_dyn_lim_violation"] = True if any(f in which_dyn_limit_violated for f in ('f_v', 'f_a')) else False
     info["yaw_dyn_lim_violation"] = True if 'yaw_dot' in which_dyn_limit_violated else False

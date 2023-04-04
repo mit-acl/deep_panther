@@ -29,6 +29,28 @@ from numpy import load
 from scipy.optimize import linear_sum_assignment
 from compression.utils.other import getPANTHERparamsAsCppStruct
 
+import sys
+import numpy as np
+import time
+from statistics import mean
+import copy
+from random import random, shuffle
+from compression.utils.other import ActionManager, ObservationManager, ObstaclesManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed, computeTotalTime
+from colorama import init, Fore, Back, Style
+import py_panther
+import math 
+from gym import spaces
+from joblib import Parallel, delayed
+import multiprocessing
+
+
+def printFailedOpt(info):
+  print(" Called optimizer--> "+Style.BRIGHT+Fore.RED +"Failed"+ Style.RESET_ALL+". "+ info)
+
+def printSucessOpt(info):
+  print(" Called optimizer--> "+Style.BRIGHT+Fore.GREEN +"Success"+ Style.RESET_ALL+". "+ info)
+
+
 ##
 ## params
 ##
@@ -58,30 +80,71 @@ ydot0=np.array([[0.0]])
 ## get b-spline
 ##
 
-traj_expert = np.array([[ 1.90339031,  2.18211999, -1.33990154,  3.6838341,   3.29023144, -1.93637244,
-   5.20031786,  2.19353318, -0.53288827,  5.63669461,  0.01027185,  1.61969445,
-  -0.61044954, -1.37475992, -2.1390703,  -2.90338068, -3.66769104,  4.58586231]])
-w_posBS_expert, w_yawBS_expert= venv.am.f_trajAnd_w_State2wBS(traj_expert, State(p0, v0, a0, y0, ydot0))
+primer_branch_traj_expert = np.array([[ 
+  0.91224966,  0.82266163,  1.32147417,  2.32024804,  1.57076722,  1.9657202,
+  3.76792436,  1.23108137,  0.98295584,  5.10536001,  0.12682231, -0.65702177,
+  -0.20569983, -0.4017783,  -0.73733611, -0.78718934, -1.0430407,   3.47650815]])
+w_posBS_expert, w_yawBS_expert= venv.am.f_trajAnd_w_State2wBS(primer_branch_traj_expert, State(p0, v0, a0, y0, ydot0))
 
-f_obs = np.array([[ 0.,          0.,          0.,          0.,          0.,          0.,
-   0.,          5.61144409,  0.,          1.64846655,  2.85507983,  0.88096795,
-  -2.46870724,  3.17149195,  0.87474921, -3.0380747,   3.8001729,   1.22478663,
-  -4.07835881,  3.80299854,  2.10886061, -2.01287786,  2.96808538,  2.17706717,
-  -0.95580791,  2.29786189,  1.14409856, -3.37488171,  2.50698373,  0.03513949,
-  -3.69475794,  3.20431133,  0.039445,   -1.24662446,  3.34564989,  0.7785396,
-  -1.41618232,  3.26220083,  1.13565258, -1.92984885,  1.42816106,  1.34055598,
-   1.36956824,  2.85507983,  0.88096795, -2.46870724,  3.17149195,  0.87474921,
-  -3.0380747,   3.8001729,   1.22478663, -4.07835881,  3.80299854,  2.10886061,
-  -2.01287786,  2.96808538,  2.17706717, -0.95580791,  2.29786189,  1.14409856,
-  -3.37488171,  2.50698373,  0.03513949, -3.69475794,  3.20431133,  0.039445,
-  -1.24662446,  3.34564989,  0.7785396,  -1.41618232,  3.26220083,  1.13565258,
-  -1.92984885,  1.42816106 , 1.34055598,  1.36956824]]
-)
+f_obs = np.array([[ 
+   0.,          0.,          0.,          0.,          0.,          0.,
+   0.,          5.20167424,  0.,         -0.75670669,  4.98871496, -0.70308872,
+   0.1861533,   5.30512708, -0.70930747, -0.38321416,  5.93380803, -0.35927004,
+  -1.42349827,  5.93663367,  0.52480393,  0.64198267,  5.10172051,  0.5930105,
+   1.69905263,  4.43149702, -0.43995811, -0.72002117,  4.64061886, -1.54891718,
+  -1.0398974,   5.33794646, -1.54461168,  1.40823608,  5.47928502, -0.80551708,
+   1.23867821,  5.39583596, -0.44840409,  0.72501169,  1.4,         1.4,
+   1.        
+  ]])
+
+f_obs_n = venv.om.normalizeObservation(f_obs)
+
+##
+## compare it to master's trajectory
+##
+
+par_v_max = [2.5, 2.5, 2.5]
+par_a_max = [5.5, 5.5, 5.5]
+par_factor_alloc = 1.0
+
+my_SolverIpopt=py_panther.SolverIpopt(getPANTHERparamsAsCppStruct())
+
+init_state=venv.om.getInit_f_StateFromObservation(f_obs);        
+final_state=venv.om.getFinal_f_StateFromObservation(f_obs);        
+total_time=computeTotalTime(init_state, final_state, par_v_max, par_a_max, par_factor_alloc)
+ExpertPolicy.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time)
+ExpertPolicy.my_SolverIpopt.setFocusOnObstacle(True)
+obstacles=venv.om.getObstaclesForCasadi(f_obs)
+ExpertPolicy.my_SolverIpopt.setObstaclesForOpt(obstacles)
+succeed=ExpertPolicy.my_SolverIpopt.optimize(True)
+
+info=ExpertPolicy.my_SolverIpopt.getInfoLastOpt()
+
+##
+## Print results
+##
+if not succeed:
+    printFailedOpt(info)
+else:
+    printSucessOpt(info)
+
+best_solutions=ExpertPolicy.my_SolverIpopt.getBestSolutions()
+action=venv.am.solsOrGuesses2action(best_solutions)
+action_normalized=venv.am.normalizeAction(action)
+venv.am.assertAction(action_normalized)
+
+index_smallest_augmented_cost=venv.cost_computer.getIndexBestTraj(f_obs_n, action_normalized)
+f_traj=self.am.getTrajFromAction(action, index_smallest_augmented_cost)
+
+print("master_branch_traj_expert", f_traj)
+
+exit()
 
 for i in range(1):
     f_posObs_ctrl_pts = listOf3dVectors2numpy3Xmatrix(CostComputer.om.getCtrlPtsObstacleI(f_obs, i))
     inflated_bbox = CostComputer.om.getBboxInflatedObstacleI(f_obs, i)
-    f_posObstBS = MyClampedUniformBSpline(0.0, 6.0, 3, 3, 7, f_posObs_ctrl_pts, True) 
+    f_posObstBS = MyClampedUniformBSpline(0.0, 6.0, 3, 3, 7, f_posObs_ctrl_pts, True)
+
 
 ##
 ## pot
