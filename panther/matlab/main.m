@@ -499,6 +499,7 @@ violation_dyn_limits=getViolationConstraints(opti_tmp);
 %%
 %% get obstacle avoidance violation
 %%
+
 opti_tmp=opti.copy;
 opti_tmp.subject_to(); %Clear constraints
 opti_tmp.subject_to([const_p_obs_avoid]);
@@ -515,13 +516,11 @@ else
     const_y=[const_y, const_y_dyn_limits];
 end
 
-
 if(soft_obstacle_avoid_constraint==true)
     total_cost = total_cost + 100*(1/numel(violation_obs_avoid))*sum(violation_obs_avoid.^2);
 else
     const_p=[const_p, const_p_obs_avoid];
 end
-
 
 % total_cost=total_cost+c_dyn_lim*getCostDynLimSoftConstraints(sp, sy, basis, v_max_n, a_max_n, j_max_n, ydot_max_n);
 
@@ -661,6 +660,7 @@ opts.jit=jit;%If true, when I call solve(), Matlab will automatically generate a
 opts.compiler='shell';
 opts.jit_options.flags='-Ofast';  %Takes ~15 seconds to generate if O0 (much more if O1,...,O3)
 opts.jit_options.verbose=true;  %See example in shallow_water.cpp
+opts.ipopt.acceptable_constr_viol_tol=1e-8;
 % opts.ipopt.hessian_approximation='limited-memory';
 % opts.ipopt.line_search_method='cg-penalty';
 % opts.ipopt.accept_every_trial_step='yes';
