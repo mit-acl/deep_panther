@@ -1317,7 +1317,7 @@ class CostComputer():
 
 				if(abs(obs_drone[0,0])<=bbox[0,0]/2 and abs(obs_drone[1,0])<=bbox[1,0]/2 and abs(obs_drone[2,0])<=bbox[2,0]/2):
 
-					print("collision")
+					print("collision detected in computeObstAvoidanceConstraintsViolation in other.py")
 					exit()
 
 					for i in range(3):

@@ -103,11 +103,15 @@ f_obs_n = venv.om.normalizeObservation(f_obs)
 ## compare it to master's trajectory
 ##
 
+
 par_v_max = [2.5, 2.5, 2.5]
 par_a_max = [5.5, 5.5, 5.5]
 par_factor_alloc = 1.0
-
 my_SolverIpopt=py_panther.SolverIpopt(getPANTHERparamsAsCppStruct())
+
+##
+## optimization
+##
 
 init_state=venv.om.getInit_f_StateFromObservation(f_obs);        
 final_state=venv.om.getFinal_f_StateFromObservation(f_obs);        
