@@ -48,8 +48,8 @@ student_policy = bc.reconstruct_policy(load_full_policy_path)
 printInBoldRed("----------------------- Expert Evaluation: --------------------")
 
 expert_policy = ExpertPolicy()
-# expert_stats = evaluate_policy_for_benchmark(expert_policy, test_venv, eval_episodes=n_demos, log_path=None)
-expert_stats = evaluate_policy(expert_policy, test_venv, eval_episodes=n_demos, log_path=None)
+expert_stats = evaluate_policy_for_benchmark(expert_policy, test_venv, eval_episodes=n_demos, log_path=None)
+# expert_stats = evaluate_policy(expert_policy, test_venv, eval_episodes=n_demos, log_path=None)
 
 ##
 ## Print

@@ -158,10 +158,10 @@ class MyEnvironment(gym.Env):
     ##  if total time that student produced is 0.0, BS function gives you an error so let's just make it bigger than 0
     ##
 
-    for i, (f_act, f_act_n) in enumerate(zip(f_action, f_action_n)):
-      if f_act[-1] <= 0.0:
-        print(f"total time {f_act[-1]}, so increase it up to 1e-5")
-        f_act[-1] = 1e-10
+    # for i, (f_act, f_act_n) in enumerate(zip(f_action, f_action_n)):
+    #   if f_act[-1] <= 0.0:
+    #     print(f"total time {f_act[-1]}, so increase it up to 1e-5")
+    #     f_act[-1] = 1e-10
 
     ##
     ## Choose the trajectory with smallest cost:
