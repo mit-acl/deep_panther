@@ -123,6 +123,7 @@ class StudentPolicy(BasePolicy):
 
         self.action_dist = SquashedDiagGaussianDistribution(action_dim)
         self.mu = nn.Linear(last_layer_dim, action_dim)
+        self.tanh = nn.Tanh()
         self.log_std = nn.Linear(last_layer_dim, action_dim)
 
     def _get_data(self) -> Dict[str, Any]:
@@ -213,8 +214,8 @@ class StudentPolicy(BasePolicy):
             ## Last layer
             ##
 
-            mean_actions = self.mu(latent_pi)
-
+            tmp = self.mu(latent_pi)
+            mean_actions = self.tanh(tmp)
         else: # if not using LSTM
 
             features = self.extract_features(obs_n)
