@@ -5,4 +5,5 @@
 5. test5.pt: 512x512x512 pos_loss:1e-4, 1.6e-4, trained for hardware
 6. test6.pt: 1024x1024x1024 pos_loss:1e-4, 1.2e-4, trained for hardware
 7. test7.pt: 1024x1024x1024 pos_loss:7e-5, 1e-4, trained for hardware. same with test6.pt but trained longer
-8. 
+8. test8.pt: 1024x1024x1024x1024 pos_loss: 7e-5, 8e-5, tanh layer at the end, trained for hardware, evaluation values are pretty low!
+9. test9.pt: 1024x1024x1024 pos_loss 1e-4, yaw_loss: 2e-4, tanh layer at the end, trained for hardware

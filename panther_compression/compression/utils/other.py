@@ -739,7 +739,7 @@ class ObservationManager():
 	def getBboxInflatedObstacleI(self,obs,i):
 		index_start_obstacle_i=self.getIndexStartObstacleI(i)
 		tmp=index_start_obstacle_i+(3*self.obsm.getCPsPerObstacle())
-		bbox_inflated=obs[0,tmp:tmp+3].reshape(3,1)
+		bbox_inflated = obs[0,tmp:tmp+3].reshape(3,1)
 		return bbox_inflated
 
 	def getf_v(self, obs):
@@ -801,8 +801,11 @@ class ObservationManager():
 	def isNanObservation(self, obs):
 		return np.isnan(np.sum(obs))
 
+	def calculateObstacleNumber(self, obs):
+		return int((obs.shape[1] - 10) / (3*self.obsm.getCPsPerObstacle()+3))
+
 	def getNormalizationVector(self, obs):
-		num_obs = int((obs.shape[1] - 10) / (3*self.obsm.getCPsPerObstacle()+3))
+		num_obs = self.calculateObstacleNumber(obs)
 		normalization_vector = self.normalization_constant
 		for i in range(num_obs-1):
 			normalization_vector = np.concatenate((normalization_vector, self.normalization_constant[0, 10:].reshape(1, -1)), axis=1)
@@ -827,6 +830,7 @@ class ObservationManager():
 
 	def getObservationShape(self):
 		return (1,self.observation_size)
+
 
 	def getRandomObservation(self):
 		random_observation=self.denormalizeObservation(self.getRandomNormalizedObservation())
@@ -1167,16 +1171,14 @@ class ActionManager():
 		w_yaw_ctrl_pts,_=self.f_trajAnd_w_State2_w_yaw_ctrl_pts_and_knots(f_traj, w_state)
 		total_time=self.getTotalTimeTraj(f_traj)
 
-		# print(f"f_action={f_action}")
-		# print(f"total_time={total_time}")
 		w_posBS = MyClampedUniformBSpline(0.0, total_time, self.deg_pos, 3, self.num_seg, w_pos_ctrl_pts, no_deriv) #def __init__():[BSpline(knots_pos, w_pos_ctrl_pts[0,:], self.deg_pos)
 		w_yawBS = MyClampedUniformBSpline(0.0, total_time, self.deg_yaw, 1, self.num_seg, w_yaw_ctrl_pts, no_deriv)
 		
 		return w_posBS, w_yawBS
 
 	def f_trajAnd_f_State2fBS(self, f_traj, f_state, no_deriv=False):
-		assert np.linalg.norm(f_state.w_pos)<1e-7, "The pos should be zero"
-		assert np.linalg.norm(f_state.w_yaw)<1e-7, "The yaw should be zero"
+		assert np.linalg.norm(f_state.w_pos) < 1e-7, "The pos should be zero"
+		assert np.linalg.norm(f_state.w_yaw) < 1e-7, "The yaw should be zero"
 		f_posBS, f_yawBS = self.f_trajAnd_w_State2wBS(f_traj, f_state, no_deriv)
 		return f_posBS, f_yawBS
 
@@ -1430,44 +1432,72 @@ class CostComputer():
 
 	def computeObstAvoidanceConstraintsViolation(self, f_obs_n, f_traj_n):
 
-		#Denormalize observation and action
+		##
+		## Denormalize observation and action
+		##
+
+		assert all( (traj >= -1 and traj <= 1) for traj in f_traj_n[0])
+		assert CostComputer.om.obsIsNormalized(f_obs_n)
+
 		f_obs = CostComputer.om.denormalizeObservation(f_obs_n)
 		f_traj = CostComputer.am.denormalizeTraj(f_traj_n)
 
+		##
+		## total_time
+		##
+
 		total_time=CostComputer.am.getTotalTimeTraj(f_traj)
 
-		###Debugging
+		##
+		## Debugging
+		##
+
 		if(total_time<1e-5):
 			print(f"total_time={total_time}")
 			print(f"f_traj_n={f_traj_n}")
 			print(f"f_traj={f_traj}")
-		###
+		
+		##
+		## loop over obstacles
+		##
 
 		f_state = CostComputer.om.get_f_StateFromf_obs(f_obs)
 		f_posBS, f_yawBS = CostComputer.am.f_trajAnd_f_State2fBS(f_traj, f_state, no_deriv=True)
+		violation = 0.0
 
-		violation=0
-
-		for i in range(self.num_obstacles):
-			f_posObs_ctrl_pts=listOf3dVectors2numpy3Xmatrix(CostComputer.om.getCtrlPtsObstacleI(f_obs, i))
-			bbox=CostComputer.om.getBboxInflatedObstacleI(f_obs, i)
-
+		for i in range(self.om.calculateObstacleNumber(f_obs)):
+			f_posObs_ctrl_pts = listOf3dVectors2numpy3Xmatrix(CostComputer.om.getCtrlPtsObstacleI(f_obs, i))
+			inflated_bbox = CostComputer.om.getBboxInflatedObstacleI(f_obs, i)
 			f_posObstBS = MyClampedUniformBSpline(0.0, CostComputer.par.fitter_total_time, CostComputer.par.fitter_deg_pos, 3, CostComputer.par.fitter_num_seg, f_posObs_ctrl_pts, True) 
 
-			#TODO: move num to a parameter
-			for t in np.linspace(start=0.0, stop=total_time, num=15).tolist():
+			min_total_time = min(total_time, CostComputer.par.fitter_total_time)
 
+			for t in np.linspace(start=0.0, stop=min_total_time, num=15).tolist(): #TODO: move num to a parameter
 				obs = f_posObstBS.getPosT(t)
 				drone = f_posBS.getPosT(t)
-
 				obs_drone = drone - obs #position of the drone wrt the obstacle
 
-				if(abs(obs_drone[0,0])<=bbox[0,0]/2 and abs(obs_drone[1,0])<=bbox[1,0]/2 and abs(obs_drone[2,0])<=bbox[2,0]/2):
+				##
+				## check collisions
+				##
+
+				if abs(obs_drone[0,0]) < inflated_bbox[0,0]/2 and \
+					abs(obs_drone[1,0]) < inflated_bbox[1,0]/2 and \
+					abs(obs_drone[2,0]) < inflated_bbox[2,0]/2:
+
+					print("COLLISION")
+					print("obs_drone: ", obs_drone)
+					print("")
+					exit()
+					# print(f"f_traj={np.array(f_traj)}")
+					# print(f"f_obs={np.array(f_obs)}")
+
+					# exit()
 
 					for i in range(3):
-						obs_dronecoord=obs_drone[i,0]
-						tmp = bbox[i,0]/2
-						violation+= min(abs(tmp - obs_dronecoord), abs(obs_dronecoord - (-tmp)) )
+						obs_dronecoord = obs_drone[i,0]
+						tmp = inflated_bbox[i,0]/2
+						violation += min(abs(tmp - obs_dronecoord), abs(obs_dronecoord - (-tmp)) )
 					
 		return violation
 
@@ -1484,7 +1514,6 @@ class CostComputer():
 		return violation   
 
 	def computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(self, f_obs_n, f_traj_n):
-
 		cost = self.computeCost(f_obs_n, f_traj_n)		
 		obst_avoidance_violation = self.computeObstAvoidanceConstraintsViolation(f_obs_n, f_traj_n)
 		dyn_lim_violation = self.computeDynLimitsConstraintsViolation(f_obs_n, f_traj_n)
@@ -1492,7 +1521,6 @@ class CostComputer():
 		return cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost
 
 	def computeCost(self, f_obs_n, f_traj_n): 
-		
 		f_ppSolOrGuess=self.setUpSolverIpoptAndGetppSolOrGuess(f_obs_n, f_traj_n)
 		tmp=CostComputer.my_SolverIpopt.computeCost(f_ppSolOrGuess) 
 		return tmp

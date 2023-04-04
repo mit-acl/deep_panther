@@ -138,7 +138,7 @@ class DynCorridor:
         self.scale= [alpha_scale_obst_traj, alpha_scale_obst_traj, alpha_scale_obst_traj]
         self.slower_min=1.0/beta_faster_obst_traj   #1.2 or 2.3
         self.slower_max=1.0/beta_faster_obst_traj   #1.2 or 2.3
-        self.bbox_dynamic=[0.5, 0.5, 0.5] # this corresponds to training_obst_size defined in panther.yaml
+        self.bbox_dynamic=[0.6, 0.6, 0.3] # this corresponds to training_obst_size defined in panther.yaml
         self.bbox_static_vert=[0.4, 0.4, 4]
         self.bbox_static_horiz=[0.4, 8, 0.4]
         self.percentage_vert=0.0

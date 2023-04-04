@@ -75,7 +75,7 @@ if __name__ == "__main__":
     ### Parameters
     ###
 
-    use_test_run_params = False
+    use_test_run_params = True
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--home_dir", type=str, default="")
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     ##
 
     parser.add_argument("--epsilon_RWTA", type=float, default=0.05)
-    net_arch = [512, 512, 512]
+    net_arch = [1024, 1024, 1024, 1024]
 
     args = parser.parse_args()
 

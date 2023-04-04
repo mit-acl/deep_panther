@@ -121,9 +121,9 @@ class StudentPolicy(BasePolicy):
         print(f"last_layer_dim={last_layer_dim}") 
         print(f"action_dim={action_dim}") 
 
-        self.action_dist = SquashedDiagGaussianDistribution(action_dim)
         self.mu = nn.Linear(last_layer_dim, action_dim)
         self.tanh = nn.Tanh()
+        self.action_dist = SquashedDiagGaussianDistribution(action_dim)
         self.log_std = nn.Linear(last_layer_dim, action_dim)
 
     def _get_data(self) -> Dict[str, Any]:
@@ -214,8 +214,8 @@ class StudentPolicy(BasePolicy):
             ## Last layer
             ##
 
-            tmp = self.mu(latent_pi)
-            mean_actions = self.tanh(tmp)
+            mean_actions = self.mu(latent_pi)
+
         else: # if not using LSTM
 
             features = self.extract_features(obs_n)
@@ -226,9 +226,18 @@ class StudentPolicy(BasePolicy):
         log_std = th.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
         return mean_actions.float(), log_std, {}
 
-    def forward(self, obs_n: th.Tensor, deterministic: bool = False) -> th.Tensor:
+    def forward(self, obs_n: th.Tensor, deterministic: bool = True) -> th.Tensor:
+        
+        ##
+        ## get mean_actions
+        ##
+
         mean_actions, log_std, kwargs = self.get_action_dist_params(obs_n)
-        # Note: the action is squashed
+        
+        ##
+        ## Squashing the action
+        ##
+        
         output=self.action_dist.actions_from_params(mean_actions, log_std, deterministic=deterministic, **kwargs)
         before_shape=list(output.shape)
 
@@ -247,7 +256,7 @@ class StudentPolicy(BasePolicy):
     #     # return action and associated log prob
     #     return self.action_dist.log_prob_from_params(mean_actions, log_std, **kwargs)
 
-    def _predict(self, obs_n: th.Tensor, deterministic: bool = False) -> th.Tensor:
+    def _predict(self, obs_n: th.Tensor, deterministic: bool = True) -> th.Tensor:
         start = time.time()
         action = self.forward(obs_n, deterministic)
         end = time.time()
@@ -256,7 +265,7 @@ class StudentPolicy(BasePolicy):
 
         return action
 
-    def predictSeveral(self, obs_n, deterministic: bool = False):
+    def predictSeveral(self, obs_n, deterministic: bool = True):
 
         #Note that here below we call predict, not _predict
         self.features_extractor = self.features_extractor_class(self.observation_space)
@@ -265,7 +274,7 @@ class StudentPolicy(BasePolicy):
         acts=np.stack(acts, axis=0)
         return acts
     
-    def predictSeveralWithComputationTimeVerbose(self, obs_n, deterministic: bool = False):
+    def predictSeveralWithComputationTimeVerbose(self, obs_n, deterministic: bool = True):
 
         #Note that here below we call predict, not _predict
         self.features_extractor = self.features_extractor_class(self.observation_space)
