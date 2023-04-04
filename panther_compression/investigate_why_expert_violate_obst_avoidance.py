@@ -114,7 +114,8 @@ final_state=venv.om.getFinal_f_StateFromObservation(f_obs);
 total_time=computeTotalTime(init_state, final_state, par_v_max, par_a_max, par_factor_alloc)
 ExpertPolicy.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time)
 ExpertPolicy.my_SolverIpopt.setFocusOnObstacle(True)
-obstacles=venv.om.getObstaclesForCasadi(f_obs)
+# obstacles=venv.om.getObstaclesForCasadi(f_obs)
+obstacles=venv.om.getObstacles(f_obs)
 ExpertPolicy.my_SolverIpopt.setObstaclesForOpt(obstacles)
 succeed=ExpertPolicy.my_SolverIpopt.optimize(True)
 
@@ -134,9 +135,15 @@ action_normalized=venv.am.normalizeAction(action)
 venv.am.assertAction(action_normalized)
 
 index_smallest_augmented_cost=venv.cost_computer.getIndexBestTraj(f_obs_n, action_normalized)
-f_traj=self.am.getTrajFromAction(action, index_smallest_augmented_cost)
+f_traj=venv.am.getTrajFromAction(action, index_smallest_augmented_cost)
 
 print("master_branch_traj_expert", f_traj)
+
+# master_branch_traj_expert [[ 1.41127246e+00  4.94472252e-03 -1.27355942e-01  2.47619666e+00
+#    1.02452388e-02 -3.66909040e-01  3.53830662e+00  9.06570997e-03
+#   -6.15215741e-01  4.95261100e+00  6.43649333e-04 -7.55919312e-01
+#   -1.30022058e-01 -9.23626866e-02 -2.67463558e-01 -5.36647659e-02
+#   -6.44980348e-01  3.07028260e+00]]
 
 exit()
 
