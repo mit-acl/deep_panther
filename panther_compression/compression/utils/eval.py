@@ -28,7 +28,6 @@ def evaluate_policy(policy, venv, log_path, eval_episodes = 30):
     trajectories = generate_trajectories(
         policy,
         venv,
-        sample_until=rollout.min_episodes(eval_episodes), 
         deterministic_policy=True,
     )
     stats, descriptors = rollout_stats(trajectories)

@@ -259,7 +259,7 @@ class MyEnvironment(gym.Env):
     # self.my_SolverIpopt.setObstaclesForOpt(self.om.getObstacles(self.previous_f_observation));
     # cost=self.my_SolverIpopt.computeCost(self.am.f_traj2f_ppSolOrGuess(f_traj)) #TODO: this cost does not take into accout the constraints right now
     # cost=self.cost_computer.computeCost(self.previous_f_obs_n, f_traj_n)
-    # constraints_violation=self.cost_computer.computeConstraintsViolation(self.previous_f_obs_n, f_traj_n)
+    constraints_violation=self.cost_computer.computeObstAvoidanceConstraintsViolation(self.previous_f_obs_n, f_traj_n)
     # augmented_cost=self.cost_computer.computeAugmentedCost(self.previous_f_obs_n, f_traj_n)
     # self.printwithNameAndColor(f"augmented cost={augmented_cost}")
 

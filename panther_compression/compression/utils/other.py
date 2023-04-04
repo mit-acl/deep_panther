@@ -249,7 +249,7 @@ class ObstaclesManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.random_pos=np.array([[random.uniform(-4.0, 4.0)],[random.uniform(-4.0, 4.0)],[random.uniform(1.0,1.0)]]);
+		self.random_pos=np.array([[random.uniform(-10.0, 10.0)],[random.uniform(-10.0, 10.0)],[random.uniform(1.0,1.0)]]);
 		self.random_offset=random.uniform(0.0, 10*math.pi)
 		self.random_scale=np.array([[random.uniform(0.5, 4.0)],[random.uniform(0.5, 4.0)],[random.uniform(0.5, 4.0)]]);
 		#self.random_pos=np.array([[2.5],[1.0],[1.0]]);
@@ -276,7 +276,7 @@ class ObstaclesManager():
 				# w_ctrl_pts_ob.append(np.array([[2],[2],[2]]))
 
 			# bbox_ob=np.array([[0.5],[0.5], [0.5]]);
-			bbox_inflated=np.array([[0.8],[0.8], [0.8]])+2*self.params["drone_radius"]*np.ones((3,1));
+			bbox_inflated=np.array([[0.6],[0.6], [0.2]])+2*self.params["drone_radius"]*np.ones((3,1));
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 		return w_obs;
 
@@ -1306,28 +1306,19 @@ class CostComputer():
 		for i in range(self.num_obstacles):
 			f_posObs_ctrl_pts=listOf3dVectors2numpy3Xmatrix(CostComputer.om.getCtrlPtsObstacleI(f_obs, i))
 			bbox=CostComputer.om.getBboxInflatedObstacleI(f_obs, i)
-			# print(f"f_posObs_ctrl_pts={f_posObs_ctrl_pts}")
-			# print(f"f_posBS.ctrl_pts={f_posBS.ctrl_pts}")
-
-			# start=time.time();
-
-			f_posObstBS = MyClampedUniformBSpline(0.0, CostComputer.par.fitter_total_time, CostComputer.par.fitter_deg_pos, 3, CostComputer.par.fitter_num_seg, f_posObs_ctrl_pts, True) 
-
-			# print(f" compute MyClampedUniformBSpline creation took {(time.time() - start)*(1e3)} ms")
-
-
-			# print("\n============")
-			# start=time.time();
-
+			f_posObstBS = MyClampedUniformBSpline(0.0, CostComputer.par.fitter_total_time, CostComputer.par.fitter_deg_pos, 3, CostComputer.par.fitter_num_seg, f_posObs_ctrl_pts, True)
 			#TODO: move num to a parameter
 			for t in np.linspace(start=0.0, stop=total_time, num=15).tolist():
 
-				obs = f_posObstBS.getPosT(t);
-				drone = f_posBS.getPosT(t);
+				obs = f_posObstBS.getPosT(t)
+				drone = f_posBS.getPosT(t)
 
 				obs_drone = drone - obs #position of the drone wrt the obstacle
 
 				if(abs(obs_drone[0,0])<=bbox[0,0]/2 and abs(obs_drone[1,0])<=bbox[1,0]/2 and abs(obs_drone[2,0])<=bbox[2,0]/2):
+
+					print("collision")
+					exit()
 
 					for i in range(3):
 						obs_dronecoord=obs_drone[i,0]

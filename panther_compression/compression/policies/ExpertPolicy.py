@@ -104,7 +104,6 @@ class ExpertPolicy(object):
         succeed=ExpertPolicy.my_SolverIpopt.optimize(True);
         info=ExpertPolicy.my_SolverIpopt.getInfoLastOpt();
 
-        
         if(succeed==False):
             self.printFailedOpt(info);
             # exit();
