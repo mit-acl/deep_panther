@@ -656,10 +656,10 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
     // std::cout << "SERVICE found" << std::endl;
     // std::cout << "pauseGazebo_.exists()= " << pauseGazebo_.exists() << std::endl;
 
-    // if (par_.pause_time_when_replanning)
-    // {
-    //   pauseTime();
-    // }
+    if (par_.pause_time_when_replanning)
+    {
+      pauseTime();
+    }
 
     //
     // Optimization
@@ -672,12 +672,15 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
         panther_ptr_->replan(edges_obstacles, best_solution_expert, best_solutions_expert, best_solution_student,
                              best_solutions_student, guesses, splines_fitted, planes, log, k_index_end);
 
-    // if (par_.pause_time_when_replanning)
-    // {
-    //   unpauseTime();
-    // }
+    if (par_.pause_time_when_replanning)
+    {
+      unpauseTime();
+    }
 
+    //
     // converting best_solution to pwp
+    //
+
     mt::PieceWisePol pwp;
     si::solOrGuess best_solution;
     par_.use_student ? best_solution = best_solution_student : best_solution = best_solution_expert;

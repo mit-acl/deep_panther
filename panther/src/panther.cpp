@@ -268,12 +268,12 @@ void Panther::updateTrajObstacles(mt::dynTraj traj)
 
   double time_now = ros::Time::now().toSec();
 
-  // std::cout << on_blue << bold << "in  updateTrajObstacles(), waiting to lock mtx_trajs_" << reset << std::endl;
   mtx_trajs_.lock();
 
-  ///////////////////////////////////////
-  ///////////////// ADD IT TO THE MAP IF IT DOES NOT EXIST
-  ///////////////////////////////////////
+  //
+  // ADD IT TO THE MAP IF IT DOES NOT EXIST
+  //
+
   std::vector<mt::dynTrajCompiled>::iterator obs_ptr =
       std::find_if(trajs_.begin(), trajs_.end(),
                    [=](const mt::dynTrajCompiled& traj_compiled) { return traj_compiled.id == traj.id; });

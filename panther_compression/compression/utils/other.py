@@ -294,15 +294,15 @@ class ObstaclesManager():
 		w_pos_obstacle = []
 		center = np.zeros((3,1))
 		for i in range(self.num_obs):
-			# radius_obstacle_pos = random.uniform(self.goal_seen_radius, (self.goal_seen_radius / 2) *0.8)
-			radius_obstacle_pos = 7.5
+			radius_obstacle_pos = random.uniform(self.goal_seen_radius*1.5, (self.x_max / 2))
+			# radius_obstacle_pos = 7.5
 			std_deg = 30
 			theta_obs = random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
 			height_g_term = random.uniform(self.params["training_env_z_min"], self.params["training_env_z_max"])
 			height_obstacle = height_g_term + random.uniform(-0.25, 0.25)
 			w_pos_obstacle.append(center + np.array([[radius_obstacle_pos*math.cos(theta_obs)],[radius_obstacle_pos*math.sin(theta_obs)],[height_obstacle]]))
 		
-		w_pos_g_term = center + np.array([[15], [0], [random.uniform(self.z_min, self.z_max)]])
+		w_pos_g_term = center + np.array([[random.uniform((self.x_max / 2)*1.5, self.x_max)], [0], [random.uniform(self.z_min, self.z_max)]])
 
 		return w_pos_obstacle, w_pos_g_term
 	
