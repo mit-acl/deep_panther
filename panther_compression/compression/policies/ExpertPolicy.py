@@ -154,8 +154,8 @@ class ExpertPolicy(object):
         num_jobs=min(multiprocessing.cpu_count(),len(obs_n)); #Note that the class variable my_SolverIpopt will be created once per job created (but only in the first call to predictSeveral I think)
 
         output = Parallel(n_jobs=num_jobs)(map(delayed(my_func), list(range(len(obs_n))))) #, prefer="threads"
-        acts = np.array(output)[:,0]
-        computation_times = np.array(output)[:,2]
+        acts = [row[0] for row in output]
+        computation_times = [row[2] for row in output]
 
         acts = np.stack(acts, axis=0)
         computation_times=np.stack(computation_times, axis=0)
