@@ -178,6 +178,7 @@ class MyEnvironment(gym.Env):
     ### MOVE THE ENVIRONMENT
     ###
 
+
     ##
     ## Update state
     ##
@@ -368,18 +369,30 @@ class MyEnvironment(gym.Env):
       yaw_dot=self.om.getyaw_dot(f_obs)
 
       ##
-      ## get g_term
+      ## get g_term 
       ##
 
-      f_g=self.om.getf_g(f_obs)
+      f_g = self.om.getf_g(f_obs)
       point_msg=PointStamped()
 
-      point_msg.header.frame_id = "world"
+      # Kota memo if you use get_policies_reward.py, and visualize goal marker in rviz (in generate_trajectories_for_benchmark), you might see the marker is off of the correct positoin
+      # but when you actually train them and record bags the goal marker appears correctly in rviz. 
+      # I am not sure why, but one workaround is to use the world frame as commented out as below
+
+      point_msg.header.frame_id = "f"
+      # point_msg.header.frame_id = "world"
+      w_g = w_state.w_T_f*f_g
       point_msg.header.stamp = time_now
-      w_g = w_state.w_T_f * f_g
-      point_msg.point.x=w_g[0,0]
-      point_msg.point.y=w_g[1,0]
-      point_msg.point.z=w_g[2,0]
+      point_msg.point.x=f_g[0,0]
+      point_msg.point.y=f_g[1,0]
+      point_msg.point.z=f_g[2,0]
+
+      # point_msg.point.x=w_g[0,0]
+      # point_msg.point.y=w_g[1,0]
+      # point_msg.point.z=w_g[2,0]
+
+      # print(w_g)
+
       self.bag.write('/g', point_msg, time_now)
 
       ##
@@ -401,20 +414,22 @@ class MyEnvironment(gym.Env):
         for t_interm in np.linspace(t0, tf, num=num_samples).tolist():
 
           marker_msg=Marker()
+          # marker_msg.header.frame_id = "f"
           marker_msg.header.frame_id = "world"
           marker_msg.header.stamp = time_now
           marker_msg.ns = "ns"
           marker_msg.id = id_sample
           marker_msg.type = marker_msg.CUBE
           marker_msg.action = marker_msg.ADD
-          pos=bspline_obs_i.getPosT(t_interm)
-          w_pos_obst = w_state.w_T_f * pos
-          marker_msg.pose.position.x = w_pos_obst[0]
-          marker_msg.pose.position.y = w_pos_obst[1]
-          marker_msg.pose.position.z = w_pos_obst[2]
+          pos = bspline_obs_i.getPosT(t_interm)
+          w_pos = w_state.w_T_f*pos
           # marker_msg.pose.position.x = pos[0]
           # marker_msg.pose.position.y = pos[1]
           # marker_msg.pose.position.z = pos[2]
+          marker_msg.pose.position.x = w_pos[0]
+          marker_msg.pose.position.y = w_pos[1]
+          marker_msg.pose.position.z = w_pos[2]
+          # for orientation, if you want to use f frame, need to rotate accordingly
           marker_msg.pose.orientation.x = 0.0
           marker_msg.pose.orientation.y = 0.0
           marker_msg.pose.orientation.z = 0.0
@@ -440,11 +455,11 @@ class MyEnvironment(gym.Env):
 
       tf_stamped=TransformStamped()
       tf_stamped.header.frame_id="world"
-      tf_stamped.child_frame_id="f"
       tf_stamped.header.stamp=time_now
-      rotation_ros, translation_ros=TfMatrix2RosQuatAndVector3(w_state.w_T_f)
-      tf_stamped.transform.translation=translation_ros
-      tf_stamped.transform.rotation=rotation_ros
+      tf_stamped.child_frame_id="f"
+      rotation_ros, translation_ros = TfMatrix2RosQuatAndVector3(w_state.w_T_f)
+      tf_stamped.transform.translation = translation_ros
+      tf_stamped.transform.rotation = rotation_ros
       tf_msg=TFMessage()
       tf_msg.transforms.append(tf_stamped)
       self.bag.write('/tf', tf_msg, time_now)
@@ -471,6 +486,7 @@ class MyEnvironment(gym.Env):
         traj_msg.header.stamp=time_now
 
         for t_i in np.arange(t0, tf, (tf-t0)/10.0):
+
           pose_stamped=PoseStamped()
           pose_stamped.header.frame_id="world"
           pose_stamped.header.stamp=time_now
@@ -482,7 +498,6 @@ class MyEnvironment(gym.Env):
           traj_msg.poses.append(pose_stamped)
 
         self.bag.write('/path'+str(i), traj_msg, time_now)
-
 
       #When using multiple environments, opening bag in constructor and closing it in _del leads to unindexed bags
       self.bag.close()

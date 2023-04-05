@@ -49,11 +49,7 @@ for name_bag in name_bags:
                 for i in range(len(msg.transforms)):
                     msg.transforms[i].header.stamp=t_corrected
                 outbag.write(topic, msg, t_corrected) #msg.transforms[0].header.stamp
-            elif topic == "/obs0": #MarkerArray
-                for i in range(len(msg.markers)):
-                    msg.markers[i].header.stamp=t_corrected
-                outbag.write(topic, msg, t_corrected)
-            elif topic == "/obs1": #MarkerArray
+            elif topic == "/obs" or topic == "/obs0" or topic == "obs1": #MarkerArray
                 for i in range(len(msg.markers)):
                     msg.markers[i].header.stamp=t_corrected
                 outbag.write(topic, msg, t_corrected)
