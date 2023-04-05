@@ -231,7 +231,7 @@ class ObstaclesManager():
 		## if random_num_of_obstacles_in_training is True, then we will have a random number of obstacles
 		##
 
-		self.num_obs = random.randint(1, self.num_obs) if self.random_num_of_obstacles_in_training else self.num_obs
+		# self.num_obs = random.randint(1, self.num_obs) if self.random_num_of_obstacles_in_training else self.num_obs
 
 		##
 		## create self.random_pos with the size of (3xself.num_obs)
@@ -294,14 +294,15 @@ class ObstaclesManager():
 		w_pos_obstacle = []
 		center = np.zeros((3,1))
 		for i in range(self.num_obs):
-			radius_obstacle_pos = random.uniform(self.goal_seen_radius, self.x_max*0.8)
+			# radius_obstacle_pos = random.uniform(self.goal_seen_radius, (self.goal_seen_radius / 2) *0.8)
+			radius_obstacle_pos = 7.5
 			std_deg = 30
 			theta_obs = random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
 			height_g_term = random.uniform(self.params["training_env_z_min"], self.params["training_env_z_max"])
 			height_obstacle = height_g_term + random.uniform(-0.25, 0.25)
 			w_pos_obstacle.append(center + np.array([[radius_obstacle_pos*math.cos(theta_obs)],[radius_obstacle_pos*math.sin(theta_obs)],[height_obstacle]]))
 		
-		w_pos_g_term = center + np.array([[random.uniform(0, self.x_max)], [0], [random.uniform(self.z_min, self.z_max)]])
+		w_pos_g_term = center + np.array([[15], [0], [random.uniform(self.z_min, self.z_max)]])
 
 		return w_pos_obstacle, w_pos_g_term
 	
@@ -1486,11 +1487,7 @@ class CostComputer():
 					abs(obs_drone[2,0]) < inflated_bbox[2,0]/2:
 
 					print("COLLISION")
-					print("f_obs", f_obs)
-					print("f_traj", f_traj)
-					exit()
-					# print(f"f_traj={np.array(f_traj)}")
-					# print(f"f_obs={np.array(f_obs)}")
+					print(f"t={t}/{min_total_time}")
 
 					# exit()
 

@@ -182,7 +182,7 @@ class MyEnvironment(gym.Env):
     ## Update state
     ##
 
-    self.w_state= State(w_posBS.getPosT(self.training_dt), w_posBS.getVelT(self.training_dt), w_posBS.getAccelT(self.training_dt), \
+    self.w_state = State(w_posBS.getPosT(self.training_dt), w_posBS.getVelT(self.training_dt), w_posBS.getAccelT(self.training_dt), \
                         w_yawBS.getPosT(self.training_dt), w_yawBS.getVelT(self.training_dt))
 
     ##
@@ -206,7 +206,7 @@ class MyEnvironment(gym.Env):
     f_observation_n=self.om.normalizeObservation(f_observation)
 
     ##
-    ## Calculate distance 
+    ## Calculate distance
     ##
 
     dist_current_2gterm=np.linalg.norm(self.w_state.w_pos-self.gm.get_w_GTermPos()) #From the current position to the goal
@@ -287,7 +287,7 @@ class MyEnvironment(gym.Env):
     if(isinstance(self.constant_obstacle_pos, type(None)) and isinstance(self.constant_gterm_pos, type(None))):
       if np.random.uniform(0, 1) < 1 - self.par.prob_choose_cross:
         self.gm.newRandomPosFarFrom_w_Position(self.w_state.w_pos)
-        self.gm.newRandomPos()
+        # self.gm.newRandomPos()
       else:
         w_pos_obstacle, w_pos_g_term = self.obsm.getObsAndGtermToCrossPath()
         self.obsm.setPos(w_pos_obstacle)
@@ -300,6 +300,7 @@ class MyEnvironment(gym.Env):
       self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
     else:
       self.w_obstacles=self.obsm.getFutureWPosStaticObstacles()
+
     f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles)
     f_observation_n=self.om.normalizeObservation(f_observation)
     self.previous_f_observation=self.om.denormalizeObservation(f_observation_n)
@@ -345,16 +346,16 @@ class MyEnvironment(gym.Env):
       self.bag=rosbag.Bag(self.name_bag, option)
 
       f_obs=self.previous_f_observation
-      w_state=self.w_state
+      w_state = self.w_state
 
       f_action= self.am.denormalizeAction(f_action_n)
 
       w_posBS_list=[]
       w_yawBS_list=[]
 
-      for i in range( np.shape(f_action)[0]): #For each row of action   
-         f_traj=self.am.getTrajFromAction(f_action, i)
-         w_posBS, w_yawBS= self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
+      for i in range( np.shape(f_action)[0] ): #For each row of action   
+         f_traj = self.am.getTrajFromAction(f_action, i)
+         w_posBS, w_yawBS = self.am.f_trajAnd_w_State2wBS(f_traj, w_state)
          w_posBS_list.append(w_posBS)
          w_yawBS_list.append(w_yawBS)
 
@@ -365,16 +366,27 @@ class MyEnvironment(gym.Env):
       f_v=self.om.getf_v(f_obs)
       f_a=self.om.getf_a(f_obs)
       yaw_dot=self.om.getyaw_dot(f_obs)
+
+      ##
+      ## get g_term
+      ##
+
       f_g=self.om.getf_g(f_obs)
-      obstacles=self.om.getObstacles(f_obs)
       point_msg=PointStamped()
 
-      point_msg.header.frame_id = "f"
+      point_msg.header.frame_id = "world"
       point_msg.header.stamp = time_now
-      point_msg.point.x=f_g[0,0]
-      point_msg.point.y=f_g[1,0]
-      point_msg.point.z=f_g[2,0]
+      w_g = w_state.w_T_f * f_g
+      point_msg.point.x=w_g[0,0]
+      point_msg.point.y=w_g[1,0]
+      point_msg.point.z=w_g[2,0]
+      self.bag.write('/g', point_msg, time_now)
 
+      ##
+      ## get obstacles
+      ##
+
+      obstacles=self.om.getObstacles(f_obs)
       for i in range(len(obstacles)):
 
         marker_array_msg=MarkerArray()
@@ -396,6 +408,10 @@ class MyEnvironment(gym.Env):
           marker_msg.type = marker_msg.CUBE
           marker_msg.action = marker_msg.ADD
           pos=bspline_obs_i.getPosT(t_interm)
+          # w_pos_obst = w_state.w_T_f * pos
+          # marker_msg.pose.position.x = w_pos_obst[0]
+          # marker_msg.pose.position.y = w_pos_obst[1]
+          # marker_msg.pose.position.z = w_pos_obst[2]
           marker_msg.pose.position.x = pos[0]
           marker_msg.pose.position.y = pos[1]
           marker_msg.pose.position.z = pos[2]
@@ -418,16 +434,24 @@ class MyEnvironment(gym.Env):
 
         self.bag.write(f'/obs{i}', marker_array_msg, time_now)
 
+      ##
+      ## tf
+      ##
+
       tf_stamped=TransformStamped()
       tf_stamped.header.frame_id="world"
-      tf_stamped.header.stamp=time_now
       tf_stamped.child_frame_id="f"
+      tf_stamped.header.stamp=time_now
       rotation_ros, translation_ros=TfMatrix2RosQuatAndVector3(w_state.w_T_f)
       tf_stamped.transform.translation=translation_ros
       tf_stamped.transform.rotation=rotation_ros
-
       tf_msg=TFMessage()
       tf_msg.transforms.append(tf_stamped)
+      self.bag.write('/tf', tf_msg, time_now)
+
+      ##
+      ## get trajectory
+      ##
 
       for i in range(len(w_posBS_list)):
 
@@ -459,8 +483,6 @@ class MyEnvironment(gym.Env):
 
         self.bag.write('/path'+str(i), traj_msg, time_now)
 
-      self.bag.write('/g', point_msg, time_now)
-      self.bag.write('/tf', tf_msg, time_now)
 
       #When using multiple environments, opening bag in constructor and closing it in _del leads to unindexed bags
       self.bag.close()

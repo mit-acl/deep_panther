@@ -5,4 +5,4 @@ python concatenate_bags.py "training*.bag"
 roscore &
 sleep 0.5
 rosrun rviz rviz -d "./rviz_cfgs/rviz_compression.rviz" &
-rosbag play training_concatenated.bag -r 0.3
+rosbag play training_concatenated.bag -r 0.1

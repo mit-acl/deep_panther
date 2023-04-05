@@ -27,6 +27,14 @@ test_venv.seed(seed)
 test_venv.env_method("set_len_ep", (test_environment_max_steps)) 
 
 ##
+## record bag
+##
+
+for i in range(num_envs):
+    test_venv.env_method("setID", i, indices=[i]) 
+    test_venv.env_method("startRecordBag", indices=[i]) 
+
+##
 ## Load and evaluate the student policy
 ##
 
@@ -61,8 +69,8 @@ print("\n")
 
 string = "{}:\n Avg. Cost: {},\n Computation Time: {}ms,\n Success Rate: {}%,\n Obst. Avoidance Failure Rate: {}%,\n Trans Dyn. Limit Failure Rate: {}%,\n Yaw Dyn. Limit Failure Rate: {}%\n"
 
-student_cost = round(student_stats["mean_cost"],2)
+# student_cost = round(student_stats["mean_cost"],2)
 expert_cost = round(expert_stats["mean_cost"],2)
 
-print(string.format( "Student", student_cost, round(student_stats["mean_computation_time"],4), round(student_stats["success_rate"],2), round(student_stats["obs_avoidance_failure_rate"],2), round(student_stats["trans_dyn_limit_failure_rate"],2), round(student_stats["yaw_dyn_limit_failure_rate"],2)))
+# print(string.format( "Student", student_cost, round(student_stats["mean_computation_time"],4), round(student_stats["success_rate"],2), round(student_stats["obs_avoidance_failure_rate"],2), round(student_stats["trans_dyn_limit_failure_rate"],2), round(student_stats["yaw_dyn_limit_failure_rate"],2)))
 print(string.format( "Expert", expert_cost, round(expert_stats["mean_computation_time"],2), round(expert_stats["success_rate"],2), round(expert_stats["obs_avoidance_failure_rate"],2), round(expert_stats["trans_dyn_limit_failure_rate"],2), round(expert_stats["yaw_dyn_limit_failure_rate"],2)))
