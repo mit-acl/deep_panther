@@ -9,7 +9,7 @@ replanning_trigger_time_expert: 0.5 #[seconds]
 replanning_lookahead_time: 2.0 #[seconds] #distance in time space = t_in - t_1 in Table I
 use_closed_form_yaw_student: false #If false, the NN will predict this closed form for the yaw angle
 make_yaw_NN: false
-prob_choose_cross: 0.9 # how much you wanna choose cross obstacle in training [0.1]
+prob_choose_cross: 1.0 # how much you wanna choose cross obstacle in training [0.1]
 # training env space size
 training_env_x_max: 10.0
 training_env_x_min: -10.0
@@ -32,7 +32,7 @@ margin_ydot_factor: 1.1 #relazation factor for training constraints used in Obse
 margin_yaw_factor: 1.0 #relazation factor for training constraints used in ActionManager()
 training_obst_size: [0.6, 0.6, 0.2] #obstacle size in training env
 use_dynamic_obst_in_training: true
-random_num_of_obstacles_in_training: true # if this is True, # of obstacles is [1,num_of_obstacles_in_training]
+random_num_of_obstacles_in_training: false # if this is True, # of obstacles is [1,num_of_obstacles_in_training]
 num_of_obstacles_in_training: 1 # this should not be bigger than num_max_of_obst defined in params_casadi.yaml(main.m)
 use_clipping: False
 use_hw_training_env: False # (1) observation of obstacles are noised
@@ -133,7 +133,7 @@ c_yaw_smooth: 0.0            #weight for the optimization
 c_fov: 1000.0                 #weight for the optimization
 c_final_pos: 100.0           #weight for the optimization
 c_final_yaw: 0.01              #weight for the optimization
-c_total_time: 10             #weight for the optimization
+c_total_time: 80             #weight for the optimization
 lambda_obst_avoidance_violation: 1.0 #To compute the augmented cost
 lambda_dyn_lim_violation: 1.0 #To compute the augmented cost
 num_of_intervals: 6 #nlopt/num_pol in rmader.yaml (TODO: could be the same as num_seg in params_casadi.yaml)
