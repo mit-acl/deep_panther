@@ -28,6 +28,14 @@ test_venv.seed(seed)
 test_venv.env_method("set_len_ep", (test_environment_max_steps)) 
 
 ##
+## record bag
+##
+
+for i in range(num_envs):
+    test_venv.env_method("setID", i, indices=[i]) 
+    test_venv.env_method("startRecordBag", indices=[i]) 
+
+##
 ## Evaluate the reward of the expert
 ##
 

@@ -1,6 +1,7 @@
 import pandas as pd
 from imitation.data import types, rollout
 from imitation.data.rollout import generate_trajectories, rollout_stats
+from statistics import mean
 
 def compute_success_rate(trajectories, eval_episodes, venv):
     nominal_ep_len = venv.get_attr("len_episode")[0]
@@ -23,20 +24,42 @@ def compute_success(trajectories, venv):
             success.append(False)
     return success
 
-def evaluate_policy(policy, venv, log_path, eval_episodes = 30):
+def evaluate_policy(policy, venv, log_path, eval_episodes = 50):
     # venv.env_method(env_dist_f_call, (disturbance))
     trajectories = generate_trajectories(
         policy,
         venv,
         deterministic_policy=True,
+        total_demos_per_round=eval_episodes
     )
     stats, descriptors = rollout_stats(trajectories)
     descriptors["success"] = compute_success(trajectories, venv)
-    stats["success_rate"] = float(sum(descriptors["success"]))/float(eval_episodes)
+    stats["success_rate"] = float(sum(descriptors["success"]))/float(stats['n_traj'])
     
     logs = pd.DataFrame(descriptors)
     # logs = logs.assign(disturbance = disturbance)
     # save logs 
     if log_path is not None:
         logs.to_pickle(log_path+".pkl")
+    return stats
+
+def evaluate_policy_for_benchmark(policy, venv, log_path, eval_episodes = 50):
+    # venv.env_method(env_dist_f_call, (disturbance))
+    total_obs_avoidance_failure, total_trans_dyn_limit_failure, \
+    total_yaw_dyn_limit_failure, total_failure, computation_times, costs, num_demos \
+    = generate_trajectories_for_benchmark(
+        policy,
+        venv,
+        deterministic_policy=True,
+        total_demos=eval_episodes
+    )
+
+    stats = {}
+    stats["mean_cost"] = mean(costs)
+    stats["mean_computation_time"] = mean(computation_times) * 1000 # ms
+    stats["success_rate"] = (1 - float(total_failure) / num_demos) * 100
+    stats["obs_avoidance_failure_rate"] = float(total_obs_avoidance_failure) / num_demos * 100
+    stats["trans_dyn_limit_failure_rate"] = float(total_trans_dyn_limit_failure) / num_demos * 100
+    stats["yaw_dyn_limit_failure_rate"] = float(total_yaw_dyn_limit_failure) / num_demos * 100
+
     return stats
