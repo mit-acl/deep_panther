@@ -75,7 +75,7 @@ if __name__ == "__main__":
     ### Parameters
     ###
 
-    use_test_run_params = True
+    use_test_run_params = False
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--home_dir", type=str, default="")
