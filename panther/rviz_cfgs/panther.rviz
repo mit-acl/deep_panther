@@ -68,9 +68,23 @@ Visualization Manager:
       Frame Timeout: 1000
       Frames:
         All Enabled: false
+        SQ01s:
+          Value: true
+        SQ01s/camera_depth_optical_frame:
+          Value: true
+        SQ01s/camera_link:
+          Value: true
+        SQ02s:
+          Value: true
+        SQ02s/camera_depth_optical_frame:
+          Value: true
+        SQ02s/camera_link:
+          Value: true
         obs_4000:
           Value: false
         obs_4001:
+          Value: true
+        vicon:
           Value: true
         world:
           Value: false
@@ -86,6 +100,15 @@ Visualization Manager:
             {}
           obs_4001:
             {}
+          vicon:
+            SQ01s:
+              SQ01s/camera_link:
+                SQ01s/camera_depth_optical_frame:
+                  {}
+            SQ02s:
+              SQ02s/camera_link:
+                SQ02s/camera_depth_optical_frame:
+                  {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -159,7 +182,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/fov
       Name: FOV
       Namespaces:
-        {}
+        marker_fov: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -167,7 +190,7 @@ Visualization Manager:
       Marker Topic: /SQ02s/panther/fov
       Name: FOV
       Namespaces:
-        {}
+        marker_fov: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -301,7 +324,15 @@ Visualization Manager:
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /SQ01s/panther/best_solution_student
-      Name: BestSolutionStu
+      Name: BestSolutionStuSQ01s
+      Namespaces:
+        SQ01s_best_solution_student0: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /SQ02s/panther/best_solution_student
+      Name: BestSolutionStuSQ02s
       Namespaces:
         {}
       Queue Size: 100
@@ -439,27 +470,35 @@ Visualization Manager:
       frame: obs_4003
       line_width: 0.03999999910593033
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /SQ01s/panther/obstacles
-      Name: Marker
+      Name: ObsEdgeSQ01s
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /SQ02s/panther/obstacles
-      Name: Marker
+      Name: ObsEdgeSQ02s
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /SQ01s/panther/actual_traj
       Name: SQ01sActualTraj
       Namespaces:
-        {}
+        ActualTraj_SQ01s: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /SQ02s/panther/actual_traj
+      Name: SQ02sActualTraj
+      Namespaces:
+        ActualTraj_SQ02s: true
       Queue Size: 100
       Value: true
     - Alpha: 1
