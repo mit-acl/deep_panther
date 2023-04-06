@@ -117,6 +117,15 @@ class MyEnvironment(gym.Env):
     # self.printwithName(f"Ep. len updated to {self.len_episode } [steps].")
     self.reset()
 
+  def get_num_obs(self):
+    return self.obsm.num_obs
+  
+  def get_num_max_of_obst(self):
+    return self.obsm.params["num_max_of_obst"]
+
+  def get_CPs_per_obstacle(self):
+    return self.obsm.getCPsPerObstacle()
+    
   def step(self, f_action_n):
 
     """

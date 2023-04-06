@@ -231,7 +231,7 @@ class ObstaclesManager():
 		## if random_num_of_obstacles_in_training is True, then we will have a random number of obstacles
 		##
 
-		# self.num_obs = random.randint(1, self.num_obs) if self.random_num_of_obstacles_in_training else self.num_obs
+		self.num_obs = random.randint(1, self.num_obs) if self.random_num_of_obstacles_in_training else self.num_obs
 
 		##
 		## create self.random_pos with the size of (3xself.num_obs)
@@ -295,7 +295,6 @@ class ObstaclesManager():
 		center = np.zeros((3,1))
 		for i in range(self.num_obs):
 			radius_obstacle_pos = random.uniform(self.goal_seen_radius*1.5, (self.x_max / 2))
-			# radius_obstacle_pos = 7.5
 			std_deg = 30
 			theta_obs = random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
 			height_g_term = random.uniform(self.params["training_env_z_min"], self.params["training_env_z_max"])
@@ -307,6 +306,7 @@ class ObstaclesManager():
 		return w_pos_obstacle, w_pos_g_term
 	
 	def getFutureWPosStaticObstacles(self):
+
 		w_obs=[]
 		for i in range(self.num_obs):
 			w_ctrl_pts_ob=np.array([[],[],[]])
@@ -317,7 +317,13 @@ class ObstaclesManager():
 			bbox_inflated= self.bbox_inflated
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 		
-		# if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
+		##
+		## VENV has a fixed size of observation space, so need to add dummy obsstacles
+		## For expert we can just use these dummy-included obstracles, but for student we need to get rid of 
+		## these dummy obstacles. Otherwise LSTM always gets the same size of observation
+		## if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
+		##
+		
 		if self.num_obs < self.params["num_max_of_obst"]:
 			for i in range(self.params["num_max_of_obst"] - self.num_obs):
 				w_obs.append(w_obs[-1])
@@ -325,6 +331,7 @@ class ObstaclesManager():
 		return w_obs
 
 	def getFutureWPosDynamicObstacles(self,t):
+
 		w_obs=[]
 		for i in range(self.num_obs):
 			trefoil=Trefoil(pos=self.random_pos[i], scale=self.random_scale, offset=self.random_offset, slower=1.5)
@@ -337,7 +344,13 @@ class ObstaclesManager():
 			bbox_inflated= self.bbox_inflated
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 
-		# if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
+		##
+		## VENV has a fixed size of observation space, so need to add dummy obsstacles
+		## For expert we can just use these dummy-included obstracles, but for student we need to get rid of 
+		## these dummy obstacles. Otherwise LSTM always gets the same size of observation
+		## if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
+		##
+
 		if self.num_obs < self.params["num_max_of_obst"]:
 			for i in range(self.params["num_max_of_obst"] - self.num_obs):
 				w_obs.append(w_obs[-1])
@@ -1485,11 +1498,6 @@ class CostComputer():
 				if abs(obs_drone[0,0]) < inflated_bbox[0,0]/2 and \
 					abs(obs_drone[1,0]) < inflated_bbox[1,0]/2 and \
 					abs(obs_drone[2,0]) < inflated_bbox[2,0]/2:
-
-					print("COLLISION")
-					print(f"t={t}/{min_total_time}")
-
-					# exit()
 
 					for i in range(3):
 						obs_dronecoord = obs_drone[i,0]

@@ -4,6 +4,7 @@
 ##
 
 import matplotlib.pyplot as plt
+import sys
 import pathlib
 import os
 import tempfile
@@ -28,13 +29,12 @@ from compression.utils.other import readPANTHERparams
 from stable_baselines3.common.env_checker import check_env
 from joblib import Parallel, delayed
 import multiprocessing
+from IPython.core import ultratb
 
 ##
 ## Coloring of the python errors, https://stackoverflow.com/a/52797444/6057617
 ##
 
-import sys
-from IPython.core import ultratb
 
 def printInBoldBlue(data_string):
     print(Style.BRIGHT+Fore.BLUE+data_string+Style.RESET_ALL)
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     train_only_supervised = False
 
     # use the existing data?
-    reuse_previous_samples = True
+    reuse_previous_samples = False
 
     # reuse the latest_policy?
     reuse_latest_policy = False

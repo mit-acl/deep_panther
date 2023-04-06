@@ -32,8 +32,8 @@ margin_ydot_factor: 1.1 #relazation factor for training constraints used in Obse
 margin_yaw_factor: 1.0 #relazation factor for training constraints used in ActionManager()
 training_obst_size: [0.6, 0.6, 0.2] #obstacle size in training env
 use_dynamic_obst_in_training: true
-random_num_of_obstacles_in_training: false # if this is True, # of obstacles is [1,num_of_obstacles_in_training]
-num_of_obstacles_in_training: 1 # this should not be bigger than num_max_of_obst defined in params_casadi.yaml(main.m)
+random_num_of_obstacles_in_training: true # if this is True, # of obstacles is [1,num_of_obstacles_in_training]
+num_of_obstacles_in_training: 2 # this should not be bigger than num_max_of_obst defined in params_casadi.yaml(main.m)
 use_clipping: False
 use_hw_training_env: False # (1) observation of obstacles are noised
 
