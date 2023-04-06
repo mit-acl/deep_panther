@@ -79,10 +79,10 @@ class DynCorridor:
         z=random.uniform(self.z_min, self.z_max)
         offset=random.uniform(-2*math.pi, 2*math.pi)
 
-        x = 3
-        y = 0
-        z = 1
-        offset = 0
+        # x = 3
+        # y = 0
+        # z = 1
+        # offset = 0
 
         slower=random.uniform(self.slower_min, self.slower_max)
         s=self.scale

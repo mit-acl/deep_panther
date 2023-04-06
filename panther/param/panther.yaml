@@ -28,7 +28,7 @@ yaw_loss_weight: 10.0
 margin_v_factor: 1.0 #relazation factor for training constraints used in ObservationManager()
 margin_a_factor: 1.0 #relazation factor for training constraints used in ObservationManager()
 # because of precision error you will see a very small violation of ydot (eg. 1.0000000002143), so it's nice to keep the margin_ydot_factor a little bit bigger
-margin_ydot_factor: 1.1 #relazation factor for training constraints used in ObservationManager()
+margin_ydot_factor: 1.5 #relazation factor for training constraints used in ObservationManager()
 margin_yaw_factor: 1.0 #relazation factor for training constraints used in ActionManager()
 training_obst_size: [0.6, 0.6, 0.2] #obstacle size in training env
 use_dynamic_obst_in_training: true
@@ -74,7 +74,7 @@ obstacle_edge_cb_duration: 1.0 #seconds
 look_teammates: false
 dist_from_gterm_to_dummy: 5.0 #[m]
 obstacle_share_cb_duration: 1.0 #seconds
-use_obstacle_share: true
+use_obstacle_share: false
 use_obstacle_shareCB: false # if it's False and use_obstacle_share is True, then an agent will publish whenever it receives obstacle's traj from tracking predictor. (which could be too frequent, so I intoroduced publishObstacleCB) 
 
 # PANTHER setting 

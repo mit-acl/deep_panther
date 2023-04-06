@@ -1265,6 +1265,7 @@ class ClosedFormYawSubstituter():
 ##
 
 class StudentCaller():
+
 	""" StudentCaller().predict() is called in panther.cpp """
 	def __init__(self, policy_path):
 		# self.student_policy=bc.reconstruct_policy(policy_path)
@@ -1294,12 +1295,6 @@ class StudentCaller():
 		f_obs=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(w_init_state, w_gterm, w_obstacles)
 		f_obs_n=self.om.normalizeObservation(f_obs)
 
-		# print(f"Going to call student with this raw sobservation={f_obs}")
-		# print(f"Which is...")
-		# self.om.printObservation(f_obs)
-
-		start = time.time()
-
 		##
         ## To work around the problem of the following error:
         ##     ValueError: Error: Unexpected observation shape (1, 43) for Box environment, please use (1, 76) or (n_env, 1, 76) for the observation shape.
@@ -1310,8 +1305,7 @@ class StudentCaller():
 		self.student_policy.features_extractor = self.student_policy.features_extractor_class(self.student_policy.observation_space)
 
 		action_normalized, info = self.student_policy.predict(f_obs_n, deterministic=True) 
-
-		action_normalized=action_normalized.reshape(self.am.getActionShape())
+		action_normalized = action_normalized.reshape(self.am.getActionShape())
 
 		##
 		## USE CLOSED FORM FOR YAW
@@ -1320,10 +1314,7 @@ class StudentCaller():
 		if(self.am.use_closed_form_yaw_student==True):
 			action_normalized=self.cfys.substituteWithClosedFormYaw(action_normalized, w_init_state, w_obstacles) #f_action_n, w_init_state, w_obstacles
 
-		end = time.time()
-		print(f" Calling the NN + Closed form yaw took {(end - start)*(1e3)} ms")
-
-		action=self.am.denormalizeAction(action_normalized)\
+		action=self.am.denormalizeAction(action_normalized)
 
 		# scale back down the acts_student
 		action[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts] = action[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts]/self.yaw_scaling
