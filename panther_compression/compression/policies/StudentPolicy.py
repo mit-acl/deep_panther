@@ -258,27 +258,27 @@ class StudentPolicy(BasePolicy):
 
     def _predict(self, obs_n: th.Tensor, deterministic: bool = True) -> th.Tensor:
         start = time.time()
-        action = self.forward(obs_n, deterministic)
+        action = self.forward(obs_n[:,:,:10+33*(self.num_obses[self.i_index])], deterministic) # hard-coded 10 and 33 for now
         end = time.time()
         self.computation_times.append(end - start)
         self.am.assertActionIsNormalized(action.cpu().numpy().reshape(self.am.getActionShape()), self.name)
 
         return action
 
-    def predictSeveral(self, obs_n, deterministic: bool = True):
+    def predictSeveral(self, obs_n, num_obses, deterministic: bool = True):
 
-        #Note that here below we call predict, not _predict
-        self.features_extractor = self.features_extractor_class(self.observation_space)
-        acts=[self.predict( obs_n[i,:], deterministic=deterministic)[0].reshape(self.am.getActionShape()) for i in range(len(obs_n))] #Note that len() returns the size along the first axis
-        
-        acts=np.stack(acts, axis=0)
+        acts, computation_time = self.predictSeveralWithComputationTimeVerbose(obs_n, num_obses)
         return acts
     
-    def predictSeveralWithComputationTimeVerbose(self, obs_n, deterministic: bool = True):
+    def predictSeveralWithComputationTimeVerbose(self, obs_n, num_obses, deterministic: bool = True):
 
         #Note that here below we call predict, not _predict
+        self.num_obses = num_obses
         self.features_extractor = self.features_extractor_class(self.observation_space)
-        acts=[self.predict( obs_n[i,:], deterministic=deterministic)[0].reshape(self.am.getActionShape()) for i in range(len(obs_n))] #Note that len() returns the size along the first axis
+        acts=[]
+        for i in range(len(obs_n)):
+            self.i_index = i
+            acts.append(self.predict( obs_n[i,:], deterministic=deterministic)[0].reshape(self.am.getActionShape()))
+        # acts=[self.predict( obs_n[i, :], deterministic=deterministic)[0].reshape(self.am.getActionShape()) for i in range(len(obs_n))] #Note that len() returns the size along the first axis
         acts=np.stack(acts, axis=0)
-
         return acts, mean(self.computation_times)
