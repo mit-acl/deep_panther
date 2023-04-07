@@ -42,7 +42,7 @@ printInBoldRed("----------------------- Student Evaluation: --------------------
 
 # DATA_POLICY_PATH = "evals/tmp_dagger/2"
 DATA_POLICY_PATH = "trained_policies/policies"
-FINAL_POLICY_NAME = "test6.pt"
+FINAL_POLICY_NAME = "test10.pt"
 n_demos = 100
 
 load_full_policy_path = os.path.join(DATA_POLICY_PATH, FINAL_POLICY_NAME)

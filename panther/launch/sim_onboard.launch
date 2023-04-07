@@ -12,7 +12,7 @@
   <arg name="gui_mission" default="false"/>
 
   <!-- <arg name="student_policy_path" default="$(find panther)/../panther_compression/trained_policies/Hung_dynamic_obstacles.pt" />  -->
-  <arg name="student_policy_path" default="$(find panther)/../panther_compression/trained_policies/policies/test4.pt" /> 
+  <arg name="student_policy_path" default="$(find panther)/../panther_compression/trained_policies/policies/test10.pt" /> 
   <!-- <arg name="student_policy_path" default="$(find panther)/../panther_compression/evals/tmp_dagger/2/intermediate_policy_round28_log9.pt" /> -->
 
   <arg name="static_planning" default="false" />  <!-- #If true, it will always plan from the same initial condition -->

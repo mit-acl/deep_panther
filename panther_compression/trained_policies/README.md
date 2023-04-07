@@ -7,3 +7,4 @@
 7. test7.pt: 1024x1024x1024 pos_loss:7e-5, 1e-4, trained for hardware. same with test6.pt but trained longer
 8. test8.pt: 1024x1024x1024x1024 pos_loss: 7e-5, 8e-5, tanh layer at the end, trained for hardware, evaluation values are pretty low!
 9. test9.pt: 1024x1024x1024 pos_loss 1e-4, yaw_loss: 2e-4, tanh layer at the end, trained for hardware
+10. test10.pt: 1024x1024x1024x1024 pos_loss: 3e-5, yaw_loss: 2e-5, LOG_STD_MAX = 20 (used to be 2), bbox [1.2, 1.2, 1.2]

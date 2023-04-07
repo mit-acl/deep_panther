@@ -858,17 +858,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
   
   mtx_trajs_.unlock();
 
-  std::cout << "[Selection] Probs of coll --> ";
-  for (int i = 0; i < all_probs.size(); i++)
-  {
-    std::cout << all_probs[i] * pow(10, 15) << "e-15,   ";
-  }
-  std::cout << std::endl;
-
-  // std::cout.precision(30);
-  // std::cout << bold << "[Selection] Chosen Trajectory " << argmax_prob_collision
-  //           << ", P(collision)= " << max_prob_collision * pow(10, 5) << "e-5" << std::endl;
-
   //
   // check if the only trajectory it has is dummy or not
   //
