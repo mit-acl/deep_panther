@@ -28,8 +28,8 @@ yaw_loss_weight: 10.0
 margin_v_factor: 1.0 #relazation factor for training constraints used in ObservationManager()
 margin_a_factor: 1.0 #relazation factor for training constraints used in ObservationManager()
 # because of precision error you will see a very small violation of ydot (eg. 1.0000000002143), so it's nice to keep the margin_ydot_factor a little bit bigger
-margin_ydot_factor: 1.5 #relazation factor for training constraints used in ObservationManager()
-margin_yaw_factor: 1.0 #relazation factor for training constraints used in ActionManager()
+margin_ydot_factor: 2.5 #relazation factor for training constraints used in ObservationManager()
+margin_yaw_factor: 2.0 #relazation factor for training constraints used in ActionManager()
 training_obst_size: [0.6, 0.6, 0.2] #obstacle size in training env
 use_dynamic_obst_in_training: true
 random_num_of_obstacles_in_training: true # if this is True, # of obstacles is [1,num_of_obstacles_in_training]

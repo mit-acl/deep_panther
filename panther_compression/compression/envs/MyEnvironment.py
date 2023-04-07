@@ -136,7 +136,7 @@ class MyEnvironment(gym.Env):
     ## Check for normalization
     ##
 
-    if(self.am.isNanAction(f_action_n) or self.am.actionIsNormalized(f_action_n)==False):
+    if self.am.isNanAction(f_action_n) or not self.am.actionIsNormalized(f_action_n):
       print(f"Nan action! Previous dist to goal: {self.prev_dist_current2goal}")
       return self.om.getNanObservation(), 0.0, True, {} #This line is added to make generate_trajectories() of rollout.py work when the expert fails 
 
@@ -146,7 +146,7 @@ class MyEnvironment(gym.Env):
     ## USE CLOSED FORM FOR YAW
     ##
 
-    if(self.par.use_closed_form_yaw_student==True):
+    if self.par.use_closed_form_yaw_student:
       f_action_n=self.cfys.substituteWithClosedFormYaw(f_action_n, self.w_state, self.w_obstacles) #f_action_n, w_init_state, w_obstacles
 
     ##
@@ -179,14 +179,13 @@ class MyEnvironment(gym.Env):
     index_smallest_augmented_cost=self.cost_computer.getIndexBestTraj(self.previous_f_obs_n, f_action_n)
 
     # self.printwithNameAndColor(f"Choosing traj_{index_smallest_augmented_cost}")
-    f_traj=self.am.getTrajFromAction(f_action, index_smallest_augmented_cost)
-    f_traj_n=self.am.getTrajFromAction(f_action_n, index_smallest_augmented_cost)
-    w_posBS, w_yawBS= self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
+    f_traj = self.am.getTrajFromAction(f_action, index_smallest_augmented_cost)
+    f_traj_n = self.am.getTrajFromAction(f_action_n, index_smallest_augmented_cost)
+    w_posBS, w_yawBS = self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
 
     ###
     ### MOVE THE ENVIRONMENT
     ###
-
 
     ##
     ## Update state
@@ -212,8 +211,8 @@ class MyEnvironment(gym.Env):
     else:
       self.w_obstacles=self.obsm.getFutureWPosStaticObstacles()
 
-    f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles)
-    f_observation_n=self.om.normalizeObservation(f_observation)
+    f_observation = self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles)
+    f_observation_n = self.om.normalizeObservation(f_observation)
 
     ##
     ## Calculate distance

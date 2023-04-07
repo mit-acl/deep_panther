@@ -18,7 +18,7 @@ from stable_baselines3.common.torch_layers import (
 from compression.utils.other import ActionManager, ObservationManager, ObstaclesManager, getPANTHERparamsAsCppStruct, readPANTHERparams
 from colorama import init, Fore, Back, Style
 # CAP the standard deviation of the actor
-LOG_STD_MAX = 2
+LOG_STD_MAX = 20
 LOG_STD_MIN = -20
 
 class StudentPolicy(BasePolicy):
@@ -265,9 +265,15 @@ class StudentPolicy(BasePolicy):
 
         return action
 
-    def predictSeveral(self, obs_n, num_obses, deterministic: bool = True):
+    def predictSeveral(self, obs_n, deterministic: bool = True):
 
-        acts, computation_time = self.predictSeveralWithComputationTimeVerbose(obs_n, num_obses)
+        self.features_extractor = self.features_extractor_class(self.observation_space)
+        acts=[]
+        for i in range(len(obs_n)):
+            self.i_index = i
+            acts.append(self.predict( obs_n[i,:], deterministic=deterministic)[0].reshape(self.am.getActionShape()))
+        # acts=[self.predict( obs_n[i, :], deterministic=deterministic)[0].reshape(self.am.getActionShape()) for i in range(len(obs_n))] #Note that len() returns the size along the first axis
+        acts=np.stack(acts, axis=0)
         return acts
     
     def predictSeveralWithComputationTimeVerbose(self, obs_n, num_obses, deterministic: bool = True):

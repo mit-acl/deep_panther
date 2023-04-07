@@ -952,7 +952,6 @@ class ActionManager():
 
 	def actionIsNormalized(self, action_normalized):
 		assert action_normalized.shape == self.getActionShape()
-
 		return np.logical_and(action_normalized >= -1, action_normalized <= 1).all()
 
 	def assertActionIsNormalized(self, action_normalized, msg_before=""):
@@ -991,6 +990,7 @@ class ActionManager():
 
 	def normalizeAction(self, action):
 		action_normalized=np.empty(action.shape)
+  
 		action_normalized[:,0:-1]=action[:,0:-1]/self.normalization_constant #Elementwise division
 		action_normalized[:,-1]=(2.0/self.fitter_total_time)*action[:,-1]-1 #Note that action[0,-1] is in [0, fitter_total_time]
 		# action_normalized[:,-1]=(2.0/1.0)*action[:,-1]-1 #Note that action[0,-1] is in [0, 1]
