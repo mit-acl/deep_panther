@@ -239,7 +239,8 @@ class StudentPolicy(BasePolicy):
         ## Squashing the action
         ##
         
-        output=self.action_dist.actions_from_params(mean_actions, log_std, deterministic=deterministic, **kwargs)
+        # output=self.action_dist.actions_from_params(mean_actions, log_std, deterministic=deterministic, **kwargs)
+        output = mean_actions
         before_shape=list(output.shape)
 
         if self.am.use_closed_form_yaw_student:
