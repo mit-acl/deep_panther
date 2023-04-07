@@ -159,7 +159,7 @@ class ExpertPolicy(object):
         
         acts = np.array(output)[:,0]
 
-        if not self.computation_times_verbose:
+        if self.computation_times_verbose:
             computation_times = np.array(output)[:,2]
             computation_times = np.stack(computation_times, axis=0)
 
