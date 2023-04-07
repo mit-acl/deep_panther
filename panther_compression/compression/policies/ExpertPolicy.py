@@ -102,7 +102,7 @@ class ExpertPolicy(object):
         if not succeed:
             self.printFailedOpt(info)
             # print("ExpertDidntSucceed (note that optimizers success/fail prompt is not ordered with env. (because it's parallelized)")
-            return self.am.getNanAction(), {"Q": 0.0} 
+            return self.am.getNanAction(), {"Q": 0.0}, computation_time
         else:
             self.printSucessOpt(info)
 
@@ -146,7 +146,7 @@ class ExpertPolicy(object):
 
     def predictSeveralWithComputationTimeVerbose(self, obs_n, deterministic=True):
 
-        self.computation_times_verbose = True
+        self.computation_times_verbose = True #This is a hack. need to get rid of this
 
         def my_func(thread_index):
             return self.predict(obs_n[thread_index,:,:], deterministic=deterministic)
@@ -154,10 +154,15 @@ class ExpertPolicy(object):
         num_jobs=min(multiprocessing.cpu_count(),len(obs_n)); #Note that the class variable my_SolverIpopt will be created once per job created (but only in the first call to predictSeveral I think)
 
         output = Parallel(n_jobs=num_jobs)(map(delayed(my_func), list(range(len(obs_n))))) #, prefer="threads"
-        acts = [row[0] for row in output]
-        computation_times = [row[2] for row in output]
+        # acts = [row[0] for row in output]
+        # computation_times = [row[2] for row in output]
+        
+        acts = np.array(output)[:,0]
+
+        if not self.computation_times_verbose:
+            computation_times = np.array(output)[:,2]
+            computation_times = np.stack(computation_times, axis=0)
 
         acts = np.stack(acts, axis=0)
-        computation_times=np.stack(computation_times, axis=0)
 
         return acts, np.mean(computation_times)
