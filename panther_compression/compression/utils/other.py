@@ -1304,6 +1304,8 @@ class StudentCaller():
 		self.student_policy.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=f_obs_n.shape)
 		self.student_policy.features_extractor = self.student_policy.features_extractor_class(self.student_policy.observation_space)
 
+		use_num_obses = False # to make sure LSTM takes a various number of obstacles
+		self.student_policy.set_use_num_obses(use_num_obses)
 		action_normalized, info = self.student_policy.predict(f_obs_n, deterministic=True) 
 		action_normalized = action_normalized.reshape(self.am.getActionShape())
 

@@ -90,6 +90,7 @@ class StudentPolicy(BasePolicy):
             print("lstm_bidirectional=", self.lstm_bidirectional)
         action_dim = get_action_dim(self.action_space)
         self.computation_times = []
+        self.use_num_obses = True
 
         ##
         ## If using closed form yaw
@@ -256,13 +257,21 @@ class StudentPolicy(BasePolicy):
     #     # return action and associated log prob
     #     return self.action_dist.log_prob_from_params(mean_actions, log_std, **kwargs)
 
+    def set_use_num_obses(self, use_num_obses):
+        self.use_num_obses = use_num_obses
+
     def _predict(self, obs_n: th.Tensor, deterministic: bool = True) -> th.Tensor:
-        start = time.time()
-        action = self.forward(obs_n[:,:,:10+33*(self.num_obses[self.i_index])], deterministic) # hard-coded 10 and 33 for now
-        end = time.time()
+
+        if self.use_num_obses:
+            start = time.time()
+            action = self.forward(obs_n[:,:,:10+33*(self.num_obses[self.i_index])], deterministic) # hard-coded 10 and 33 for now
+            end = time.time()
+        else:
+            start = time.time()
+            action = self.forward(obs_n, deterministic)
+            end = time.time()
         self.computation_times.append(end - start)
         self.am.assertActionIsNormalized(action.cpu().numpy().reshape(self.am.getActionShape()), self.name)
-
         return action
 
     def predictSeveral(self, obs_n, deterministic: bool = True):
