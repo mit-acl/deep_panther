@@ -223,6 +223,7 @@ class StudentPolicy(BasePolicy):
             latent_pi = self.latent_pi(features)
             mean_actions = self.mu(latent_pi)
 
+        mean_actions = self.tanh(mean_actions)
         log_std = self.log_std(latent_pi)
         log_std = th.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
         return mean_actions.float(), log_std, {}
