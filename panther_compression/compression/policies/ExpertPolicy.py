@@ -165,4 +165,4 @@ class ExpertPolicy(object):
 
         acts = np.stack(acts, axis=0)
 
-        return acts, np.mean(computation_times)
+        return acts, computation_times

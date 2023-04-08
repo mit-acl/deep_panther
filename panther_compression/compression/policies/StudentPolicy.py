@@ -298,4 +298,4 @@ class StudentPolicy(BasePolicy):
             acts.append(self.predict( obs_n[i,:], deterministic=deterministic)[0].reshape(self.am.getActionShape()))
         # acts=[self.predict( obs_n[i, :], deterministic=deterministic)[0].reshape(self.am.getActionShape()) for i in range(len(obs_n))] #Note that len() returns the size along the first axis
         acts=np.stack(acts, axis=0)
-        return acts, mean(self.computation_times)
+        return acts, self.computation_times
