@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 
 import numpy as np
 import sympy as sp
@@ -8,8 +7,8 @@ import collections
 from datetime import date
 
 def getTrefoil(tt,offset,slower,lim_x, lim_y, lim_z):
-    x=(sp.sin((tt+slower*offset)/slower)+2*sp.sin(2*((tt+slower*offset)/slower))+3)/6; # in [0,1] approx
-    y=(sp.cos((tt+slower*offset)/slower)-2*sp.cos(2*((tt+slower*offset)/slower))+3)/6;
+    x=(sp.sin((tt+slower*offset)/slower)+2*sp.sin(2*((tt+slower*offset)/slower))+3)/6  # in [0,1] approx
+    y=(sp.cos((tt+slower*offset)/slower)-2*sp.cos(2*((tt+slower*offset)/slower))+3)/6
     z=((-sp.sin(3*((tt+slower*offset)/slower)))+1.0)/2.0; # in [0,1] approx
 
     x=min(lim_x)+(max(lim_x)-min(lim_x))*x
@@ -26,7 +25,7 @@ if __name__=="__main__":
     # Obstacle Params
     Obstacle = collections.namedtuple('Name', ["name","bbox", "slower", "offset", "lim_x", "lim_y", "lim_z"])
     all_drones=[        #"name"     ,"bbox"         ,"slower","offset","lim_x"    ,"lim_y"    ,"lim_z"
-                Obstacle("obstacle1",[1.0, 1.0, 1.0],1.5     ,0.0     ,[-2.0, 2.0],[-2.0, 2.0],[1.0, 2.5])
+                Obstacle("obstacle1",[0.6, 0.6, 0.2],1.5     ,0.0     ,[-1.0, 1.0],[-1.0, 1.0],[1.0, 2.0])
                 ]
 
     # symbolic t
@@ -34,7 +33,7 @@ if __name__=="__main__":
 
     # create obstacle yamls in the spedicified path
     for i in range(len(all_drones)):
-        drone_i=all_drones[i];
+        drone_i=all_drones[i]
         traj=getTrefoil(t, drone_i.offset, drone_i.slower, drone_i.lim_x, drone_i.lim_y, drone_i.lim_z)
         # print traj
         name_file=package_path+"/param/obstacle1.yaml"
