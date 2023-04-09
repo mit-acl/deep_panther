@@ -55,6 +55,7 @@ add_message_files(
   CoeffPoly.msg
   Log.msg
   Logtp.msg
+  GoalReached.msg
 )
 
 ## Generate services in the 'srv' folder

@@ -121,7 +121,7 @@ res_plot_traj: 30.0  #Higher --> More resolution when plotting the trajectory
 color_type_student: "vel" #"vel" or "time" or "aug_cost" or "agent" or "black"
 color_type_expert: "vel" #"vel" or "time" or "aug_cost" or "agent" or "black"
 n_agents: 16 #only used for the color in the trajectory
-z_goal_when_using_rviz: 1.0 #[meters] 
+z_goal_when_using_rviz: 0.0 #[meters] 
 
 # Optimization
 #############################################

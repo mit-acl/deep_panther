@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+    <arg name="num_of_agents" default="1"/>
+    <arg name="circle_radius" default="10.0"/>
+
+	<node name="goal_reached_checker" pkg="panther" type="goal_reached_checker.py" output="screen">
+        <param name="num_of_agents" value="$(arg num_of_agents)"/>
+        <param name="circle_radius" value="$(arg circle_radius)"/>
+	</node>
+
+</launch>
