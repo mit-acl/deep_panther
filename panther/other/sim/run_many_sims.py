@@ -65,7 +65,7 @@ if __name__ == '__main__':
     ##
 
     NUM_OF_SIMS = 100
-    NUM_OF_AGENTS = 2
+    NUM_OF_AGENTS = 1
     NUM_OF_OBS_LIST = [5, 10, 15]
     CIRCLE_RADIUS = 10.0
     USE_PERFECT_CONTROLLER = "true"
@@ -73,7 +73,7 @@ if __name__ == '__main__':
     SIM_DURATION = 60 # in seconds
     HOME_DIR = sys.argv[1] if len(sys.argv) > 1 else "/media/kota/T7/deep-panther/bags"
     RECORD_NODE_NAME = "bag_recorder"
-    KILL_ALL = "tmux kill-server & killall -9 gazebo & killall -9 gzserver  & killall -9 gzclient & killall -9  & killall -9 rosmaster & pkill panther_node & pkill -f dynamic_obstacles & pkill -f rosout & pkill -f behavior_selector_node & pkill -f rviz & pkill -f rqt_gui & pkill -f perfect_tracker & pkill -f panther_commands"
+    KILL_ALL = "killall -9 gazebo & killall -9 gzserver  & killall -9 gzclient & pkill -f panther & pkill -f gazebo_ros & pkill -f spawn_model & pkill -f gzserver & pkill -f gzclient  & pkill -f static_transform_publisher &  killall -9 multi_robot_node & killall -9 roscore & killall -9 rosmaster & pkill rmader_node & pkill -f tracker_predictor & pkill -f swarm_traj_planner & pkill -f dynamic_obstacles & pkill -f rosout & pkill -f behavior_selector_node & pkill -f rviz & pkill -f rqt_gui & pkill -f perfect_tracker & pkill -f rmader_commands & pkill -f dynamic_corridor & tmux kill-server & pkill -f perfect_controller & pkill -f publish_in_gazebo"
 
     ##
     ## make sure ROS (and related stuff) is not running
