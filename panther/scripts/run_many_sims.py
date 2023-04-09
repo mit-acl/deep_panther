@@ -71,7 +71,7 @@ if __name__ == '__main__':
     USE_PERFECT_CONTROLLER = "true"
     USE_PERFECT_PREDICTION = "true"
     SIM_DURATION = 60 # in seconds
-    HOME_DIR = sys.args[1] if len(sys.argv) > 1 else "/media/kota/T7/deep-panther/bags"
+    HOME_DIR = sys.argv[1] if len(sys.argv) > 1 else "/media/kota/T7/deep-panther/bags"
     RECORD_NODE_NAME = "bag_recorder"
     KILL_ALL = "tmux kill-server & killall -9 gazebo & killall -9 gzserver  & killall -9 gzclient & killall -9  & killall -9 rosmaster & pkill panther_node & pkill -f dynamic_obstacles & pkill -f rosout & pkill -f behavior_selector_node & pkill -f rviz & pkill -f rqt_gui & pkill -f perfect_tracker & pkill -f panther_commands"
 
