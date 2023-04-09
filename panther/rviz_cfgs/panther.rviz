@@ -558,7 +558,7 @@ Visualization Manager:
       Value: false
     - Class: jsk_rviz_plugin/TFTrajectory
       Enabled: true
-      Name: TFTrajectory
+      Name: Obs1TFTrajectory
       Value: true
       color: 239; 41; 41
       duration: 300
@@ -566,7 +566,7 @@ Visualization Manager:
       line_width: 0.03999999910593033
     - Class: jsk_rviz_plugin/TFTrajectory
       Enabled: true
-      Name: TFTrajectory
+      Name: Obs2TFTrajectory
       Value: true
       color: 239; 41; 41
       duration: 300
@@ -574,7 +574,7 @@ Visualization Manager:
       line_width: 0.03999999910593033
     - Class: jsk_rviz_plugin/TFTrajectory
       Enabled: true
-      Name: TFTrajectory
+      Name: Obs3TFTrajectory
       Value: true
       color: 239; 41; 41
       duration: 300
@@ -582,11 +582,19 @@ Visualization Manager:
       line_width: 0.03999999910593033
     - Class: jsk_rviz_plugin/TFTrajectory
       Enabled: true
-      Name: TFTrajectory
+      Name: Obs4TFTrajectory
       Value: true
       color: 239; 41; 41
       duration: 300
       frame: obs_4003
+      line_width: 0.03999999910593033
+    - Class: jsk_rviz_plugin/TFTrajectory
+      Enabled: true
+      Name: Obs5TFTrajectory
+      Value: true
+      color: 239; 41; 41
+      duration: 300
+      frame: obs_4004
       line_width: 0.03999999910593033
     - Class: rviz/Marker
       Enabled: false
@@ -748,5 +756,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1920
-  X: 6400
+  X: 8320
   Y: 0
