@@ -97,7 +97,8 @@ Panther::Panther(mt::parameters par) : par_(par)
       adjustObstaclesForOptimization(obstacles_for_opt);
       verify(obstacles_for_opt.size() == par_.num_max_of_obst, "obstacles_for_opt.size() should be equal to par_.num_max_of_obst");
       solver_->setObstaclesForOpt(obstacles_for_opt);
-      pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos);
+      int original_num_of_obstacles = obstacles_for_opt.size();
+      pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos, original_num_of_obstacles);
       std::cout << "Called the student!" << std::endl;
     }
   }
@@ -824,7 +825,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
       t_start, t_start + par_.fitter_total_time, splines_fitted);  // basically converts trajs_ to obstacles_for_opt
 
   /////////////////////////////////////////////////////////////////////////
-  ////////////////////////Compute trajectory to focus on //////////////////
+  //////////////////////// Compute trajectory to focus on /////////////////
   /////////////////////////////////////////////////////////////////////////
 
   double time_allocated = getMinTimeDoubleIntegrator3D(A.pos, A.vel, G.pos, G.vel, par_.v_max, par_.a_max);
@@ -934,13 +935,16 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     tmp_obstacles_for_opt.clear();
   }
 
-
-  if (par_.use_expert)
-  {
-
   //
-  // adjust obstacles_for_opt for expert
+  // adjust obstacles_for_opt size
   //
+  // for expert, casadi only accepts a fixed number of obstacles so this step is necessary
+  // for stduent, LSTM can handle any number of obstacles, but getCostsAndViolationsOfActionFromObsnAndActionn
+  // only accepts a fixed number of obstacles so this step is necessary. In StudentCaller.predict(), we undo this step
+  // for LSTM, but we use this adjusted size for getCostsAndViolationsOfActionFromObsnAndActionn
+  //
+
+  int original_obstacles_for_opt_size = obstacles_for_opt.size(); // this is used for LSTM
 
   adjustObstaclesForOptimization(obstacles_for_opt);
   solver_->setObstaclesForOpt(obstacles_for_opt);
@@ -950,8 +954,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
   //
 
   verify(obstacles_for_opt.size() == par_.num_max_of_obst, "obstacles_for_opt.size() should be equal to par_.num_max_of_obst");
-
-  }
 
   //
   // Initialize variables
@@ -1037,7 +1039,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
 
     log_ptr_->tim_initial_setup.toc();
     std::cout << "Calling the student!" << std::endl;
-    pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos);
+    pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos, original_obstacles_for_opt_size);
     best_solutions_student = result.cast<std::vector<si::solOrGuess>>();
 
     pybind11::object tmp = student_caller_ptr_->attr("getIndexBestTraj")();

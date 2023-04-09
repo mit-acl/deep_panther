@@ -1282,7 +1282,7 @@ class StudentCaller():
 		# self.index_best_unsafe_traj = None
 		self.costs_and_violations_of_action = None# CostsAndViolationsOfAction
 
-	def predict(self, w_init_ppstate, w_ppobstacles, w_gterm): #pp stands for py_panther
+	def predict(self, w_init_ppstate, w_ppobstacles, w_gterm, original_obstacles_for_opt_size): #pp stands for py_panther
 
 		w_init_state=convertPPState2State(w_init_ppstate)
 		w_gterm=w_gterm.reshape(3,1)
@@ -1306,7 +1306,9 @@ class StudentCaller():
 
 		use_num_obses = False # to make sure LSTM takes a various number of obstacles
 		self.student_policy.set_use_num_obses(use_num_obses)
-		action_normalized, info = self.student_policy.predict(f_obs_n, deterministic=True) 
+		f_obs_n_for_lstm = self.get_f_obs_n_for_lstm(f_obs_n, original_obstacles_for_opt_size)
+		with th.no_grad():
+			action_normalized = self.student_policy._predict(th.as_tensor(f_obs_n_for_lstm), deterministic=True) 
 		action_normalized = action_normalized.reshape(self.am.getActionShape())
 
 		##
@@ -1351,6 +1353,10 @@ class StudentCaller():
 			all_solOrGuess.append(my_solOrGuess)
 
 		return all_solOrGuess   
+
+	def get_f_obs_n_for_lstm(self, f_obs_n, original_obstacles_for_opt_size):
+		f_obs_n_for_lstm = f_obs_n[:,0:10+(3*self.obsm.getCPsPerObstacle()+3)*original_obstacles_for_opt_size]
+		return f_obs_n_for_lstm
 
 	def getIndexBestTraj(self):
 		return self.costs_and_violations_of_action.index_best_traj
