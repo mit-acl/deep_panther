@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+	<arg name="quad"/>
+
+	<!-- Start goal node -->
+	<node ns="$(arg quad)" name="goal" pkg="panther" type="hw_goal.py" output="screen"/>
+
+</launch>

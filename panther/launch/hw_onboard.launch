@@ -5,7 +5,8 @@
     <arg name="quad" default="NX04"/>
     <arg name="use_gui_mission" default="true"/>
     <arg name="perfect_prediction" default="false"/>
-    <arg name="student_policy_path" default="$(find panther)/../panther_compression/trained_policies/Hung_dynamic_obstacles.pt" />
+    <arg name="student_policy_path" default="$(find panther)/../panther_compression/trained_policies/policies/test14.pt" />
+
     <arg name="static_planning" default="false" />  <!-- #If true, it will always plan from the same initial condition -->
 
     <!-- commands -->
