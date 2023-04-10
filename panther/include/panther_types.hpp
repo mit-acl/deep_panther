@@ -77,6 +77,12 @@ struct log
   bool success_replanning = false;  //
   std::string info_replan = "";     //
   int drone_status;                 //
+  double time_opt = 0.0;            // This is a workaround to access optimizaiton time in solver_ipopt.cpp
+
+  void setTimeOpt(const double& t)
+  {
+    time_opt = t;
+  }
 };
 
 struct obstacleForOpt

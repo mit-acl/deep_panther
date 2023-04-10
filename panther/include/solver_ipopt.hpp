@@ -227,6 +227,7 @@ public:
   // std::pair<double, double> computeTransAndYawDynLimitsConstraintsViolation(si::solOrGuess sol_or_guess);
 
   std::string getInfoLastOpt();
+  void getOptTime(double &opt_time);
 
 protected:
 private:

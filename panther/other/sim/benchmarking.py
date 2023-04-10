@@ -27,6 +27,9 @@ if __name__ == "__main__":
     
     # process data
     subprocess.run(["python", "process_data.py", str(DATA_DIR)])
+
+    # plot data
+    subprocess.run(["python", "plot_data.py", str(DATA_DIR)])
     
     
 
