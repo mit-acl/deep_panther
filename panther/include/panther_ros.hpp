@@ -144,6 +144,7 @@ private:
   ros::Publisher pub_fov_;
   ros::Publisher pub_obstacles_;
   ros::Publisher pub_log_;
+  ros::Publisher pub_is_ready_;
 
   ros::Subscriber sub_term_goal_;
   ros::Subscriber sub_whoplans_;

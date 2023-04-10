@@ -16,6 +16,7 @@
 #include <Eigen/Geometry>
 
 #include <panther_msgs/Log.h>
+#include <panther_msgs/IsReady.h>
 
 // #include <assert.h> /* assert */
 
@@ -304,6 +305,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   pub_fov_ = nh1_.advertise<visualization_msgs::Marker>("fov", 1);
   pub_obstacles_ = nh1_.advertise<visualization_msgs::Marker>("obstacles", 1);
   pub_log_ = nh1_.advertise<panther_msgs::Log>("log", 1);
+  pub_is_ready_ = nh1_.advertise<panther_msgs::IsReady>("is_ready", 1);
 
   // Subscribers
   sub_term_goal_ = nh1_.subscribe("term_goal", 1, &PantherRos::terminalGoalCB, this);
@@ -908,6 +910,12 @@ void PantherRos::whoPlansCB(const panther_msgs::WhoPlans& msg)
       obstacleShareCBTimer_.start();
     }
     std::cout << on_blue << "**************PANTHER STARTED" << reset << std::endl;
+
+    panther_msgs::IsReady is_ready_msg;
+    is_ready_msg.header.stamp = ros::Time::now();
+    is_ready_msg.is_ready = true;
+    pub_is_ready_.publish(is_ready_msg);
+
   }
 }
 

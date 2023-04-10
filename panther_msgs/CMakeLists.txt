@@ -56,6 +56,7 @@ add_message_files(
   Log.msg
   Logtp.msg
   GoalReached.msg
+  IsReady.msg
 )
 
 ## Generate services in the 'srv' folder
