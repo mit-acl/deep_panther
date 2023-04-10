@@ -47,28 +47,30 @@ class ReadyCheck:
         # is_ready_cnt
         self.is_ready_cnt = 0
 
+        # publishers
+        self.pub_goals = []
+        for i in range(self.num_of_agents):
+            agent_name = f"SQ{str(i+1).zfill(2)}s"
+            self.pub_goals.append(rospy.Publisher("/"+agent_name+"/term_goal", PoseStamped, queue_size=1))
+
     # goal reached checker
     def is_ready_checker(self, timer):
         if self.is_ready_cnt == self.num_of_agents:
             ## publish goal
-            commands = []
             for i, (x, y, z) in enumerate(zip(self.x_goal_list, self.y_goal_list, self.z_goal_list)):
-                agent_name = f"SQ{str(i+1).zfill(2)}s"
                 ## TODO: may need to change the goal orientation
-                commands.append("rostopic pub /"+agent_name+"/term_goal geometry_msgs/PoseStamped \'{header: {stamp: now, frame_id: \"world\"}, \
-                    pose: {position: {x: "+str(x)+", y: "+str(y)+", z: "+str(z)+"}, orientation: {w: 1.0}}}\'")
-            
-            ## send goals to all the agents
-            session_name = "pub_goal"
-            os.system("tmux kill-session -t" + session_name)
-            os.system("tmux new-session -d -s "+str(session_name)+" -x 300 -y 300")
-            time.sleep(1.0)
-            # tmux splitting
-            for i in range(len(commands)):
-                os.system('tmux new-window -t ' + str(session_name))
-            time.sleep(1.0)
-            for i in range(len(commands)):
-                os.system('tmux send-keys -t '+str(session_name)+':'+str(i) +'.0 "'+ commands[i]+'" '+' C-m')
+                msg = PoseStamped()
+                msg.header.stamp = rospy.Time.now()
+                msg.header.frame_id = "world"
+                msg.pose.position.x = x
+                msg.pose.position.y = y
+                msg.pose.position.z = z
+                msg.pose.orientation.x = 0.0
+                msg.pose.orientation.y = 0.0
+                msg.pose.orientation.z = 0.0
+                msg.pose.orientation.w = 1.0
+                self.pub_goals[i].publish(msg)
+                print("Publishing goal to agent %d" % (i+1))
 
             ## shutdown the node
             rospy.signal_shutdown("All the agents are ready")
