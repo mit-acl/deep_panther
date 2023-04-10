@@ -1,8 +1,13 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-#Author: Kota Kondo
-#Date: April 8 2023
+# /* ----------------------------------------------------------------------------
+#  * Copyright 2023, Kota Kondo, Aerospace Controls Laboratory
+#  * Massachusetts Institute of Technology
+#  * All Rights Reserved
+#  * Authors: Jesus Tordesillas, et al.
+#  * See LICENSE file for the license information
+#  * -------------------------------------------------------------------------- */
 
 import math
 import os
@@ -26,17 +31,13 @@ class GoalReachedCheck:
         rospy.sleep(3)
 
         # goal radius
-        self.goal_radius = 0.30
+        self.goal_radius = 0.5 #needs to be the same as the one in panther.yaml
 
         # number of agents
         self.num_of_agents = num_of_agents
 
         # is initialized?
         self.initialized = False
-
-        # starting time to calculate completion time
-        now = rospy.get_rostime()
-        self.starting_time = now.secs + now.nsecs / 1e9
 
         # state and term_goal
         self.state_pos = np.empty([self.num_of_agents,3])
@@ -76,7 +77,6 @@ class GoalReachedCheck:
                             self.is_goal_reached = True
                             now = rospy.get_rostime()
                             self.goal_reached.header.stamp = now
-                            self.goal_reached.travel_time = now.secs + now.nsecs / 1e9 - self.starting_time
                             self.goal_reached.is_goal_reached = True
                             self.pubIsGoalReached.publish(self.goal_reached)
 

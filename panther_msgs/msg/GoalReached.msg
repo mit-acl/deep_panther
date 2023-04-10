@@ -1,3 +1,2 @@
 Header header
-float64 travel_time
 bool is_goal_reached
