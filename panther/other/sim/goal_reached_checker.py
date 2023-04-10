@@ -66,8 +66,9 @@ class GoalReachedCheck:
                         # print(LA.norm(self.state_pos[i,:] - self.term_goal_pos[i,:]))
                         return
                     else:
-                        self.is_goal_reached_check_list[i] = True
-                        self.is_goal_reached_cnt = self.is_goal_reached_cnt + 1
+                        if self.is_goal_reached_check_list[i] == False:
+                            self.is_goal_reached_check_list[i] = True
+                            self.is_goal_reached_cnt = self.is_goal_reached_cnt + 1
                         # print(self.is_goal_reached_cnt)
                         # print(i)
                         # print(self.state_pos[i,:])
