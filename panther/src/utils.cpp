@@ -17,7 +17,8 @@ panther_msgs::Log log2LogMsg(mt::log log)
 
   log_msg.ms_initial_setup = log.tim_initial_setup.getMsSaved();
   log_msg.ms_convex_hulls = log.tim_convex_hulls.getMsSaved();
-  log_msg.ms_opt = log.tim_opt.getMsSaved();
+  //log_msg.ms_opt = log.tim_opt.getMsSaved();
+  log_msg.ms_opt = log.time_opt;
   log_msg.ms_guess_pos = log.tim_guess_pos.getMsSaved();
   log_msg.ms_guess_yaw_search_graph = log.tim_guess_yaw_search_graph.getMsSaved();
   log_msg.ms_guess_yaw_fit_poly = log.tim_guess_yaw_fit_poly.getMsSaved();

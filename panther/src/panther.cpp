@@ -1010,6 +1010,9 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
 
     log_ptr_->tim_initial_setup.toc();
     bool result = solver_->optimize();
+    double time_opt;
+    solver_->getOptTime(time_opt);
+    log_ptr_->setTimeOpt(time_opt);
 
     total_replannings_++;
     if (result == false)

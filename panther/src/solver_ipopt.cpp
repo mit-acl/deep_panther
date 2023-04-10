@@ -761,6 +761,11 @@ std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
   return map_arguments;
 }
 
+void SolverIpopt::getOptTime(double &opt_time)
+{
+  opt_time = opt_timer_.getMsSaved();
+}
+
 bool SolverIpopt::optimize(bool supress_all_prints)
 {
   info_last_opt_ = "";
@@ -905,8 +910,9 @@ bool SolverIpopt::optimize(bool supress_all_prints)
       // std::cout << bold << green << "Optimizing for YAW and POSITION!" << reset << std::endl;
 
       // printMap(map_arguments);
-
+      opt_timer_.tic();
       result = cf_op_(map_arguments);  // from Casadi
+      opt_timer_.toc();
     }
     else if (par_.mode == "py" && focus_on_obstacle_ == true)
     {
