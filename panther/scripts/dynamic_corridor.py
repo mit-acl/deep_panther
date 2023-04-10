@@ -128,8 +128,8 @@ class DynCorridor:
         self.total_num_obs=total_num_obs
         self.num_of_dyn_objects=int(1.0*total_num_obs)
         self.num_of_stat_objects=total_num_obs-self.num_of_dyn_objects; 
-        self.x_min= 2.0 
-        self.x_max= 6.0
+        self.x_min= -2.0 
+        self.x_max= 2.0
         self.y_min= -2.0 
         self.y_max= 2.0
         self.z_min= 1.0 
@@ -488,7 +488,6 @@ class DynCorridor:
         # z_rotated_string=z_rotated_string+'+' + str(z);
         # return [x_rotated_string, y_rotated_string, z_rotated_string]
 
-
         #Without rotation
         x_string=x_string+'+' + str(x)
         y_string=y_string+'+' + str(y)
@@ -623,36 +622,12 @@ if __name__ == '__main__':
     print("*************************************")
     args = parser.parse_args(sys.argv[1:11]) #See https://discourse.ros.org/t/getting-python-argparse-to-work-with-a-launch-file-or-python-node/10606
 
-    
-
-    # total_num_obs=140
     ns = rospy.get_namespace()
     try:
         rospy.init_node('dynamic_obstacles')
         c = DynCorridor(args.num_of_obs, args.gazebo, args.type_of_obst_traj, args.alpha_scale_obst_traj, args.beta_faster_obst_traj)
-        rospy.Timer(rospy.Duration(0.01), c.pubTF) #was 0.01
+        rospy.Timer(rospy.Duration(0.01), c.pubTF)
         c.pubTF(None)
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
-
-
-
-        # See https://en.wikipedia.org/wiki/Triangle_wave
-        # x_string='2*abs('+tt+str(offset+0.5)+'+''-floor('+tt+str(offset+0.5)+'+'+'0.5))'+'+' + str(x); #'2*sin(t)' 
-        # y_string='2*abs('+tt+str(offset)+'+''-floor('+tt+str(offset)+'+'+'0.5))'+'+' + str(y); #'2*sin(t)' 
-        # z_string='2*abs('+tt+str(offset+1.0)+'+''-floor('+tt+str(offset+1.0)+'+'+'0.5))'+'+' + str(z); #'2*sin(t)' 
-
-        # x_string=x_string+'+'+x_string;
-        # y_string=y_string+'+'+y_string;
-        # z_string=z_string+'+'+z_string;
-
-        
-        # x_string=str(scale_x)+'*0.5*sgn(cos('+tt+str(offset)+'))';
-        # y_string=str(scale_y)+'*0.5*sgn(cos('+tt+str(offset)+'))';
-        # z_string=str(scale_z)+'*0.5*sgn(cos('+tt+str(offset)+'))';
-
-
-
-
-        # p=rotz(45)*[0.5*w*sign(cos(t));0.5*h*sign(sin(t));0.5*w*sign(cos(t))]
