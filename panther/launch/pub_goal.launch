@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+    <arg name="x_goal_list" default="[0]"/>
+    <arg name="y_goal_list" default="[0]"/>
+    <arg name="z_goal_list" default="[0]"/>
+
+	<node name="pub_goal" pkg="panther" type="pub_goal.py" output="screen">
+        <rosparam param="x_goal_list" subst_value="True">$(arg x_goal_list)</rosparam>
+        <rosparam param="y_goal_list" subst_value="True">$(arg y_goal_list)</rosparam>
+        <rosparam param="z_goal_list" subst_value="True">$(arg z_goal_list)</rosparam>
+	</node>
+
+</launch>
