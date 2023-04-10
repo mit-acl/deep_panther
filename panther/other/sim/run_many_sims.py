@@ -75,7 +75,7 @@ if __name__ == '__main__':
     DATA_DIR = sys.argv[1] if len(sys.argv) > 1 else "/media/kota/T7/deep-panther/bags"
     RECORD_NODE_NAME = "bag_recorder"
     KILL_ALL = "killall -9 gazebo & killall -9 gzserver  & killall -9 gzclient & pkill -f panther & pkill -f gazebo_ros & pkill -f spawn_model & pkill -f gzserver & pkill -f gzclient  & pkill -f static_transform_publisher &  killall -9 multi_robot_node & killall -9 roscore & killall -9 rosmaster & pkill rmader_node & pkill -f tracker_predictor & pkill -f swarm_traj_planner & pkill -f dynamic_obstacles & pkill -f rosout & pkill -f behavior_selector_node & pkill -f rviz & pkill -f rqt_gui & pkill -f perfect_tracker & pkill -f rmader_commands & pkill -f dynamic_corridor & tmux kill-server & pkill -f perfect_controller & pkill -f publish_in_gazebo"
-    ROS_TOPICS = "/{}/goal /{}/state /tf /tf_static /{}/panther/fov /obstacles_mesh /{}/panther/best_solution_expert /{}/panther/best_solution_student /{}/term_goal /{}/panther/actual_traj /clock /trajs /sim_all_agents_goal_reached /{}/panther/is_ready"
+    TOPICS_TO_RECORD = "/{}/goal /{}/state /tf /tf_static /{}/panther/fov /obstacles_mesh /{}/panther/best_solution_expert /{}/panther/best_solution_student /{}/term_goal /{}/panther/actual_traj /clock /trajs /sim_all_agents_goal_reached /{}/panther/is_ready /{}/panther/log"
 
     ##
     ## make sure ROS (and related stuff) is not running
@@ -129,11 +129,12 @@ if __name__ == '__main__':
             ## rosbag record
             agent_bag_recorders = []
             for i in range(NUM_OF_AGENTS):
+                sim_name = f"sim_{str(s).zfill(3)}"
                 agent_name = f"SQ{str(i+1).zfill(2)}s"
+                recorded_topics = TOPICS_TO_RECORD.format(*[agent_name for i in range(9)])
                 agent_bag_recorder = f"{agent_name}_{RECORD_NODE_NAME}"
-                recorded_topics = ROS_TOPICS.format(*[agent_name for i in range(8)])
                 agent_bag_recorders.append(agent_bag_recorder)
-                commands.append("sleep "+str(time_sleep)+" && cd "+folder_bags+" && rosbag record "+recorded_topics+" -o sim_"+str(s)+"_"+agent_name+" __name:="+agent_bag_recorder)
+                commands.append("sleep "+str(time_sleep)+" && cd "+folder_bags+" && rosbag record "+recorded_topics+" -o "+sim_name+"_"+agent_name+" __name:="+agent_bag_recorder)
             
             ## goal checker
             commands.append(f"sleep {time_sleep} && roslaunch --wait panther goal_reached_checker.launch num_of_agents:={NUM_OF_AGENTS} circle_radius:={CIRCLE_RADIUS}")
