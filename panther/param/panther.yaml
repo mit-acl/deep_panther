@@ -60,7 +60,7 @@ fov_depth: 5.0 #[m]
 
 # Primer Setting
 #############################################
-is_multiagent: true
+is_multiagent: false
 use_delaycheck: false
 
 ### ATTENTION: this will change which casadi file we will use for optimization
