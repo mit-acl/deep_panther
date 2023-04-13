@@ -66,6 +66,7 @@ def visualization(agent_pos, agent_quat, obst_pos, fov_x_deg, fov_y_deg, fov_dep
     ax.set_ylabel('y')
     ax.set_zlabel('z')
     ax.set_title('FOV visualization')
+    ax.set_box_aspect([1,1,1])
     ax.scatter(agent_pos[0], agent_pos[1], agent_pos[2], c='r', marker='o')
     ax.scatter(obst_pos[0], obst_pos[1], obst_pos[2], c='b', marker='o')
     ax.plot([agent_pos[0], obst_pos[0]], [agent_pos[1], obst_pos[1]], [agent_pos[2], obst_pos[2]], c='b', linestyle='--')
@@ -117,13 +118,42 @@ if __name__ == "__main__":
     ## unit test
     ##
 
-    for i in range(100):
-        agent_pos = np.array([0.0, 0.0, 0.0])
-        agent_quat = quaternion_from_euler(random.uniform(-math.pi, math.pi), random.uniform(-math.pi, math.pi), random.uniform(-math.pi, math.pi))
-        obst_pos = np.array([random.uniform(-fov_depth, fov_depth), random.uniform(-fov_depth, fov_depth), random.uniform(-fov_depth, fov_depth)])
-        print(check_obst_is_in_FOV(agent_pos, agent_quat, obst_pos, fov_x_deg, fov_y_deg, fov_depth))
-        visualization(agent_pos, agent_quat, obst_pos, fov_x_deg, fov_y_deg, fov_depth)
-        time.sleep(0.1)
+    # for i in range(100):
+    #     agent_pos = np.array([0.0, 0.0, 0.0])
+    #     agent_quat = quaternion_from_euler(random.uniform(-math.pi, math.pi), random.uniform(-math.pi, math.pi), random.uniform(-math.pi, math.pi))
+    #     obst_pos = np.array([random.uniform(-fov_depth, fov_depth), random.uniform(-fov_depth, fov_depth), random.uniform(-fov_depth, fov_depth)])
+    #     print(check_obst_is_in_FOV(agent_pos, agent_quat, obst_pos, fov_x_deg, fov_y_deg, fov_depth))
+    #     visualization(agent_pos, agent_quat, obst_pos, fov_x_deg, fov_y_deg, fov_depth)
+    #     time.sleep(0.1)
+
+
+    # Testing points on a sphere
+    agent_pos = np.array([5.0, -4.0, 3.0])
+    agent_quat = quaternion_from_euler(random.uniform(-math.pi, math.pi), random.uniform(-math.pi, math.pi), random.uniform(-math.pi, math.pi))
+
+    # Sample obstacle positions on the surface of a sphere around the agent position
+    sphere_radius = 6.0
+    sphere_center = agent_pos
+
+    obst_pos = []
+    resolution = 50
+    for phi in range(resolution):
+        for theta in range(resolution):
+            obst_pos.append(np.array(
+                    [
+                        sphere_center[0] + sphere_radius * math.sin(2 * math.pi * phi / resolution) * math.cos(2 * math.pi * theta / resolution),
+                        sphere_center[1] + sphere_radius * math.sin(2 * math.pi * phi / resolution) * math.sin(2 * math.pi * theta / resolution),
+                        sphere_center[2] + sphere_radius * math.cos(2 * math.pi * phi / resolution)
+                    ]
+                )
+            )
+
+    in_FOV_points = []
+    for pos in obst_pos:
+        if check_obst_is_in_FOV(agent_pos, agent_quat, pos, fov_x_deg, fov_y_deg, fov_depth):
+            in_FOV_points.append(pos)
+    
+    visualization(agent_pos, agent_quat, in_FOV_points, fov_x_deg, fov_y_deg, fov_depth)
 
     
 
