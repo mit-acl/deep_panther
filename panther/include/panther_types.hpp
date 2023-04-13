@@ -812,7 +812,8 @@ struct parameters
 {
   //
   // clang-format off
-  bool            use_hw_training_env;
+  double          goal_seen_radius_training;
+  bool            use_noised_obst_size;
   bool            use_clipping;
   double          yaw_loss_weight;
   bool            use_bn;

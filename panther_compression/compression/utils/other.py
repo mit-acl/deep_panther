@@ -249,7 +249,7 @@ class ObstaclesManager():
 		## bbox size
 		##
 
-		if self.params["use_hw_training_env"]:
+		if self.params["use_noised_obst_size"]:
 			noised_obst_x = np.random.normal(loc=self.params["training_obst_size"][0], scale=0.2)
 			noised_obst_y = np.random.normal(loc=self.params["training_obst_size"][1], scale=0.2)
 			noised_obst_z = np.random.normal(loc=self.params["training_obst_size"][2], scale=0.2)

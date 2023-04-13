@@ -223,7 +223,8 @@ class MyEnvironment(gym.Env):
     self.prev_dist_current2goal = dist_current_2gterm
     # self.printwithName(f"Timestep={self.timestep}, dist_current_2gterm={round(dist_current_2gterm,2)}, w_state.w_pos={self.w_state.w_pos.T}")
 
-    goal_reached = (dist_current_2gterm<self.par.goal_seen_radius and dist_endtraj_2gterm<self.par.goal_radius)
+    # goal_reached = (dist_current_2gterm<self.par.goal_seen_radius and dist_endtraj_2gterm<self.par.goal_radius)
+    goal_reached = (dist_current_2gterm<self.par.goal_seen_radius_training and dist_endtraj_2gterm<self.par.goal_radius)
     if(goal_reached):
       self.num_goal_reached += 1
       print(Style.BRIGHT + Fore.GREEN + "Goal reached!" + Style.RESET_ALL)

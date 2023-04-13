@@ -24,7 +24,7 @@ max_side_bbox_obs: 3.0
 max_dist2BSPoscPoint: 25.0
 training_dt: 0.1 #Training timestep in seconds (how much you proceed as a step in an episode)
 yaw_scaling: 1.0
-yaw_loss_weight: 50.0
+yaw_loss_weight: 30.0
 margin_v_factor: 1.0 #relazation factor for training constraints used in ObservationManager()
 margin_a_factor: 1.0 #relazation factor for training constraints used in ObservationManager()
 # because of precision error you will see a very small violation of ydot (eg. 1.0000000002143), so it's nice to keep the margin_ydot_factor a little bit bigger
@@ -35,15 +35,14 @@ use_dynamic_obst_in_training: true
 random_num_of_obstacles_in_training: true # if this is True, # of obstacles is [1,num_of_obstacles_in_training]
 num_of_obstacles_in_training: 3 # this should not be bigger than num_max_of_obst defined in params_casadi.yaml(main.m)
 use_clipping: False
-use_noised_obst_size: True # (1) observation of obstacles are noised
-goal_seen_radius_training: 1.0 # [m]
+use_hw_training_env: True # (1) observation of obstacles are noised
 
 # LSTM
 #############################################
 use_lstm: true # use LSTM?
 use_bn: false # use batch normalization after LSTM
 lstm_dropout: 0.0
-lstm_output_dim: 64
+lstm_output_dim: 128
 lstm_num_layers: 1 # if it's more than 1, it is stacked LSTM
 lstm_bidirectional: false
 
