@@ -68,8 +68,13 @@ def visualization(agent_pos, agent_quat, obst_pos, fov_x_deg, fov_y_deg, fov_dep
     ax.set_title('FOV visualization')
     ax.set_box_aspect([1,1,1])
     ax.scatter(agent_pos[0], agent_pos[1], agent_pos[2], c='r', marker='o')
-    ax.scatter(obst_pos[0], obst_pos[1], obst_pos[2], c='b', marker='o')
-    ax.plot([agent_pos[0], obst_pos[0]], [agent_pos[1], obst_pos[1]], [agent_pos[2], obst_pos[2]], c='b', linestyle='--')
+    if type(obst_pos) is list:
+        for pos in obst_pos:
+            ax.scatter(pos[0], pos[1], pos[2], c="orange", marker='o')
+    else:
+        ax.scatter(obst_pos[0], obst_pos[1], obst_pos[2], c='b', marker='o')
+        ax.plot([agent_pos[0], obst_pos[0]], [agent_pos[1], obst_pos[1]], [agent_pos[2], obst_pos[2]], c='b', linestyle='--')
+
     
     # Compute the FOV vertices (from panther_ros.cpp)
 
