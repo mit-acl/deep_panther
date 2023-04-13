@@ -30,11 +30,6 @@ class ReadyCheck:
 
     def __init__(self, x_goal_list, y_goal_list, z_goal_list):
 
-        rospy.sleep(3)
-
-        # goal radius
-        self.goal_radius = 0.5 #needs to be the same as the one in panther.yaml
-
         # number of agents
         assert len(x_goal_list) == len(y_goal_list) == len(z_goal_list)
         self.num_of_agents = len(x_goal_list)
@@ -56,6 +51,7 @@ class ReadyCheck:
     # goal reached checker
     def is_ready_checker(self, timer):
         if self.is_ready_cnt == self.num_of_agents:
+            rospy.sleep(5)
             ## publish goal
             for i, (x, y, z) in enumerate(zip(self.x_goal_list, self.y_goal_list, self.z_goal_list)):
                 ## TODO: may need to change the goal orientation
