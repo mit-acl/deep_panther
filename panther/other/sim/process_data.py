@@ -42,7 +42,7 @@ if __name__ == '__main__':
     ## Paramters
     ##
 
-    DATA_DIR = sys.argv[1] if len(sys.argv) > 1 else "/media/kota/T7/deep-panther/bags"
+    DATA_DIR = sys.argv[1] if len(sys.argv) > 1 else "bags"
     TOPICS_TO_UNPACK = "/{}/goal /{}/state /tf /tf_static /{}/panther/fov /obstacles_mesh /{}/panther/best_solution_expert /{}/panther/best_solution_student /{}/term_goal /{}/panther/actual_traj /clock /trajs /sim_all_agents_goal_reached /{}/panther/is_ready /{}/panther/log"
     NUM_OF_AGENTS = 2 #TODO: hard coded
     NUM_OF_OBSTACLES = 1 #TODO: hard coded
