@@ -45,7 +45,7 @@ if __name__ == '__main__':
     DATA_DIR = sys.argv[1] if len(sys.argv) > 1 else "bags"
     TOPICS_TO_UNPACK = "/{}/goal /{}/state /tf /tf_static /{}/panther/fov /obstacles_mesh /{}/panther/best_solution_expert /{}/panther/best_solution_student /{}/term_goal /{}/panther/actual_traj /clock /trajs /sim_all_agents_goal_reached /{}/panther/is_ready /{}/panther/log"
     NUM_OF_AGENTS = 2 #TODO: hard coded
-    NUM_OF_OBSTACLES = 1 #TODO: hard coded
+    NUM_OF_OBSTACLES = 2 #TODO: hard coded
     AGENTS_LIST = [f"SQ{str(i+1).zfill(2)}s" for i in range(NUM_OF_AGENTS)]
     OBSTACLES_LIST = [f"obs_{4000+i}" for i in range(NUM_OF_OBSTACLES)]
     AGENT_BBOX = np.array([1.2, 1.2, 1.2]) #TODO:hard coded
@@ -191,7 +191,10 @@ if __name__ == '__main__':
 
                 bag_transformer = BagTfTransformer(bag)
                 sim_start_time = sim_start_times[-1]
-                sim_end_time = sim_end_times[-1]
+                try: 
+                    sim_end_time = sim_end_times[-1]
+                except:
+                    sim_end_time = bag.get_end_time()
                 discrete_times = np.linspace(sim_start_time, sim_end_time, int((sim_end_time - sim_start_time) * 100))
 
                 # get combination of an agent and an agent and an agent and an obstacle
@@ -330,12 +333,15 @@ if __name__ == '__main__':
             ##
 
             # (1) travel time
-            travel_time = max(sim_end_times) - min(sim_start_times)
+            try:
+                travel_time = max(sim_end_times) - min(sim_start_times)
+            except:
+                travel_time = bag.get_end_time() - min(sim_start_times)
+
             travel_time_list.append(travel_time)
 
             # (2) computation time
-            computation_time = mean(computation_times) # right now I am not including octopus search time
-            computation_time_list.append(computation_time)
+            computation_time_list.extend(computation_times) # right now I am not including octopus search time
 
             # (3) number of collisions
             num_of_collisions_btwn_agents_list.append(num_of_collisions_btwn_agents)
@@ -374,22 +380,21 @@ if __name__ == '__main__':
             # (11) number of stops
             num_of_stops_list.append(num_of_stops)
 
-
         ##
         ## Data print per simulation environment (eg. 1_obs_1_agent)
         ##
 
         d_string     = f"date                                             {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         sf_string    = f"simulation folder                                {os.path.join(DATA_DIR, sim_folder)}"
-        tt_string    = f"travel time                                      {round(mean(travel_time_list),2)}"
-        ct_string    = f"computational time                               {round(mean(computation_time_list),2)}"
+        tt_string    = f"travel time                                      {round(mean(travel_time_list),2)} [s]"
+        ct_string    = f"computational time                               {round(mean(computation_time_list),2)} [ms]"
         ncba_string  = f"number of collisions btwn agents                 {round(mean(num_of_collisions_btwn_agents_list),2)}"
         ncbao_string = f"number of collisions btwn agents and obstacles   {round(mean(num_of_collisions_btwn_agents_and_obstacles_list),2)}"
-        fr_string    = f"fov rate                                         {round(mean(fov_rate_list),2)*100} / 100"
+        fr_string    = f"fov rate                                         {round(mean(fov_rate_list),2)*100} [%]"
         cfd_string   = f"continuous fov detection                         {round(mean(continuous_fov_detection_list),2)}"
-        tdcvr_string = f"translational dynamic constraint violation rate  {round(mean(translational_dynamic_constraint_violation_rate_list),2)*100} / 100"
-        ydcvr_string = f"yaw dynamic constraint violation rate            {round(mean(yaw_dynamic_constraint_violation_rate_list),2)*100} / 100"
-        sr_string    = f"success rate                                     {round(mean(success_rate_list),2)*100} / 100"
+        tdcvr_string = f"translational dynamic constraint violation rate  {round(mean(translational_dynamic_constraint_violation_rate_list),2)*100} [%]"
+        ydcvr_string = f"yaw dynamic constraint violation rate            {round(mean(yaw_dynamic_constraint_violation_rate_list),2)*100} [%]"
+        sr_string    = f"success rate                                     {round(mean(success_rate_list),2)*100} [%]"
         ats_string   = f"accel trajectory smoothness                      {round(mean(accel_trajectory_smoothness_list),2)}"
         jts_string   = f"jerk trajectory smoothness                       {round(mean(jerk_trajectory_smoothness_list),2)}"
         ns_string    = f"number of stops                                  {round(mean(num_of_stops_list),2)}"

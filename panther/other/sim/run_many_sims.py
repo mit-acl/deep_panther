@@ -67,7 +67,7 @@ if __name__ == '__main__':
 
     NUM_OF_SIMS = 1
     NUM_OF_AGENTS = 2
-    NUM_OF_OBS_LIST = [1]
+    NUM_OF_OBS_LIST = [2]
     CIRCLE_RADIUS = 5.0
     USE_PERFECT_CONTROLLER = "true"
     USE_PERFECT_PREDICTION = "true"
@@ -76,6 +76,7 @@ if __name__ == '__main__':
     RECORD_NODE_NAME = "bag_recorder"
     KILL_ALL = "killall -9 gazebo & killall -9 gzserver  & killall -9 gzclient & pkill -f panther & pkill -f gazebo_ros & pkill -f spawn_model & pkill -f gzserver & pkill -f gzclient  & pkill -f static_transform_publisher &  killall -9 multi_robot_node & killall -9 roscore & killall -9 rosmaster & pkill rmader_node & pkill -f tracker_predictor & pkill -f swarm_traj_planner & pkill -f dynamic_obstacles & pkill -f rosout & pkill -f behavior_selector_node & pkill -f rviz & pkill -f rqt_gui & pkill -f perfect_tracker & pkill -f rmader_commands & pkill -f dynamic_corridor & tmux kill-server & pkill -f perfect_controller & pkill -f publish_in_gazebo"
     TOPICS_TO_RECORD = "/{}/goal /{}/state /tf /tf_static /{}/panther/fov /obstacles_mesh /{}/panther/best_solution_expert /{}/panther/best_solution_student /{}/term_goal /{}/panther/actual_traj /clock /trajs /sim_all_agents_goal_reached /{}/panther/is_ready /{}/panther/log"
+    USE_RVIZ = "true"
 
     ##
     ## make sure ROS (and related stuff) is not running
@@ -108,7 +109,7 @@ if __name__ == '__main__':
             commands = []
 
             time_sleep = max(0.2*NUM_OF_OBS_LIST[k], 2.0)
-            time_sleep_goal = min(NUM_OF_OBS_LIST[k], NUM_OF_AGENTS, 10.0)
+            time_sleep_goal = min(NUM_OF_OBS_LIST[k], NUM_OF_AGENTS, 2.0)
 
             ##
             ## simulation set up
@@ -118,7 +119,7 @@ if __name__ == '__main__':
             commands.append("roscore")
 
             ## sim_basestation
-            commands.append(f"roslaunch --wait panther sim_base_station.launch num_of_obs:={NUM_OF_OBS_LIST[k]} rviz:=true gui_mission:=false")
+            commands.append(f"roslaunch --wait panther sim_base_station.launch num_of_obs:={NUM_OF_OBS_LIST[k]} rviz:={USE_RVIZ} gui_mission:=false")
 
             ## sim_onboard
             x_start_list, y_start_list, z_start_list, yaw_start_list, x_goal_list, y_goal_list, z_goal_list = get_start_end_state(NUM_OF_AGENTS, CIRCLE_RADIUS)

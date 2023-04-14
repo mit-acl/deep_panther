@@ -12,11 +12,16 @@ def check_obst_is_in_FOV(agent_pos, agent_quat, obst_pos, fov_x_deg, fov_y_deg, 
     """
     Check if the obstacle is in the agent's FOV.
     """
-    # Compute the FOV vertices (from panther_ros.cpp)
+
+    # Define v0 and obst_pos
+    v0 = np.array(agent_pos)
+    obst_pos = np.array(obst_pos)
+    
+    # Compute the FOV vertices wrt the origin (from panther_ros.cpp)
     delta_y = fov_depth * abs(math.tan((fov_x_deg * math.pi / 180) / 2.0))
     delta_z = fov_depth * abs(math.tan((fov_y_deg * math.pi / 180) / 2.0))
 
-    v0 = agent_pos
+    # Define FOV vertices
     v1 = np.array([-delta_y, delta_z, fov_depth])
     v2 = np.array([delta_y, delta_z, fov_depth])
     v3 = np.array([delta_y, -delta_z, fov_depth])
@@ -27,6 +32,23 @@ def check_obst_is_in_FOV(agent_pos, agent_quat, obst_pos, fov_x_deg, fov_y_deg, 
     v2 = rotate_vector(v2, agent_quat)
     v3 = rotate_vector(v3, agent_quat)
     v4 = rotate_vector(v4, agent_quat)
+
+    # Another rotatoin camera_depth_optical_frame to camera_link
+    cameradepthoptframe2cameralink = quaternion_from_euler(-1.57, 0, -1.57)
+    v1 = rotate_vector(v1, cameradepthoptframe2cameralink)
+    v2 = rotate_vector(v2, cameradepthoptframe2cameralink)
+    v3 = rotate_vector(v3, cameradepthoptframe2cameralink)
+    v4 = rotate_vector(v4, cameradepthoptframe2cameralink)
+
+    # Another translation camera_link to body
+    cameralink2body = np.array([0.1, 0, 0])
+
+    # translate back the FOV vertices
+    v0 = v0 + cameralink2body
+    v1 = v1 + np.array(agent_pos) + cameralink2body
+    v2 = v2 + np.array(agent_pos) + cameralink2body
+    v3 = v3 + np.array(agent_pos) + cameralink2body
+    v4 = v4 + np.array(agent_pos) + cameralink2body
 
     # Check if the obstacle is in the FOV
     poly = np.array([v0, v1, v2, v3, v4])
@@ -68,20 +90,19 @@ def visualization(agent_pos, agent_quat, obst_pos, fov_x_deg, fov_y_deg, fov_dep
     ax.set_title('FOV visualization')
     ax.set_box_aspect([1,1,1])
     ax.scatter(agent_pos[0], agent_pos[1], agent_pos[2], c='r', marker='o')
-    if type(obst_pos) is list:
-        for pos in obst_pos:
-            ax.scatter(pos[0], pos[1], pos[2], c="orange", marker='o')
-    else:
-        ax.scatter(obst_pos[0], obst_pos[1], obst_pos[2], c='b', marker='o')
-        ax.plot([agent_pos[0], obst_pos[0]], [agent_pos[1], obst_pos[1]], [agent_pos[2], obst_pos[2]], c='b', linestyle='--')
-
     
     # Compute the FOV vertices (from panther_ros.cpp)
 
-    delta_y = fov_depth * abs(math.tan((fov_x_deg * math.pi / 180) / 2.0))
+    delta_y = fov_depth * abs(math.tan((fov_x_deg * math.pi / 180) / 2.0)) 
     delta_z = fov_depth * abs(math.tan((fov_y_deg * math.pi / 180) / 2.0))
 
-    v0 = agent_pos
+    # Define v0 and obst_pos
+    v0 = np.array(agent_pos)
+    obst_pos = np.array(obst_pos)
+    ax.scatter(obst_pos[0], obst_pos[1], obst_pos[2], c='b', marker='o')
+    ax.plot([agent_pos[0], obst_pos[0]], [agent_pos[1], obst_pos[1]], [agent_pos[2], obst_pos[2]], c='b', linestyle='--')
+
+    # Define FOV vertices
     v1 = np.array([-delta_y, delta_z, fov_depth])
     v2 = np.array([delta_y, delta_z, fov_depth])
     v3 = np.array([delta_y, -delta_z, fov_depth])
@@ -93,6 +114,23 @@ def visualization(agent_pos, agent_quat, obst_pos, fov_x_deg, fov_y_deg, fov_dep
     v3 = rotate_vector(v3, agent_quat)
     v4 = rotate_vector(v4, agent_quat)
 
+    # Another rotatoin camera_depth_optical_frame to camera_link (refer to static_transform.launch)
+    cameradepthoptframe2cameralink = quaternion_from_euler(-1.57, 0, -1.57) #TODO: hard-coded
+    v1 = rotate_vector(v1, cameradepthoptframe2cameralink)
+    v2 = rotate_vector(v2, cameradepthoptframe2cameralink)
+    v3 = rotate_vector(v3, cameradepthoptframe2cameralink)
+    v4 = rotate_vector(v4, cameradepthoptframe2cameralink)
+
+    # Another translation camera_link to body (refer to static_transform.launch)
+    cameralink2body = np.array([0.1, 0, 0]) #TODO: hard-coded
+
+    # translate back the FOV vertices
+    v0 = v0 + cameralink2body
+    v1 = v1 + np.array(agent_pos) + cameralink2body
+    v2 = v2 + np.array(agent_pos) + cameralink2body
+    v3 = v3 + np.array(agent_pos) + cameralink2body
+    v4 = v4 + np.array(agent_pos) + cameralink2body
+    
     ax.scatter(v0[0], v0[1], v0[2], c='g', marker='o')
     ax.scatter(v1[0], v1[1], v1[2], c='g', marker='o')
     ax.scatter(v2[0], v2[1], v2[2], c='g', marker='o')
@@ -107,6 +145,7 @@ def visualization(agent_pos, agent_quat, obst_pos, fov_x_deg, fov_y_deg, fov_dep
     ax.plot([v3[0], v4[0]], [v3[1], v4[1]], [v3[2], v4[2]], c='g', linestyle='-')
     ax.plot([v4[0], v1[0]], [v4[1], v1[1]], [v4[2], v1[2]], c='g', linestyle='-')
     ax.view_init(30, 30)
+    plt.axis('equal')
     plt.show()
 
 if __name__ == "__main__":
@@ -124,41 +163,43 @@ if __name__ == "__main__":
     ##
 
     # for i in range(100):
-    #     agent_pos = np.array([0.0, 0.0, 0.0])
-    #     agent_quat = quaternion_from_euler(random.uniform(-math.pi, math.pi), random.uniform(-math.pi, math.pi), random.uniform(-math.pi, math.pi))
-    #     obst_pos = np.array([random.uniform(-fov_depth, fov_depth), random.uniform(-fov_depth, fov_depth), random.uniform(-fov_depth, fov_depth)])
-    #     print(check_obst_is_in_FOV(agent_pos, agent_quat, obst_pos, fov_x_deg, fov_y_deg, fov_depth))
-    #     visualization(agent_pos, agent_quat, obst_pos, fov_x_deg, fov_y_deg, fov_depth)
-    #     time.sleep(0.1)
+    agent_pos = np.array([4.0, 0.0, 0.0])
+    # agent_quat = quaternion_from_euler(random.uniform(-math.pi, math.pi), random.uniform(-math.pi, math.pi), random.uniform(-math.pi, math.pi))
+    agent_quat = np.array([0.0, 0.0, 0.9999898750170859, -0.0044999848125152645])
+    # obst_pos = np.array([random.uniform(-fov_depth, fov_depth), random.uniform(-fov_depth, fov_depth), random.uniform(-fov_depth, fov_depth)])
+    obst_pos = np.array([-0.8523707384853926, -2.1019122983325724, 1.9699891817917603])
+    print(check_obst_is_in_FOV(agent_pos, agent_quat, obst_pos, fov_x_deg, fov_y_deg, fov_depth))
+    visualization(agent_pos, agent_quat, obst_pos, fov_x_deg, fov_y_deg, fov_depth)
+    time.sleep(0.1)
 
 
-    # Testing points on a sphere
-    agent_pos = np.array([5.0, -4.0, 3.0])
-    agent_quat = quaternion_from_euler(random.uniform(-math.pi, math.pi), random.uniform(-math.pi, math.pi), random.uniform(-math.pi, math.pi))
+    # # Testing points on a sphere
+    # agent_pos = np.array([5.0, -4.0, 3.0])
+    # agent_quat = quaternion_from_euler(random.uniform(-math.pi, math.pi), random.uniform(-math.pi, math.pi), random.uniform(-math.pi, math.pi))
 
-    # Sample obstacle positions on the surface of a sphere around the agent position
-    sphere_radius = 6.0
-    sphere_center = agent_pos
+    # # Sample obstacle positions on the surface of a sphere around the agent position
+    # sphere_radius = 6.0
+    # sphere_center = agent_pos
 
-    obst_pos = []
-    resolution = 50
-    for phi in range(resolution):
-        for theta in range(resolution):
-            obst_pos.append(np.array(
-                    [
-                        sphere_center[0] + sphere_radius * math.sin(2 * math.pi * phi / resolution) * math.cos(2 * math.pi * theta / resolution),
-                        sphere_center[1] + sphere_radius * math.sin(2 * math.pi * phi / resolution) * math.sin(2 * math.pi * theta / resolution),
-                        sphere_center[2] + sphere_radius * math.cos(2 * math.pi * phi / resolution)
-                    ]
-                )
-            )
+    # obst_pos = []
+    # resolution = 50
+    # for phi in range(resolution):
+    #     for theta in range(resolution):
+    #         obst_pos.append(np.array(
+    #                 [
+    #                     sphere_center[0] + sphere_radius * math.sin(2 * math.pi * phi / resolution) * math.cos(2 * math.pi * theta / resolution),
+    #                     sphere_center[1] + sphere_radius * math.sin(2 * math.pi * phi / resolution) * math.sin(2 * math.pi * theta / resolution),
+    #                     sphere_center[2] + sphere_radius * math.cos(2 * math.pi * phi / resolution)
+    #                 ]
+    #             )
+    #         )
 
-    in_FOV_points = []
-    for pos in obst_pos:
-        if check_obst_is_in_FOV(agent_pos, agent_quat, pos, fov_x_deg, fov_y_deg, fov_depth):
-            in_FOV_points.append(pos)
+    # in_FOV_points = []
+    # for pos in obst_pos:
+    #     if check_obst_is_in_FOV(agent_pos, agent_quat, pos, fov_x_deg, fov_y_deg, fov_depth):
+    #         in_FOV_points.append(pos)
     
-    visualization(agent_pos, agent_quat, in_FOV_points, fov_x_deg, fov_y_deg, fov_depth)
+    # visualization(agent_pos, agent_quat, in_FOV_points, fov_x_deg, fov_y_deg, fov_depth)
 
     
 
