@@ -39,7 +39,7 @@ class MyEnvironment(gym.Env):
     print("Creating new environment!")
     
     self.verbose = False
-    self.len_episode = 50     # Time steps [-] # is overwritten in policy_compression_train.py
+    self.len_episode = 300     # Time steps [-] # is overwritten in policy_compression_train.py
     self.am=ActionManager()
     self.om=ObservationManager()
     self.obsm=ObstaclesManager()
