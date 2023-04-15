@@ -812,6 +812,7 @@ struct parameters
 {
   //
   // clang-format off
+  double          use_expert_for_other_agents_in_training;
   double          goal_seen_radius_training;
   bool            use_noised_obst_size;
   bool            use_clipping;

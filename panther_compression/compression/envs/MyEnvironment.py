@@ -25,7 +25,7 @@ from geometry_msgs.msg import PointStamped
 #####
 from imitation.util import logger, util
 from compression.policies.ExpertPolicy import ExpertPolicy
-
+from imitation.algorithms import bc
 import uuid
 
 class MyEnvironment(gym.Env):
@@ -45,7 +45,6 @@ class MyEnvironment(gym.Env):
     self.om=ObservationManager()
     self.obsm=ObstaclesManager()
     self.gm=GTermManager()
-    self.oam=OtherAgentsManager(ExpertPolicy())
     self.cfys=ClosedFormYawSubstituter()
     self.cost_computer=CostComputer()
     self.action_shape=self.am.getActionShape()
@@ -67,6 +66,11 @@ class MyEnvironment(gym.Env):
     self.num_goal_reached = 0
     self.time = 0.0
     self.prev_dist_current2goal = 0.0
+
+    policy = ExpertPolicy() if self.par.use_expert_for_other_agents_in_training else \
+      bc.reconstruct_policy("/home/kota/Research/deep-panther_ws/src/deep_panther/panther_compression/trained_policies/policies/test30.pt")
+    self.oam=OtherAgentsManager(policy)
+    
     # self.my_SolverIpopt=py_panther.SolverIpopt(self.par)
     # self.reset()
 

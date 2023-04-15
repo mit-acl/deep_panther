@@ -62,6 +62,7 @@ PYBIND11_MODULE(py_panther, m)
       // This part below should be copied/pasted from parameters of panther_types.hpp
       // clang-format off
 
+      .def_readwrite("use_expert_for_other_agents_in_training", &mt::parameters::use_expert_for_other_agents_in_training)
       .def_readwrite("goal_seen_radius_training", &mt::parameters::goal_seen_radius_training)
       .def_readwrite("use_noised_obst_size", &mt::parameters::use_noised_obst_size)
       .def_readwrite("use_clipping", &mt::parameters::use_clipping)

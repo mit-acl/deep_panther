@@ -67,6 +67,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   ROS_INFO("Found transform %s --> %s", name_drone_.c_str(), name_camera_depth_optical_frame_tf_.c_str());
   // std::cout << "par_.b_T_c.matrix()= " << par_.b_T_c.matrix() << std::endl;
 
+  safeGetParam(nh1_, "use_expert_for_other_agents_in_training", par_.use_expert_for_other_agents_in_training);
   safeGetParam(nh1_, "goal_seen_radius_training", par_.goal_seen_radius_training);
   safeGetParam(nh1_, "use_noised_obst_size", par_.use_noised_obst_size);
   safeGetParam(nh1_, "use_clipping", par_.use_clipping);
