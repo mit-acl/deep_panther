@@ -844,7 +844,6 @@ struct parameters
   bool            use_lstm;
   double          prob_choose_cross;
   bool            make_yaw_NN;
-  double          yaw_scaling;
   double          dist_from_gterm_to_dummy;
   std::vector<std::string> agents_ids;
   bool            is_multiagent;

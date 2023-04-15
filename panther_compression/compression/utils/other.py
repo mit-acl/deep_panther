@@ -1480,7 +1480,6 @@ class StudentCaller():
 		self.obsm=ObstaclesManager()
 		self.cc=CostComputer()
 		self.cfys=ClosedFormYawSubstituter()
-		self.yaw_scaling = getPANTHERparamsAsCppStruct().yaw_scaling
 		self.params = readPANTHERparams()
 		# self.index_smallest_augmented_cost = 0
 		# self.index_best_safe_traj = None
@@ -1524,9 +1523,6 @@ class StudentCaller():
 			action_normalized=self.cfys.substituteWithClosedFormYaw(action_normalized, w_init_state, w_obstacles) #f_action_n, w_init_state, w_obstacles
 
 		action=self.am.denormalizeAction(action_normalized)
-
-		# scale back down the acts_student
-		action[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts] = action[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts]/self.yaw_scaling
 
 		##
 		## This funciton uses Casadi, and it needs a fixed size of obstacles

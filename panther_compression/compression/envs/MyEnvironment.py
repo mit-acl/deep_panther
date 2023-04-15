@@ -152,14 +152,6 @@ class MyEnvironment(gym.Env):
       f_action_n=self.cfys.substituteWithClosedFormYaw(f_action_n, self.w_state, self.w_obstacles) #f_action_n, w_init_state, w_obstacles
 
     ##
-    ## Yaw scaling correctoin
-    ## to have bigger loss, we magnified yaw actions (look at bc.py's expert_yaw_i assignment)
-    ## before convert actions to B-spline, we need to revert this change
-    ##
-    
-    f_action_n[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts] = f_action_n[:,self.am.traj_size_pos_ctrl_pts:self.am.traj_size_pos_ctrl_pts+self.am.traj_size_yaw_ctrl_pts]/self.par.yaw_scaling
-
-    ##
     ## Check for normalization
     ##
 
