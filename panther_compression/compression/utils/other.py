@@ -124,9 +124,10 @@ def readPANTHERparams():
 	return params_yaml
 
 class Obstacle():
-	def __init__(self, ctrl_pts, bbox_inflated):
+	def __init__(self, ctrl_pts, bbox_inflated, is_obstacle=True):
 		self.ctrl_pts=ctrl_pts
 		self.bbox_inflated=bbox_inflated
+		self.is_obstacle=is_obstacle
 
 def convertPPObstacle2Obstacle(ppobstacle): #pp stands for py_panther
 	assert type(ppobstacle.ctrl_pts) is list
@@ -324,8 +325,8 @@ class ObstaclesManager():
 		## if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
 		##
 		
-		if self.num_obs < self.params["num_max_of_obst"]:
-			for i in range(self.params["num_max_of_obst"] - self.num_obs):
+		if self.num_obs < self.params["num_max_of_obst"] - self.params["num_of_other_agents_in_training"]:
+			for i in range( (self.params["num_max_of_obst"] - - self.params["num_of_other_agents_in_training"]) - self.num_obs):
 				w_obs.append(w_obs[-1])
 
 		return w_obs
@@ -351,11 +352,184 @@ class ObstaclesManager():
 		## if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
 		##
 
-		if self.num_obs < self.params["num_max_of_obst"]:
-			for i in range(self.params["num_max_of_obst"] - self.num_obs):
+		if self.num_obs < self.params["num_max_of_obst"] - self.params["num_of_other_agents_in_training"]:
+			for i in range( (self.params["num_max_of_obst"] - - self.params["num_of_other_agents_in_training"]) - self.num_obs):
 				w_obs.append(w_obs[-1])
 
 		return w_obs
+
+##
+##
+## OtherAgentsManager
+##
+##
+
+class OtherAgentsManager():
+	"""
+	Provide other agents trajectories in the training environment
+	"""	
+	params=readPANTHERparams()
+	fitter = py_panther.Fitter(params["fitter_num_samples"])
+
+	def __init__(self, policy):
+
+		self.om = ObservationManager()
+		self.am = ActionManager()
+		self.cost_computer = CostComputer()
+
+		self.params = readPANTHERparams()
+		self.x_max = self.params["training_env_x_max"]
+		self.x_min = self.params["training_env_x_min"]
+		self.y_max = self.params["training_env_y_max"]
+		self.y_min = self.params["training_env_y_min"]
+		self.z_max = self.params["training_env_z_max"]
+		self.z_min = self.params["training_env_z_min"]
+		self.goal_radius = self.params["goal_radius"]
+		self.goal_seen_radius = self.params["goal_seen_radius"]
+
+		self.fitter_num_seg=self.params["fitter_num_seg"]
+		self.fitter_deg_pos=self.params["fitter_deg_pos"]
+		self.fitter_total_time=self.params["fitter_total_time"]
+		self.fitter_num_samples=self.params["fitter_num_samples"]
+	
+		self.other_agent_bbox_inflated= np.array(self.params["training_other_agent_size"]) + np.array(self.params["drone_bbox"])
+		self.policy = policy
+		self.num_of_other_agents = self.params["num_of_other_agents_in_training"]
+
+		ctrl_pts = self.am.get_zero_ctrl_pts_for_student()
+		bbox_inflated = self.am.get_bbox_inflated_for_student()
+		w_student = []
+		for i in range(self.params["num_max_of_obst"]):
+			w_student.append(Obstacle(ctrl_pts, bbox_inflated, is_obstacle=False))
+		self.reset(w_student)
+
+	def reset(self, w_obstacles):
+
+		self.get_new_state()
+		previous_oaf_obs = self.get_oaf_obs_from_w_obs(w_obstacles)
+		self.previous_oaf_obs_n = self.om.normalizeObservation(previous_oaf_obs)
+
+	def get_new_state(self):
+
+		##
+		## create self.w_state
+		##
+
+		self.w_pos = np.array([
+			[random.uniform(self.x_min, self.x_max)],
+			[random.uniform(self.y_min, self.y_max)],
+			[random.uniform(self.z_min, self.z_max)]
+		])
+
+		self.w_vel = np.array([[0], [0], [0]])
+		self.w_acc = np.array([[0], [0], [0]])
+		self.w_yaw = np.array([[0]])
+		self.w_dyaw = np.array([[0]])
+
+		self.w_state = State(self.w_pos, self.w_vel, self.w_acc, self.w_yaw, self.w_dyaw)
+
+		##
+		## get terminal goal
+		##
+
+		dist = 0.0
+		min_dist = 5.0
+		while dist < min_dist:
+			self.w_gterm_pos = np.array([
+				[random.uniform(self.x_min, self.x_max)],
+				[random.uniform(self.y_min, self.y_max)],
+				[random.uniform(self.z_min, self.z_max)]
+			])
+			dist = np.linalg.norm(self.w_gterm_pos - self.w_pos)
+	
+	def update_state(self, oaf_traj, dt):
+
+		##
+		## update self.w_state
+		##
+
+		w_posBS, w_yawBS = self.am.f_trajAnd_w_State2wBS(oaf_traj, self.w_state)
+		self.w_state = State(w_posBS.getPosT(dt), w_posBS.getVelT(dt), w_posBS.getAccelT(dt), w_yawBS.getPosT(dt), w_yawBS.getVelT(dt))
+
+		##
+		## goal reached check
+		##
+
+		dist_current_2gterm=np.linalg.norm(self.w_state.w_pos-self.w_gterm_pos) #From the current position to the goal
+		dist_endtraj_2gterm=np.linalg.norm(w_posBS.getLastPos()-self.w_gterm_pos) #From the end of the current traj to the goal
+	
+		if dist_current_2gterm < self.goal_seen_radius and dist_endtraj_2gterm < self.goal_radius:
+			ctrl_pts = self.am.get_zero_ctrl_pts_for_student()
+			bbox_inflated = self.am.get_bbox_inflated_for_student()
+			w_student = []
+			for i in range(self.params["num_max_of_obst"]):
+				w_student.append(Obstacle(ctrl_pts, bbox_inflated, is_obstacle=False))
+			self.reset(w_student)
+			print('[other agent] goal reached')
+		
+	def getFutureWPosOtherAgents(self, time, w_obstacles_and_student, w_obstacles, dt):
+
+		##
+		## convert w_obstacles_and_student to f_obs in other agent frame (oaf)
+		##
+		
+		oaf_obs = self.get_oaf_obs_from_w_obs(w_obstacles_and_student)
+		oaf_obs_n = self.om.normalizeObservation(oaf_obs)
+
+		##
+		## get action from policy
+		##
+
+		oaf_action_n, _, _= self.get_oaf_action_n_from_oaf_obs_n(oaf_obs_n)
+
+		if self.am.isNanAction(oaf_action_n) or not self.am.actionIsNormalized(oaf_action_n):
+			print(f"Nan action!")
+			return w_obstacles
+
+		##
+		## denormalization
+		##
+
+		oaf_action = self.am.denormalizeAction(oaf_action_n)
+
+		##
+		## get w_obastacles_and_other_agents
+		##
+
+		index_smallest_augmented_cost = self.cost_computer.getIndexBestTraj(self.previous_oaf_obs_n, oaf_action_n)
+		oaf_traj = self.am.getTrajFromAction(oaf_action, index_smallest_augmented_cost)
+		w_other_agents = self.am.f_traj_and_w_state_2_w_student_for_other_agents(oaf_traj, self.w_state)
+		w_obstacles_and_other_agents = w_obstacles[:]
+		w_obstacles_and_other_agents.extend(w_other_agents)
+		
+		##
+		## update previous_oaf_obs_n
+		##
+
+		self.previous_oaf_obs_n = oaf_obs_n
+
+		##
+		## update other agents state
+		##
+
+		self.update_state(oaf_traj, dt)
+
+		return w_obstacles_and_other_agents
+	
+	def get_oaf_action_n_from_oaf_obs_n(self, oaf_obs_n):
+		"""
+		Convert oaf obstacles to oaf action
+		"""
+		print("call policy in other agent manager")
+		oaf_action_n = self.policy.predict(oaf_obs_n)
+		return oaf_action_n
+
+	def get_oaf_obs_from_w_obs(self, w_obstacles):
+		"""
+		Convert world obstacles to oaf obstacles
+		"""
+		f_observation = self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.w_gterm_pos, w_obstacles)
+		return f_observation
 
 ##
 ##
@@ -830,6 +1004,20 @@ class ObservationManager():
 		observation_normalized = observation / self.getNormalizationVector(observation)
 		# assert np.logical_and(observation_normalized >= -1, observation_normalized <= 1).all()
 		return observation_normalized
+	
+	def normalizeObservationWithNumObstAndOtherAgents(self, observation, num_obst, num_other_agents):
+
+		normalization_vector = self.normalization_constant
+		for i in range(num_obst-1):
+			normalization_vector = np.concatenate((normalization_vector, self.normalization_constant[0, 10:].reshape(1, -1)), axis=1)
+
+		ones13=np.ones((1,3))
+		for i in range(num_other_agents):
+			normalization_vector = np.concatenate((normalization_vector, self.max_dist2obs*np.ones((1,3*10)), self.max_side_bbox_obs*ones13), axis=1)
+
+		observation_normalized = observation /normalization_vector
+
+		return observation_normalized
 
 	def denormalizeObservation(self,observation_normalized):
 		""" Denormalize from [-1,1] to original range """
@@ -854,7 +1042,7 @@ class ObservationManager():
 		random_normalized_observation=np.random.uniform(-1,1, size=self.getObservationShape())
 		return random_normalized_observation
 
-	def get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self,w_state, w_gterm_pos, w_obstacles):
+	def get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self, w_state, w_gterm_pos, w_obstacles):
 
 		f_gterm_pos=w_state.f_T_w * w_gterm_pos
 		dist2gterm=np.linalg.norm(f_gterm_pos)
@@ -943,6 +1131,9 @@ class ActionManager():
 		self.max_yawcPoint=self.margin_yaw_factor*2.0*math.pi # not sure why but this was 4e3*math.pi before (Kota's change)
 		self.fitter_total_time=params["fitter_total_time"]
 
+		self.training_other_agent_size = params["training_other_agent_size"]
+		self.drone_bbox = params["drone_bbox"]
+
 		# print("self.max_dist2BSPoscPoint= ", self.max_dist2BSPoscPoint)
 		# print("self.max_yawcPoint= ", self.max_yawcPoint)
 		self.normalization_constant_traj=np.concatenate((self.max_dist2BSPoscPoint*np.ones((1, self.traj_size_pos_ctrl_pts)), \
@@ -986,7 +1177,8 @@ class ActionManager():
 		return np.full(self.getActionShape(), np.nan)
 
 	def isNanAction(self, act):
-		return np.isnan(np.sum(act))
+		# return np.isnan(np.sum(act))
+		return np.isnan(act).any()
 
 	def normalizeAction(self, action):
 		action_normalized=np.empty(action.shape)
@@ -1113,6 +1305,19 @@ class ActionManager():
 
 		return w_pos_ctrl_pts, knots_pos
 
+	def get_bbox_inflated_for_student(self):
+		return np.array(self.training_other_agent_size) + np.array(self.drone_bbox)
+	
+	def get_zero_ctrl_pts_for_student(self):
+		return np.zeros((3,10)) #TODO: hardcoded
+
+	def f_traj_and_w_state_2_w_student_for_other_agents(self, f_traj, w_state):
+		w_agent_for_other_agents = []
+		# TODO: make this multi other agents
+		w_pos_ctrl_pts, _ = self.f_trajAnd_w_State2_w_pos_ctrl_pts_and_knots(f_traj, w_state)
+		bbox_inflated = np.array(self.training_other_agent_size) + np.array(self.drone_bbox)
+		w_agent_for_other_agents.append(Obstacle(ctrl_pts=w_pos_ctrl_pts, bbox_inflated=bbox_inflated, is_obstacle=False))
+		return w_agent_for_other_agents
 
 	def f_trajAnd_w_State2_w_yaw_ctrl_pts_and_knots(self, f_traj, w_state):
 
@@ -1435,7 +1640,7 @@ class CostComputer():
 		total_time=computeTotalTime(init_state, final_state, CostComputer.par.v_max, CostComputer.par.a_max, CostComputer.par.factor_alloc)
 		CostComputer.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time)
 		CostComputer.my_SolverIpopt.setFocusOnObstacle(True)
-		obstacles=CostComputer.om.getObstacles(f_obs)
+		obstacles=CostComputer.om.getObstaclesForCasadi(f_obs)
 
 		CostComputer.my_SolverIpopt.setObstaclesForOpt(obstacles)
 		f_state=CostComputer.om.get_f_StateFromf_obs(f_obs)
@@ -1533,6 +1738,7 @@ class CostComputer():
 		return cost + CostComputer.par.lambda_obst_avoidance_violation*obst_avoidance_violation + CostComputer.par.lambda_dyn_lim_violation*dyn_lim_violation
 
 	def getIndexBestTraj(self, f_obs_n, f_action_n):
+
 		tmp=self.getCostsAndViolationsOfActionFromObsnAndActionn(f_obs_n, f_action_n)
 		return tmp.index_best_traj
 		# smallest_augmented_cost = float('inf')
@@ -1566,20 +1772,24 @@ class CostComputer():
 		## PARALLEL OPTION
 		##
 
-		def my_func(thread_index):
-			traj_n=f_action_n[thread_index,:].reshape(1,-1)
-			cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_obs_n, traj_n)
-			return [cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost] 
+		# def my_func(thread_index):
+		# 	traj_n=f_action_n[thread_index,:].reshape(1,-1)
+		# 	cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_obs_n, traj_n)
+		# 	return [cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost] 
 
-		num_of_trajs=np.shape(f_action_n)[0]
-		num_jobs=multiprocessing.cpu_count() #min(multiprocessing.cpu_count(),num_of_trajs); #Note that the class variable my_SolverIpopt will be created once per job created (but only in the first call to predictSeveral I think)
-		alls = Parallel(n_jobs=num_jobs)(map(delayed(my_func), list(range(num_of_trajs)))) #, prefer="threads"
+		# num_of_trajs=np.shape(f_action_n)[0]
 
-		for i in range( np.shape(f_action_n)[0]): #For each row of action
-			costs.append(alls[i][0])
-			obst_avoidance_violations.append(alls[i][1])
-			dyn_lim_violations.append(alls[i][2])
-			augmented_costs.append(alls[i][3])
+		# print(num_of_trajs)
+		# exit()
+
+		# num_jobs=multiprocessing.cpu_count() #min(multiprocessing.cpu_count(),num_of_trajs); #Note that the class variable my_SolverIpopt will be created once per job created (but only in the first call to predictSeveral I think)
+		# alls = Parallel(n_jobs=num_jobs)(map(delayed(my_func), list(range(num_of_trajs)))) #, prefer="threads"
+
+		# for i in range( np.shape(f_action_n)[0]): #For each row of action
+		# 	costs.append(alls[i][0])
+		# 	obst_avoidance_violations.append(alls[i][1])
+		# 	dyn_lim_violations.append(alls[i][2])
+		# 	augmented_costs.append(alls[i][3])
 
 		# start=time.time();
 
@@ -1589,12 +1799,12 @@ class CostComputer():
 			## NON-PARALLEL OPTION
 			##
 
-			# traj_n=f_action_n[i,:].reshape(1,-1);
-			# cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_obs_n, traj_n)
-			# costs.append(cost)
-			# obst_avoidance_violations.append(obst_avoidance_violation)
-			# dyn_lim_violations.append(dyn_lim_violation)
-			# augmented_costs.append(augmented_cost)
+			traj_n=f_action_n[i,:].reshape(1,-1)
+			cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost = self.computeCost_AndObsAvoidViolation_AndDynLimViolation_AndAugmentedCost(f_obs_n, traj_n)
+			costs.append(cost)
+			obst_avoidance_violations.append(obst_avoidance_violation)
+			dyn_lim_violations.append(dyn_lim_violation)
+			augmented_costs.append(augmented_cost)
 
 			##
 			## END NON-PARALLEL OPTION

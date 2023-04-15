@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import copy
 from gym import spaces
-from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager, getPANTHERparamsAsCppStruct, computeTotalTime, posAccelYaw2TfMatrix
+from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, Obstacle, ObstaclesManager, getPANTHERparamsAsCppStruct, computeTotalTime, posAccelYaw2TfMatrix, OtherAgentsManager
 from compression.utils.other import TfMatrix2RosQuatAndVector3, TfMatrix2RosPose
 from compression.utils.other import CostComputer
 from compression.utils.other import MyClampedUniformBSpline
@@ -24,6 +24,7 @@ from tf2_msgs.msg import TFMessage
 from geometry_msgs.msg import PointStamped
 #####
 from imitation.util import logger, util
+from compression.policies.ExpertPolicy import ExpertPolicy
 
 import uuid
 
@@ -44,6 +45,7 @@ class MyEnvironment(gym.Env):
     self.om=ObservationManager()
     self.obsm=ObstaclesManager()
     self.gm=GTermManager()
+    self.oam=OtherAgentsManager(ExpertPolicy())
     self.cfys=ClosedFormYawSubstituter()
     self.cost_computer=CostComputer()
     self.action_shape=self.am.getActionShape()
@@ -182,6 +184,7 @@ class MyEnvironment(gym.Env):
     f_traj = self.am.getTrajFromAction(f_action, index_smallest_augmented_cost)
     f_traj_n = self.am.getTrajFromAction(f_action_n, index_smallest_augmented_cost)
     w_posBS, w_yawBS = self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
+    w_student_for_other_agents = self.am.f_traj_and_w_state_2_w_student_for_other_agents(f_traj, self.w_state)
 
     ###
     ### MOVE THE ENVIRONMENT
@@ -211,7 +214,28 @@ class MyEnvironment(gym.Env):
     else:
       self.w_obstacles=self.obsm.getFutureWPosStaticObstacles()
 
-    f_observation = self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles)
+    ##
+    ## Construct Other Agents
+    ##
+
+    w_obstacles_and_student = self.w_obstacles[:]
+    w_obstacles = self.w_obstacles[:]
+    w_obstacles_and_student.extend(w_student_for_other_agents)
+
+    if self.par.use_other_agents_in_training:
+      self.w_obstacles_and_other_agents=self.oam.getFutureWPosOtherAgents(self.time, w_obstacles_and_student, w_obstacles, self.training_dt)
+    else:
+      self.w_obstacles_and_other_agents=w_obstacles
+    
+    if len(self.w_obstacles_and_other_agents) < self.par.num_max_of_obst:
+      for i in range(self.oam.num_of_other_agents):
+          self.w_obstacles_and_other_agents.append(self.w_obstacles_and_other_agents[-1])
+
+    ##
+    ## get f_observation
+    ##
+
+    f_observation = self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles_and_other_agents)
     f_observation_n = self.om.normalizeObservation(f_observation)
 
     ##
@@ -311,10 +335,42 @@ class MyEnvironment(gym.Env):
     else:
       self.w_obstacles=self.obsm.getFutureWPosStaticObstacles()
 
-    f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles)
+    ##
+    ## w_student_for_other_agents
+    ##
+
+    ctrl_pts = self.am.get_zero_ctrl_pts_for_student()
+    bbox_inflated = self.am.get_bbox_inflated_for_student()
+    w_student_for_other_agents = [Obstacle(ctrl_pts, bbox_inflated, is_obstacle=False)]
+
+    ##
+    ## Other agent state
+    ##
+
+    w_obstacles_and_student = self.w_obstacles[:]
+    w_obstacles = self.w_obstacles[:]
+    w_obstacles_and_student.extend(w_student_for_other_agents)
+
+    if self.par.use_other_agents_in_training:
+      self.w_obstacles_and_other_agents=self.oam.getFutureWPosOtherAgents(self.time, w_obstacles_and_student, w_obstacles, self.training_dt)
+    else:
+      self.w_obstacles_and_other_agents=w_obstacles
+
+    if len(self.w_obstacles_and_other_agents) < self.par.num_max_of_obst:
+      for i in range(self.oam.num_of_other_agents):
+          self.w_obstacles_and_other_agents.append(self.w_obstacles_and_other_agents[-1])
+
+    f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles_and_other_agents)
     f_observation_n=self.om.normalizeObservation(f_observation)
     self.previous_f_observation=self.om.denormalizeObservation(f_observation_n)
     self.previous_f_obs_n=f_observation_n
+
+    ##
+    ## other agent state reset
+    ##
+
+    self.oam.reset(w_obstacles_and_student)
+
     return f_observation_n
 
   def render(self, mode='human'):

@@ -77,8 +77,10 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "num_obst_in_FOV", par_.num_obst_in_FOV);
   safeGetParam(nh1_, "goal_seen_radius", par_.goal_seen_radius);
   safeGetParam(nh1_, "use_dynamic_obst_in_training", par_.use_dynamic_obst_in_training);
+  safeGetParam(nh1_, "use_other_agents_in_training", par_.use_other_agents_in_training);
   safeGetParam(nh1_, "training_dt", par_.training_dt);
   safeGetParam(nh1_, "num_of_obstacles_in_training", par_.num_of_obstacles_in_training);
+  safeGetParam(nh1_, "num_of_other_agents_in_training", par_.num_of_other_agents_in_training);
   safeGetParam(nh1_, "lstm_output_dim", par_.lstm_output_dim);
   safeGetParam(nh1_, "lstm_num_layers", par_.lstm_num_layers);
   safeGetParam(nh1_, "lstm_bidirectional", par_.lstm_bidirectional);
@@ -119,6 +121,10 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "training_obst_size", training_obst_size_tmp);
   par_.training_obst_size << training_obst_size_tmp[0], training_obst_size_tmp[1], training_obst_size_tmp[2];
   
+  std::vector<double> training_other_agent_size_tmp;
+  safeGetParam(nh1_, "training_other_agent_size", training_other_agent_size_tmp);
+  par_.training_other_agent_size << training_other_agent_size_tmp[0], training_other_agent_size_tmp[1], training_other_agent_size_tmp[2];
+
   safeGetParam(nh1_, "drone_extra_radius_for_NN", par_.drone_extra_radius_for_NN);
   safeGetParam(nh1_, "Ra", par_.Ra);
   safeGetParam(nh1_, "impose_FOV_in_trajCB", par_.impose_FOV_in_trajCB);

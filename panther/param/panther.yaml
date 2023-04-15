@@ -31,9 +31,13 @@ margin_a_factor: 1.0 #relazation factor for training constraints used in Observa
 margin_ydot_factor: 1.0 #relazation factor for training constraints used in ObservationManager()
 margin_yaw_factor: 1.0 #relazation factor for training constraints used in ActionManager()
 training_obst_size: [0.6, 0.6, 0.2] #obstacle size in training env
+training_other_agent_size: [0.8, 0.8, 0.8] #agent size in training env
 use_dynamic_obst_in_training: true
-random_num_of_obstacles_in_training: true # if this is True, # of obstacles is [1,num_of_obstacles_in_training]
-num_of_obstacles_in_training: 3 # this should not be bigger than num_max_of_obst defined in params_casadi.yaml(main.m)
+use_other_agents_in_training: false
+random_num_of_obstacles_in_training: false # if this is True, # of obstacles is [1,num_of_obstacles_in_training]
+# num_of_obstacles_in_training + num_of_other_agents_in_training should not be bigger than num_max_of_obst defined in params_casadi.yaml(main.m)
+num_of_obstacles_in_training: 2
+num_of_other_agents_in_training: 1
 use_clipping: False
 use_noised_obst_size: True # (1) observation of obstacles are noised
 goal_seen_radius_training: 1.0 # [m]
@@ -137,7 +141,7 @@ c_final_yaw: 0.01              #weight for the optimization
 c_total_time: 80             #weight for the optimization
 lambda_obst_avoidance_violation: 1.0 #To compute the augmented cost
 lambda_dyn_lim_violation: 1.0 #To compute the augmented cost
-num_of_intervals: 6 #nlopt/num_pol in rmader.yaml (TODO: could be the same as num_seg in params_casadi.yaml)
+num_of_intervals: 7 #nlopt/num_pol in rmader.yaml (TODO: could be the same as num_seg in params_casadi.yaml)
 
 # Other
 #############################################

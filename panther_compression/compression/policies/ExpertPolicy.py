@@ -40,7 +40,7 @@ class ExpertPolicy(object):
 
         # self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
 
-        self.computation_times_verbose = False
+        self.computation_times_verbose = True
 
         self.name=Style.BRIGHT+Fore.BLUE+"  [Exp]"+Style.RESET_ALL
         self.reset()
@@ -63,7 +63,7 @@ class ExpertPolicy(object):
         In the case of critics, it is the estimated value of the observation."""
 
         if(self.om.isNanObservation(obs_n)):
-            return self.am.getNanAction(), {"Q": 0.0} 
+            return self.am.getNanAction(), {"Q": 0.0} , 1e5
         obs=self.om.denormalizeObservation(obs_n)
 
         ##
@@ -115,7 +115,7 @@ class ExpertPolicy(object):
         if self.computation_times_verbose:
             return action_normalized, {"Q": Q}, computation_time
         else:
-            return action_normalized, {"Q": Q}
+            return action_normalized, {"Q": Q}, 1e5
 
     def predictSeveral(self, obs_n, deterministic=True):
 

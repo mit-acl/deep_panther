@@ -822,13 +822,16 @@ struct parameters
   double          num_obst_in_FOV;
   double          goal_seen_radius;
   bool            use_dynamic_obst_in_training;
+  bool            use_other_agents_in_training;
   Eigen::Vector3d training_obst_size;
+  Eigen::Vector3d training_other_agent_size;
   double          margin_v_factor;
   double          margin_a_factor;
   double          margin_ydot_factor;
   double          margin_yaw_factor;
   double          training_dt;
   int             num_of_obstacles_in_training;
+  int             num_of_other_agents_in_training;
   int             lstm_output_dim;
   int             lstm_num_layers;
   bool            lstm_bidirectional;
