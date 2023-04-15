@@ -56,7 +56,7 @@ make_plots=false;
 
 deg_pos=3; %The degree of the position polynomial
 deg_yaw=2; %The degree of the yaw polynomial
-num_seg=6; %The number of segments in the trajectory (the more segments the less conservative the trajectory is [also makes optimization problem harder])
+num_seg=7; %The number of segments in the trajectory (the more segments the less conservative the trajectory is [also makes optimization problem harder])
 num_max_of_obst = 3; %This is the maximum num of the obstacles that will be considered in the constraints
 num_obst_in_FOV = 1; % this is different from max_num_obst, which is the max number of obst that an agent includes for constraints
 
@@ -607,10 +607,13 @@ tmp1=[ p0_value(1)*ones(1,sp.p-1)  linspace(p0_value(1),pf_value(1), sp.N+1-2*(s
 tmp2=[ y0_value(1)*ones(1,sy.p-1)  linspace(y0_value(1),yf_value(1), sy.N+1-2*(sy.p-1))  yf_value(1)*ones(1,sy.p-1) ];
 
 alpha_value = 3.53467;
-tmp1=[0, 0, 0, 1.64678, 2.85231, 4.05784, 5.70462, 5.70462, 5.70462; 
-      0, 0, 0, -0.378827, -1.05089, -1.71629, -2.08373, -2.08373, -2.08373; 
-      0, 0, 0, 5.62017e-05, 0.00192903, 0.00290378, 0.00011499, 0.00011499, 0.00011499];
-tmp2=[0, 0, 0.281832, 0.888652, 1.82877, 2.19427, 2.34944, 2.34944];
+% tmp1=[0, 0, 0, 1.64678, 2.85231, 4.05784, 5.70462, 5.70462, 5.70462; 
+%       0, 0, 0, -0.378827, -1.05089, -1.71629, -2.08373, -2.08373, -2.08373; 
+%       0, 0, 0, 5.62017e-05, 0.00192903, 0.00290378, 0.00011499, 0.00011499, 0.00011499];
+tmp1=[0, 0, 0, 1.64678, 2.85231, 4.05784, 5.70462, 5.70462, 5.70462, 5.70462; 
+      0, 0, 0, -0.378827, -1.05089, -1.71629, -2.08373, -2.08373, -2.08373, -2.08373; 
+      0, 0, 0, 5.62017e-05, 0.00192903, 0.00290378, 0.00011499, 0.00011499, 0.00011499, 0.0011499];
+tmp2=[0, 0, 0.281832, 0.888652, 1.82877, 2.19427, 2.34944, 2.34944, 2.34944];
 
 % all_obstacle_bbox_inflated_value= ones(size(all_obstacle_bbox_inflated));
 
@@ -1150,9 +1153,9 @@ f.save('./casadi_generated_files/get_optimal_yaw_for_fixed_pos.casadi')
 %          0         2         -2    7    0.0052    3    0.0052 0.0052 0.0052];
 
 
-pCPs_value=[[0, 0, 0, 0.601408, 2.57406, 4.70471, 5.96806, 5.96806, 5.96806];
- [0, 0, 0, -0.0954786, -0.261755, -0.312647, -0.270762, -0.270762, -0.270762]; 
- [1, 1, 1, 1.14378, 1.07827, 1.01892, 1.0935, 1.0935, 1.0935]];
+pCPs_value=[[0, 0, 0, 0.601408, 2.57406, 4.70471, 5.96806, 5.96806, 5.96806, 5.96806];
+ [0, 0, 0, -0.0954786, -0.261755, -0.312647, -0.270762, -0.270762, -0.270762, -0.270762]; 
+ [1, 1, 1, 1.14378, 1.07827, 1.01892, 1.0935, 1.0935, 1.0935, 1.0935]];
 % pCPs_feature_value=([1 -2 3]').*ones(3,fitter.bs.num_cpoints);
 
 pCPs_feature_value=[[4.21462, 4.00643, 3.40667, 2.8736, 3.28795, 4.29628, 4.95785, 4.71115, 4.19066, 3.9898]; 
