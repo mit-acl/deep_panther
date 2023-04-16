@@ -716,16 +716,8 @@ std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
   map_arguments["af"] = eigen2std(final_state_.accel);
   map_arguments["y0"] = initial_state_.yaw;
   map_arguments["yf"] = final_state_.yaw;
-
-  // if (fabs(final_state_.yaw) > 1e-5 || par_.c_final_yaw > 0.0)
-  // {
-  //   std::cout << red << bold << "Implement this!" << std::endl;
-  //   abort();
-  // }
-
   map_arguments["ydot0"] = initial_state_.dyaw;
-  map_arguments["ydotf"] =
-      final_state_.dyaw;  // Needed: if not (and if you are minimizing ddyaw), ddyaw=cte --> yaw will explode
+  map_arguments["ydotf"] = final_state_.dyaw;  // Needed: if not (and if you are minimizing ddyaw), ddyaw=cte --> yaw will explode
   map_arguments["v_max"] = eigen2std(par_.v_max);
   map_arguments["a_max"] = eigen2std(par_.a_max);
   map_arguments["j_max"] = eigen2std(par_.j_max);
@@ -824,7 +816,7 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   }
 
   //
-  // CASADI
+  // CASADI (getmapConstantArguments will get obstacle info, etc)
   //
 
   std::map<std::string, casadi::DM> map_arguments = getMapConstantArguments();

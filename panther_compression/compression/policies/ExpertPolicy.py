@@ -77,17 +77,26 @@ class ExpertPolicy(object):
             obs = np.reshape(obs, (1, obs.shape[0]))
 
         ##
-        ## Call the optimization
+        ## Set the initial and final states
         ##
-        
+
         init_state=self.om.getInit_f_StateFromObservation(obs);        
         final_state=self.om.getFinal_f_StateFromObservation(obs);        
         total_time=computeTotalTime(init_state, final_state, self.par_v_max, self.par_a_max, self.par_factor_alloc)
         ExpertPolicy.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time)
+        
+        ##
+        ## Set the obstacles
+        ##
+        
         ExpertPolicy.my_SolverIpopt.setFocusOnObstacle(True)
         obstacles=self.om.getObstaclesForCasadi(obs)
         ExpertPolicy.my_SolverIpopt.setObstaclesForOpt(obstacles)
 
+        ##
+        ## Call the optimization
+        ##
+        
         start = time.time()
         succeed=ExpertPolicy.my_SolverIpopt.optimize(True)
         end = time.time()

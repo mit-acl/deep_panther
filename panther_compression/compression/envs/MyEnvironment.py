@@ -70,7 +70,7 @@ class MyEnvironment(gym.Env):
     policy = ExpertPolicy() if self.par.use_expert_for_other_agents_in_training else \
       bc.reconstruct_policy("/home/kota/Research/deep-panther_ws/src/deep_panther/panther_compression/trained_policies/policies/test30.pt")
     self.oam=OtherAgentsManager(policy)
-    
+
     # self.my_SolverIpopt=py_panther.SolverIpopt(self.par)
     # self.reset()
 
@@ -344,8 +344,8 @@ class MyEnvironment(gym.Env):
     ##
 
     w_obstacles_and_student = self.w_obstacles[:]
-    w_obstacles = self.w_obstacles[:]
     w_obstacles_and_student.extend(w_student_for_other_agents)
+    w_obstacles = self.w_obstacles[:]
 
     if self.par.use_other_agents_in_training:
       self.w_obstacles_and_other_agents=self.oam.getFutureWPosOtherAgents(self.time, w_obstacles_and_student, w_obstacles, self.training_dt)
