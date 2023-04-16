@@ -772,6 +772,7 @@ struct dynTraj
   int id;
   double time_received;  // time at which this trajectory was received from an agent
   bool is_agent;         // true for a trajectory of an agent, false for an obstacle
+  bool is_committed;
 };
 
 struct dynTrajCompiled
@@ -790,6 +791,7 @@ struct dynTrajCompiled
   double time_received;  // time at which this trajectory was received from an agent
   bool is_agent;         // true for a trajectory of an agent, false for an obstacle
   bool is_static;
+  bool is_committed;
 };
 
 // struct mt::PieceWisePolWithInfo
@@ -812,7 +814,7 @@ struct parameters
 {
   //
   // clang-format off
-  double          use_expert_for_other_agents_in_training;
+  bool            use_expert_for_other_agents_in_training;
   double          goal_seen_radius_training;
   bool            use_noised_obst_size;
   bool            use_clipping;
@@ -847,7 +849,7 @@ struct parameters
   bool            make_yaw_NN;
   double          dist_from_gterm_to_dummy;
   std::vector<std::string> agents_ids;
-  bool            is_multiagent;
+  bool            use_mesh_network;
   bool            use_panther_star;
   bool            look_teammates;
   bool            perfect_prediction;                 // use_ground_truth_prediction
@@ -933,6 +935,8 @@ struct parameters
   double lambda_dyn_lim_violation;
   double gamma;
   bool use_delaycheck;
+  bool use_delaycheck_wo_check;
+  double delaycheck_time;
   bool use_obstacle_edge_cb;
   double obstacle_edge_cb_duration;
   double obstacle_share_cb_duration;

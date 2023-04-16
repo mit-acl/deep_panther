@@ -65,9 +65,10 @@ fov_depth: 5.0 #[m]
 
 # Primer Setting
 #############################################
-is_multiagent: false
-use_delaycheck: false
-
+use_mesh_network: true
+use_delaycheck: true
+use_delaycheck_wo_check: true # if you wanna use this, use_delaycheck needs to be true
+delaycheck_time: 0.05 #[s]
 ### ATTENTION: this will change which casadi file we will use for optimization
 ### You first need to generate panther_compute_cost.casadi by running main.m with 
 ### optimize_n_planes=false, optimize_d_planes=false, and optimize_time_alloc=false. (which is now done by use_panther_star=false)

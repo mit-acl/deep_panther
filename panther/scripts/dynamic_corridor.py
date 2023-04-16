@@ -184,6 +184,7 @@ class DynCorridor:
             dynamic_trajectory_msg.pos.y=y #Current position, will be updated later
             dynamic_trajectory_msg.pos.z=z #Current position, will be updated later
             dynamic_trajectory_msg.id = 4000 + i #Current id 4000 to avoid interference with ids from agents #TODO
+            dynamic_trajectory_msg.is_committed = True
 
             self.all_dyn_traj.append(dynamic_trajectory_msg)
 

@@ -45,9 +45,8 @@ public:
 private:
   std::unique_ptr<Panther> panther_ptr_;
 
-  //
-
-  void publishOwnTraj(const mt::PieceWisePol& pwp);
+  // publishing traj to other agents
+  void publishOwnTraj(const mt::PieceWisePol& pwp, const bool& is_committed);
   void publishPlanes(std::vector<Hyperplane3D>& planes);
 
   // class methods

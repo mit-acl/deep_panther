@@ -125,7 +125,7 @@ if __name__ == '__main__':
         # (3) number of collisions
         num_of_collisions_btwn_agents = 0
         num_of_collisions_btwn_agents_and_obstacles = 0
-
+        
         # (4) fov rate
         fov_rate = { agent: 0 for agent in AGENTS_LIST }
         agent_obstacle_proxy = { agent: 0 for agent in AGENTS_LIST }

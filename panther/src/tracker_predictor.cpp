@@ -647,6 +647,7 @@ void TrackerPredictor::cloud_cb(const sensor_msgs::PointCloud2ConstPtr& pcl2ptr_
     dynTraj_msg.pos = eigen2rosvector(track_j.pwp_mean.eval(t_now));
     dynTraj_msg.id = track_j.id_int;
     dynTraj_msg.is_agent = false;
+    dynTraj_msg.is_committed = true;
 
     pub_traj_.publish(dynTraj_msg);
 

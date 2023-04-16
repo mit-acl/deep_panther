@@ -182,6 +182,7 @@ void Panther::dynTraj2dynTrajCompiled(const mt::dynTraj& traj, mt::dynTrajCompil
   traj_compiled.bbox = traj.bbox;
   traj_compiled.id = traj.id;
   traj_compiled.time_received = traj.time_received;  // ros::Time::now().toSec();
+  traj_compiled.is_committed = traj.is_committed;
 }
 
 // Note that this function is here because I need t_ for this evaluation
@@ -259,68 +260,58 @@ void Panther::updateTrajObstacles(mt::dynTraj traj)
 {
   MyTimer tmp_t(true);
 
+  //
+  // used for Recheck
+  //
+
   if (started_check_ == true && traj.is_agent == true)
   {
     have_received_trajectories_while_checking_ = true;
   }
 
+  //
+  // Get traj_compiled
+  //
+
   mt::dynTrajCompiled traj_compiled;
   dynTraj2dynTrajCompiled(traj, traj_compiled);
 
-  double time_now = ros::Time::now().toSec();
+  //
+  // Add traj_compiled to trajs_
+  //
 
   mtx_trajs_.lock();
 
   //
-  // ADD IT TO THE MAP IF IT DOES NOT EXIST
+  // If the trajectory is not committed, then we add it to trajs_ regardless of whether it already exists or not
   //
 
-  std::vector<mt::dynTrajCompiled>::iterator obs_ptr =
-      std::find_if(trajs_.begin(), trajs_.end(),
-                   [=](const mt::dynTrajCompiled& traj_compiled) { return traj_compiled.id == traj.id; });
-
-  bool exists_in_local_map = (obs_ptr != std::end(trajs_));
-
-  if (exists_in_local_map)
-  {  // if that object already exists, substitute its trajectory
-    *obs_ptr = traj_compiled;
-  }
-  else
-  {  // if it doesn't exist, add it to the local map
+  if (!traj_compiled.is_committed)
+  {
     trajs_.push_back(traj_compiled);
-    // ROS_WARN_STREAM("Adding " << traj_compiled.id);
+  } 
+  else
+  {
+    std::vector<mt::dynTrajCompiled>::iterator obs_ptr =
+        std::find_if(trajs_.begin(), trajs_.end(),
+                    [=](const mt::dynTrajCompiled& traj_compiled) { return traj_compiled.id == traj.id; });
+
+    bool exists_in_local_map = (obs_ptr != std::end(trajs_));
+
+    if (exists_in_local_map)
+    {  // if that object already exists, substitute its trajectory
+      *obs_ptr = traj_compiled;
+    }
+    else
+    {  // if it doesn't exist, add it to the local map
+      trajs_.push_back(traj_compiled);
+      // ROS_WARN_STREAM("Adding " << traj_compiled.id);
+    }
   }
-
-  ///////////////////////////////////////////
-  ///////// LEAVE ONLY THE CLOSEST TRAJECTORY
-  ///////////////////////////////////////////
-
-  // if (trajs_.size() >= 1)
-  // {
-  //   double distance_new_traj = (evalMeanDynTrajCompiled(traj_compiled, time_now) - state_.pos).norm();
-  //   double distance_old_traj = (evalMeanDynTrajCompiled(trajs_[0], time_now) - state_.pos).norm();
-
-  //   if (distance_new_traj < distance_old_traj)
-  //   {
-  //     trajs_[0] = traj_compiled;
-  //   }
-  // }
-  // else
-  // {
-  //   trajs_.push_back(traj_compiled);
-  // }
-
-  // verify(trajs_.size() == 1, "the vector trajs_ should have size = 1");
-
-  ///////////////////////////////////
-  ///////////////////////////////////
-  ///////////////////////////////////
 
   mtx_trajs_.unlock();
-  // std::cout << red << bold << "in updateTrajObstacles(), mtx_trajs_ unlocked" << reset << std::endl;
 
   have_received_trajectories_while_checking_ = false;
-  // std::cout << bold << blue << "updateTrajObstacles took " << tmp_t << reset << std::endl;
 }
 
 bool Panther::IsTranslating()
@@ -359,6 +350,7 @@ void Panther::addDummyObstacle(double t_start, double t_end, std::vector<mt::obs
   dummy_traj.id = 6000;            // TODO: hardcoded
   dummy_traj.time_received = 0.0;  // TODO: fix if necessary
   dummy_traj.is_agent = false;
+  dummy_traj.is_committed = true;
 
   //
   // compile
@@ -1172,13 +1164,11 @@ bool Panther::addTrajToPlan(const int& k_index_end, mt::log& log, const si::solO
 // --------------------------------------------------------------------------------------------------------------
 //
 
-// Checks that I have not received new trajectories that affect me while doing the optimization
+// Check and Recheck (used in MADER)
 bool Panther::safetyCheck(mt::PieceWisePol& pwp)
 {
   mtx_trajs_.lock();
-
   started_check_ = true;
-
   bool result = true;
 
   //
@@ -1192,7 +1182,7 @@ bool Panther::safetyCheck(mt::PieceWisePol& pwp)
       if (trajsAndPwpAreInCollision(traj, pwp, pwp.times.front(), pwp.times.back()))
       {
         mtx_trajs_.unlock();
-        ROS_ERROR_STREAM("Traj collides with " << traj.id);
+        ROS_ERROR_STREAM("[Check] Traj collides with " << traj.id);
         result = false;  // will have to redo the optimization
         return result;
       }
@@ -1208,13 +1198,80 @@ bool Panther::safetyCheck(mt::PieceWisePol& pwp)
   // and now do another check in case I've received anything while I was checking.
   if (have_received_trajectories_while_checking_ == true)
   {
-    ROS_ERROR_STREAM("Recvd traj while checking ");
+    ROS_ERROR_STREAM("[Recheck] Recvd traj while checking ");
     result = false;
   }
 
   started_check_ = false;
 
   return result;
+}
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
+// Check step used in Delay Check
+bool Panther::check(mt::PieceWisePol& pwp)
+{
+  bool result = true;
+  mtx_trajs_.lock();
+
+  //
+  // Check
+  //
+
+  for (auto traj : trajs_)
+  {
+    if (traj.time_received > time_init_opt_ && traj.is_agent == true)
+    {
+      if (trajsAndPwpAreInCollision(traj, pwp, pwp.times.front(), pwp.times.back()))
+      {
+        mtx_trajs_.unlock();
+        ROS_ERROR_STREAM("[Check] Traj collides with " << traj.id);
+        result = false;  // will have to redo the optimization
+        return result;
+      }
+    }
+  }
+
+  mtx_trajs_.unlock();
+
+  return result;
+}
+
+//
+// --------------------------------------------------------------------------------------------------------------
+//
+
+// Delay Check
+bool Panther::delayCheck(mt::PieceWisePol& pwp)
+{
+
+  auto start = std::chrono::system_clock::now();
+  auto current_time = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = current_time - start;
+
+  // delay check for par_.delaycheck_time seconds
+  while(elapsed_seconds.count() < par_.delaycheck_time)
+  {
+    if (!check(pwp))
+    {
+      ROS_ERROR_STREAM("[Delay Check] Traj collides");
+      return false;
+    }
+    current_time = std::chrono::system_clock::now();
+    elapsed_seconds = current_time - start;
+  }
+
+  // one last time to make sure the all the traj received in delaycheck_time have been checked
+  if (!check(pwp))
+  {
+    ROS_ERROR_STREAM("[Delay Check] Traj collides");
+    return false;
+  }
+
+  return true;
 }
 
 //

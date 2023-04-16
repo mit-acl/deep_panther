@@ -67,7 +67,6 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   ROS_INFO("Found transform %s --> %s", name_drone_.c_str(), name_camera_depth_optical_frame_tf_.c_str());
   // std::cout << "par_.b_T_c.matrix()= " << par_.b_T_c.matrix() << std::endl;
 
-  safeGetParam(nh1_, "use_expert_for_other_agents_in_training", par_.use_expert_for_other_agents_in_training);
   safeGetParam(nh1_, "goal_seen_radius_training", par_.goal_seen_radius_training);
   safeGetParam(nh1_, "use_noised_obst_size", par_.use_noised_obst_size);
   safeGetParam(nh1_, "use_clipping", par_.use_clipping);
@@ -92,14 +91,16 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "training_env_z_max", par_.training_env_z_max);
   safeGetParam(nh1_, "training_env_z_min", par_.training_env_z_min);
   safeGetParam(nh1_, "use_lstm", par_.use_lstm);
-  safeGetParam(nh1_, "is_multiagent", par_.is_multiagent);
+  safeGetParam(nh1_, "use_mesh_network", par_.use_mesh_network);
   safeGetParam(nh1_, "use_delaycheck", par_.use_delaycheck);
+  safeGetParam(nh1_, "use_delaycheck_wo_check", par_.use_delaycheck_wo_check);
   safeGetParam(nh1_, "use_panther_star", par_.use_panther_star);
   safeGetParam(nh1_, "use_ff", par_.use_ff);
   safeGetParam(nh1_, "visual", par_.visual);
   safeGetParam(nh1_, "color_type_expert", par_.color_type_expert);
   safeGetParam(nh1_, "color_type_student", par_.color_type_student);
   safeGetParam(nh1_, "n_agents", par_.n_agents);
+  safeGetParam(nh1_, "use_expert_for_other_agents_in_training", par_.use_expert_for_other_agents_in_training);
   if (par_.use_panther_star)
   {
     safeGetParam(nh1_, "num_of_trajs_per_replan", par_.num_of_trajs_per_replan);
@@ -191,6 +192,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "print_graph_yaw_info", par_.print_graph_yaw_info);
   safeGetParam(nh1_, "z_goal_when_using_rviz", par_.z_goal_when_using_rviz);
   safeGetParam(nh1_, "mode", par_.mode);
+  safeGetParam(nh1_, "delaycheck_time", par_.delaycheck_time);
   // b_T_c (see above)
   safeGetParam(nh1_, "basis", par_.basis);
   safeGetParam(nh1_, "num_max_of_obst", par_.num_max_of_obst);
@@ -301,7 +303,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   pub_guesses_ = nh1_.advertise<visualization_msgs::MarkerArray>("guesses", 1);
   pub_splines_fitted_ = nh1_.advertise<visualization_msgs::MarkerArray>("splines_fitted", 1);
 
-  if (par_.is_multiagent)
+  if (par_.use_mesh_network)
   {
     pub_traj_ = nh1_.advertise<panther_msgs::DynTraj>("trajs", 1, true);  // The last boolean is latched or not
   }
@@ -331,7 +333,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   // get agents id
   safeGetParam(nh1_, "agents_ids", par_.agents_ids);
 
-  if (par_.is_multiagent)
+  if (par_.use_mesh_network)
   {
     ROS_INFO("Using Multiagent Scheme");
     for (std::string id : par_.agents_ids)  // id is a string
@@ -537,6 +539,7 @@ void PantherRos::trajCB(const panther_msgs::DynTraj& msg)
   tmp.bbox << msg.bbox[0], msg.bbox[1], msg.bbox[2];
   tmp.id = msg.id;
   tmp.is_agent = msg.is_agent;
+  tmp.is_committed = msg.is_committed;
   tmp.time_received = ros::Time::now().toSec();
 
   panther_ptr_->updateTrajObstacles(tmp);
@@ -556,7 +559,7 @@ void PantherRos::trajCB(const panther_msgs::DynTraj& msg)
 
 // This trajectory contains all the future trajectory (current_pos --> A --> final_point_of_traj), because it's the
 // composition of pwp
-void PantherRos::publishOwnTraj(const mt::PieceWisePol& pwp)
+void PantherRos::publishOwnTraj(const mt::PieceWisePol& pwp, const bool& is_committed)
 {
   panther_msgs::DynTraj msg;
   msg.use_pwp_field = true;
@@ -574,8 +577,8 @@ void PantherRos::publishOwnTraj(const mt::PieceWisePol& pwp)
   msg.pos.y = state_.pos.y();
   msg.pos.z = state_.pos.z();
   msg.id = id_;
-
   msg.is_agent = true;
+  msg.is_committed = is_committed;
   pub_traj_.publish(msg);
 }
 
@@ -703,10 +706,50 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
     }
 
     //
-    // Check & Recheck
+    // Safety Check
     //
 
-    bool checked = panther_ptr_->safetyCheck(pwp);
+    bool checked = false;
+
+    if (par_.use_delaycheck){
+
+      //
+      // if we are using delaycheck without check, we skip the check step
+      //
+
+      if (!par_.use_delaycheck_wo_check)
+      {
+        checked = panther_ptr_->check(pwp);
+        if (!checked)
+        {
+          publishOwnTrajInFailure(edges_obstacles);
+          return;
+        }
+      }
+
+      //
+      // Publish Traj_New
+      //
+
+      publishOwnTraj(pwp, false);
+
+      //
+      // Delay Check
+      //
+
+      checked = panther_ptr_->delayCheck(pwp);
+
+    }
+    else
+    {
+
+      //
+      // Check & Recheck
+      //
+
+      checked = panther_ptr_->safetyCheck(pwp);
+
+    }
 
     if (!checked)
     {
@@ -728,7 +771,7 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 
     // Success
 
-    publishOwnTraj(pwp);
+    publishOwnTraj(pwp, true);
     pwp_last_ = pwp;
 
     if (log.drone_status != DroneStatus::GOAL_REACHED)  // log.replanning_was_needed
@@ -799,7 +842,7 @@ void PantherRos::publishOwnTrajInFailure(mt::Edges edges_obstacles)
 
   if (timer_stop_.elapsedSoFarMs() > 500.0)  // publish every half a second. TODO set as param
   {
-    publishOwnTraj(pwp_last_);  // This is needed because is drone DRONE1 stops, it needs to keep publishing his
+    publishOwnTraj(pwp_last_, true);  // This is needed because is drone DRONE1 stops, it needs to keep publishing his
                                 // last planned trajectory, so that other drones can avoid it (even if DRONE1
                                 // was very far from the other drones with it last successfully planned a
                                 // trajectory).
@@ -880,7 +923,7 @@ void PantherRos::stateCB(const snapstack_msgs::State& msg)
   if (published_initial_position_ == false)
   {
     pwp_last_ = createPwpFromStaticPosition(state_);
-    publishOwnTraj(pwp_last_);
+    publishOwnTraj(pwp_last_, true);
     published_initial_position_ = true;
   }
   if (panther_ptr_->IsTranslating() == true && par_.visual)
