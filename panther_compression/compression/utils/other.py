@@ -317,17 +317,6 @@ class ObstaclesManager():
 
 			bbox_inflated= self.bbox_inflated
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
-		
-		##
-		## VENV has a fixed size of observation space, so need to add dummy obsstacles
-		## For expert we can just use these dummy-included obstracles, but for student we need to get rid of 
-		## these dummy obstacles. Otherwise LSTM always gets the same size of observation
-		## if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
-		##
-		
-		if self.num_obs < self.params["num_max_of_obst"] - self.params["num_of_other_agents_in_training"]:
-			for i in range( (self.params["num_max_of_obst"] - - self.params["num_of_other_agents_in_training"]) - self.num_obs):
-				w_obs.append(w_obs[-1])
 
 		return w_obs
 
@@ -344,17 +333,6 @@ class ObstaclesManager():
 			w_ctrl_pts_ob=listOf3dVectors2numpy3Xmatrix(w_ctrl_pts_ob_list)
 			bbox_inflated= self.bbox_inflated
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
-
-		##
-		## VENV has a fixed size of observation space, so need to add dummy obsstacles
-		## For expert we can just use these dummy-included obstracles, but for student we need to get rid of 
-		## these dummy obstacles. Otherwise LSTM always gets the same size of observation
-		## if self.num_obs < num_max_of_obst, then add the last element of w_obs to meet the num_max_of_obst
-		##
-
-		if self.num_obs < self.params["num_max_of_obst"] - self.params["num_of_other_agents_in_training"]:
-			for i in range( (self.params["num_max_of_obst"] - - self.params["num_of_other_agents_in_training"]) - self.num_obs):
-				w_obs.append(w_obs[-1])
 
 		return w_obs
 
@@ -466,7 +444,20 @@ class OtherAgentsManager():
 				w_student.append(Obstacle(ctrl_pts, bbox_inflated, is_obstacle=False))
 			self.reset(w_student)
 			print('[other agent] goal reached')
-		
+	
+	def get_static_other_agents(self):
+
+		##
+		## create constrol points (repeated w_pos for 10 times)
+		##
+
+		ctrl_pts = np.tile(self.w_pos, (1, 10))
+		bbox_inflated = self.other_agent_bbox_inflated
+		w_obstacles = []
+		for i in range(self.num_of_other_agents):
+			w_obstacles.append(Obstacle(ctrl_pts, bbox_inflated, is_obstacle=False))
+		return w_obstacles
+
 	def getFutureWPosOtherAgents(self, time, w_obstacles_and_student, w_obstacles, dt):
 
 		##
@@ -484,7 +475,11 @@ class OtherAgentsManager():
 
 		if self.am.isNanAction(oaf_action_n) or not self.am.actionIsNormalized(oaf_action_n):
 			print(f"Nan action!")
-			return w_obstacles
+			# return w_obstacles and num_of_other_agents
+			w_other_agents = self.get_static_other_agents()
+			w_obstacles_and_other_agents = w_obstacles[:]
+			w_obstacles_and_other_agents.extend(w_other_agents)
+			return w_obstacles_and_other_agents, self.num_of_other_agents
 
 		##
 		## denormalization
@@ -514,7 +509,8 @@ class OtherAgentsManager():
 
 		self.update_state(oaf_traj, dt)
 
-		return w_obstacles_and_other_agents
+		# return w_obstacles and num_of_other_agents
+		return w_obstacles_and_other_agents, self.num_of_other_agents
 	
 	def get_oaf_action_n_from_oaf_obs_n(self, oaf_obs_n):
 		"""
@@ -1486,7 +1482,7 @@ class StudentCaller():
 		# self.index_best_unsafe_traj = None
 		self.costs_and_violations_of_action = None# CostsAndViolationsOfAction
 
-	def predict(self, w_init_ppstate, w_ppobstacles, w_gterm, original_obstacles_for_opt_size): #pp stands for py_panther
+	def predict(self, w_init_ppstate, w_ppobstacles, w_gterm, num_obst, num_oa): #pp stands for py_panther
 
 		w_init_state=convertPPState2State(w_init_ppstate)
 		w_gterm=w_gterm.reshape(3,1)
@@ -1510,9 +1506,9 @@ class StudentCaller():
 
 		use_num_obses = False # to make sure LSTM takes a various number of obstacles
 		self.student_policy.set_use_num_obses(use_num_obses)
-		f_obs_n_for_lstm = self.get_f_obs_n_for_lstm(f_obs_n, original_obstacles_for_opt_size)
+		self.student_policy.set_num_obs_num_oa(num_obst, num_oa)
 		with th.no_grad():
-			action_normalized = self.student_policy._predict(th.as_tensor(f_obs_n_for_lstm), deterministic=True) 
+			action_normalized = self.student_policy._predict(th.as_tensor(f_obs_n), deterministic=True) 
 		action_normalized = action_normalized.reshape(self.am.getActionShape())
 
 		##
@@ -1554,10 +1550,6 @@ class StudentCaller():
 			all_solOrGuess.append(my_solOrGuess)
 
 		return all_solOrGuess   
-
-	def get_f_obs_n_for_lstm(self, f_obs_n, original_obstacles_for_opt_size):
-		f_obs_n_for_lstm = f_obs_n[:,0:10+(3*self.obsm.getCPsPerObstacle()+3)*original_obstacles_for_opt_size]
-		return f_obs_n_for_lstm
 
 	def getIndexBestTraj(self):
 		return self.costs_and_violations_of_action.index_best_traj

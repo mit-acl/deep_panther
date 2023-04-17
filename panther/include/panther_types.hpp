@@ -92,6 +92,7 @@ struct obstacleForOpt
   std::vector<Eigen::Vector3d> ctrl_pts;
   Eigen::Vector3d bbox_inflated;
   bool is_dummy = false;
+  bool is_agent = false;
 
   void printInfo()
   {
@@ -819,8 +820,6 @@ struct parameters
   bool            use_noised_obst_size;
   bool            use_clipping;
   double          yaw_loss_weight;
-  bool            use_bn;
-  double          lstm_dropout;
   bool            random_num_of_obstacles_in_training;
   double          num_obst_in_FOV;
   double          goal_seen_radius;
@@ -835,9 +834,6 @@ struct parameters
   double          training_dt;
   int             num_of_obstacles_in_training;
   int             num_of_other_agents_in_training;
-  int             lstm_output_dim;
-  int             lstm_num_layers;
-  bool            lstm_bidirectional;
   double          training_env_x_max;
   double          training_env_x_min;
   double          training_env_y_max;
@@ -845,6 +841,17 @@ struct parameters
   double          training_env_z_max;
   double          training_env_z_min;
   bool            use_lstm;
+  bool            use_bn;
+  double          lstm_dropout;
+  int             lstm_output_dim;
+  int             lstm_num_layers;
+  bool            lstm_bidirectional;
+  bool            use_lstm_oa;
+  bool            use_bn_oa;
+  double          lstm_dropout_oa;
+  int             lstm_output_dim_oa;
+  int             lstm_num_layers_oa;
+  bool            lstm_bidirectional_oa;
   double          prob_choose_cross;
   bool            make_yaw_NN;
   double          dist_from_gterm_to_dummy;

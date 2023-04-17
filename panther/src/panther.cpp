@@ -97,8 +97,11 @@ Panther::Panther(mt::parameters par) : par_(par)
       adjustObstaclesForOptimization(obstacles_for_opt);
       verify(obstacles_for_opt.size() == par_.num_max_of_obst, "obstacles_for_opt.size() should be equal to par_.num_max_of_obst");
       solver_->setObstaclesForOpt(obstacles_for_opt);
-      int original_num_of_obstacles = obstacles_for_opt.size();
-      pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos, original_num_of_obstacles);
+
+      int num_obst, num_oa;
+      getNumObstAndNumOtherAgents(obstacles_for_opt, num_obst, num_oa);
+
+      pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos, num_obst, num_oa);
       std::cout << "Called the student!" << std::endl;
     }
   }
@@ -109,6 +112,23 @@ Panther::~Panther()
   if (par_.use_student == true)
   {
     pybind11::finalize_interpreter();
+  }
+}
+
+void Panther::getNumObstAndNumOtherAgents(const std::vector<mt::obstacleForOpt>& obstacles_for_opt, int& num_obst, int& num_oa)
+{
+  num_obst = 0;
+  num_oa = 0;
+  for (auto obst : obstacles_for_opt)
+  {
+    if (obst.is_agent == false)
+    {
+      num_obst++;
+    }
+    else
+    {
+      num_oa++;
+    }
   }
 }
 
@@ -430,6 +450,7 @@ std::vector<mt::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
     Eigen::Vector3d bbox_inflated = trajs_[i].bbox + par_.drone_bbox;
 
     obstacle_for_opt.bbox_inflated = bbox_inflated;
+    obstacle_for_opt.is_agent = trajs_[i].is_agent;
 
     obstacles_for_opt.push_back(obstacle_for_opt);
 
@@ -895,13 +916,14 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     // We can choose a small number of obsts to track in FOV, and incorporate other obsts/agents in optimization as
     // constraints.
     // Reorder obstacles_for_opt so that the first elements are the ones with the highest probability of collision
+    // Put agents after obstacles (so that they are not considered in FOV)
     // Example:
-    // trajs_ =                 [obs1, obs2, obs3, obs4]
-    // all_probs =              [ 0.5,  0.1,    1,    0]
-    // argmax_prob_collisions = [   2,    1,    3,    0]
-    // tmp_obstacles_for_opt =  [obs4, obs3, obs1, obs2]
-    // obstacles_for_opt =      [obs4, obs3, obs1, obs2]
-    // if num_obst_in_FOV in main.m is 2, then an agent will consider [obs4, obs3] as FOV constraints
+    // trajs_ =                 [obs1, obs2, obs3, agent1,   obs4, agent2]
+    // all_probs =              [ 0.5,  0.1,    1,      0,    0.3,    1.2]
+    // argmax_prob_collisions = [   3,    1,    4,      0,      2,      5]
+    // tmp_obstacles_for_opt =  [obs2, obs4, obs1,   obs3, agent1, agent2]
+    // obstacles_for_opt =      [obs2, obs4, obs1,   obs3, agent1, agent2]
+    // if num_obst_in_FOV in main.m is 2, then an agent will consider [obs2, obs4] as FOV constraints
 
     std::vector<mt::obstacleForOpt> tmp_obstacles_for_opt;
 
@@ -911,20 +933,38 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     }
 
     //
-    // assign tmp_obstacles_for_opt to obstacles_for_opt
+    // Put agents at the end of tmp_obstacles_for_opt
     //
 
-    obstacles_for_opt.clear();
+    std::vector<mt::obstacleForOpt> tmp_obstacles_for_opt2;
     for (int i = 0; i < tmp_obstacles_for_opt.size(); i++)
     {
-      obstacles_for_opt.push_back(tmp_obstacles_for_opt[i]);
+      if (tmp_obstacles_for_opt[i].is_agent == false)
+      {
+        tmp_obstacles_for_opt2.push_back(tmp_obstacles_for_opt[i]);
+      }
     }
+
+    for (int i = 0; i < tmp_obstacles_for_opt.size(); i++)
+    {
+      if (tmp_obstacles_for_opt[i].is_agent == true)
+      {
+        tmp_obstacles_for_opt2.push_back(tmp_obstacles_for_opt[i]);
+      }
+    }
+
+    //
+    // assign tmp_obstacles_for_opt2 to obstacles_for_opt
+    //
+
+    obstacles_for_opt = tmp_obstacles_for_opt2;
 
     //
     // delete tmp_obstacles_for_opt
     //
 
     tmp_obstacles_for_opt.clear();
+    tmp_obstacles_for_opt2.clear();
   }
 
   //
@@ -935,8 +975,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
   // only accepts a fixed number of obstacles so this step is necessary. In StudentCaller.predict(), we undo this step
   // for LSTM, but we use this adjusted size for getCostsAndViolationsOfActionFromObsnAndActionn
   //
-
-  int original_obstacles_for_opt_size = obstacles_for_opt.size(); // this is used for LSTM
 
   adjustObstaclesForOptimization(obstacles_for_opt);
   solver_->setObstaclesForOpt(obstacles_for_opt);
@@ -1034,7 +1072,9 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
 
     log_ptr_->tim_initial_setup.toc();
     std::cout << "Calling the student!" << std::endl;
-    pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos, original_obstacles_for_opt_size);
+    int num_obst, num_oa;
+    getNumObstAndNumOtherAgents(obstacles_for_opt, num_obst, num_oa);
+    pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos, num_obst, num_oa);
     best_solutions_student = result.cast<std::vector<si::solOrGuess>>();
 
     pybind11::object tmp = student_caller_ptr_->attr("getIndexBestTraj")();

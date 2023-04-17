@@ -68,7 +68,7 @@ class MyEnvironment(gym.Env):
     self.prev_dist_current2goal = 0.0
 
     policy = ExpertPolicy() if self.par.use_expert_for_other_agents_in_training else \
-      bc.reconstruct_policy("/home/kota/Research/deep-panther_ws/src/deep_panther/panther_compression/trained_policies/policies/test30.pt")
+      bc.reconstruct_policy("/home/kota/Research/deep-panther_ws/src/deep_panther/panther_compression/trained_policies/policies/test12.pt")
     self.oam=OtherAgentsManager(policy)
 
     # self.my_SolverIpopt=py_panther.SolverIpopt(self.par)
@@ -125,6 +125,9 @@ class MyEnvironment(gym.Env):
 
   def get_num_obs(self):
     return self.obsm.num_obs
+  
+  def get_num_oa(self):
+    return self.oam.num_of_other_agents
   
   def get_num_max_of_obst(self):
     return self.obsm.params["num_max_of_obst"]
@@ -206,9 +209,9 @@ class MyEnvironment(gym.Env):
 
     # static or dynamic obstacles
     if self.par.use_dynamic_obst_in_training:
-      self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
+      self.w_obstacles = self.obsm.getFutureWPosDynamicObstacles(self.time)
     else:
-      self.w_obstacles=self.obsm.getFutureWPosStaticObstacles()
+      self.w_obstacles = self.obsm.getFutureWPosStaticObstacles()
 
     ##
     ## Construct Other Agents
@@ -218,14 +221,16 @@ class MyEnvironment(gym.Env):
     w_obstacles = self.w_obstacles[:]
     w_obstacles_and_student.extend(w_student_for_other_agents)
 
+    num_other_agents = 0
     if self.par.use_other_agents_in_training:
-      self.w_obstacles_and_other_agents=self.oam.getFutureWPosOtherAgents(self.time, w_obstacles_and_student, w_obstacles, self.training_dt)
+      self.w_obstacles_and_other_agents, num_other_agents = self.oam.getFutureWPosOtherAgents(self.time, w_obstacles_and_student, w_obstacles, self.training_dt)
     else:
-      self.w_obstacles_and_other_agents=w_obstacles
+      self.w_obstacles_and_other_agents = w_obstacles
     
     if len(self.w_obstacles_and_other_agents) < self.par.num_max_of_obst:
       for i in range(self.oam.num_of_other_agents):
           self.w_obstacles_and_other_agents.append(self.w_obstacles_and_other_agents[-1])
+          num_other_agents += 1
 
     ##
     ## get f_observation
@@ -327,9 +332,9 @@ class MyEnvironment(gym.Env):
       self.gm.setPos(self.constant_gterm_pos)
 
     if self.par.use_dynamic_obst_in_training:
-      self.w_obstacles=self.obsm.getFutureWPosDynamicObstacles(self.time)
+      self.w_obstacles = self.obsm.getFutureWPosDynamicObstacles(self.time)
     else:
-      self.w_obstacles=self.obsm.getFutureWPosStaticObstacles()
+      self.w_obstacles = self.obsm.getFutureWPosStaticObstacles()
 
     ##
     ## w_student_for_other_agents
@@ -347,10 +352,11 @@ class MyEnvironment(gym.Env):
     w_obstacles_and_student.extend(w_student_for_other_agents)
     w_obstacles = self.w_obstacles[:]
 
+    num_other_agents = 0
     if self.par.use_other_agents_in_training:
-      self.w_obstacles_and_other_agents=self.oam.getFutureWPosOtherAgents(self.time, w_obstacles_and_student, w_obstacles, self.training_dt)
+      self.w_obstacles_and_other_agents, num_other_agents = self.oam.getFutureWPosOtherAgents(self.time, w_obstacles_and_student, w_obstacles, self.training_dt)
     else:
-      self.w_obstacles_and_other_agents=w_obstacles
+      self.w_obstacles_and_other_agents = w_obstacles
 
     if len(self.w_obstacles_and_other_agents) < self.par.num_max_of_obst:
       for i in range(self.oam.num_of_other_agents):

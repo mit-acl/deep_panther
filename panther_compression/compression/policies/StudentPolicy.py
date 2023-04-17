@@ -74,14 +74,20 @@ class StudentPolicy(BasePolicy):
         par = getPANTHERparamsAsCppStruct()
         self.features_dim=self.om.getObservationSize()
         print("features_dim=", self.features_dim)
-        self.use_lstm = use_lstm
         self.agent_input_dim = self.om.getAgentObservationSize()
         self.lstm_each_obstacle_dim = self.obsm.getSizeEachObstacle()
+        self.use_lstm = use_lstm
+        self.use_bn = par.use_bn
+        self.lstm_dropout = par.lstm_dropout
         self.lstm_output_dim = par.lstm_output_dim
         self.lstm_num_layers = par.lstm_num_layers
         self.lstm_bidirectional = par.lstm_bidirectional
-        self.lstm_dropout = par.lstm_dropout
-        self.use_bn = par.use_bn
+        self.use_lstm_oa = par.use_lstm_oa
+        self.use_bn_oa = par.use_bn_oa
+        self.lstm_dropout_oa = par.lstm_dropout_oa
+        self.lstm_output_dim_oa = par.lstm_output_dim_oa
+        self.lstm_num_layers_oa = par.lstm_num_layers_oa
+        self.lstm_bidirectional_oa = par.lstm_bidirectional_oa
         self.features_extractor_class = features_extractor_class
         print("use_lstm=", self.use_lstm)
         if self.use_lstm:
@@ -105,17 +111,34 @@ class StudentPolicy(BasePolicy):
 
         if self.use_lstm:
 
+            ##
+            ## LSTM for obstacles
+            ##
+
             self.lstm = nn.LSTM(input_size=self.lstm_each_obstacle_dim, hidden_size=self.lstm_output_dim, num_layers=self.lstm_num_layers, bidirectional=self.lstm_bidirectional, dropout=self.lstm_dropout)
             self.batch_norm = nn.BatchNorm1d(self.lstm_output_dim)
-            latent_pi_net = create_mlp(self.agent_input_dim+self.lstm_output_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
-            self.latent_pi = nn.Sequential(*latent_pi_net)
-            last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
+            latent_fc = create_mlp(self.agent_input_dim+self.lstm_output_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
+            self.latent_fc = nn.Sequential(*latent_fc)
+
+            if self.use_lstm_oa:
+                
+                ##
+                ## LSTM for other agents
+                ##
+
+                self.lstm_other_agents = nn.LSTM(input_size=self.lstm_each_obstacle_dim, hidden_size=self.lstm_output_dim_oa, num_layers=self.lstm_num_layers_oa, bidirectional=self.lstm_bidirectional_oa, dropout=self.lstm_dropout_oa)
+                self.batch_norm_other_agents = nn.BatchNorm1d(self.lstm_output_dim_oa)
+                
+                ## overwrite the latent_fc
+                latent_fc = create_mlp(self.agent_input_dim+self.lstm_output_dim+self.lstm_output_dim_oa, -1, net_arch, activation_fn) #Create multi layer perceptron, see
+                self.latent_fc = nn.Sequential(*latent_fc)
 
         else: # if not using LSTM
 
-            latent_pi_net = create_mlp(self.features_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
-            self.latent_pi = nn.Sequential(*latent_pi_net)
-            last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
+            latent_fc = create_mlp(self.features_dim, -1, net_arch, activation_fn) #Create multi layer perceptron, see https://github.com/DLR-RM/stable-baselines3/blob/201fbffa8c40a628ecb2b30fd0973f3b171e6c4c/stable_baselines3/common/torch_layers.py#L96
+            self.latent_fc = nn.Sequential(*latent_fc)
+
+        last_layer_dim = net_arch[-1] if len(net_arch) > 0 else self.features_dim
 
         print(f"self.net_arch={self.net_arch}") #This is a list containing the number of neurons in each layer (excluding input and output)
         #features_dim is the number of inputs (i.e., the number of input layers)
@@ -143,7 +166,7 @@ class StudentPolicy(BasePolicy):
     def printwithName(self,data):
         print(self.name+data)
 
-    def get_action_dist_params(self, obs_n: th.Tensor) -> Tuple[th.Tensor, th.Tensor, Dict[str, th.Tensor]]:
+    def get_action_dist_params(self, obs_n: th.Tensor, num_obst: float, num_oa: float) -> Tuple[th.Tensor, th.Tensor, Dict[str, th.Tensor]]:
         """
         Get the parameters for the action distribution.
 
@@ -154,94 +177,33 @@ class StudentPolicy(BasePolicy):
 
         if self.use_lstm:
 
-            ##
-            ## get features
-            ##
-
-            features = self.extract_features(obs_n)
-            
-            ##
-            ## devide features into agent and obst and reshape obst_features for LSTM
-            ##
-
-            agent_features = features[None, :, :self.agent_input_dim] # TODO: pass # obstacles and change 33 #None is for keeping the same dimension
-            obst_features = features[None, :, self.agent_input_dim:] # TODO: pass # obstacles and change 33
-            
-            batch_size = features.shape[0]
-            num_of_obstacles = int(obst_features.shape[2]/self.lstm_each_obstacle_dim) # need to calculate here because num_of_obstacles depends on each simulation
-            
-            ##
-            ## batch_first=False, so (sequence_length, batch_size, input_size) = (num_of_obstacles, batch_size, lstm_each_obstacle_dim)
-            ## reshape obst_features from (1, 20, 66) to (2, 20, 33) #FYI this doesn't work: lstm_input = th.reshape(obst_features, (num_of_obstacles, batch_size, self.lstm_each_obstacle_dim))
-            ## initliaze lstm_input as an empty tensor
-            ## https://stackoverflow.com/questions/48302810/whats-the-difference-between-hidden-and-output-in-pytorch-lstm
-            ##
-
-            lstm_input = th.empty((num_of_obstacles, batch_size, self.lstm_each_obstacle_dim)).to(self.device)
-            for i in range(num_of_obstacles):
-                for j in range(batch_size):
-                    lstm_input[i,j,:] = obst_features[0,j,i*self.lstm_each_obstacle_dim:(i+1)*self.lstm_each_obstacle_dim]
-            
-            ##
-            ## LSTM layer
-            ##
-
-            lstm_out, (h_n, c_n) = self.lstm(lstm_input)
-
-            # th.set_printoptions(profile="full")
-            # print("lstm_out ", lstm_out)
-            # print("lstm_out[-1] ", lstm_out[-1])
-            # print("h_n ", h_n)
-            # print("h_n[-1] ", h_n[-1])
-            # assert h_n[-1] == lstm_out[-1] #this is true
-
-            ##
-            ## Batch normalization
-            ## h_n.shape  ([lastm_num_layers, batch_size, lstm_hidden_size])
-            ##
-
-            if self.use_bn:
-                bn_out = self.batch_norm(h_n[-1])
+            if self.use_lstm_oa:
+                actions = self.get_actions_with_two_lstms(obs_n, num_obst, num_oa)
             else:
-                bn_out = h_n[-1]
-            ##
-            ## FC layers
-            ##
-
-            lstm_out_cat = th.cat((agent_features[-1], bn_out), dim=1)
-            latent_pi = self.latent_pi(lstm_out_cat) #lstm_out_cat[None,:] -- None is added for dimension match
-            
-            ##
-            ## Last layer
-            ##
-
-            mean_actions = self.mu(latent_pi)
+                actions = self.get_actions_with_one_lstm(obs_n, num_obst+num_oa)
 
         else: # if not using LSTM
 
             features = self.extract_features(obs_n)
-            latent_pi = self.latent_pi(features)
-            mean_actions = self.mu(latent_pi)
+            latent_fc = self.latent_fc(features)
+            actions = self.mu(latent_fc)
 
-        mean_actions = self.tanh(mean_actions)
-        log_std = self.log_std(latent_pi)
-        log_std = th.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
-        return mean_actions.float(), log_std, {}
-
-    def forward(self, obs_n: th.Tensor, deterministic: bool = True) -> th.Tensor:
+        actions = self.tanh(actions)
+        return actions.float()
+    
+    def forward(self, obs_n: th.Tensor, num_obst: float, num_oa:float, deterministic: bool = True) -> th.Tensor:
         
         ##
-        ## get mean_actions
+        ## get actions
         ##
 
-        mean_actions, log_std, kwargs = self.get_action_dist_params(obs_n)
+        actions = self.get_action_dist_params(obs_n, num_obst, num_oa)
         
         ##
         ## Squashing the action
         ##
         
-        # output=self.action_dist.actions_from_params(mean_actions, log_std, deterministic=deterministic, **kwargs)
-        output = mean_actions
+        output = actions
         before_shape=list(output.shape)
 
         if self.am.use_closed_form_yaw_student:
@@ -254,23 +216,179 @@ class StudentPolicy(BasePolicy):
 
         return output
 
-    # def action_log_prob(self, obs: th.Tensor) -> Tuple[th.Tensor, th.Tensor]:
-    #     mean_actions, log_std, kwargs = self.get_action_dist_params(obs)
-    #     # return action and associated log prob
-    #     return self.action_dist.log_prob_from_params(mean_actions, log_std, **kwargs)
-
     def set_use_num_obses(self, use_num_obses):
         self.use_num_obses = use_num_obses
+    
+    def set_num_obs_num_oa(self, num_obs, num_oa):
+        self.num_obs = num_obs
+        self.num_oa = num_oa
+    
+    def get_actions_with_one_lstm(self, obs_n: th.Tensor, num_obst_and_oa: float) -> th.Tensor:
+
+        """
+        One LSTM for both obstacles and other agents
+        """
+
+        features = self.extract_features(obs_n)
+        
+        ##
+        ## devide features into agent and obst and reshape obst_features for LSTM
+        ##
+
+        obst_and_oa_end_index = self.agent_input_dim + num_obst_and_oa*self.lstm_each_obstacle_dim
+
+        agent_features = features[None, :, :self.agent_input_dim] #None is for keeping the same dimension
+        obst_features = features[None, :, self.agent_input_dim:obst_and_oa_end_index]
+        
+        batch_size = features.shape[0]
+        num_of_obstacles = int(obst_features.shape[2]/self.lstm_each_obstacle_dim) # need to calculate here because num_of_obstacles depends on each simulation
+        
+        ##
+        ## batch_first=False, so (sequence_length, batch_size, input_size) = (num_of_obstacles, batch_size, lstm_each_obstacle_dim)
+        ## reshape obst_features from (1, 20, 66) to (2, 20, 33) #FYI this doesn't work: lstm_input = th.reshape(obst_features, (num_of_obstacles, batch_size, self.lstm_each_obstacle_dim))
+        ## initliaze lstm_input as an empty tensor
+        ## https://stackoverflow.com/questions/48302810/whats-the-difference-between-hidden-and-output-in-pytorch-lstm
+        ##
+
+        lstm_input = th.empty((num_of_obstacles, batch_size, self.lstm_each_obstacle_dim)).to(self.device)
+        for i in range(num_of_obstacles):
+            for j in range(batch_size):
+                lstm_input[i,j,:] = obst_features[0,j,i*self.lstm_each_obstacle_dim:(i+1)*self.lstm_each_obstacle_dim]
+        
+        ##
+        ## LSTM layer
+        ##
+
+        lstm_out, (h_n, c_n) = self.lstm(lstm_input)
+
+        # th.set_printoptions(profile="full")
+        # print("lstm_out ", lstm_out)
+        # print("lstm_out[-1] ", lstm_out[-1])
+        # print("h_n ", h_n)
+        # print("h_n[-1] ", h_n[-1])
+        # assert h_n[-1] == lstm_out[-1] #this is true
+
+        ##
+        ## Batch normalization
+        ## h_n.shape  ([lastm_num_layers, batch_size, lstm_hidden_size])
+        ##
+
+        if self.use_bn:
+            bn_out = self.batch_norm(h_n[-1])
+        else:
+            bn_out = h_n[-1]
+
+        ##
+        ## FC layers
+        ##
+
+        lstm_out_cat = th.cat((agent_features[-1], bn_out), dim=1)
+        latent_fc = self.latent_fc(lstm_out_cat) #lstm_out_cat[None,:] -- None is added for dimension match
+        
+        ##
+        ## Last layer
+        ##
+
+        actions = self.mu(latent_fc)
+
+        return actions
+    
+    def get_actions_with_two_lstms(self, obs_n: th.Tensor, num_obst: float, num_oa: float) -> th.Tensor:
+
+        """
+        Two LSTMs for both obstacles and other agents
+        """
+
+        features = self.extract_features(obs_n)
+        
+        ##
+        ## devide features into agent and obst and reshape obst_features for LSTM
+        ##
+
+        obst_oa_separation_index = self.agent_input_dim + num_obst*self.lstm_each_obstacle_dim
+
+        agent_features = features[None, :, :self.agent_input_dim] #None is for keeping the same dimension
+        obst_features = features[None, :, self.agent_input_dim:obst_oa_separation_index]
+        oa_features = features[None, :, obst_oa_separation_index:obst_oa_separation_index + num_oa*self.lstm_each_obstacle_dim]
+        
+        batch_size = features.shape[0]
+        num_of_obstacles = int(obst_features.shape[2]/self.lstm_each_obstacle_dim) # need to calculate here because num_of_obstacles depends on each simulation
+        
+        ##
+        ## Obstacle LSTM layer
+        ##
+
+        ##
+        ## batch_first=False, so (sequence_length, batch_size, input_size) = (num_of_obstacles, batch_size, lstm_each_obstacle_dim)
+        ## reshape obst_features from (1, 20, 66) to (2, 20, 33) #FYI this doesn't work: lstm_input = th.reshape(obst_features, (num_of_obstacles, batch_size, self.lstm_each_obstacle_dim))
+        ## initliaze lstm_input as an empty tensor
+        ## https://stackoverflow.com/questions/48302810/whats-the-difference-between-hidden-and-output-in-pytorch-lstm
+        ##
+
+        lstm_input = th.empty((num_of_obstacles, batch_size, self.lstm_each_obstacle_dim)).to(self.device)
+        for i in range(num_of_obstacles):
+            for j in range(batch_size):
+                lstm_input[i,j,:] = obst_features[0,j,i*self.lstm_each_obstacle_dim:(i+1)*self.lstm_each_obstacle_dim]
+
+        lstm_out, (h_n, c_n) = self.lstm(lstm_input)
+
+        # th.set_printoptions(profile="full")
+        # print("lstm_out ", lstm_out)
+        # print("lstm_out[-1] ", lstm_out[-1])
+        # print("h_n ", h_n)
+        # print("h_n[-1] ", h_n[-1])
+        # assert h_n[-1] == lstm_out[-1] #this is true
+
+        ##
+        ## Batch normalization
+        ## h_n.shape  ([lastm_num_layers, batch_size, lstm_hidden_size])
+        ##
+
+        if self.use_bn:
+            bn_out_obst = self.batch_norm(h_n[-1])
+        else:
+            bn_out_obst = h_n[-1]
+
+        ##
+        ## Other Agents LSTM layer
+        ##
+
+        lstm_input = th.empty((num_oa, batch_size, self.lstm_each_obstacle_dim)).to(self.device)
+        for i in range(num_oa):
+            for j in range(batch_size):
+                lstm_input[i,j,:] = oa_features[0,j,i*self.lstm_each_obstacle_dim:(i+1)*self.lstm_each_obstacle_dim]
+
+        lstm_out, (h_n, c_n) = self.lstm_other_agents(lstm_input)
+
+        if self.use_bn:
+            bn_out_oa = self.batch_norm(h_n[-1])
+        else:
+            bn_out_oa = h_n[-1]
+
+        ##
+        ## FC layers
+        ##
+
+        lstm_out_cat = th.cat((agent_features[-1], bn_out_obst, bn_out_oa), dim=1)
+        latent_fc = self.latent_fc(lstm_out_cat) #lstm_out_cat[None,:] -- None is added for dimension match
+        
+        ##
+        ## Last layer
+        ##
+
+        actions = self.mu(latent_fc)
+
+        return actions
 
     def _predict(self, obs_n: th.Tensor, deterministic: bool = True) -> th.Tensor:
 
         if self.use_num_obses:
             start = time.time()
-            action = self.forward(obs_n[:,:,:10+33*(self.num_obses[self.i_index])], deterministic) # hard-coded 10 and 33 for now
+            action = self.forward(obs_n, self.num_obses[self.i_index], self.num_oas[self.i_index] , deterministic) # hard-coded 10 and 33 for now
             end = time.time()
         else:
             start = time.time()
-            action = self.forward(obs_n, deterministic)
+            action = self.forward(obs_n, self.num_obs, self.num_oa, deterministic)
             end = time.time()
         self.computation_times.append(end - start)
         self.am.assertActionIsNormalized(action.cpu().numpy().reshape(self.am.getActionShape()), self.name)
@@ -287,10 +405,11 @@ class StudentPolicy(BasePolicy):
         acts=np.stack(acts, axis=0)
         return acts
     
-    def predictSeveralWithComputationTimeVerbose(self, obs_n, num_obses, deterministic: bool = True):
+    def predictSeveralWithComputationTimeVerbose(self, obs_n, num_obses, num_oas, deterministic: bool = True):
 
         #Note that here below we call predict, not _predict
         self.num_obses = num_obses
+        self.num_oas = num_oas
         self.features_extractor = self.features_extractor_class(self.observation_space)
         acts=[]
         for i in range(len(obs_n)):

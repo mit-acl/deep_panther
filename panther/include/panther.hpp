@@ -99,6 +99,7 @@ private:
 
   void logAndTimeReplan(const std::string& info, const bool& success, mt::log& log);
 
+  void getNumObstAndNumOtherAgents(const std::vector<mt::obstacleForOpt>& obstacles_for_opt, int& num_obst, int& num_oa);
   void dynTraj2dynTrajCompiled(const mt::dynTraj& traj, mt::dynTrajCompiled& traj_compiled);
 
   bool initializedStateAndTermGoal();
