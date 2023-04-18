@@ -463,7 +463,7 @@ class MyEnvironment(gym.Env):
       self.bag.write('/g', point_msg, time_now)
 
       ##
-      ## get obstacles
+      ## get obstacles and other agents
       ##
 
       obstacles=self.om.getObstacles(f_obs)

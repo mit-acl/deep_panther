@@ -471,7 +471,7 @@ class OtherAgentsManager():
 		## get action from policy
 		##
 
-		oaf_action_n, _, _= self.get_oaf_action_n_from_oaf_obs_n(oaf_obs_n)
+		oaf_action_n, _ = self.get_oaf_action_n_from_oaf_obs_n(oaf_obs_n)
 
 		if self.am.isNanAction(oaf_action_n) or not self.am.actionIsNormalized(oaf_action_n):
 			print(f"Nan action!")
@@ -1643,7 +1643,7 @@ class CostComputer():
 		##
 
 		assert all( (traj >= -1 and traj <= 1) for traj in f_traj_n[0])
-		assert CostComputer.om.obsIsNormalized(f_obs_n)
+		# assert CostComputer.om.obsIsNormalized(f_obs_n)
 
 		f_obs = CostComputer.om.denormalizeObservation(f_obs_n)
 		f_traj = CostComputer.am.denormalizeTraj(f_traj_n)

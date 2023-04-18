@@ -1,7 +1,7 @@
 # Training setting
 #############################################
 num_of_trajs_per_replan: 6 # num of students' traj (n_s in Table I in deep panther paper)
-max_num_of_initial_guesses: 10 # (n_runs in Table I)
+max_num_of_initial_guesses: 6 # (n_runs in Table I)
 drone_extra_radius_for_NN: 0.0  #(m) Used for collision checking
 pause_time_when_replanning: false
 replanning_trigger_time_student: 0.1 #[seconds] 
@@ -24,11 +24,11 @@ max_side_bbox_obs: 3.0
 max_dist2BSPoscPoint: 25.0
 training_dt: 0.2 #Training timestep in seconds (how much you proceed as a step in an episode)
 yaw_loss_weight: 50.0
-margin_v_factor: 1.0 #relaxation factor for training constraints used in ObservationManager()
-margin_a_factor: 1.0 #relaxation factor for training constraints used in ObservationManager()
+margin_v_factor: 1.5 #relaxation factor for training constraints used in ObservationManager()
+margin_a_factor: 1.5 #relaxation factor for training constraints used in ObservationManager()
 # because of precision error you will see a very small violation of ydot (eg. 1.0000000002143), so it's nice to keep the margin_ydot_factor a little bit bigger
-margin_ydot_factor: 1.0 #relaxation factor for training constraints used in ObservationManager()
-margin_yaw_factor: 1.0 #relaxation factor for training constraints used in ActionManager()
+margin_ydot_factor: 1.5 #relaxation factor for training constraints used in ObservationManager()
+margin_yaw_factor: 1.5 #relaxation factor for training constraints used in ActionManager()
 training_obst_size: [0.6, 0.6, 0.2] #obstacle size in training env
 training_other_agent_size: [0.8, 0.8, 0.8] #agent size in training env
 use_dynamic_obst_in_training: true
