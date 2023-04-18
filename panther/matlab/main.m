@@ -410,7 +410,7 @@ for i = 1:num_obst_in_FOV
         % Take the center of the obstacle and get the position of the obstacle in the world frame
 
         % w_fevar=obst{1}.centers(:,simpson_index); %TODO: For now, only choosing one obstacle
-        w_fevar=obst{i}.centers(:,simpson_index); % Choose the top num_obst_in_FOV obstacles
+        w_fevar=obst{i}.centers(:,simpson_index); % Choose the first num_obst_in_FOV obstacles
         
         c_P=c_T_b*b_T_w*[w_fevar;1]; %Position of the feature (the center of the obstacle) in the camera frame
         s=c_P(1:2)/(c_P(3));  %Note that here we are not using f (the focal length in meters) because it will simply add a constant factor in ||s|| and in ||s_dot||

@@ -22,25 +22,25 @@ max_dist2goal: 25.0
 max_dist2obs: 25.0
 max_side_bbox_obs: 3.0
 max_dist2BSPoscPoint: 25.0
-training_dt: 0.2 #Training timestep in seconds (how much you proceed as a step in an episode)
+training_dt: 0.5 #Training timestep in seconds (how much you proceed as a step in an episode)
 yaw_loss_weight: 50.0
-margin_v_factor: 1.0 #relaxation factor for training constraints used in ObservationManager()
-margin_a_factor: 1.0 #relaxation factor for training constraints used in ObservationManager()
+margin_v_factor: 1.001 #relazation factor for training constraints used in ObservationManager()
+margin_a_factor: 1.001 #relazation factor for training constraints used in ObservationManager()
 # because of precision error you will see a very small violation of ydot (eg. 1.0000000002143), so it's nice to keep the margin_ydot_factor a little bit bigger
-margin_ydot_factor: 1.0 #relaxation factor for training constraints used in ObservationManager()
-margin_yaw_factor: 1.0 #relaxation factor for training constraints used in ActionManager()
+margin_ydot_factor: 1.001 #relazation factor for training constraints used in ObservationManager()
+margin_yaw_factor: 1.001 #relazation factor for training constraints used in ActionManager()
 training_obst_size: [0.6, 0.6, 0.2] #obstacle size in training env
 training_other_agent_size: [0.8, 0.8, 0.8] #agent size in training env
 use_dynamic_obst_in_training: true
-use_other_agents_in_training: true
-use_expert_for_other_agents_in_training: false
+use_other_agents_in_training: false
+use_expert_for_other_agents_in_training: true
 random_num_of_obstacles_in_training: false # need to get rid of this  # if this is True, # of obstacles is [1,num_of_obstacles_in_training]
 # num_of_obstacles_in_training + num_of_other_agents_in_training should not be bigger than num_max_of_obst defined in params_casadi.yaml(main.m)
 num_of_obstacles_in_training: 2
 num_of_other_agents_in_training: 1
 use_clipping: False
 use_noised_obst_size: True # (1) observation of obstacles are noised
-goal_seen_radius_training: 1.0 # [m]
+goal_seen_radius_training: 2.5 # [m]
 
 # LSTM
 #############################################
