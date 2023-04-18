@@ -467,8 +467,9 @@ class MyEnvironment(gym.Env):
       ##
 
       obstacles=self.om.getObstacles(f_obs)
-      for i in range(len(obstacles)):
 
+      for i in range(len(obstacles)):
+        
         marker_array_msg=MarkerArray()
         t0=self.time
         tf=self.time + np.max(f_action[:,-1]) #self.am.getTotalTime()#self.par.fitter_total_time

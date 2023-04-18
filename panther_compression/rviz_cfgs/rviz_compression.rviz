@@ -11,6 +11,7 @@ Panels:
         - /Path1
         - /Obstacle01
         - /Obstacle11
+        - /Obstacle31
       Splitter Ratio: 0.5
     Tree Height: 719
   - Class: rviz/Selection
@@ -242,6 +243,22 @@ Visualization Manager:
         {}
       Queue Size: 100
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /obs2
+      Name: Obstacle2
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /obs3
+      Name: Obstacle3
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -307,4 +324,4 @@ Window Geometry:
     collapsed: false
   Width: 1848
   X: 72
-  Y: 27
+  Y: 228
