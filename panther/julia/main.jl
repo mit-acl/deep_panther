@@ -1,5 +1,5 @@
 ##
-## Call Python script from Julia using MPI
+## Call Python script from Julia using MPI (~/.julia/bin/mpiexecjl -np 2 julia main.jl )
 ##
 
 using MPI; MPI.install_mpiexecjl(force=true)
