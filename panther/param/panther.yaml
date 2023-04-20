@@ -1,6 +1,6 @@
 # Training setting
 #############################################
-num_of_trajs_per_replan: 6 # num of students' traj (n_s in Table I in deep panther paper)
+num_of_trajs_per_replan: 1 # num of students' traj (n_s in Table I in deep panther paper)
 max_num_of_initial_guesses: 6 # (n_runs in Table I)
 drone_extra_radius_for_NN: 0.0  #(m) Used for collision checking
 pause_time_when_replanning: false
