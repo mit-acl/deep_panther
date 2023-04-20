@@ -713,6 +713,8 @@ void Panther::pubObstacleEdge(mt::Edges& edges_obstacles_out, const Eigen::Affin
 
 void Panther::adjustObstaclesForOptimization(std::vector<mt::obstacleForOpt>& obstacles_for_opt)
 {
+
+
   //
   // If obstacles_for_opt is too small, then we need to add some dummy obstacles, which is the copy of the last obstacle
   //
@@ -740,6 +742,20 @@ void Panther::adjustObstaclesForOptimization(std::vector<mt::obstacleForOpt>& ob
     {
       obstacles_for_opt.pop_back();
     }
+  }
+
+  //
+  // If using student, and there's no other agent, then we need to add a dummy other agent (otherwise, LSTM for other agent will complain)
+  //
+
+  int num_obst, num_oa;
+  getNumObstAndNumOtherAgents(obstacles_for_opt, num_obst, num_oa);
+
+  if (par_.use_student == true && num_oa == 0)
+  {
+    std::cout << bold << "No other agent. Add a dummy other agent" << std::endl;
+    mt::obstacleForOpt& dummy_oa = obstacles_for_opt.back(); // this could change obstacle into other agent, but it's better than using a completely dummy other agent
+    dummy_oa.is_agent = true;
   }
 }
 

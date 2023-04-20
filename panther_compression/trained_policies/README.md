@@ -14,3 +14,4 @@
 14. test14.pt: 1024x1024x1024x1024 pos_loss: 3e-5, 4e-5, dyn constraints for hw, using noised obs for obst, 1.0 margins, training_dt 0.1 (from 0.25), max_side_bbox_obs 3.0, prob_choose_cross (0.8 from 1.0)
 15. test15.py: 1024x1024x1024x1024 pos_loss: 2e-5, 4e-5, same with test14 but with yaw_loss_weight 30.0 and evaluatoin_yaw_loss is around 0.05
 16. test16.py: 1024x1024x1024x1024 pos_loss: 4e-5, 9e-5, training_dt 0.2. only ~50k round 
+17. test17.py: 1024x1024x1024x1024 pos_loss: 3e-5, 4e-5, training with other agents. May need to train with completely randomized environment. only ~100k rounds
