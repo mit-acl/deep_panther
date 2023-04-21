@@ -68,6 +68,32 @@ Visualization Manager:
       Frame Timeout: 1000
       Frames:
         All Enabled: false
+        SQ01s:
+          Value: true
+        SQ01s/camera_depth_optical_frame:
+          Value: true
+        SQ01s/camera_link:
+          Value: true
+        SQ02s:
+          Value: true
+        SQ02s/camera_depth_optical_frame:
+          Value: true
+        SQ02s/camera_link:
+          Value: true
+        SQ03s:
+          Value: true
+        SQ03s/camera_depth_optical_frame:
+          Value: true
+        SQ03s/camera_link:
+          Value: true
+        obs_4000:
+          Value: true
+        obs_4001:
+          Value: true
+        vicon:
+          Value: true
+        world:
+          Value: true
       Marker Alpha: 1
       Marker Scale: 2
       Name: TF
@@ -75,7 +101,24 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        {}
+        world:
+          obs_4000:
+            {}
+          obs_4001:
+            {}
+          vicon:
+            SQ01s:
+              SQ01s/camera_link:
+                SQ01s/camera_depth_optical_frame:
+                  {}
+            SQ02s:
+              SQ02s/camera_link:
+                SQ02s/camera_depth_optical_frame:
+                  {}
+            SQ03s:
+              SQ03s/camera_link:
+                SQ03s/camera_depth_optical_frame:
+                  {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -237,7 +280,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/fov
       Name: SQ01sFOV
       Namespaces:
-        {}
+        marker_fov: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -277,7 +320,7 @@ Visualization Manager:
       Marker Topic: /obstacles_mesh
       Name: Obstacles
       Namespaces:
-        {}
+        mesh: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -445,7 +488,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/best_solution_student
       Name: SQ01sBestSolutionStu
       Namespaces:
-        {}
+        SQ01s_best_solution_student0: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -573,25 +616,25 @@ Visualization Manager:
       frame: obs_4001
       line_width: 0.03999999910593033
     - Class: jsk_rviz_plugin/TFTrajectory
-      Enabled: true
+      Enabled: false
       Name: Obs3TFTrajectory
-      Value: true
+      Value: false
       color: 239; 41; 41
       duration: 300
       frame: obs_4002
       line_width: 0.03999999910593033
     - Class: jsk_rviz_plugin/TFTrajectory
-      Enabled: true
+      Enabled: false
       Name: Obs4TFTrajectory
-      Value: true
+      Value: false
       color: 239; 41; 41
       duration: 300
       frame: obs_4003
       line_width: 0.03999999910593033
     - Class: jsk_rviz_plugin/TFTrajectory
-      Enabled: true
+      Enabled: false
       Name: Obs5TFTrajectory
-      Value: true
+      Value: false
       color: 239; 41; 41
       duration: 300
       frame: obs_4004
@@ -617,7 +660,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/actual_traj
       Name: SQ01sActualTraj
       Namespaces:
-        {}
+        ActualTraj_SQ01s: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -732,9 +775,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9647963047027588
+      Pitch: 0.9047953486442566
       Target Frame: <Fixed Frame>
-      Yaw: 3.153188467025757
+      Yaw: 3.123182773590088
     Saved: ~
 Window Geometry:
   DepthImage:
