@@ -952,7 +952,8 @@ class ObservationManager():
 
 	def getObstaclesForCasadi(self, obs):
 		obstacles=[]
-		for i in range(self.num_max_of_obst): # num_max_of_obst is Casadi
+		num_obs = self.calculateObstacleNumber(obs)
+		for i in range(num_obs): # num_max_of_obst is Casadi
 			ctrl_pts=self.getCtrlPtsObstacleI(obs,i) 
 			bbox_inflated=self.getBboxInflatedObstacleI(obs,i)
 			obstacle=py_panther.obstacleForOpt()

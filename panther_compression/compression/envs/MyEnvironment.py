@@ -233,11 +233,20 @@ class MyEnvironment(gym.Env):
           num_other_agents += 1
 
     ##
+    ## add dummy obst (if necessary) to meet the num_max_of_obst
+    ##
+
+    if len(self.w_obstacles_and_other_agents) < self.par.num_max_of_obst:
+      for i in range(self.par.num_max_of_obst - len(self.w_obstacles_and_other_agents)):
+        self.w_obstacles_and_other_agents.append(self.w_obstacles_and_other_agents[-1])
+        
+    ##
     ## get f_observation
     ##
 
     f_observation = self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles_and_other_agents)
     f_observation_n = self.om.normalizeObservation(f_observation)
+
 
     ##
     ## Calculate distance
@@ -359,7 +368,7 @@ class MyEnvironment(gym.Env):
       self.w_obstacles_and_other_agents = w_obstacles
 
     if len(self.w_obstacles_and_other_agents) < self.par.num_max_of_obst:
-      for i in range(self.oam.num_of_other_agents):
+      for i in range(self.par.num_max_of_obst - len(self.w_obstacles_and_other_agents)):
           self.w_obstacles_and_other_agents.append(self.w_obstacles_and_other_agents[-1])
 
     f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles_and_other_agents)
