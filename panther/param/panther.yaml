@@ -144,7 +144,7 @@ c_maxydot_yaw_search: 0.0     #weight for the yaw search
 c_pos_smooth: 0.0003           #weight for the optimization
 c_yaw_smooth: 0.0            #weight for the optimization
 c_fov: 1000.0                 #weight for the optimization
-c_final_pos: 100.0           #weight for the optimization
+c_final_pos: 1000.0           #weight for the optimization
 c_final_yaw: 0.01              #weight for the optimization
 c_total_time: 80             #weight for the optimization
 lambda_obst_avoidance_violation: 1.0 #To compute the augmented cost
