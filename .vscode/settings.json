@@ -5,5 +5,12 @@
         "/home/kota/Research/rmader_ws/devel/lib/python3/dist-packages",
         "/home/kota/Research/deep-panther_ws/src/deep_panther/panther/../panther_compression",
         "/usr/lib/python3/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/kota/Research/deep-panther_ws/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages",
+        "/home/kota/Research/rmader_ws/devel/lib/python3/dist-packages",
+        "/home/kota/Research/deep-panther_ws/src/deep_panther/panther/../panther_compression",
+        "/usr/lib/python3/dist-packages"
     ]
 }
