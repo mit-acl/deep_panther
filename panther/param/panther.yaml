@@ -4,12 +4,12 @@ num_of_trajs_per_replan: 6 # num of students' traj (n_s in Table I in deep panth
 max_num_of_initial_guesses: 6 # (n_runs in Table I)
 drone_extra_radius_for_NN: 0.0  #(m) Used for collision checking
 pause_time_when_replanning: false
-replanning_trigger_time_student: 0.1 #[seconds] 
+replanning_trigger_time_student: 0.01 #[seconds] 
 replanning_trigger_time_expert: 0.5 #[seconds] 
-replanning_lookahead_time: 2.0 #[seconds] #distance in time space = t_in - t_1 in Table I
+replanning_lookahead_time: 0.2 #[seconds] #distance in time space = t_in - t_1 in Table I
 use_closed_form_yaw_student: false #If false, the NN will predict this closed form for the yaw angle
 make_yaw_NN: false
-prob_choose_cross: 0.8 # how much you wanna choose cross obstacle in training [0.1]
+prob_choose_cross: 0.5 # how much you wanna choose cross obstacle in training [0.1]
 # training env space size
 training_env_x_max: 10.0
 training_env_x_min: -10.0
@@ -23,14 +23,14 @@ max_dist2obs: 25.0
 max_side_bbox_obs: 3.0
 max_dist2BSPoscPoint: 25.0
 training_dt: 0.2 #Training timestep in seconds (how much you proceed as a step in an episode)
-yaw_loss_weight: 50.0
+yaw_loss_weight: 70.0
 margin_v_factor: 1.5 #relaxation factor for training constraints used in ObservationManager()
 margin_a_factor: 1.5 #relaxation factor for training constraints used in ObservationManager()
 # because of precision error you will see a very small violation of ydot (eg. 1.0000000002143), so it's nice to keep the margin_ydot_factor a little bit bigger
 margin_ydot_factor: 1.5 #relaxation factor for training constraints used in ObservationManager()
 margin_yaw_factor: 1.5 #relaxation factor for training constraints used in ActionManager()
-training_obst_size: [0.6, 0.6, 0.2] #obstacle size in training env
-training_other_agent_size: [0.8, 0.8, 0.8] #agent size in training env
+training_obst_size: [0.6, 0.6, 0.6] #obstacle size in training env
+training_other_agent_size: [0.2, 0.2, 0.2] #agent size in training env
 use_dynamic_obst_in_training: true
 use_other_agents_in_training: true
 use_expert_for_other_agents_in_training: false
@@ -74,7 +74,7 @@ fov_depth: 5.0 #[m]
 #############################################
 use_mesh_network: true
 use_delaycheck: true
-use_delaycheck_wo_check: true # if you wanna use this, use_delaycheck needs to be true
+use_delaycheck_wo_check: false # if you wanna use this, use_delaycheck needs to be true
 delaycheck_time: 0.05 #[s]
 ### ATTENTION: this will change which casadi file we will use for optimization
 ### You first need to generate panther_compute_cost.casadi by running main.m with 
@@ -84,7 +84,7 @@ use_panther_star: true # read the comment above
 impose_FOV_in_trajCB: false # if True, it only allows communication betw obstacle that is in FOV
 use_obstacle_edge_cb: true
 obstacle_edge_cb_duration: 1.0 #seconds
-look_teammates: false
+look_teammates: false # not used anymore
 dist_from_gterm_to_dummy: 5.0 #[m]
 obstacle_share_cb_duration: 1.0 #seconds
 use_obstacle_share: false
@@ -97,7 +97,7 @@ use_ff: true # use feedforward #Needs to be true if you are using perfect_tracke
 goal_radius: 0.5   #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
 goal_seen_radius: 2.5 #(m) no more replanning needed sphere (when drone gets close to goal OS fails a lot, so we introduced this)
 Ra: 15.0           # [m] Radius of my planning sphere (planning horizon)
-drone_bbox: [1.2, 1.2, 1.2]  #(m) Used for collision checking
+drone_bbox: [0.2, 0.2, 0.2]  #(m) Used for collision checking
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
 # flight space size
