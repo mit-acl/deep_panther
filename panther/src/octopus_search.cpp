@@ -550,11 +550,11 @@ bool OctopusSearch::computeUpperAndLowerConstraints(const int i, const Eigen::Ve
   ////////////////////////IMPOSE ACCELERATION CONSTRAINTS
   ////////////////////////
 
-  // // // |vi - viM1|<=a_max_*d
-  // // //  <=>
-  // // // (vi - viM1)<=a_max_*d   AND   (vi - viM1)>=-a_max_*d
-  // // //  <=>
-  // // //  vi<=a_max_*d + viM1   AND     vi>=-a_max_*d + viM1
+  // // |vi - viM1|<=a_max_*d
+  // //  <=>
+  // // (vi - viM1)<=a_max_*d   AND   (vi - viM1)>=-a_max_*d
+  // //  <=>
+  // // vi<=a_max_*d + viM1   AND     vi>=-a_max_*d + viM1
 
   double d = (knots_(i + p_) - knots_(i + 1)) / (1.0 * (p_ - 1));
 
@@ -598,11 +598,6 @@ bool OctopusSearch::computeUpperAndLowerConstraints(const int i, const Eigen::Ve
       areVeryClose(constraint_zL, constraint_zU)     /////////////////
   )
   {  // can happen when i==(N_-3), but never happens when i<(N_-3)
-
-    // std::cout << red << "x: " << constraint_xL << " --> " << constraint_xU << " || "
-    //           << "y: " << constraint_yL << " --> " << constraint_yU << " || "
-    //           << "z: " << constraint_zL << " --> " << constraint_zU << reset << std::endl;
-    // std::cout << bold << red << "Interval is zero" << reset << std::endl;
     num_intervals_is_zero_ += 1;
     return false;
   }

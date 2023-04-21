@@ -12,20 +12,15 @@
 #include <algorithm>
 #include <vector>
 #include <stdlib.h>
-
+#include <ros/package.h>
 #include "panther.hpp"
 #include "timer.hpp"
 #include "termcolor.hpp"
 #include "bspline_utils.hpp"
-
-#include <ros/package.h>
-
-////////////////////////// Needed to call the student
+// Needed to call the student
 #include <pybind11/eigen.h>
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
-//////////////////////////
-
 // #include "exprtk.hpp"
 
 using namespace termcolor;
@@ -34,6 +29,10 @@ using namespace termcolor;
 // typedef ROSTimer MyTimer;
 // typedef ROSWallTimer MyTimer;
 typedef PANTHER_timers::Timer MyTimer;
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
 
 Panther::Panther(mt::parameters par) : par_(par)
 {
@@ -95,17 +94,23 @@ Panther::Panther(mt::parameters par) : par_(par)
       tmp.ctrl_pts = fitter_->fit(samples);
       obstacles_for_opt.push_back(tmp);
       adjustObstaclesForOptimization(obstacles_for_opt);
-      verify(obstacles_for_opt.size() == par_.num_max_of_obst, "obstacles_for_opt.size() should be equal to par_.num_max_of_obst");
+      verify(obstacles_for_opt.size() == par_.num_max_of_obst, "obstacles_for_opt.size() should be equal to "
+                                                               "par_.num_max_of_obst");
       solver_->setObstaclesForOpt(obstacles_for_opt);
 
       int num_obst, num_oa;
       getNumObstAndNumOtherAgents(obstacles_for_opt, num_obst, num_oa);
 
-      pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos, num_obst, num_oa);
+      pybind11::object result =
+          student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos, num_obst, num_oa);
       std::cout << "Called the student!" << std::endl;
     }
   }
 }
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
 
 Panther::~Panther()
 {
@@ -115,7 +120,12 @@ Panther::~Panther()
   }
 }
 
-void Panther::getNumObstAndNumOtherAgents(const std::vector<mt::obstacleForOpt>& obstacles_for_opt, int& num_obst, int& num_oa)
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
+void Panther::getNumObstAndNumOtherAgents(const std::vector<mt::obstacleForOpt>& obstacles_for_opt, int& num_obst,
+                                          int& num_oa)
 {
   num_obst = 0;
   num_oa = 0;
@@ -131,6 +141,10 @@ void Panther::getNumObstAndNumOtherAgents(const std::vector<mt::obstacleForOpt>&
     }
   }
 }
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
 
 void Panther::dynTraj2dynTrajCompiled(const mt::dynTraj& traj, mt::dynTrajCompiled& traj_compiled)
 {
@@ -205,6 +219,10 @@ void Panther::dynTraj2dynTrajCompiled(const mt::dynTraj& traj, mt::dynTrajCompil
   traj_compiled.is_committed = traj.is_committed;
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 // Note that this function is here because I need t_ for this evaluation
 Eigen::Vector3d Panther::evalMeanDynTrajCompiled(const mt::dynTrajCompiled& traj, double t)
 {
@@ -227,6 +245,10 @@ Eigen::Vector3d Panther::evalMeanDynTrajCompiled(const mt::dynTrajCompiled& traj
   return tmp;
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 // Note that this function is here because it needs t_ for this evaluation
 Eigen::Vector3d Panther::evalVarDynTrajCompiled(const mt::dynTrajCompiled& traj, double t)
 {
@@ -248,6 +270,10 @@ Eigen::Vector3d Panther::evalVarDynTrajCompiled(const mt::dynTrajCompiled& traj,
   }
   return tmp;
 }
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
 
 void Panther::removeOldTrajectories()
 {
@@ -275,6 +301,9 @@ void Panther::removeOldTrajectories()
   mtx_trajs_.unlock();
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
 // Note that we need to compile the trajectories inside panther.cpp because t_ is in panther.hpp
 void Panther::updateTrajObstacles(mt::dynTraj traj)
 {
@@ -309,12 +338,12 @@ void Panther::updateTrajObstacles(mt::dynTraj traj)
   if (!traj_compiled.is_committed)
   {
     trajs_.push_back(traj_compiled);
-  } 
+  }
   else
   {
     std::vector<mt::dynTrajCompiled>::iterator obs_ptr =
         std::find_if(trajs_.begin(), trajs_.end(),
-                    [=](const mt::dynTrajCompiled& traj_compiled) { return traj_compiled.id == traj.id; });
+                     [=](const mt::dynTrajCompiled& traj_compiled) { return traj_compiled.id == traj.id; });
 
     bool exists_in_local_map = (obs_ptr != std::end(trajs_));
 
@@ -338,6 +367,10 @@ bool Panther::IsTranslating()
 {
   return (drone_status_ == DroneStatus::GOAL_SEEN || drone_status_ == DroneStatus::TRAVELING);
 }
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
 
 void Panther::addDummyObstacle(double t_start, double t_end, std::vector<mt::obstacleForOpt>& obstacles_for_opt,
                                mt::state& A, std::vector<si::solOrGuess>& splines_fitted)
@@ -417,6 +450,10 @@ void Panther::addDummyObstacle(double t_start, double t_end, std::vector<mt::obs
   splines_fitted.push_back(spline_fitted);
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 std::vector<mt::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, double t_end,
                                                             std::vector<si::solOrGuess>& splines_fitted)
 {
@@ -493,6 +530,10 @@ std::vector<mt::obstacleForOpt> Panther::getObstaclesForOpt(double t_start, doub
   return obstacles_for_opt;
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 void Panther::setTerminalGoal(mt::state& term_goal)
 {
   mtx_G_term.lock();
@@ -510,10 +551,18 @@ void Panther::setTerminalGoal(mt::state& term_goal)
   }
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 void Panther::getG(mt::state& G)
 {
   G = G_;
 }
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
 
 void Panther::getState(mt::state& data)
 {
@@ -522,12 +571,20 @@ void Panther::getState(mt::state& data)
   mtx_state_.unlock();
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 void Panther::getG_term(mt::state& data)
 {
   mtx_G_term.lock();
   data = G_term_;  // Local copy of the terminal terminal goal
   mtx_G_term.unlock();
 }
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
 
 void Panther::updateState(mt::state data)
 {
@@ -554,6 +611,9 @@ void Panther::updateState(mt::state data)
   }
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
 // This function needs to be called once the state has been initialized
 void Panther::doStuffTermGoal()
 {
@@ -603,6 +663,10 @@ void Panther::doStuffTermGoal()
   mtx_planner_status_.unlock();
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 bool Panther::initializedAllExceptPlanner()
 {
   if (!state_initialized_ || !terminal_goal_initialized_)
@@ -614,6 +678,10 @@ bool Panther::initializedAllExceptPlanner()
   return true;
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 bool Panther::initializedStateAndTermGoal()
 {
   if (!state_initialized_ || !terminal_goal_initialized_)
@@ -622,6 +690,10 @@ bool Panther::initializedStateAndTermGoal()
   }
   return true;
 }
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
 
 bool Panther::initialized()
 {
@@ -634,6 +706,10 @@ bool Panther::initialized()
   }
   return true;
 }
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
 
 bool Panther::isReplanningNeeded()
 {
@@ -697,7 +773,12 @@ bool Panther::isReplanningNeeded()
   return true;
 }
 
-void Panther::pubObstacleEdge(mt::Edges& edges_obstacles_out, const Eigen::Affine3d& c_T_b, const Eigen::Affine3d& w_T_b)
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
+void Panther::pubObstacleEdge(mt::Edges& edges_obstacles_out, const Eigen::Affine3d& c_T_b,
+                              const Eigen::Affine3d& w_T_b)
 {
   //
   // Get edges_obstacles
@@ -712,10 +793,12 @@ void Panther::pubObstacleEdge(mt::Edges& edges_obstacles_out, const Eigen::Affin
   edges_obstacles_out = cu::vectorGCALPol2edges(hulls);
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 void Panther::adjustObstaclesForOptimization(std::vector<mt::obstacleForOpt>& obstacles_for_opt)
 {
-
-
   //
   // If obstacles_for_opt is too small, then we need to add some dummy obstacles, which is the copy of the last obstacle
   //
@@ -746,7 +829,8 @@ void Panther::adjustObstaclesForOptimization(std::vector<mt::obstacleForOpt>& ob
   }
 
   //
-  // If using student, and there's no other agent, then we need to add a dummy other agent (otherwise, LSTM for other agent will complain)
+  // If using student, and there's no other agent, then we need to add a dummy other agent (otherwise, LSTM for other
+  // agent will complain)
   //
 
   int num_obst, num_oa;
@@ -755,10 +839,15 @@ void Panther::adjustObstaclesForOptimization(std::vector<mt::obstacleForOpt>& ob
   if (par_.use_student == true && num_oa == 0)
   {
     std::cout << bold << "No other agent. Add a dummy other agent" << std::endl;
-    mt::obstacleForOpt& dummy_oa = obstacles_for_opt.back(); // this could change obstacle into other agent, but it's better than using a completely dummy other agent
+    mt::obstacleForOpt& dummy_oa = obstacles_for_opt.back();  // this could change obstacle into other agent, but it's
+                                                              // better than using a completely dummy other agent
     dummy_oa.is_agent = true;
   }
 }
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
 
 bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_solution_expert,
                      std::vector<si::solOrGuess>& best_solutions_expert, si::solOrGuess& best_solution_student,
@@ -872,7 +961,6 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
 
   for (int i = 0; i < trajs_.size(); i++)
   {
-
     double prob_i = 0.0;
     for (int j = 0; j <= num_samplesp1; j++)
     {
@@ -886,7 +974,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     }
     all_probs.push_back(prob_i);
   }
-  
+
   mtx_trajs_.unlock();
 
   //
@@ -913,13 +1001,14 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     verify(obstacles_for_opt.size() >= 1, "obstacles_for_opt should have at least 1 element");
 
     //
-    // define argmax_prob_collisions vector which is the list of indices of the highest probability of collision stored in all_probs
+    // define argmax_prob_collisions vector which is the list of indices of the highest probability of collision stored
+    // in all_probs
     //
 
     std::vector<int> argmax_prob_collisions(all_probs.size());
     iota(argmax_prob_collisions.begin(), argmax_prob_collisions.end(), 0);
     stable_sort(argmax_prob_collisions.begin(), argmax_prob_collisions.end(),
-        [&all_probs](int i1, int i2) {return all_probs[i1] < all_probs[i2];});
+                [&all_probs](int i1, int i2) { return all_probs[i1] < all_probs[i2]; });
 
     //
     // check argmax_prob_collisions is within range
@@ -1000,7 +1089,8 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
   // Verify that obstacles_for_opt.size() is equal to par_.num_max_of_obst
   //
 
-  verify(obstacles_for_opt.size() == par_.num_max_of_obst, "obstacles_for_opt.size() should be equal to par_.num_max_of_obst");
+  verify(obstacles_for_opt.size() == par_.num_max_of_obst, "obstacles_for_opt.size() should be equal to "
+                                                           "par_.num_max_of_obst");
 
   //
   // Initialize variables
@@ -1009,12 +1099,13 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
   int n_safe_trajs_expert = 0;
   int n_safe_trajs_student = 0;
   int n_safe_trajs = 0;
-  
+
   //
   // Get edges_obstacles
   //
 
-  if (par_.perfect_prediction){
+  if (par_.perfect_prediction)
+  {
     mtx_trajs_.lock();
     ConvexHullsOfCurves hulls = convexHullsOfCurves(t_start, t_final);
     mtx_trajs_.unlock();
@@ -1023,11 +1114,10 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
 
   if (par_.use_expert)
   {
-
     //
     // Use Expert
     //
-    
+
     solver_->setFocusOnObstacle(true);
     solver_->par_.c_fov = par_.c_fov;
     solver_->par_.c_final_yaw = par_.c_final_yaw;
@@ -1082,9 +1172,8 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
 
   if (par_.use_student)
   {
-
     //
-    // Use Student 
+    // Use Student
     //
 
     log_ptr_->tim_initial_setup.toc();
@@ -1178,6 +1267,10 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
 
   return true;
 }
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
 
 bool Panther::addTrajToPlan(const int& k_index_end, mt::log& log, const si::solOrGuess& best_solution,
                             mt::trajectory& X_safe_out)
@@ -1304,13 +1397,12 @@ bool Panther::check(mt::PieceWisePol& pwp)
 // Delay Check
 bool Panther::delayCheck(mt::PieceWisePol& pwp)
 {
-
   auto start = std::chrono::system_clock::now();
   auto current_time = std::chrono::system_clock::now();
   std::chrono::duration<double> elapsed_seconds = current_time - start;
 
   // delay check for par_.delaycheck_time seconds
-  while(elapsed_seconds.count() < par_.delaycheck_time)
+  while (elapsed_seconds.count() < par_.delaycheck_time)
   {
     if (!check(pwp))
     {
@@ -1792,7 +1884,9 @@ ConvexHullsOfCurves Panther::convexHullsOfCurves(double t_start, double t_end)
   return result;
 }
 
-ConvexHullsOfCurves Panther::convexHullsOfCurvesForObstacleEdge(double t_start, double t_end, const Eigen::Affine3d& c_T_b, const Eigen::Affine3d& w_T_b)
+ConvexHullsOfCurves Panther::convexHullsOfCurvesForObstacleEdge(double t_start, double t_end,
+                                                                const Eigen::Affine3d& c_T_b,
+                                                                const Eigen::Affine3d& w_T_b)
 {
   ConvexHullsOfCurves result;
 
@@ -1812,9 +1906,9 @@ ConvexHullsOfCurves Panther::convexHullsOfCurvesForObstacleEdge(double t_start, 
     if (par_.impose_FOV_in_trajCB)
     {
       Eigen::Vector3d c_pos = c_T_b * (w_T_b.inverse()) * w_pos;  // position of the obstacle in the camera frame
-                                                                    // (i.e., depth optical frame)
-      bool inFOV =                                                  // check if it's inside the field of view.
-          c_pos.z() < par_.fov_depth &&                             //////////////////////
+                                                                  // (i.e., depth optical frame)
+      bool inFOV =                                                // check if it's inside the field of view.
+          c_pos.z() < par_.fov_depth &&                           //////////////////////
           fabs(atan2(c_pos.x(), c_pos.z())) <
               ((par_.fov_x_deg * M_PI / 180.0) / 2.0) &&  ///// Note that fov_x_deg means x camera_depth_optical_frame
           fabs(atan2(c_pos.y(), c_pos.z())) <

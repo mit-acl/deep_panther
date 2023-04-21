@@ -25,6 +25,10 @@
 
 typedef PANTHER_timers::Timer MyTimer;
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 // this object is created in the panther_ros_node
 PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle nh3, ros::NodeHandle nh4,
                        ros::NodeHandle nh5)
@@ -128,10 +132,11 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   std::vector<double> training_obst_size_tmp;
   safeGetParam(nh1_, "training_obst_size", training_obst_size_tmp);
   par_.training_obst_size << training_obst_size_tmp[0], training_obst_size_tmp[1], training_obst_size_tmp[2];
-  
+
   std::vector<double> training_other_agent_size_tmp;
   safeGetParam(nh1_, "training_other_agent_size", training_other_agent_size_tmp);
-  par_.training_other_agent_size << training_other_agent_size_tmp[0], training_other_agent_size_tmp[1], training_other_agent_size_tmp[2];
+  par_.training_other_agent_size << training_other_agent_size_tmp[0], training_other_agent_size_tmp[1],
+      training_other_agent_size_tmp[2];
 
   safeGetParam(nh1_, "drone_extra_radius_for_NN", par_.drone_extra_radius_for_NN);
   safeGetParam(nh1_, "Ra", par_.Ra);
@@ -438,6 +443,10 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   ROS_INFO("Planner initialized");
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 PantherRos::~PantherRos()
 {
   sub_state_.shutdown();
@@ -448,6 +457,10 @@ PantherRos::~PantherRos()
   obstacleShareCBTimer_.stop();
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 void PantherRos::pubObstacles(mt::Edges edges_obstacles)
 {
   if (edges_obstacles.size() > 0)
@@ -457,6 +470,10 @@ void PantherRos::pubObstacles(mt::Edges edges_obstacles)
 
   return;
 }
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
 
 void PantherRos::obstacleTrajCB(const panther_msgs::DynTraj& msg)
 {
@@ -477,9 +494,12 @@ void PantherRos::obstacleTrajCB(const panther_msgs::DynTraj& msg)
   mtx_obstacle_traj_.unlock();
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 void PantherRos::trajCB(const panther_msgs::DynTraj& msg)
 {
-
   //
   // Check if the trajecotry is from myself
   //
@@ -563,6 +583,10 @@ void PantherRos::trajCB(const panther_msgs::DynTraj& msg)
   }
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 // This trajectory contains all the future trajectory (current_pos --> A --> final_point_of_traj), because it's the
 // composition of pwp
 void PantherRos::publishOwnTraj(const mt::PieceWisePol& pwp, const bool& is_committed)
@@ -588,6 +612,10 @@ void PantherRos::publishOwnTraj(const mt::PieceWisePol& pwp, const bool& is_comm
   pub_traj_.publish(msg);
 }
 
+//
+// ------------------------------------------------------------------------------------------------------
+//
+
 void PantherRos::pauseTime()
 {
   //// ROS Noetic
@@ -601,6 +629,10 @@ void PantherRos::pauseTime()
   //   abort();  // Debugging
   // }
 }
+
+//
+// ------------------------------------------------------------------------------------------------------
+//
 
 void PantherRos::unpauseTime()
 {
@@ -717,8 +749,8 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 
     bool checked = false;
 
-    if (par_.use_delaycheck){
-
+    if (par_.use_delaycheck)
+    {
       //
       // if we are using delaycheck without check, we skip the check step
       //
@@ -744,17 +776,14 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
       //
 
       checked = panther_ptr_->delayCheck(pwp);
-
     }
     else
     {
-
       //
       // Check & Recheck
       //
 
       checked = panther_ptr_->safetyCheck(pwp);
-
     }
 
     if (!checked)
@@ -829,8 +858,6 @@ void PantherRos::replanCB(const ros::TimerEvent& e)
 
       pubVectorOfsolOrGuess(splines_fitted, pub_splines_fitted_, name_drone_ + "_spline_fitted", "vel");
     }
-
-    // std::cout << "[Callback] Leaving replanCB" << std::endl;
   }
 }
 
@@ -849,11 +876,11 @@ void PantherRos::publishOwnTrajInFailure(mt::Edges edges_obstacles)
   if (timer_stop_.elapsedSoFarMs() > 500.0)  // publish every half a second. TODO set as param
   {
     publishOwnTraj(pwp_last_, true);  // This is needed because is drone DRONE1 stops, it needs to keep publishing his
-                                // last planned trajectory, so that other drones can avoid it (even if DRONE1
-                                // was very far from the other drones with it last successfully planned a
-                                // trajectory).
-                                // Note that these trajectories are time-indexed, and the last position is taken
-                                // if t>times.back(). See eval() function in the pwp struct
+                                      // last planned trajectory, so that other drones can avoid it (even if DRONE1
+                                      // was very far from the other drones with it last successfully planned a
+                                      // trajectory).
+                                      // Note that these trajectories are time-indexed, and the last position is taken
+                                      // if t>times.back(). See eval() function in the pwp struct
     timer_stop_.reset();
   }
 }
@@ -972,7 +999,6 @@ void PantherRos::whoPlansCB(const panther_msgs::WhoPlans& msg)
     is_ready_msg.header.stamp = ros::Time::now();
     is_ready_msg.is_ready = true;
     pub_is_ready_.publish(is_ready_msg);
-
   }
 }
 
