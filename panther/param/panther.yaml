@@ -1,6 +1,6 @@
 # Training setting
 #############################################
-num_of_trajs_per_replan: 6 # num of students' traj (n_s in Table I in deep panther paper)
+num_of_trajs_per_replan: 6 # num of traj (n_s in Table I in deep panther paper)
 max_num_of_initial_guesses: 6 # (n_runs in Table I)
 drone_extra_radius_for_NN: 0.0  #(m) Used for collision checking
 pause_time_when_replanning: false
@@ -96,7 +96,7 @@ agents_ids: ["01", "02", "03", "04", "05"]
 use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
 goal_radius: 0.5   #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
 goal_seen_radius: 2.5 #(m) no more replanning needed sphere (when drone gets close to goal OS fails a lot, so we introduced this)
-Ra: 15.0           # [m] Radius of my planning sphere (planning horizon)
+Ra: 20.0           # [m] Radius of my planning sphere (planning horizon)
 drone_bbox: [0.2, 0.2, 0.2]  #(m) Used for collision checking
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
@@ -109,8 +109,8 @@ z_min: -100.0        #[m] points below this are considered ground
 z_max: 100.0         #[m] 
 ydot_max: 1.0           # [rd/s] Maximum angular velocity. 0.4 for Hardware
 v_max: [2.0, 2.0, 2.0]   #[m/s]  7.0
-a_max: [3.0, 3.0, 3.0]   #[m/s2] Note that if a_max.z() > 9.81, the drone may flip
-j_max: [4.0, 4.0, 4.0]   #[m/s3] 
+a_max: [10.0, 10.0, 10.0]   #[m/s2] Note that if a_max.z() > 9.81, the drone may flip
+j_max: [30.0, 30.0, 30.0]   #[m/s3] 
 factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
 max_seconds_keeping_traj: 30.0     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
 gamma: 0.1 #[seconds] >0 Time step between discretization points
@@ -144,7 +144,7 @@ c_maxydot_yaw_search: 0.0     #weight for the yaw search
 c_pos_smooth: 0.0003           #weight for the optimization
 c_yaw_smooth: 0.0            #weight for the optimization
 c_fov: 1000.0                 #weight for the optimization
-c_final_pos: 1000.0           #weight for the optimization
+c_final_pos: 2000.0           #weight for the optimization
 c_final_yaw: 0.01              #weight for the optimization
 c_total_time: 80             #weight for the optimization
 lambda_obst_avoidance_violation: 1.0 #To compute the augmented cost
@@ -154,7 +154,7 @@ num_of_intervals: 7 #nlopt/num_pol in rmader.yaml (TODO: could be the same as nu
 # Other
 #############################################
 factor_alloc: 1.0 #>=1. Used to find the total duration of a given trajectory. # check if it's used!!
-alpha_shrink: 0.9 #\in [0,1] Only used for MINVO/Bezier
+alpha_shrink: 1.0 #\in [0,1] Only used for MINVO/Bezier
 norminv_prob: 1.0 #For x% bands, set this to norminv(x). #70.0% band <--> 0.524, 80.0% band <--> 0.841, 90.0% band <--> 1.282, 97.5% band <--> 1.96 (i.e. total area is 95%)
 print_graph_yaw_info: false
 mode: panther #  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther), ysweep (noPA but with sweep in yaw) 
