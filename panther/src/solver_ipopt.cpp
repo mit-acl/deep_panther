@@ -173,17 +173,20 @@ std::vector<double> ClosedFormYawSolver::getyCPsfrompCPSUsingClosedForm(
 SolverIpopt::SolverIpopt(const mt::parameters &par)
 {
   par_ = par;
-  // log_ptr_ = log_ptr;
+  // log_ptr_ = log_ptr; // not used anymore
 
+  //
   // All these values are for the position spline
+  //
 
   si::splineParam sp_tmp(par_.deg_pos, par_.num_seg);
   si::splineParam sy_tmp(par_.deg_yaw, par_.num_seg);
-
   sp_ = sp_tmp;
   sy_ = sy_tmp;
 
-  ///////////////////////////////////////
+  //
+  // Basis initialization
+  //
 
   mt::basisConverter basis_converter;
   // basis used for collision
@@ -212,42 +215,52 @@ SolverIpopt::SolverIpopt(const mt::parameters &par)
     abort();
   }
 
-  ///////////////////////////////////////
-  ///////////////////////////////////////
+  //
+  // Casadi files initialization
+  //
 
-  // // TODO: if C++14, use std::make_unique instead
+  // TODO: if C++14, use std::make_unique instead
   separator_solver_ptr_ = std::unique_ptr<separator::Separator>(new separator::Separator());
   octopusSolver_ptr_ =
       std::unique_ptr<OctopusSearch>(new OctopusSearch(par_.basis, par_.num_seg, par_.deg_pos, par_.alpha_shrink));
-
   std::cout << bold << "SolverIpopt, reading .casadi files..." << reset << std::endl;
-
   std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
   std::fstream myfile(folder + "index_instruction.txt", std::ios_base::in);
   myfile >> index_instruction_;
-  cf_op_ = casadi::Function::load(folder + "op.casadi");
-  // cf_op_force_final_pos_ = casadi::Function::load(folder + "op_force_final_pos.casadi");
-  // cf_fixed_pos_op_ = casadi::Function::load(folder + "op_fixed_pos.casadi"); //Not used for now
-  cf_fit_yaw_ = casadi::Function::load(folder + "fit_yaw.casadi");
-  // cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
-  cf_visibility_ = casadi::Function::load(folder + "visibility.casadi");
 
   if (par_.use_panther_star)
   {
     cf_compute_cost_ = casadi::Function::load(folder + "compute_cost.casadi");
+    cf_op_ = casadi::Function::load(folder + "op.casadi");
+    cf_fit_yaw_ = casadi::Function::load(folder + "fit_yaw.casadi");
+    cf_visibility_ = casadi::Function::load(folder + "visibility.casadi");
+    cf_compute_dyn_limits_constraints_violation_ = casadi::Function::load(folder + "compute_dyn_limits_constraints_"
+                                                                                   "violation.casadi");
+    cf_compute_trans_and_yaw_dyn_limits_constraints_violatoin_ = casadi::Function::load(folder + "compute_trans_and_"
+                                                                                                 "yaw_"
+                                                                                                 "dyn_limits_"
+                                                                                                 "constraints_"
+                                                                                                 "violation.casadi");
   }
   else
   {
     cf_compute_cost_ = casadi::Function::load(folder + "panther_compute_cost.casadi");
+    cf_op_ = casadi::Function::load(folder + "panther_op.casadi");
+    cf_fit_yaw_ = casadi::Function::load(folder + "panther_fit_yaw.casadi");
+    cf_visibility_ = casadi::Function::load(folder + "panther_visibility.casadi");
+    cf_compute_dyn_limits_constraints_violation_ = casadi::Function::load(folder + "panther_compute_dyn_limits_"
+                                                                                   "constraints_"
+                                                                                   "violation.casadi");
+    cf_compute_trans_and_yaw_dyn_limits_constraints_violatoin_ = casadi::Function::load(folder + "panther_compute_"
+                                                                                                 "trans_and_"
+                                                                                                 "yaw_"
+                                                                                                 "dyn_limits_"
+                                                                                                 "constraints_"
+                                                                                                 "violation."
+                                                                                                 "casadi");
   }
-  cf_compute_dyn_limits_constraints_violation_ = casadi::Function::load(folder + "compute_dyn_limits_constraints_"
-                                                                                 "violation.casadi");
-  cf_compute_trans_and_yaw_dyn_limits_constraints_violatoin_ = casadi::Function::load(folder + "compute_trans_and_yaw_dyn_limits_constraints_violation.casadi");
-  // std::cout << bold << "__________" << reset << std::endl;
 
   b_Tmatrixcasadi_c_ = casadi::DM(4, 4);
-
-  // std::cout << "par_.b_T_c= " << par_.b_T_c << std::endl;
 
   for (int i = 0; i < par_.b_T_c.rows(); i++)
   {
@@ -257,8 +270,9 @@ SolverIpopt::SolverIpopt(const mt::parameters &par)
     }
   }
 
-  //////////////////////////////////////// CONSTRUCT THE GRAPH FOR THE YAW SEARCH
-  ////////////////////////////////////////////////////////////////////////////////
+  //
+  // CONSTRUCT THE GRAPH FOR THE YAW SEARCH
+  //
 
   num_of_yaw_per_layer_ = par_.num_of_yaw_per_layer;
   num_of_layers_ = par_.sampler_num_samples;
@@ -272,14 +286,16 @@ SolverIpopt::SolverIpopt(const mt::parameters &par)
   // mygraph_t mygraph_(0);  // start a graph with 0 vertices
   mygraph_.clear();
 
+  //
   // create all the vertexes and add them to the graph
+  //
+
   std::vector<std::vector<vd>> all_vertexes_tmp(num_of_layers_ - 1, std::vector<vd>(num_of_yaw_per_layer_));  // TODO
   all_vertexes_ = all_vertexes_tmp;
   std::vector<vd> tmp(1);  // first layer only one element
   all_vertexes_.insert(all_vertexes_.begin(), tmp);
 
   // https://stackoverflow.com/questions/47904550/should-i-keep-track-of-vertex-descriptors-in-boost-graph-library
-
   double y0_tmp = 0.0;  // this value will be updated at the start of each iteration
 
   // add rest of the vertexes
@@ -319,9 +335,6 @@ SolverIpopt::SolverIpopt(const mt::parameters &par)
       }
     }
   }
-
-  ////////////////////////////////////////
-  ////////////////////////////////////////
 }
 
 SolverIpopt::~SolverIpopt()
@@ -347,8 +360,6 @@ void SolverIpopt::getPlanes(std::vector<Hyperplane3D> &planes)
 //   num_of_obst_ = hulls_.size();
 //   num_of_normals_ = par_.num_seg * num_of_obst_;
 // }
-
-//////////////////////////////////////////////////////////
 
 bool SolverIpopt::isInCollision(mt::state state, double t)
 {
@@ -621,7 +632,6 @@ std::vector<si::solOrGuess> SolverIpopt::getGuesses()
 
 double SolverIpopt::computeCost(si::solOrGuess sol_or_guess)
 {
-
   std::map<std::string, casadi::DM> map_arguments = getMapConstantArguments();
 
   casadi::DM matrix_qp = stdVectorEigen3d2CasadiMatrix(sol_or_guess.qp);
@@ -682,14 +692,17 @@ double SolverIpopt::computeDynLimitsConstraintsViolation(si::solOrGuess sol_or_g
 //   map_arguments["yCPs"] = matrix_qy;
 //   // map_arguments["all_nd"] = all_nd;  //Does not appear in the dyn. limits constraints
 
-//   std::map<std::string, casadi::DM> result = cf_compute_trans_and_yaw_dyn_limits_constraints_violatoin_(map_arguments);
+//   std::map<std::string, casadi::DM> result =
+//   cf_compute_trans_and_yaw_dyn_limits_constraints_violatoin_(map_arguments);
 
-//   std::vector<double> trans_dyn_limits_constraints_violation = casadiMatrix2StdVectorDouble(result["trans_violation"]);
-//   std::vector<double> yaw_dyn_limits_constraints_violation = casadiMatrix2StdVectorDouble(result["yaw_violation"]);
+//   std::vector<double> trans_dyn_limits_constraints_violation =
+//   casadiMatrix2StdVectorDouble(result["trans_violation"]); std::vector<double> yaw_dyn_limits_constraints_violation =
+//   casadiMatrix2StdVectorDouble(result["yaw_violation"]);
 
 //   double trans_violation = std::accumulate(
 //       trans_dyn_limits_constraints_violation.begin(), trans_dyn_limits_constraints_violation.end(),
-//       decltype(trans_dyn_limits_constraints_violation)::value_type(0));  // https://stackoverflow.com/a/3221813/6057617
+//       decltype(trans_dyn_limits_constraints_violation)::value_type(0));  //
+//       https://stackoverflow.com/a/3221813/6057617
 
 //   double yaw_violation = std::accumulate(
 //       yaw_dyn_limits_constraints_violation.begin(), yaw_dyn_limits_constraints_violation.end(),
@@ -717,7 +730,8 @@ std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
   map_arguments["y0"] = initial_state_.yaw;
   map_arguments["yf"] = final_state_.yaw;
   map_arguments["ydot0"] = initial_state_.dyaw;
-  map_arguments["ydotf"] = final_state_.dyaw;  // Needed: if not (and if you are minimizing ddyaw), ddyaw=cte --> yaw will explode
+  map_arguments["ydotf"] =
+      final_state_.dyaw;  // Needed: if not (and if you are minimizing ddyaw), ddyaw=cte --> yaw will explode
   map_arguments["v_max"] = eigen2std(par_.v_max);
   map_arguments["a_max"] = eigen2std(par_.a_max);
   map_arguments["j_max"] = eigen2std(par_.j_max);
