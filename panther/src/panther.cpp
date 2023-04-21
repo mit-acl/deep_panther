@@ -655,8 +655,9 @@ bool Panther::isReplanningNeeded()
   mtx_G_term.unlock();
 
   // Check if we have reached the goal
+  mtx_plan_.lock();
   double dist_to_goal = (G_term.pos - plan_.front().pos).norm();
-  // std::cout << "dist_to_goal= " << dist_to_goal << std::endl;
+  mtx_plan_.unlock();
   if (dist_to_goal < par_.goal_radius)
   {
     changeDroneStatus(DroneStatus::GOAL_REACHED);
@@ -675,7 +676,7 @@ bool Panther::isReplanningNeeded()
   // Check if goal is seen
   //
 
-  if (dist_last_plan_to_goal < par_.goal_radius && drone_status_ == DroneStatus::TRAVELING)
+  if (dist_last_plan_to_goal < par_.goal_radius)
   {
     changeDroneStatus(DroneStatus::GOAL_SEEN);
     std::cout << "Status changed to GOAL_SEEN!" << std::endl;
