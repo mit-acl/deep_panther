@@ -68,7 +68,7 @@ class MyEnvironment(gym.Env):
     self.prev_dist_current2goal = 0.0
 
     policy = ExpertPolicy() if self.par.use_expert_for_other_agents_in_training else \
-      bc.reconstruct_policy("/trained_policies/policies/test16.pt")
+      bc.reconstruct_policy("trained_policies/policies/test16.pt")
     self.oam=OtherAgentsManager(policy)
 
     # self.my_SolverIpopt=py_panther.SolverIpopt(self.par)
