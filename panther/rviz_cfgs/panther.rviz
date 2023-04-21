@@ -6,7 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /TF1/Frames1
-        - /DepthCloud1/Auto Size1
+        - /DepthCloudSQ01s1/Auto Size1
       Splitter Ratio: 0.7411764860153198
     Tree Height: 1904
   - Class: rviz/Selection
@@ -35,7 +35,7 @@ Panels:
         - /Grid1
         - /TF1
         - /TF1/Frames1
-        - /DepthCloud1/Auto Size1
+        - /DepthCloudSQ01s1/Auto Size1
       Splitter Ratio: 0.652466356754303
     Tree Height: 441
 Preferences:
@@ -64,36 +64,10 @@ Visualization Manager:
       Reference Frame: <Fixed Frame>
       Value: true
     - Class: rviz/TF
-      Enabled: true
+      Enabled: false
       Frame Timeout: 1000
       Frames:
         All Enabled: false
-        SQ01s:
-          Value: true
-        SQ01s/camera_depth_optical_frame:
-          Value: true
-        SQ01s/camera_link:
-          Value: true
-        SQ02s:
-          Value: true
-        SQ02s/camera_depth_optical_frame:
-          Value: true
-        SQ02s/camera_link:
-          Value: true
-        SQ03s:
-          Value: true
-        SQ03s/camera_depth_optical_frame:
-          Value: true
-        SQ03s/camera_link:
-          Value: true
-        obs_4000:
-          Value: true
-        obs_4001:
-          Value: true
-        vicon:
-          Value: true
-        world:
-          Value: true
       Marker Alpha: 1
       Marker Scale: 2
       Name: TF
@@ -101,26 +75,9 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        world:
-          obs_4000:
-            {}
-          obs_4001:
-            {}
-          vicon:
-            SQ01s:
-              SQ01s/camera_link:
-                SQ01s/camera_depth_optical_frame:
-                  {}
-            SQ02s:
-              SQ02s/camera_link:
-                SQ02s/camera_depth_optical_frame:
-                  {}
-            SQ03s:
-              SQ03s/camera_link:
-                SQ03s/camera_depth_optical_frame:
-                  {}
+        {}
       Update Interval: 0
-      Value: true
+      Value: false
     - Alpha: 1
       Class: rviz/PointStamped
       Color: 0; 255; 0
@@ -408,7 +365,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/best_solution_expert
       Name: SQ01sBestSolutionExp
       Namespaces:
-        {}
+        SQ01s_best_solution_expert0: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -488,7 +445,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/best_solution_student
       Name: SQ01sBestSolutionStu
       Namespaces:
-        SQ01s_best_solution_student0: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -718,7 +675,7 @@ Visualization Manager:
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
-      Name: DepthCloud
+      Name: DepthCloudSQ01s
       Occlusion Compensation:
         Occlusion Time-Out: 30
         Value: false
@@ -730,6 +687,30 @@ Visualization Manager:
       Topic Filter: true
       Use Fixed Frame: true
       Use rainbow: true
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /SQ01s/drone_marker
+      Name: MeshSQ01s
+      Namespaces:
+        mesh_SQ01s: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /SQ02s/drone_marker
+      Name: MeshSQ02s
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /SQ03s/drone_marker
+      Name: MeshSQ03s
+      Namespaces:
+        {}
+      Queue Size: 100
       Value: true
   Enabled: true
   Global Options:
@@ -775,9 +756,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9047953486442566
+      Pitch: 0.8697954416275024
       Target Frame: <Fixed Frame>
-      Yaw: 3.123182773590088
+      Yaw: 3.1431827545166016
     Saved: ~
 Window Geometry:
   DepthImage:
