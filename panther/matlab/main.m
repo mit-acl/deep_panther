@@ -57,8 +57,12 @@ make_plots=false;
 deg_pos=3; %The degree of the position polynomial
 deg_yaw=2; %The degree of the yaw polynomial
 num_seg=7; %The number of segments in the trajectory (the more segments the less conservative the trajectory is [also makes optimization problem harder])
-num_max_of_obst = 3; %This is the maximum num of the obstacles that will be considered in the constraints
-num_obst_in_FOV = 1; % this is different from max_num_obst, which is the max number of obst that an agent includes for constraints
+
+%% ATTENTION!!!!! TODO: make this automatic
+%% if you change these two numbers, don't forget to run this main file twice, once with use_panther_star=true and once with use_panther_star=false
+num_max_of_obst = 6; %This is the maximum num of the obstacles that will be considered in the constraints
+num_obst_in_FOV = 2; % this is different from max_num_obst, which is the max number of obst that an agent includes for constraints
+%% END ATTENTION!!!!!
 
 dim_pos=3; %The dimension of the position trajectory (R3)
 dim_yaw=1; %The dimension of the yaw trajectory (R1)
@@ -717,7 +721,6 @@ else
     my_func.save('./casadi_generated_files/op.casadi') %Optimization Problam. The file generated is quite big
 end
 
-
 % opti_tmp=opti.copy;
 % opti_tmp.subject_to( sp.getPosT(tf)== pf );
 % my_function_tmp = opti_tmp.to_function('my_function_tmp', vars, results_vars,...
@@ -800,7 +803,11 @@ g = Function('g', par_and_init_guess_exprs ,{all_is_in_FOV_for_different_yaw},..
                   par_and_init_guess_names ,{'result'});
 g=g.expand();
 
-g.save('./casadi_generated_files/visibility.casadi') %The file generated is quite big
+if (use_panther_star)
+    g.save('./casadi_generated_files/visibility.casadi') %The file generated is quite big
+else
+    g.save('./casadi_generated_files/panther_visibility.casadi') %The file generated is quite big
+end
 
 g_result=g(names_value{:});
 
@@ -983,9 +990,11 @@ sy_tmp.plotPosVelAccelJerk();
 subplot(4,1,1); hold on;
 plot(t_opt_n_samples, all_yaw_value, 'o')
 
-
-f.save('./casadi_generated_files/fit_yaw.casadi') 
-
+if (use_panther_star)
+    f.save('./casadi_generated_files/fit_yaw.casadi') 
+else
+    f.save('./casadi_generated_files/panther_fit_yaw.casadi') 
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%    FUNCTION TO FIT A SPLINE TO POSITION SAMPLES     %%%%
@@ -1050,7 +1059,6 @@ fitter.bs.plotPos3D();
 scatter3(samples_value(1,:), samples_value(2,:), samples_value(3,:))
 
 f.save('./casadi_generated_files/fit3d.casadi') 
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1191,20 +1199,18 @@ plot(all_t_n,full(result.all_yaw_corrected),'o')
 
 function result=createCellArrayofStructsForObstacles(fitter)
          
-     num_obs=size(fitter.bbox_inflated,2);
-
-     result=[];
+    num_obs=size(fitter.bbox_inflated,2);
+    disp(['num_obs=', num2str(num_obs)])
+    % num_obs = max_num_obst
+    result=[];
      
-     for i=1:num_obs
+    for i=1:num_obs
         name_crtl_pts=['obs_', num2str(i-1), '_ctrl_pts'];  %Note that we use i-1 here because it will be called from C++
         name_bbox_inflated=['obs_', num2str(i-1), '_bbox_inflated'];          %Note that we use i-1 here because it will be called from C++
-
         crtl_pts_value=zeros(size(fitter.bs_casadi{i}.CPoints));
-
         result=[result,...
                 {createStruct(name_crtl_pts,   fitter.ctrl_pts{i} , crtl_pts_value)},...
                 {createStruct(name_bbox_inflated, fitter.bbox_inflated{i} ,  [1;1;1]  )}];
-
     end
          
 end
