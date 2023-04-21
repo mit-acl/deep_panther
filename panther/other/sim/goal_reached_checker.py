@@ -51,7 +51,6 @@ class GoalReachedCheck:
         self.is_goal_reached = False
 
         # keep track of which drone has already got to the goal
-        self.is_goal_reached_cnt = 0
         self.is_goal_reached_check_list = [False for i in range(self.num_of_agents)]
 
     # goal reached checker
@@ -60,21 +59,12 @@ class GoalReachedCheck:
             for i in range(self.num_of_agents):
                 if self.is_goal_reached_check_list[i] == False:
                     if (LA.norm(self.state_pos[i,:] - self.term_goal_pos[i,:]) > self.goal_radius):
-                        # print(i)
-                        # print(self.state_pos)
-                        # print(self.term_goal_pos[i,:])
-                        # print(LA.norm(self.state_pos[i,:] - self.term_goal_pos[i,:]))
                         return
                     else:
                         if self.is_goal_reached_check_list[i] == False:
                             self.is_goal_reached_check_list[i] = True
-                            self.is_goal_reached_cnt = self.is_goal_reached_cnt + 1
-                        # print(self.is_goal_reached_cnt)
-                        # print(i)
-                        # print(self.state_pos[i,:])
-                        # print(self.term_goal_pos[i,:])
 
-                        if self.is_goal_reached_cnt == self.num_of_agents:
+                        if self.is_goal_reached_check_list.count(True) == self.num_of_agents:
                             self.is_goal_reached = True
                             now = rospy.get_rostime()
                             self.goal_reached.header.stamp = now
@@ -169,8 +159,8 @@ if __name__ == '__main__':
     ## get params
     ##
 
-    num_of_agents = rospy.get_param("num_of_agents", 1)
-    circle_radius = rospy.get_param("circle_radius", 10.0)
+    num_of_agents = rospy.get_param("goal_reached_checker/num_of_agents")
+    circle_radius = rospy.get_param("goal_reached_checker/circle_radius")
 
     rospy.init_node('goalReachedCheck')
     startNode(num_of_agents, circle_radius)
