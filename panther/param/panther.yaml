@@ -40,7 +40,7 @@ num_of_obstacles_in_training: 2
 num_of_other_agents_in_training: 1
 use_clipping: False
 use_noised_obst_size: True # (1) observation of obstacles are noised
-goal_seen_radius_training: 1.0 # [m]
+goal_seen_radius_training: 0.5 # [m]
 
 # LSTM
 #############################################
