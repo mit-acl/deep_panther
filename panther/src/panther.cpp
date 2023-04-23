@@ -1675,6 +1675,7 @@ void Panther::getDesiredYaw(mt::state& next_goal)
 {
   mt::state current_state;
   getState(current_state);
+  next_goal = current_state;
 
   double desired_yaw = atan2(G_term_.pos[1] - current_state.pos[1], G_term_.pos[0] - current_state.pos[0]);
   double diff = desired_yaw - current_state.yaw;
