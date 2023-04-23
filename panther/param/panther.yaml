@@ -157,4 +157,4 @@ factor_alloc: 1.0 #>=1. Used to find the total duration of a given trajectory. #
 alpha_shrink: 1.0 #\in [0,1] Only used for MINVO/Bezier
 norminv_prob: 1.0 #For x% bands, set this to norminv(x). #70.0% band <--> 0.524, 80.0% band <--> 0.841, 90.0% band <--> 1.282, 97.5% band <--> 1.96 (i.e. total area is 95%)
 print_graph_yaw_info: false
-mode: panther #  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther), ysweep (noPA but with sweep in yaw) 
+mode: panther #  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther), ysweep (noPA but with sweep in yaw)
