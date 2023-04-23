@@ -65,7 +65,7 @@ if __name__ == '__main__':
     ## Parameters
     ##
 
-    NUM_OF_SIMS = 100
+    NUM_OF_SIMS = 1
     NUM_OF_AGENTS = [1, 3]
     NUM_OF_OBS_LIST = [2]
     CIRCLE_RADIUS = 5.0
