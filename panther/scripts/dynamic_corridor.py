@@ -34,6 +34,7 @@ import glob
 import rospkg
 import argparse
 from datetime import datetime
+import yaml
 
 def getColorJet(v, vmin, vmax): 
 
@@ -138,7 +139,13 @@ class DynCorridor:
         self.scale= [alpha_scale_obst_traj, alpha_scale_obst_traj, alpha_scale_obst_traj]
         self.slower_min=1.0/beta_faster_obst_traj   #1.2 or 2.3
         self.slower_max=1.0/beta_faster_obst_traj   #1.2 or 2.3
-        self.bbox_dynamic=[0.6, 0.6, 0.6] # this corresponds to training_obst_size defined in panther.yaml
+
+        PANTHER_YAML_PATH = rospkg.RosPack().get_path("panther") + "/param/panther.yaml"
+        with open(PANTHER_YAML_PATH) as f:
+            PANTHER_YAML_PARAMS = yaml.safe_load(f)
+
+
+        self.bbox_dynamic=PANTHER_YAML_PARAMS["obstacle_bbox"] # this corresponds to training_obst_size defined in panther.yaml
         self.bbox_static_vert=[0.4, 0.4, 4]
         self.bbox_static_horiz=[0.4, 8, 0.4]
         self.percentage_vert=0.0
