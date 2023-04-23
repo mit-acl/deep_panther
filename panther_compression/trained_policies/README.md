@@ -16,3 +16,4 @@
 16. test16.py: 1024x1024x1024x1024 pos_loss: 4e-5, 9e-5, training_dt 0.2. only ~50k round 
 17. test17.py: 1024x1024x1024x1024 pos_loss: 3e-5, 4e-5, training with other agents. May need to train with completely randomized environment. only ~100k rounds
 18. test18.py: 1024x1024x1024x1024 pos_loss: 7e-5, 9e-5, using test17.pt, but changed obstacles' positions are now randomly generated
+19. test19.py: 1024x1024x1024x1024 pos_loss: 4e-5, 4e-5, using params that solved the issue "when close to goal, expert fails a lot"
