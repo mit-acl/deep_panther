@@ -225,11 +225,12 @@ SolverIpopt::SolverIpopt(const mt::parameters &par)
       std::unique_ptr<OctopusSearch>(new OctopusSearch(par_.basis, par_.num_seg, par_.deg_pos, par_.alpha_shrink));
   std::cout << bold << "SolverIpopt, reading .casadi files..." << reset << std::endl;
   std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
-  std::fstream myfile(folder + "index_instruction.txt", std::ios_base::in);
-  myfile >> index_instruction_;
+
 
   if (par_.use_panther_star)
   {
+    std::fstream myfile(folder + "index_instruction.txt", std::ios_base::in);
+    myfile >> index_instruction_;
     cf_compute_cost_ = casadi::Function::load(folder + "compute_cost.casadi");
     cf_op_ = casadi::Function::load(folder + "op.casadi");
     cf_fit_yaw_ = casadi::Function::load(folder + "fit_yaw.casadi");
@@ -244,6 +245,8 @@ SolverIpopt::SolverIpopt(const mt::parameters &par)
   }
   else
   {
+    std::fstream myfile(folder + "panther_index_instruction.txt", std::ios_base::in);
+    myfile >> index_instruction_;
     cf_compute_cost_ = casadi::Function::load(folder + "panther_compute_cost.casadi");
     cf_op_ = casadi::Function::load(folder + "panther_op.casadi");
     cf_fit_yaw_ = casadi::Function::load(folder + "panther_fit_yaw.casadi");
