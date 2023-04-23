@@ -68,7 +68,7 @@ if __name__ == '__main__':
     NUM_OF_SIMS = 1
     NUM_OF_AGENTS = [1, 3]
     NUM_OF_OBS_LIST = [2]
-    CIRCLE_RADIUS = 5.0
+    CIRCLE_RADIUS = 4.0
     USE_PERFECT_CONTROLLER = "true"
     USE_PERFECT_PREDICTION = "false"
     SIM_DURATION = 120 # in seconds

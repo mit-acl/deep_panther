@@ -82,6 +82,7 @@ if __name__ == '__main__':
     ##
 
     sim_folders = listdirs(rootdir=DATA_DIR, subdirs=[])
+    sim_folders.sort()
 
     ##
     ## Data extraction preparation for all simulation folders
