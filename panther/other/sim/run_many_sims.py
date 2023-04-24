@@ -169,6 +169,9 @@ if __name__ == '__main__':
                             elif agent_type == "primer":
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_panther_star true")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_expert false")
+                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_student true")
+                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_of_trajs_per_replan {traj_num}")
+                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/max_num_of_initial_guesses {traj_num}")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_max_of_obst {PRIMER_NUM_MAX_OF_OBST}")
                                 
 
