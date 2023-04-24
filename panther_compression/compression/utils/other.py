@@ -1813,10 +1813,11 @@ class CostComputer():
 
 		if(index_best_safe_traj is not None):
 			index_best_traj = index_best_safe_traj
-
 		elif(index_best_unsafe_traj is not None):
 			index_best_traj= index_best_unsafe_traj
 		else:
+			print(index_best_safe_traj)
+			print(index_best_unsafe_traj)
 			print("This should never happen!!")
 			exit();		
 
