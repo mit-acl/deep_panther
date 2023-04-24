@@ -849,7 +849,7 @@ void Panther::adjustObstaclesForOptimization(std::vector<mt::obstacleForOpt>& ob
     std::cout << bold << "No other agent. Add a dummy other agent" << std::endl;
     mt::obstacleForOpt& dummy_oa = obstacles_for_opt.front();  // this could change obstacle into other agent, but it's
                                                               // better than using a completely dummy other agent
-    dummy_oa.is_agent = true;
+    dummy_oa.is_agent = false;
   }
 }
 

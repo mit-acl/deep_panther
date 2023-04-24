@@ -271,7 +271,7 @@ class ObstaclesManager():
 
 	def getNumObs(self):
 		# return self.num_obs
-		return self.params["num_max_of_obst"]
+		return int(rospy.get_param("/SQ01s/panther/num_max_of_obst"))
 
 	def getCPsPerObstacle(self):
 		return self.fitter_num_seg + self.fitter_deg_pos # 7 + 3
@@ -279,7 +279,7 @@ class ObstaclesManager():
 	def getSizeAllObstacles(self):
 		# Size of the ctrl_pts + bbox
 		# return self.num_obs*(3*self.getCPsPerObstacle() + 3)
-		return self.params["num_max_of_obst"]*(3*self.getCPsPerObstacle() + 3)
+		return int(rospy.get_param("/SQ01s/panther/num_max_of_obst"))*(3*self.getCPsPerObstacle() + 3)
 
 	def getSizeEachObstacle(self):
 		return 3*self.getCPsPerObstacle() + 3
@@ -378,7 +378,7 @@ class OtherAgentsManager():
 		ctrl_pts = self.am.get_zero_ctrl_pts_for_student()
 		bbox_inflated = self.am.get_bbox_inflated_for_student()
 		w_student = []
-		for i in range(self.params["num_max_of_obst"]):
+		for i in range(int(rospy.get_param("/SQ01s/panther/num_max_of_obst"))):
 			w_student.append(Obstacle(ctrl_pts, bbox_inflated, is_obstacle=False))
 		self.reset(w_student)
 
@@ -441,7 +441,7 @@ class OtherAgentsManager():
 			ctrl_pts = self.am.get_zero_ctrl_pts_for_student()
 			bbox_inflated = self.am.get_bbox_inflated_for_student()
 			w_student = []
-			for i in range(self.params["num_max_of_obst"]):
+			for i in range(int(rospy.get_param("/SQ01s/panther/num_max_of_obst"))):
 				w_student.append(Obstacle(ctrl_pts, bbox_inflated, is_obstacle=False))
 			self.reset(w_student)
 			print('[other agent] goal reached')
@@ -1528,7 +1528,7 @@ class StudentCaller():
 		## 
 
 		num_obs = int((f_obs_n.shape[1] - 10) / (3*self.obsm.getCPsPerObstacle()+3))
-		for i in range(num_obs, self.params["num_max_of_obst"]):
+		for i in range(num_obs, int(rospy.get_param("/SQ01s/panther/num_max_of_obst"))):
 			f_obs_n = np.concatenate((f_obs_n, f_obs_n[:,-3*self.obsm.getCPsPerObstacle()-3:]), axis=1)
 
 		self.costs_and_violations_of_action=self.cc.getCostsAndViolationsOfActionFromObsnAndActionn(f_obs_n, action_normalized)
