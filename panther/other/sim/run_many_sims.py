@@ -81,7 +81,7 @@ if __name__ == '__main__':
     AGENTS_TYPES = ["primer"]
     TRAJ_NUM_PER_REPLAN_LIST = [1, 6]
     DEFAULT_NUM_MAX_OF_OBST = 4 #TODO: hard-coded
-    PRIMER_NUM_MAX_OF_OBST = 8
+    PRIMER_NUM_MAX_OF_OBST = 4
     
     ##
     ## make sure ROS (and related stuff) is not running
@@ -169,10 +169,7 @@ if __name__ == '__main__':
                             elif agent_type == "primer":
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_panther_star true")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_expert false")
-                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_student true")
-                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_of_trajs_per_replan 6")
-                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/max_num_of_initial_guesses 6")
-                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_max_of_obst {PRIMER_NUM_MAX_OF_OBST}")
+                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_This should never happenmax_of_obst {PRIMER_NUM_MAX_OF_OBST}")
                                 
 
                         ## sim_onboard
