@@ -761,7 +761,7 @@ class ObservationManager():
 		self.max_dist2obs=params["max_dist2obs"]
 		self.max_side_bbox_obs=params["max_side_bbox_obs"]
 		self.Ra=params["Ra"]
-		self.num_max_of_obst = params["num_max_of_obst"] # from casadi
+		self.num_max_of_obst = int(rospy.get_param("/SQ01s/panther/num_of_trajs_per_replan")) # from casadi
 		self.use_lstm = params["use_lstm"] 
 		
 		ones13=np.ones((1,3))

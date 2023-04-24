@@ -80,7 +80,7 @@ if __name__ == '__main__':
     AGENTS_TYPES = ["parm", "parm_star", "primer"]
     AGENTS_TYPES = ["primer"]
     TRAJ_NUM_PER_REPLAN_LIST = [1, 6]
-    DEFAULT_NUM_MAX_OF_OBST = rospy.get_param("/SQ01s/panther/num_max_of_obst") #TODO: hard-coded
+    DEFAULT_NUM_MAX_OF_OBST = 4 #TODO: hard-coded
     PRIMER_NUM_MAX_OF_OBST = 8
     
     ##
