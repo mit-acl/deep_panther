@@ -169,7 +169,7 @@ if __name__ == '__main__':
                             elif agent_type == "primer":
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_panther_star true")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_expert false")
-                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_This should never happenmax_of_obst {PRIMER_NUM_MAX_OF_OBST}")
+                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_max_of_obst {PRIMER_NUM_MAX_OF_OBST}")
                                 
 
                         ## sim_onboard
