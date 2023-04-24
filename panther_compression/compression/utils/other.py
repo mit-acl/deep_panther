@@ -20,6 +20,7 @@ import tf.transformations
 from joblib import Parallel, delayed
 import multiprocessing
 import gym
+import rospy
 
 class ExpertDidntSucceed(Exception):
 	  pass
@@ -1115,7 +1116,7 @@ class ActionManager():
 		 --> where ctrlpoints_yaw has the ctrlpoints that are not determined by init pos/vel, and final vel
 		     i.e., len(ctrlpoints_yaw)= (num_seg_yaw + deg_yaw - 1 + 1) - 2 - 1 = num_seg_yaw + deg_yaw - 3 """
 
-		self.num_traj_per_action=params["num_of_trajs_per_replan"]
+		self.num_traj_per_action=int(rospy.get_param("/SQ01s/panther/num_of_trajs_per_replan")) # TODO: SQ01s dependency
 		self.total_num_pos_ctrl_pts = self.num_seg + self.deg_pos
 		self.traj_size_pos_ctrl_pts = 3*(self.total_num_pos_ctrl_pts - 5)
 		self.traj_size_yaw_ctrl_pts = (self.num_seg + self.deg_yaw - 3)
