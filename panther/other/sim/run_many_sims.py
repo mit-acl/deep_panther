@@ -98,7 +98,7 @@ if __name__ == '__main__':
     os.system("sed -i '/use_student:/s/^/#/g' $(rospack find panther)/param/panther.yaml")
     os.system("sed -i '/num_of_trajs_per_replan:/s/^/#/g' $(rospack find panther)/param/panther.yaml")
     os.system("sed -i '/max_num_of_initial_guesses:/s/^/#/g' $(rospack find panther)/param/panther.yaml")
-    os.system("sed -i '/num_max_of_obst:/s/^/#/g' $(rospack find panther)/matlab/casadi_generated_files/params_casadi.yaml")
+    # os.system("sed -i '/num_max_of_obst:/s/^/#/g' $(rospack find panther)/matlab/casadi_generated_files/params_casadi.yaml")
 
     ##
     ## simulation loop
@@ -158,21 +158,21 @@ if __name__ == '__main__':
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_student false")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_of_trajs_per_replan {traj_num}")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/max_num_of_initial_guesses {traj_num}")
-                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_max_of_obst {DEFAULT_NUM_MAX_OF_OBST}")
+                                # commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_max_of_obst {DEFAULT_NUM_MAX_OF_OBST}")
                             elif agent_type == "parm_star":
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_panther_star true")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_expert true")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_student false")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_of_trajs_per_replan {traj_num}")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/max_num_of_initial_guesses {traj_num}")
-                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_max_of_obst {DEFAULT_NUM_MAX_OF_OBST}")
+                                # commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_max_of_obst {DEFAULT_NUM_MAX_OF_OBST}")
                             elif agent_type == "primer":
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_panther_star true")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_expert false")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_student true")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_of_trajs_per_replan {traj_num}")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/max_num_of_initial_guesses {traj_num}")
-                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_max_of_obst {PRIMER_NUM_MAX_OF_OBST}")
+                                # commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_max_of_obst {PRIMER_NUM_MAX_OF_OBST}")
                                 
 
                         ## sim_onboard
@@ -253,5 +253,5 @@ if __name__ == '__main__':
     os.system("sed -i '/use_student:/s/^#//g' $(rospack find panther)/param/panther.yaml")
     os.system("sed -i '/num_of_trajs_per_replan:/s/^#//g' $(rospack find panther)/param/panther.yaml")
     os.system("sed -i '/max_num_of_initial_guesses:/s/^#//g' $(rospack find panther)/param/panther.yaml")
-    os.system("sed -i '/num_max_of_obst:/s/^#//g' $(rospack find panther)/matlab/casadi_generated_files/params_casadi.yaml")
+    # os.system("sed -i '/num_max_of_obst:/s/^#//g' $(rospack find panther)/matlab/casadi_generated_files/params_casadi.yaml")
     
