@@ -1154,10 +1154,12 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
               << std::endl;
 
     log_ptr_->tim_initial_setup.toc();
+    std::cout << "Calling the expert!" << std::endl;
+    auto start_time = std::chrono::high_resolution_clock::now();
     bool result = solver_->optimize();
-    double time_opt;
-    solver_->getOptTime(time_opt);
-    log_ptr_->setTimeOpt(time_opt);
+    auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end_time - start_time;
+    log_ptr_->setTimeOpt(elapsed_seconds.count()*1000.0);
 
     total_replannings_++;
     if (result == false)
@@ -1194,7 +1196,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos, num_obst, num_oa);
     auto end_time = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
-    log_ptr_->setTimeOpt(elapsed_seconds.count());
+    log_ptr_->setTimeOpt(elapsed_seconds.count()*1000.0);
     best_solutions_student = result.cast<std::vector<si::solOrGuess>>();
 
     pybind11::object tmp = student_caller_ptr_->attr("getIndexBestTraj")();
