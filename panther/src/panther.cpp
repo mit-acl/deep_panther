@@ -1188,7 +1188,13 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     std::cout << "Calling the student!" << std::endl;
     int num_obst, num_oa;
     getNumObstAndNumOtherAgents(obstacles_for_opt, num_obst, num_oa);
+
+    // get time
+    auto start_time = std::chrono::system_clock::now();
     pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos, num_obst, num_oa);
+    auto end_time = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end_time - start_time;
+    log_ptr_->setTimeOpt(elapsed_seconds.count());
     best_solutions_student = result.cast<std::vector<si::solOrGuess>>();
 
     pybind11::object tmp = student_caller_ptr_->attr("getIndexBestTraj")();
