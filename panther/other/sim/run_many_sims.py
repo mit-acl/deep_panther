@@ -65,7 +65,7 @@ if __name__ == '__main__':
     ## Parameters
     ##
 
-    NUM_OF_SIMS = 1
+    NUM_OF_SIMS =50
     NUM_OF_AGENTS = [1, 3]
     NUM_OF_OBS_LIST = [2]
     CIRCLE_RADIUS = 4.0
@@ -78,7 +78,6 @@ if __name__ == '__main__':
     TOPICS_TO_RECORD = "/{}/goal /{}/state /tf /tf_static /{}/panther/fov /obstacles_mesh /{}/panther/best_solution_expert /{}/panther/best_solution_student /{}/term_goal /{}/panther/actual_traj /clock /trajs /sim_all_agents_goal_reached /{}/panther/is_ready /{}/panther/log"
     USE_RVIZ = sys.argv[2] if len(sys.argv) >2 else "false"
     AGENTS_TYPES = ["parm", "parm_star", "primer"]
-    AGENTS_TYPES = ["primer"]
     TRAJ_NUM_PER_REPLAN_LIST = [1, 6]
     DEFAULT_NUM_MAX_OF_OBST = 4 #TODO: hard-coded
     PRIMER_NUM_MAX_OF_OBST = 4
