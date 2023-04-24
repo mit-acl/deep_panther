@@ -42,7 +42,6 @@ import datetime
 import yaml
 import pprint
 import rospkg
-import contextlib
 
 def listdirs(rootdir, subdirs):
     for it in os.scandir(rootdir):
@@ -59,12 +58,14 @@ if __name__ == '__main__':
     ##
 
     DATA_DIR = sys.argv[1] if len(sys.argv) > 1 else "/media/kota/T7/deep-panther/bags"
-    TOPICS_TO_UNPACK = "/{}/goal /{}/state /tf /tf_static /{}/panther/fov /obstacles_mesh /{}/panther/best_solution_expert /{}/panther/best_solution_student /{}/term_goal /{}/panther/actual_traj /clock /trajs /sim_all_agents_goal_reached /{}/panther/is_ready /{}/panther/log"
+    TOPICS_TO_UNPACK = "/tf /tf_static /obstacles_mesh /clock /trajs /sim_all_agents_goal_reached"
+    TOPICS_TO_UNPACK_AGENT = "/{}/goal /{}/state /{}/panther/fov /{}/panther/best_solution_expert /{}/panther/best_solution_student /{}/term_goal /{}/panther/actual_traj /{}/panther/is_ready /{}/panther/log"
     PANTHER_YAML_PATH = rospkg.RosPack().get_path("panther") + "/param/panther.yaml"
     with open(PANTHER_YAML_PATH) as f:
         PANTHER_YAML_PARAMS = yaml.safe_load(f)
     AGENT_BBOX = np.array(PANTHER_YAML_PARAMS["drone_bbox"]) 
-    OBSTACLE_BBOX = np.array(PANTHER_YAML_PARAMS["obstacle_bbox"])
+    # OBSTACLE_BBOX = np.array(PANTHER_YAML_PARAMS["obstacle_bbox"])
+    OBSTACLE_BBOX = np.array([0.6, 0.6, 0.6])
     BBOX_AGENT_AGENT = AGENT_BBOX / 2  + AGENT_BBOX / 2
     BBOX_AGENT_OBST = AGENT_BBOX / 2 + OBSTACLE_BBOX / 2
     FOV_X_DEG = PANTHER_YAML_PARAMS["fov_x_deg"]
@@ -180,8 +181,14 @@ if __name__ == '__main__':
 
             print(sim_folder+"/"+bag_file)
             num_of_bags += 1
-            agent_name = bag_file[8:13]
-            topics = TOPICS_TO_UNPACK.format(*[agent_name for i in range(9)]).split(" ")
+            num_agent = sim_folder[-8]
+
+            topics = TOPICS_TO_UNPACK.split(" ")
+            agent_names = []
+            for i in range(int(num_agent)):
+                agent_name = f"SQ{str(i+1).zfill(2)}s"
+                agent_names.append(agent_name)
+                topics.extend(TOPICS_TO_UNPACK_AGENT.format(*[agent_name for i in range(9)]).split(" "))
 
             with rosbag.Bag(os.path.join(DATA_DIR, sim_folder, bag_file)) as bag:
 
@@ -195,7 +202,7 @@ if __name__ == '__main__':
                 sim_end_times = []
 
                 for topic, msg, t in bag.read_messages(topics=topics):
-                    if  topic == f"/{agent_name}/term_goal":
+                    if  topic in [f"/{agent_name}/term_goal" for agent_name in agent_names]:
                         sim_start_times.append(msg.header.stamp.to_sec())
                     if topic == f"/sim_all_agents_goal_reached":
                         sim_end_times.append(msg.header.stamp.to_sec())
@@ -209,7 +216,7 @@ if __name__ == '__main__':
                 computation_times = []
 
                 for topic, msg, t in bag.read_messages(topics=topics):
-                    if topic == f"/{agent_name}/panther/log":
+                    if topic in [f"/{agent_name}/panther/log" for agent_name in agent_names]:
                         computation_times.append(msg.ms_opt)
 
                 ##
@@ -218,11 +225,9 @@ if __name__ == '__main__':
 
                 print("(3) number of collisions")
 
-                # suppress warnings (especially for TF_REPEATED_DATA)
-                with contextlib.redirect_stdout(os.devnull):
-
+                try:
                     bag_transformer = BagTfTransformer(bag)
-                    sim_start_time = max(0, sim_start_times[-1])
+                    sim_start_time = max(sim_start_times)
                     try: 
                         sim_end_time = sim_end_times[-1]
                     except:
@@ -282,7 +287,9 @@ if __name__ == '__main__':
                                 if x_diff < BBOX_AGENT_OBST[0] and y_diff < BBOX_AGENT_OBST[1] and z_diff < BBOX_AGENT_OBST[2]:
                                     num_of_collisions_btwn_agents_and_obstacles += 1
                                     break
-                
+                except:
+                    pass
+
                 ##
                 ## (4) fov rate & (5) continuous fov detection
                 ##
@@ -293,60 +300,65 @@ if __name__ == '__main__':
                 discrete_times = np.linspace(sim_start_time, sim_end_time, int((sim_end_time - sim_start_time) * DISCRETE_TIME_HZ))
                 dt = flight_time / len(discrete_times)
 
-                for agent in AGENTS_LIST:
-                    for obstacle in OBSTACLES_LIST:
-                        is_in_FOV_in_prev_timestep = False
-                        max_streak_in_FOV = 0
-                        for t in discrete_times:
+                try:
 
-                            # check if the obstacle is in the FOV of the agent
-                            agent_pos, agent_quat = bag_transformer.lookupTransform("world", agent, rospy.Time.from_sec(t))
-                            obst_pos, _ = bag_transformer.lookupTransform("world", obstacle, rospy.Time.from_sec(t))
-                            fov_rate[agent] += check_obst_is_in_FOV(agent_pos, agent_quat, obst_pos, FOV_X_DEG, FOV_Y_DEG, FOV_DEPTH)
+                    for agent in AGENTS_LIST:
+                        for obstacle in OBSTACLES_LIST:
+                            is_in_FOV_in_prev_timestep = False
+                            max_streak_in_FOV = 0
+                            for t in discrete_times:
 
-                            # check if the agent is close to the obstacle
-                            dist = np.linalg.norm(np.array(agent_pos) - np.array(obst_pos))
-                            if dist < FOV_DEPTH:
-                                agent_obstacle_proxy[agent] += 1
+                                # check if the obstacle is in the FOV of the agent
+                                agent_pos, agent_quat = bag_transformer.lookupTransform("world", agent, rospy.Time.from_sec(t))
+                                obst_pos, _ = bag_transformer.lookupTransform("world", obstacle, rospy.Time.from_sec(t))
+                                fov_rate[agent] += check_obst_is_in_FOV(agent_pos, agent_quat, obst_pos, FOV_X_DEG, FOV_Y_DEG, FOV_DEPTH)
 
-                            # check if the obstacle is in the FOV of the agent continuously
-                            if check_obst_is_in_FOV(agent_pos, agent_quat, obst_pos, FOV_X_DEG, FOV_Y_DEG, FOV_DEPTH):
-                                if not is_in_FOV_in_prev_timestep:
-                                    max_streak_in_FOV = 1
+                                # check if the agent is close to the obstacle
+                                dist = np.linalg.norm(np.array(agent_pos) - np.array(obst_pos))
+                                if dist < FOV_DEPTH:
+                                    agent_obstacle_proxy[agent] += 1
+
+                                # check if the obstacle is in the FOV of the agent continuously
+                                if check_obst_is_in_FOV(agent_pos, agent_quat, obst_pos, FOV_X_DEG, FOV_Y_DEG, FOV_DEPTH):
+                                    if not is_in_FOV_in_prev_timestep:
+                                        max_streak_in_FOV = 1
+                                    else:
+                                        max_streak_in_FOV += 1
+                                        continuous_fov_detection[agent][obstacle] = max(continuous_fov_detection[agent][obstacle], max_streak_in_FOV)
+                                    is_in_FOV_in_prev_timestep = True
                                 else:
-                                    max_streak_in_FOV += 1
-                                    continuous_fov_detection[agent][obstacle] = max(continuous_fov_detection[agent][obstacle], max_streak_in_FOV)
-                                is_in_FOV_in_prev_timestep = True
-                            else:
-                                is_in_FOV_in_prev_timestep = False
+                                    is_in_FOV_in_prev_timestep = False
 
-                # converet the count to rate
-                for agent in AGENTS_LIST:
-                    fov_rate[agent] = fov_rate[agent] / agent_obstacle_proxy[agent]
-                
+                    # converet the count to rate
+                    for agent in AGENTS_LIST:
+                        fov_rate[agent] = fov_rate[agent] / agent_obstacle_proxy[agent]
+                except:
+                    pass
                 ##
                 ## (6) translational dynamic constraint violation rate & (7) yaw dynamic constraint violation rate
                 ##
 
                 print("(6) translational dynamic constraint violation rate & (7) yaw dynamic constraint violation rate")
 
-                topic_num = 0
-                for topic, msg, t in bag.read_messages(topics=topics):
+                try:
+                    topic_num = 0
+                    for topic, msg, t in bag.read_messages(topics=topics):
 
-                    if  topic == f"/{agent_name}/goal":
+                        if  topic in [f"/{agent_name}/goal" for agent_name in agent_names]:
 
-                        vel = np.linalg.norm(np.array([msg.v.x, msg.v.y, msg.v.z]))
-                        acc = np.linalg.norm(np.array([msg.a.x, msg.a.y, msg.a.z]))
-                        jerk = np.linalg.norm(np.array([msg.j.x, msg.j.y, msg.j.z]))
-                        dyaw = float(msg.dpsi)
+                            vel = np.linalg.norm(np.array([msg.v.x, msg.v.y, msg.v.z]))
+                            acc = np.linalg.norm(np.array([msg.a.x, msg.a.y, msg.a.z]))
+                            jerk = np.linalg.norm(np.array([msg.j.x, msg.j.y, msg.j.z]))
+                            dyaw = float(msg.dpsi)
 
-                        if vel > math.sqrt(3)*MAX_VEL or acc > math.sqrt(3)*MAX_ACC or jerk > math.sqrt(3)*MAX_JERK:
-                            translational_dynamic_constraint_violation_rate += 1
-                        if dyaw > MAX_DYAW:
-                            yaw_dynamic_constraint_violation_rate += 1
-                        
-                        topic_num += 1
-                
+                            if vel > math.sqrt(3)*MAX_VEL or acc > math.sqrt(3)*MAX_ACC or jerk > math.sqrt(3)*MAX_JERK:
+                                translational_dynamic_constraint_violation_rate += 1
+                            if dyaw > MAX_DYAW:
+                                yaw_dynamic_constraint_violation_rate += 1
+                            
+                            topic_num += 1
+                except:
+                    pass
                 ##
                 ## (8) success rate
                 ##
@@ -366,7 +378,7 @@ if __name__ == '__main__':
 
                 for topic, msg, t in bag.read_messages(topics=topics):
 
-                    if  topic == f"/{agent_name}/goal":
+                    if topic in [f"/{agent_name}/goal" for agent_name in agent_names]:
 
                         acc = np.linalg.norm(np.array([msg.a.x, msg.a.y, msg.a.z]))
                         jerk = np.linalg.norm(np.array([msg.j.x, msg.j.y, msg.j.z]))
@@ -382,7 +394,7 @@ if __name__ == '__main__':
 
                 is_stopped = True
                 for topic, msg, t in bag.read_messages(topics=topics):
-                    if  topic == f"/{agent_name}/goal":
+                    if topic in [f"/{agent_name}/goal" for agent_name in agent_names]:
 
                         vel = np.linalg.norm(np.array([msg.v.x, msg.v.y, msg.v.z]))
 
