@@ -78,6 +78,7 @@ if __name__ == '__main__':
     TOPICS_TO_RECORD = "/{}/goal /{}/state /tf /tf_static /{}/panther/fov /obstacles_mesh /{}/panther/best_solution_expert /{}/panther/best_solution_student /{}/term_goal /{}/panther/actual_traj /clock /trajs /sim_all_agents_goal_reached /{}/panther/is_ready /{}/panther/log"
     USE_RVIZ = sys.argv[2] if len(sys.argv) >2 else "false"
     AGENTS_TYPES = ["parm", "parm_star", "primer"]
+    AGENTS_TYPES = ["primer"]
     TRAJ_NUM_PER_REPLAN_LIST = [1, 6]
 
     ##
