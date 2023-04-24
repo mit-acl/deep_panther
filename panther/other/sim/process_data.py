@@ -76,6 +76,7 @@ if __name__ == '__main__':
     MAX_DYAW = PANTHER_YAML_PARAMS["ydot_max"]
     DT = PANTHER_YAML_PARAMS["dc"]
     STOP_VEL_THRESHOLD = 0.001 # m/s
+    DISCRETE_TIME_HZ = 10 # Hz
 
     ##
     ## Get simulation folders
@@ -221,12 +222,12 @@ if __name__ == '__main__':
                 with contextlib.redirect_stdout(os.devnull):
 
                     bag_transformer = BagTfTransformer(bag)
-                    sim_start_time = sim_start_times[-1]
+                    sim_start_time = max(0, sim_start_times[-1])
                     try: 
                         sim_end_time = sim_end_times[-1]
                     except:
                         sim_end_time = bag.get_end_time()
-                    discrete_times = np.linspace(sim_start_time, sim_end_time, int((sim_end_time - sim_start_time) * 100))
+                    discrete_times = np.linspace(sim_start_time, sim_end_time, int((sim_end_time - sim_start_time) * DISCRETE_TIME_HZ))
 
                     # get combination of an agent and an agent and an agent and an obstacle
                     agent_agent_pairs = list(itertools.combinations(AGENTS_LIST, 2))
@@ -289,7 +290,7 @@ if __name__ == '__main__':
                 print("(4) fov rate & (5) continuous fov detection")
 
                 flight_time = sim_end_time - sim_start_time
-                discrete_times = np.linspace(sim_start_time, sim_end_time, int((sim_end_time - sim_start_time) * 100))
+                discrete_times = np.linspace(sim_start_time, sim_end_time, int((sim_end_time - sim_start_time) * DISCRETE_TIME_HZ))
                 dt = flight_time / len(discrete_times)
 
                 for agent in AGENTS_LIST:
