@@ -98,7 +98,7 @@ if __name__ == '__main__':
     os.system("sed -i '/use_student:/s/^/#/g' $(rospack find panther)/param/panther.yaml")
     os.system("sed -i '/num_of_trajs_per_replan:/s/^/#/g' $(rospack find panther)/param/panther.yaml")
     os.system("sed -i '/max_num_of_initial_guesses:/s/^/#/g' $(rospack find panther)/param/panther.yaml")
-    os.system("sed -i '/num_max_of_obst:/s/^/#/g' $(rospack find panther)/param/params_casadi.yaml")
+    os.system("sed -i '/num_max_of_obst:/s/^/#/g' $(rospack find panther)/matlab/casadi_generated_files/params_casadi.yaml")
 
     ##
     ## simulation loop
@@ -253,5 +253,5 @@ if __name__ == '__main__':
     os.system("sed -i '/use_student:/s/^#//g' $(rospack find panther)/param/panther.yaml")
     os.system("sed -i '/num_of_trajs_per_replan:/s/^#//g' $(rospack find panther)/param/panther.yaml")
     os.system("sed -i '/max_num_of_initial_guesses:/s/^#//g' $(rospack find panther)/param/panther.yaml")
-    os.system("sed -i '/num_max_of_obst:/s/^#//g' $(rospack find panther)/param/params_casadi.yaml")
+    os.system("sed -i '/num_max_of_obst:/s/^#//g' $(rospack find panther)/matlab/casadi_generated_files/params_casadi.yaml")
     
