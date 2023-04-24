@@ -65,7 +65,7 @@ if __name__ == '__main__':
     ## Parameters
     ##
 
-    NUM_OF_SIMS =50
+    NUM_OF_SIMS =10
     NUM_OF_AGENTS = [1, 3]
     NUM_OF_OBS_LIST = [2]
     CIRCLE_RADIUS = 4.0
@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
         for agent_type in AGENTS_TYPES:
 
-            if traj_num == 1 and agent_type == "primer":
+            if traj_num != 6 and agent_type == "primer":
                 # primer always produce 6 trajs as the NN's output is fixed
                 continue
 
@@ -182,14 +182,17 @@ if __name__ == '__main__':
                             commands.append(f"sleep 5.0 && roslaunch --wait panther sim_onboard.launch quad:={agent_name} perfect_controller:={USE_PERFECT_CONTROLLER} perfect_prediction:={USE_PERFECT_PREDICTION} x:={x} y:={y} z:={z} yaw:={yaw} 2> >(grep -v -e TF_REPEATED_DATA -e buffer)")
                         
                         ## rosbag record
-                        agent_bag_recorders = []
-                        for i in range(l):
-                            sim_name = f"sim_{str(s).zfill(3)}"
-                            agent_name = f"SQ{str(i+1).zfill(2)}s"
-                            recorded_topics = TOPICS_TO_RECORD.format(*[agent_name for i in range(9)])
-                            agent_bag_recorder = f"{agent_name}_{RECORD_NODE_NAME}"
-                            agent_bag_recorders.append(agent_bag_recorder)
-                            commands.append("sleep "+str(time_sleep)+" && cd "+folder_bags+" && rosbag record "+recorded_topics+" -o "+sim_name+"_"+agent_name+" __name:="+agent_bag_recorder)
+                        # agent_bag_recorders = []
+                        # for i in range(l):
+                        #     sim_name = f"sim_{str(s).zfill(3)}"
+                        #     agent_name = f"SQ{str(i+1).zfill(2)}s"
+                        #     recorded_topics = TOPICS_TO_RECORD.format(*[agent_name for i in range(9)])
+                        #     agent_bag_recorder = f"{agent_name}_{RECORD_NODE_NAME}"
+                        #     agent_bag_recorders.append(agent_bag_recorder)
+                        #     commands.append("sleep "+str(time_sleep)+" && cd "+folder_bags+" && rosbag record "+recorded_topics+" -o "+sim_name+"_"+agent_name+" __name:="+agent_bag_recorder)
+                        sim_name = f"sim_{str(s).zfill(3)}"
+                        sim_bag_recorder = sim_name
+                        commands.append('sleep '+str(time_sleep)+' && cd '+folder_bags+' && rosbag record -a -x "camera" -o '+sim_name+' __name:='+sim_bag_recorder)
                         
                         ## goal checker
                         commands.append(f"sleep {time_sleep} && roslaunch --wait panther goal_reached_checker.launch num_of_agents:={l} circle_radius:={CIRCLE_RADIUS}")
@@ -236,8 +239,7 @@ if __name__ == '__main__':
                             os.system(f'echo "simulation {s}: goal reached" >> '+folder_bags+'/status.txt')
                             print("Goal is reached, killing the bag node")
 
-                        for agent_bag_recorder in agent_bag_recorders:
-                            os.system("rosnode kill "+agent_bag_recorder)
+                        os.system("rosnode kill "+sim_bag_recorder)
                         time.sleep(0.5)
                         print("Killing the rest")
                         os.system(KILL_ALL)
