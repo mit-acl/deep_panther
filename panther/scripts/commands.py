@@ -16,6 +16,7 @@ from snapstack_msgs.msg import QuadFlightMode
 #from behavior_selector.srv import MissionModeChange
 import math
 import sys
+import numpy as np
 
 def quat2yaw(q):
     yaw = math.atan2(2 * (q.w * q.z + q.x * q.y),
@@ -34,7 +35,7 @@ class PantherCommands:
         self.timer_take_off.shutdown()
         
         self.alt_taken_off = 2.0; #Altitude when hovering after taking off
-        self.initialized = True
+        self.initialized = False
         self.is_killed = False
         self.takeoff_goal=Goal()
 
@@ -146,4 +147,4 @@ def startNode():
 if __name__ == '__main__':
     rospy.init_node('panther_commands')  
     startNode()
-    print ("Behavior selector started") 
+    print ("Behavior selector started")
