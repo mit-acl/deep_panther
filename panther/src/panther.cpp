@@ -843,6 +843,14 @@ void Panther::adjustObstaclesForOptimization(std::vector<mt::obstacleForOpt>& ob
                                                               // better than using a completely dummy other agent
     dummy_oa.is_agent = true;
   }
+
+  if (par_.use_student == true && num_obst == 0)
+  {
+    std::cout << bold << "No other agent. Add a dummy other agent" << std::endl;
+    mt::obstacleForOpt& dummy_oa = obstacles_for_opt.front();  // this could change obstacle into other agent, but it's
+                                                              // better than using a completely dummy other agent
+    dummy_oa.is_agent = false;
+  }
 }
 
 //
@@ -1146,10 +1154,12 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
               << std::endl;
 
     log_ptr_->tim_initial_setup.toc();
+    std::cout << "Calling the expert!" << std::endl;
+    auto start_time = std::chrono::high_resolution_clock::now();
     bool result = solver_->optimize();
-    double time_opt;
-    solver_->getOptTime(time_opt);
-    log_ptr_->setTimeOpt(time_opt);
+    auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end_time - start_time;
+    log_ptr_->setTimeOpt(elapsed_seconds.count()*1000.0);
 
     total_replannings_++;
     if (result == false)
@@ -1180,7 +1190,13 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
     std::cout << "Calling the student!" << std::endl;
     int num_obst, num_oa;
     getNumObstAndNumOtherAgents(obstacles_for_opt, num_obst, num_oa);
+
+    // get time
+    auto start_time = std::chrono::system_clock::now();
     pybind11::object result = student_caller_ptr_->attr("predict")(A, obstacles_for_opt, G_term.pos, num_obst, num_oa);
+    auto end_time = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end_time - start_time;
+    log_ptr_->setTimeOpt(elapsed_seconds.count()*1000.0);
     best_solutions_student = result.cast<std::vector<si::solOrGuess>>();
 
     pybind11::object tmp = student_caller_ptr_->attr("getIndexBestTraj")();
@@ -1657,6 +1673,12 @@ void Panther::resetInitialization()
   plan_.clear();
 }
 
+void Panther::convertAgentStateToCameraState(const mt::state& agent_state, mt::state& camera_state)
+{ 
+  camera_state = agent_state;
+  camera_state.yaw = agent_state.yaw - M_PI / 2; //TODO: hacky. proper way to do this to use drone2camera transform to get camera yaw
+}
+
 void Panther::yaw(double diff, mt::state& next_goal)
 {
   saturate(diff, -par_.dc * par_.ydot_max, par_.dc * par_.ydot_max);
@@ -1675,9 +1697,13 @@ void Panther::getDesiredYaw(mt::state& next_goal)
 {
   mt::state current_state;
   getState(current_state);
+  next_goal = current_state;
 
   double desired_yaw = atan2(G_term_.pos[1] - current_state.pos[1], G_term_.pos[0] - current_state.pos[0]);
-  double diff = desired_yaw - current_state.yaw;
+
+  mt::state camera_state;
+  convertAgentStateToCameraState(current_state, camera_state);
+  double diff = desired_yaw - camera_state.yaw;
 
   angle_wrap(diff);
 

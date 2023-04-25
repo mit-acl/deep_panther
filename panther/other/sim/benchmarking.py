@@ -1,6 +1,7 @@
 
 #!/usr/bin/env python
 
+import sys
 import subprocess
 import numpy as np
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
@@ -17,7 +18,7 @@ if __name__ == "__main__":
     ##
 
     # home directory
-    HOME_DIR = sys.argv[1] if len(sys.argv) > 1 else "/media/kota/T7/deep-panther"
+    HOME_DIR = sys.argv[1] if len(sys.argv) > 1 else "/media/kota/T7/deep-panther/"
 
     # run simulations
     subprocess.run(["python", "run_many_sims.py", str(HOME_DIR)])
@@ -26,10 +27,10 @@ if __name__ == "__main__":
     DATA_DIR = HOME_DIR + "/bags"
     
     # process data
-    subprocess.run(["python", "process_data.py", str(DATA_DIR)])
+    subprocess.run(["python", "process_data.py 2> >(grep -v -e TF_REPEATED_DATA -e buffer_core.cpp)", str(DATA_DIR)])
 
     # plot data
-    subprocess.run(["python", "plot_data.py", str(DATA_DIR)])
+    # subprocess.run(["python", "plot_data.py", str(DATA_DIR)])
     
     
 

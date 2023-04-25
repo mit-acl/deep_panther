@@ -111,17 +111,9 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "color_type_student", par_.color_type_student);
   safeGetParam(nh1_, "n_agents", par_.n_agents);
   safeGetParam(nh1_, "use_expert_for_other_agents_in_training", par_.use_expert_for_other_agents_in_training);
-  if (par_.use_panther_star)
-  {
-    safeGetParam(nh1_, "num_of_trajs_per_replan", par_.num_of_trajs_per_replan);
-    safeGetParam(nh1_, "max_num_of_initial_guesses", par_.max_num_of_initial_guesses);
-  }
-  else
-  {
-    // if you use panther, then we only optimize one trajectory
-    par_.num_of_trajs_per_replan = 1;
-    par_.max_num_of_initial_guesses = 1;
-  }
+
+  safeGetParam(nh1_, "num_of_trajs_per_replan", par_.num_of_trajs_per_replan);
+  safeGetParam(nh1_, "max_num_of_initial_guesses", par_.max_num_of_initial_guesses);
   safeGetParam(nh1_, "dc", par_.dc);
   safeGetParam(nh1_, "goal_radius", par_.goal_radius);
 

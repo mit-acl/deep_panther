@@ -166,7 +166,7 @@ class StudentPolicy(BasePolicy):
     def printwithName(self,data):
         print(self.name+data)
 
-    def get_action_dist_params(self, obs_n: th.Tensor, num_obst: float, num_oa: float) -> Tuple[th.Tensor, th.Tensor, Dict[str, th.Tensor]]:
+    def get_action_dist_params(self, obs_n: th.Tensor, num_obst: int, num_oa: int) -> Tuple[th.Tensor, th.Tensor, Dict[str, th.Tensor]]:
         """
         Get the parameters for the action distribution.
 
@@ -191,7 +191,7 @@ class StudentPolicy(BasePolicy):
         actions = self.tanh(actions)
         return actions.float()
     
-    def forward(self, obs_n: th.Tensor, num_obst: float, num_oa:float, deterministic: bool = True) -> th.Tensor:
+    def forward(self, obs_n: th.Tensor, num_obst: int, num_oa: int, deterministic: bool = True) -> th.Tensor:
         
         ##
         ## get actions
@@ -293,7 +293,7 @@ class StudentPolicy(BasePolicy):
 
         return actions
     
-    def get_actions_with_two_lstms(self, obs_n: th.Tensor, num_obst: float, num_oa: float) -> th.Tensor:
+    def get_actions_with_two_lstms(self, obs_n: th.Tensor, num_obst: int, num_oa: int) -> th.Tensor:
 
         """
         Two LSTMs for both obstacles and other agents
@@ -310,6 +310,9 @@ class StudentPolicy(BasePolicy):
         agent_features = features[None, :, :self.agent_input_dim] #None is for keeping the same dimension
         obst_features = features[None, :, self.agent_input_dim:obst_oa_separation_index]
         oa_features = features[None, :, obst_oa_separation_index:obst_oa_separation_index + num_oa*self.lstm_each_obstacle_dim]
+        
+        print("num_oa: ", num_oa)
+        print("num_obst: ", num_obst)
         
         batch_size = features.shape[0]
         num_of_obstacles = int(obst_features.shape[2]/self.lstm_each_obstacle_dim) # need to calculate here because num_of_obstacles depends on each simulation

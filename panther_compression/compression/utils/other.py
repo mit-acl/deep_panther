@@ -20,6 +20,7 @@ import tf.transformations
 from joblib import Parallel, delayed
 import multiprocessing
 import gym
+import rospy
 
 class ExpertDidntSucceed(Exception):
 	  pass
@@ -270,7 +271,7 @@ class ObstaclesManager():
 
 	def getNumObs(self):
 		# return self.num_obs
-		return self.params["num_max_of_obst"]
+		return int(rospy.get_param("/SQ01s/panther/num_max_of_obst"))
 
 	def getCPsPerObstacle(self):
 		return self.fitter_num_seg + self.fitter_deg_pos # 7 + 3
@@ -278,7 +279,7 @@ class ObstaclesManager():
 	def getSizeAllObstacles(self):
 		# Size of the ctrl_pts + bbox
 		# return self.num_obs*(3*self.getCPsPerObstacle() + 3)
-		return self.params["num_max_of_obst"]*(3*self.getCPsPerObstacle() + 3)
+		return int(rospy.get_param("/SQ01s/panther/num_max_of_obst"))*(3*self.getCPsPerObstacle() + 3)
 
 	def getSizeEachObstacle(self):
 		return 3*self.getCPsPerObstacle() + 3
@@ -377,7 +378,7 @@ class OtherAgentsManager():
 		ctrl_pts = self.am.get_zero_ctrl_pts_for_student()
 		bbox_inflated = self.am.get_bbox_inflated_for_student()
 		w_student = []
-		for i in range(self.params["num_max_of_obst"]):
+		for i in range(int(rospy.get_param("/SQ01s/panther/num_max_of_obst"))):
 			w_student.append(Obstacle(ctrl_pts, bbox_inflated, is_obstacle=False))
 		self.reset(w_student)
 
@@ -440,7 +441,7 @@ class OtherAgentsManager():
 			ctrl_pts = self.am.get_zero_ctrl_pts_for_student()
 			bbox_inflated = self.am.get_bbox_inflated_for_student()
 			w_student = []
-			for i in range(self.params["num_max_of_obst"]):
+			for i in range(int(rospy.get_param("/SQ01s/panther/num_max_of_obst"))):
 				w_student.append(Obstacle(ctrl_pts, bbox_inflated, is_obstacle=False))
 			self.reset(w_student)
 			print('[other agent] goal reached')
@@ -760,7 +761,7 @@ class ObservationManager():
 		self.max_dist2obs=params["max_dist2obs"]
 		self.max_side_bbox_obs=params["max_side_bbox_obs"]
 		self.Ra=params["Ra"]
-		self.num_max_of_obst = params["num_max_of_obst"] # from casadi
+		self.num_max_of_obst = int(rospy.get_param("/SQ01s/panther/num_of_trajs_per_replan")) # from casadi
 		self.use_lstm = params["use_lstm"] 
 		
 		ones13=np.ones((1,3))
@@ -1115,7 +1116,7 @@ class ActionManager():
 		 --> where ctrlpoints_yaw has the ctrlpoints that are not determined by init pos/vel, and final vel
 		     i.e., len(ctrlpoints_yaw)= (num_seg_yaw + deg_yaw - 1 + 1) - 2 - 1 = num_seg_yaw + deg_yaw - 3 """
 
-		self.num_traj_per_action=params["num_of_trajs_per_replan"]
+		self.num_traj_per_action=int(rospy.get_param("/SQ01s/panther/num_of_trajs_per_replan")) # TODO: SQ01s dependency
 		self.total_num_pos_ctrl_pts = self.num_seg + self.deg_pos
 		self.traj_size_pos_ctrl_pts = 3*(self.total_num_pos_ctrl_pts - 5)
 		self.traj_size_yaw_ctrl_pts = (self.num_seg + self.deg_yaw - 3)
@@ -1527,7 +1528,7 @@ class StudentCaller():
 		## 
 
 		num_obs = int((f_obs_n.shape[1] - 10) / (3*self.obsm.getCPsPerObstacle()+3))
-		for i in range(num_obs, self.params["num_max_of_obst"]):
+		for i in range(num_obs, int(rospy.get_param("/SQ01s/panther/num_max_of_obst"))):
 			f_obs_n = np.concatenate((f_obs_n, f_obs_n[:,-3*self.obsm.getCPsPerObstacle()-3:]), axis=1)
 
 		self.costs_and_violations_of_action=self.cc.getCostsAndViolationsOfActionFromObsnAndActionn(f_obs_n, action_normalized)
@@ -1812,10 +1813,11 @@ class CostComputer():
 
 		if(index_best_safe_traj is not None):
 			index_best_traj = index_best_safe_traj
-
 		elif(index_best_unsafe_traj is not None):
 			index_best_traj= index_best_unsafe_traj
 		else:
+			print(index_best_safe_traj)
+			print(index_best_unsafe_traj)
 			print("This should never happen!!")
 			exit();		
 

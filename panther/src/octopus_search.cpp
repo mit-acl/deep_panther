@@ -679,10 +679,10 @@ void OctopusSearch::printPath(Node& node1)
   while (tmp.previous != NULL)
   {
     // std::cout << tmp.index << ", ";  // qi.transpose().x()
-    std::cout << tmp.previous->qi.transpose() << std::endl;
+    // std::cout << tmp.previous->qi.transpose() << std::endl;
     tmp = *tmp.previous;
   }
-  std::cout << std::endl;
+  // std::cout << std::endl;
 }
 
 std::vector<Eigen::Vector3d> OctopusSearch::recoverCPsFromNodePtr(Node* result_ptr)
@@ -772,8 +772,8 @@ bool OctopusSearch::checkFeasAndFillND(std::vector<Eigen::Vector3d>& q, std::vec
       if (solved == false)
       {
         ////////////////////////////// For debugging
-        std::cout << red << "\nThis does NOT satisfy the LP:  obstacle= " << obst_index
-                  << ", last index=" << index_interv + 3 << reset << std::endl;
+        // std::cout << red << "\nThis does NOT satisfy the LP:  obstacle= " << obst_index
+        //           << ", last index=" << index_interv + 3 << reset << std::endl;
 
         // std::cout << " (in basis_ form)" << std::endl;
 
@@ -1254,7 +1254,7 @@ bool OctopusSearch::run(std::vector<os::solution>& solutions, int max_num_of_sol
 
     if (intervalIsNotZero == false)  // constraintxL>constraint_xU (or with other axes)
     {
-      std::cout << "   " << current_ptr->qi.transpose() << " Interval is zero!" << std::endl;
+      // std::cout << "   " << current_ptr->qi.transpose() << " Interval is zero!" << std::endl;
 
       continue;
     }
@@ -1326,20 +1326,20 @@ bool OctopusSearch::run(std::vector<os::solution>& solutions, int max_num_of_sol
                         constraint_zU);
   }
 
-  std::cout << "[A*] openList_ is empty" << std::endl;
+  // std::cout << "[A*] openList_ is empty" << std::endl;
   goto exitloop;
 
 exitloop:
 
   ///
 
-  if (num_intervals_is_zero_ > 0)
-  {
-    std::cout << bold << red << "Interval is zero (x" << num_intervals_is_zero_ << ")" << reset << std::endl;
-  }
+  // if (num_intervals_is_zero_ > 0)
+  // {
+  //   std::cout << bold << red << "Interval is zero (x" << num_intervals_is_zero_ << ")" << reset << std::endl;
+  // }
 
-  std::cout << "nodesptr_cng_.size()==" << nodesptr_cng_.size() << std::endl;
-  std::cout << "nodesptr_cg_.size()==" << nodesptr_cg_.size() << std::endl;
+  // std::cout << "nodesptr_cng_.size()==" << nodesptr_cng_.size() << std::endl;
+  // std::cout << "nodesptr_cg_.size()==" << nodesptr_cg_.size() << std::endl;
 
   nodesptr_cg_and_cng_.clear();
 
@@ -1357,7 +1357,7 @@ exitloop:
     nodesptr_cg_and_cng_.push_back(nodesptr_cng_[i]);
   }
 
-  std::cout << "nodesptr_cg_and_cng_.size()=" << nodesptr_cg_and_cng_.size() << std::endl;
+  // std::cout << "nodesptr_cg_and_cng_.size()=" << nodesptr_cg_and_cng_.size() << std::endl;
 
   // if (nodesptr_cg_and_cng_.size() != max_num_of_solutions_needed)
   // {

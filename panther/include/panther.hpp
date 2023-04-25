@@ -59,6 +59,7 @@ public:
   void setTerminalGoal(mt::state& term_goal);
   void resetInitialization();
 
+  void convertAgentStateToCameraState(const mt::state& agent_state, mt::state& camera_state);
   void yaw(double diff, mt::state& next_goal);
   void getDesiredYaw(mt::state& next_goal);
 
