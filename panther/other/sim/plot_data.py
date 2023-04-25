@@ -40,7 +40,7 @@ import matplotlib as mpl
 import matplotlib.font_manager as font_manager
 from process_data import listdirs
 
-def plot_bar(y_axis_label, data1, data2):
+def plot_bar(y_axis_label, fig_name, data1, data2):
 
     # constants
     LABELS = ["PARM", "PARM*", "PRIMER"]
@@ -91,6 +91,7 @@ def plot_bar(y_axis_label, data1, data2):
     plt.xticks(x_axis, LABELS, fontproperties=font)
     plt.ylabel(y_axis_label, fontproperties=font)
     plt.title("3 agents with 2 obstacles", fontproperties=font)
+    plt.savefig(fig_name, bbox_inches='tight')
     plt.show()
 
 if __name__ == '__main__':
@@ -100,6 +101,7 @@ if __name__ == '__main__':
     ##
 
     DATA_DIR = sys.argv[1] if len(sys.argv) > 1 else "/media/kota/T7/deep-panther/bags"
+    FIG_SAVE_DIR = DATA_DIR + "/figs"
 
     ##
     ## Font setting
@@ -227,11 +229,46 @@ if __name__ == '__main__':
     travel_time_list_2obs1agents = [travel_time_list[0:2], travel_time_list[2:4], travel_time_list[4]]
     travel_time_list_2obs3agents = [travel_time_list[5:7], travel_time_list[7:9], travel_time_list[9]]
     travel_time_y_axis_label = "Travel time [s]"
-    plot_bar(y_axis_label=travel_time_y_axis_label, data1=travel_time_list_2obs1agents, data2=travel_time_list_2obs3agents)
+    travel_time_fig_name = "travel_time"
+    plot_bar(y_axis_label=travel_time_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+travel_time_fig_name, data1=travel_time_list_2obs1agents, data2=travel_time_list_2obs3agents)
 
-    
+    # (2) computation time
+    computation_time_list_2obs1agents = [computation_time_list[0:2], computation_time_list[2:4], computation_time_list[4]]
+    computation_time_list_2obs3agents = [computation_time_list[5:7], computation_time_list[7:9], computation_time_list[9]]
+    computation_time_y_axis_label = "Computation time [s]"
+    computation_time_fig_name = "computation_time"
+    plot_bar(y_axis_label=computation_time_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+computation_time_fig_name, data1=computation_time_list_2obs1agents, data2=computation_time_list_2obs3agents)
 
+    # (3) number of collisions
+    num_of_collisions_btwn_agents_list_2obs1agents = [num_of_collisions_btwn_agents_list[0:2], num_of_collisions_btwn_agents_list[2:4], num_of_collisions_btwn_agents_list[4]]
+    num_of_collisions_btwn_agents_list_2obs3agents = [num_of_collisions_btwn_agents_list[5:7], num_of_collisions_btwn_agents_list[7:9], num_of_collisions_btwn_agents_list[9]]
+    num_of_collisions_btwn_agents_y_axis_label = "Number of collisions between agents"
+    num_of_collisions_btwn_agents_fig_name = "num_of_collisions_btwn_agents"
+    plot_bar(y_axis_label=num_of_collisions_btwn_agents_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+num_of_collisions_btwn_agents_fig_name, data1=num_of_collisions_btwn_agents_list_2obs1agents, data2=num_of_collisions_btwn_agents_list_2obs3agents)
 
+    num_of_collisions_btwn_agents_and_obstacles_list_2obs1agents = [num_of_collisions_btwn_agents_and_obstacles_list[0:2], num_of_collisions_btwn_agents_and_obstacles_list[2:4], num_of_collisions_btwn_agents_and_obstacles_list[4]]
+    num_of_collisions_btwn_agents_and_obstacles_list_2obs3agents = [num_of_collisions_btwn_agents_and_obstacles_list[5:7], num_of_collisions_btwn_agents_and_obstacles_list[7:9], num_of_collisions_btwn_agents_and_obstacles_list[9]]
+    num_of_collisions_btwn_agents_and_obstacles_y_axis_label = "Number of collisions between agents and obstacles"
+    num_of_collisions_btwn_agents_and_obstacles_fig_name = "num_of_collisions_btwn_agents_and_obstacles"
+    plot_bar(y_axis_label=num_of_collisions_btwn_agents_and_obstacles_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+num_of_collisions_btwn_agents_and_obstacles_fig_name, data1=num_of_collisions_btwn_agents_and_obstacles_list_2obs1agents, data2=num_of_collisions_btwn_agents_and_obstacles_list_2obs3agents)
 
+    # (4) fov rate
+    fov_rate_list_2obs1agents = [fov_rate_list[0:2], fov_rate_list[2:4], fov_rate_list[4]]
+    fov_rate_list_2obs3agents = [fov_rate_list[5:7], fov_rate_list[7:9], fov_rate_list[9]]
+    fov_rate_y_axis_label = "FOV rate [%]"
+    fov_rate_list_fig_name = "fov_rate"
+    plot_bar(y_axis_label=fov_rate_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+fov_rate_list_fig_name, data1=fov_rate_list_2obs1agents, data2=fov_rate_list_2obs3agents)
 
-    
+    # (5) continuous fov detection
+    continuous_fov_detection_list_2obs1agents = [continuous_fov_detection_list[0:2], continuous_fov_detection_list[2:4], continuous_fov_detection_list[4]]
+    continuous_fov_detection_list_2obs3agents = [continuous_fov_detection_list[5:7], continuous_fov_detection_list[7:9], continuous_fov_detection_list[9]]
+    continuous_fov_detection_y_axis_label = "Continuous FOV detection [%]"
+    continuous_fov_detection_fig_name = "continuous_fov_detection"
+    plot_bar(y_axis_label=continuous_fov_detection_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+continuous_fov_detection_fig_name, data1=continuous_fov_detection_list_2obs1agents, data2=continuous_fov_detection_list_2obs3agents)
+
+    # (8) success rate
+    success_rate_list_2obs1agents = [success_rate_list[0:2], success_rate_list[2:4], success_rate_list[4]]
+    success_rate_list_2obs3agents = [success_rate_list[5:7], success_rate_list[7:9], success_rate_list[9]]
+    success_rate_y_axis_label = "Success rate [%]"
+    success_rate_fig_name = "success_rate"
+    plot_bar(y_axis_label=success_rate_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+success_rate_fig_name, data1=success_rate_list_2obs1agents, data2=success_rate_list_2obs3agents)
