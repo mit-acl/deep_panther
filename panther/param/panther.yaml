@@ -72,7 +72,7 @@ fov_depth: 5.0 #[m]
 
 # Primer Setting
 #############################################
-use_mesh_network: true
+use_mesh_network: false
 use_delaycheck: true
 use_delaycheck_wo_check: false # if you wanna use this, use_delaycheck needs to be true
 delaycheck_time: 0.05 #[s]
@@ -92,7 +92,7 @@ use_obstacle_shareCB: false # if it's False and use_obstacle_share is True, then
 
 # PANTHER setting 
 #############################################
-agents_ids: ["01", "02", "03", "04", "05"]
+agents_ids: ["01", "02", "03"]
 use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
 goal_radius: 0.5   #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
 goal_seen_radius: 2.5 #(m) no more replanning needed sphere (when drone gets close to goal OS fails a lot, so we introduced this)
