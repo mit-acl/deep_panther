@@ -3,7 +3,7 @@
     <!-- args -->
 
     <arg name="quad" default="NX04"/>
-    <arg name="use_gui_mission" default="true"/>
+    <arg name="gui_mission" default="true"/>
     <arg name="perfect_prediction" default="false"/>
     <arg name="student_policy_path" default="$(find panther)/../panther_compression/trained_policies/policies/test14.pt" />
 
@@ -44,7 +44,7 @@
         <!-- Parameters -->
         <rosparam file="$(find panther)/param/panther.yaml" command="load"/>
         <rosparam file="$(find panther)/matlab/casadi_generated_files/params_casadi.yaml" command="load"/>
-        <param name="use_gui_mission" value="$(arg use_gui_mission)" /> 
+        <param name="gui_mission" value="$(arg gui_mission)" /> 
         <param name="perfect_prediction" value="$(arg perfect_prediction)" /> 
         <param name="student_policy_path" value="$(arg student_policy_path)" /> 
         <param name="static_planning" value="$(arg static_planning)" /> 
