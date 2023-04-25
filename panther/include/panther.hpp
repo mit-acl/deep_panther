@@ -169,6 +169,7 @@ private:
   mt::state state_;
   mt::state G_;       // This goal is always inside of the map
   mt::state G_term_;  // This goal is the clicked goal
+  mt::state yawing_start_state_;
 
   int solutions_found_ = 0;
   int total_replannings_ = 0;
