@@ -137,8 +137,8 @@ class DynCorridor:
         self.z_max= 1.0
         # self.scale= [(self.x_max-self.x_min)/self.total_num_obs, 5.0, 1.0]
         self.scale= [alpha_scale_obst_traj, alpha_scale_obst_traj, alpha_scale_obst_traj]
-        self.slower_min=1.0/beta_faster_obst_traj   #1.2 or 2.3
-        self.slower_max=1.0/beta_faster_obst_traj   #1.2 or 2.3
+        self.slower_min=3.0   #1.2 or 2.3
+        self.slower_max=3.0   #1.2 or 2.3
 
         PANTHER_YAML_PATH = rospkg.RosPack().get_path("panther") + "/param/panther.yaml"
         with open(PANTHER_YAML_PATH) as f:

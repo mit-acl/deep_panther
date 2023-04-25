@@ -204,6 +204,10 @@ if __name__ == '__main__':
                     if topic == f"/sim_all_agents_goal_reached":
                         sim_end_times.append(msg.header.stamp.to_sec())
 
+                if sim_start_times == []:
+                    print("SIMULATION WAS NOT PROPERLY STARTED!!!")
+                    continue
+
                 ##
                 ## (2) computation time
                 ##
