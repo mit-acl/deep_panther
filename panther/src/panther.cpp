@@ -1673,6 +1673,12 @@ void Panther::resetInitialization()
   plan_.clear();
 }
 
+void Panther::convertAgentStateToCameraState(const mt::state& agent_state, mt::state& camera_state)
+{ 
+  camera_state = agent_state;
+  camera_state.yaw = agent_state.yaw - M_PI / 2; //TODO: hacky. proper way to do this to use drone2camera transform to get camera yaw
+}
+
 void Panther::yaw(double diff, mt::state& next_goal)
 {
   saturate(diff, -par_.dc * par_.ydot_max, par_.dc * par_.ydot_max);
@@ -1694,7 +1700,10 @@ void Panther::getDesiredYaw(mt::state& next_goal)
   next_goal = current_state;
 
   double desired_yaw = atan2(G_term_.pos[1] - current_state.pos[1], G_term_.pos[0] - current_state.pos[0]);
-  double diff = desired_yaw - current_state.yaw;
+
+  mt::state camera_state;
+  convertAgentStateToCameraState(current_state, camera_state);
+  double diff = desired_yaw - camera_state.yaw;
 
   angle_wrap(diff);
 
