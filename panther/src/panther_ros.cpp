@@ -121,6 +121,10 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "drone_bbox", drone_bbox_tmp);
   par_.drone_bbox << drone_bbox_tmp[0], drone_bbox_tmp[1], drone_bbox_tmp[2];
 
+  std::vector<double> obstacle_bbox_tmp;
+  safeGetParam(nh1_, "obstacle_bbox", obstacle_bbox_tmp);
+  par_.obstacle_bbox << obstacle_bbox_tmp[0], obstacle_bbox_tmp[1], obstacle_bbox_tmp[2];
+
   std::vector<double> training_obst_size_tmp;
   safeGetParam(nh1_, "training_obst_size", training_obst_size_tmp);
   par_.training_obst_size << training_obst_size_tmp[0], training_obst_size_tmp[1], training_obst_size_tmp[2];

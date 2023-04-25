@@ -325,7 +325,7 @@ class ObstaclesManager():
 
 		w_obs=[]
 		for i in range(self.num_obs):
-			trefoil=Trefoil(pos=self.random_pos[i], scale=self.random_scale, offset=self.random_offset, slower=1.5)
+			trefoil=Trefoil(pos=self.random_pos[i], scale=self.random_scale, offset=self.random_offset, slower=3.0)
 			samples=[]
 			for t_interm in np.linspace(t, t + self.fitter_total_time, num=self.fitter_num_samples):#.tolist():
 				samples.append(trefoil.getPosT(t_interm))

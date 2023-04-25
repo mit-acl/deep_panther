@@ -133,7 +133,7 @@ class DynCorridor:
         self.x_max= 2.0
         self.y_min= -2.0 
         self.y_max= 2.0
-        self.z_min= 1.0 
+        self.z_min= 1.0
         self.z_max= 1.0
         # self.scale= [(self.x_max-self.x_min)/self.total_num_obs, 5.0, 1.0]
         self.scale= [alpha_scale_obst_traj, alpha_scale_obst_traj, alpha_scale_obst_traj]
@@ -145,8 +145,8 @@ class DynCorridor:
             PANTHER_YAML_PARAMS = yaml.safe_load(f)
 
 
-        # self.bbox_dynamic=PANTHER_YAML_PARAMS["obstacle_bbox"] # this corresponds to training_obst_size defined in panther.yaml
-        self.bbox_dynamic=[0.6, 0.6, 0.6] # this corresponds to training_obst_size defined in panther.yaml
+        self.bbox_dynamic=PANTHER_YAML_PARAMS["obstacle_bbox"] # this corresponds to training_obst_size defined in panther.yaml
+        # self.bbox_dynamic=[0.6, 0.6, 0.6] # this corresponds to training_obst_size defined in panther.yaml
         self.bbox_static_vert=[0.4, 0.4, 4]
         self.bbox_static_horiz=[0.4, 8, 0.4]
         self.percentage_vert=0.0

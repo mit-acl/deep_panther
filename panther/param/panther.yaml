@@ -9,7 +9,7 @@ replanning_trigger_time_expert: 0.01 #[seconds]
 replanning_lookahead_time: 0.2 #[seconds] #distance in time space = t_in - t_1 in Table I
 use_closed_form_yaw_student: false #If false, the NN will predict this closed form for the yaw angle
 make_yaw_NN: false
-prob_choose_cross: 0.5 # how much you wanna choose cross obstacle in training [0.1]
+prob_choose_cross: 0.8 # how much you wanna choose cross obstacle in training [0.1]
 # training env space size
 training_env_x_max: 10.0
 training_env_x_min: -10.0
@@ -34,7 +34,7 @@ training_other_agent_size: [0.2, 0.2, 0.2] #agent size in training env
 use_dynamic_obst_in_training: true
 use_other_agents_in_training: true
 use_expert_for_other_agents_in_training: false
-random_num_of_obstacles_in_training: false # need to get rid of this  # if this is True, # of obstacles is [1,num_of_obstacles_in_training]
+random_num_of_obstacles_in_training: true # need to get rid of this  # if this is True, # of obstacles is [1,num_of_obstacles_in_training]
 # num_of_obstacles_in_training + num_of_other_agents_in_training should not be bigger than num_max_of_obst defined in params_casadi.yaml(main.m)
 num_of_obstacles_in_training: 2
 num_of_other_agents_in_training: 1
@@ -96,9 +96,9 @@ agents_ids: ["01", "02", "03"]
 use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
 goal_radius: 0.5   #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
 goal_seen_radius: 2.5 #(m) no more replanning needed sphere (when drone gets close to goal OS fails a lot, so we introduced this)
-Ra: 20.0           # [m] Radius of my planning sphere (planning horizon)
+Ra: 15.0           # [m] Radius of my planning sphere (planning horizon)
 drone_bbox: [0.2, 0.2, 0.2]  #(m) Used for collision checking
-# obstacle_bbox: [0.6, 0.6, 0.6]  #(m) Used for collision checking
+obstacle_bbox: [0.6, 0.6, 0.6]  #(m) Used for collision checking
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
 # flight space size
@@ -145,7 +145,7 @@ c_maxydot_yaw_search: 0.0     #weight for the yaw search
 c_pos_smooth: 0.0003           #weight for the optimization
 c_yaw_smooth: 0.0            #weight for the optimization
 c_fov: 1000.0                 #weight for the optimization
-c_final_pos: 2000.0           #weight for the optimization
+c_final_pos: 100.0           #weight for the optimization
 c_final_yaw: 0.01              #weight for the optimization
 c_total_time: 80             #weight for the optimization
 lambda_obst_avoidance_violation: 1.0 #To compute the augmented cost

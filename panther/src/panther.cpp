@@ -653,6 +653,10 @@ void Panther::doStuffTermGoal()
   //
 
   changeDroneStatus(DroneStatus::YAWING);
+  
+  // save the state that the agent started yawing
+  mt::state yawing_start_state_;
+  getState(yawing_start_state_);
 
   terminal_goal_initialized_ = true;
 
@@ -1691,14 +1695,16 @@ void Panther::yaw(double diff, mt::state& next_goal)
   next_goal.dyaw = dyaw_filtered_;
   next_goal.yaw = previous_yaw_ + dyaw_filtered_ * par_.dc;
   previous_yaw_ = next_goal.yaw;
+  std::cout << "next_goal.yaw " << next_goal.yaw << std::endl;
 }
 
 void Panther::getDesiredYaw(mt::state& next_goal)
 {
   mt::state current_state;
   getState(current_state);
+  next_goal = yawing_start_state_;
 
-  double desired_yaw = atan2(G_term_.pos[1] - current_state.pos[1], G_term_.pos[0] - current_state.pos[0]);
+  double desired_yaw = atan2(G_term_.pos[1] - yawing_start_state_.pos[1], G_term_.pos[0] - yawing_start_state_.pos[0]);
 
   mt::state camera_state;
   convertAgentStateToCameraState(current_state, camera_state);

@@ -870,6 +870,7 @@ struct parameters
   double          dc;                                 //void setVar_dc(const std::string& value) { dc = std::stod(value); };
   double          goal_radius;                        //void setVar_goal_radius(const std::string& value) { goal_radius = std::stod(value); };
   Eigen::Vector3d drone_bbox;                         //void setVar_drone_radius(const std::string& value) { drone_radius = std::stod(value); };//
+  Eigen::Vector3d obstacle_bbox;                         //void setVar_drone_radius(const std::string& value) { drone_radius = std::stod(value); };//
   double          drone_extra_radius_for_NN;                       //void setVar_drone_radius(const std::string& value) { drone_radius = std::stod(value); };//
   double          Ra;                                 //void setVar_Ra(const std::string& value) { Ra = std::stod(value); };
   bool            impose_FOV_in_trajCB;               //void setVar_impose_FOV_in_trajCB(const std::string& value) { impose_FOV_in_trajCB = string2bool(value); };
