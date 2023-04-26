@@ -65,12 +65,12 @@ if __name__ == '__main__':
     ## Parameters
     ##
 
-    NUM_OF_SIMS =10
+    NUM_OF_SIMS = 10
     NUM_OF_AGENTS = [1, 3]
     NUM_OF_OBS_LIST = [2]
     CIRCLE_RADIUS = 4.0
     USE_PERFECT_CONTROLLER = "true"
-    USE_PERFECT_PREDICTION = "false"
+    USE_PERFECT_PREDICTION = "true"
     SIM_DURATION = 60 # in seconds
     DATA_DIR = sys.argv[1] if len(sys.argv) > 1 else "/media/kota/T7/deep-panther/bags"
     RECORD_NODE_NAME = "bag_recorder"
@@ -191,7 +191,7 @@ if __name__ == '__main__':
                         #     commands.append("sleep "+str(time_sleep)+" && cd "+folder_bags+" && rosbag record "+recorded_topics+" -o "+sim_name+"_"+agent_name+" __name:="+agent_bag_recorder)
                         sim_name = f"sim_{str(s).zfill(3)}"
                         sim_bag_recorder = sim_name
-                        commands.append('sleep '+str(time_sleep)+' && cd '+folder_bags+' && rosbag record -a -x "camera" -o '+sim_name+' __name:='+sim_bag_recorder)
+                        commands.append('sleep '+str(time_sleep)+' && cd '+folder_bags+' && rosbag record -a -x "camera(.*)" -o '+sim_name+' __name:='+sim_bag_recorder)
                         
                         ## goal checker
                         commands.append(f"sleep {time_sleep} && roslaunch --wait panther goal_reached_checker.launch num_of_agents:={l} circle_radius:={CIRCLE_RADIUS}")

@@ -176,6 +176,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   safeGetParam(nh1_, "margin_ydot_factor", par_.margin_ydot_factor);
   safeGetParam(nh1_, "margin_yaw_factor", par_.margin_yaw_factor);
   safeGetParam(nh1_, "factor_alpha", par_.factor_alpha);
+  safeGetParam(nh1_, "lower_bound_alpha", par_.lower_bound_alpha);
   safeGetParam(nh1_, "max_seconds_keeping_traj", par_.max_seconds_keeping_traj);
   safeGetParam(nh1_, "a_star_samp_x", par_.a_star_samp_x);
   safeGetParam(nh1_, "a_star_samp_y", par_.a_star_samp_y);

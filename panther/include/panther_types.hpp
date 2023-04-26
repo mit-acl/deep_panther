@@ -894,6 +894,7 @@ struct parameters
   Eigen::Vector3d          a_max;
   Eigen::Vector3d          j_max;
   double          factor_alpha;                       //void setVar_factor_alpha(const std::string& value) { factor_alpha = std::stod(value); };
+  double          lower_bound_alpha;                       //void setVar_factor_alpha(const std::string& value) { factor_alpha = std::stod(value); };
   double          max_seconds_keeping_traj;           //void setVar_ydot_max(const std::string& value) { ydot_max = std::stod(value); };
   int             a_star_samp_x;                      //void setVar_a_star_samp_x(const std::string& value) { a_star_samp_x = std::stoi(value); };
   int             a_star_samp_y;                      //void setVar_a_star_samp_y(const std::string& value) { a_star_samp_y = std::stoi(value); };

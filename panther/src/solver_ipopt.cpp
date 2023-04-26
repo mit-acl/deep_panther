@@ -839,6 +839,10 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   std::map<std::string, casadi::DM> map_arguments = getMapConstantArguments();
 
   double alpha_guess = (t_final_guess_ - t_init_);
+  if (alpha_guess < par_.lower_bound_alpha && !par_.use_panther_star)
+  {
+    alpha_guess = par_.lower_bound_alpha;
+  }
   map_arguments["alpha"] = alpha_guess;  // Initial guess for alpha
 
   std::cout << "alpha_guess= " << alpha_guess << std::endl;

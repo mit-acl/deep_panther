@@ -65,8 +65,8 @@ num_seg=7; %The number of segments in the trajectory (the more segments the less
 
 %% ATTENTION!!!!! TODO: make this automatic
 %% if you change these two numbers, don't forget to run this main file twice, once with use_panther_star=true and once with use_panther_star=false
-num_max_of_obst = 2; %This is the maximum num of the obstacles that will be considered in the constraints
-num_obst_in_FOV = 1; % this is different from max_num_obst, which is the max number of obst that an agent includes for constraints
+num_max_of_obst = 4; %This is the maximum num of the obstacles that will be considered in the constraints
+num_obst_in_FOV = 2; % this is different from max_num_obst, which is the max number of obst that an agent includes for constraints
 %% END ATTENTION!!!!!
 
 dim_pos=3; %The dimension of the position trajectory (R3)
