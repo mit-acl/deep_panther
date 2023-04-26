@@ -3,7 +3,7 @@
 deg_pos: 3
 deg_yaw: 2
 num_seg: 7
-num_max_of_obst: 8
+num_max_of_obst: 2
 num_obst_in_FOV: 2
 sampler_num_samples: 28
 fitter_num_samples: 20
