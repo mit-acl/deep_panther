@@ -46,7 +46,7 @@ end
 %% Whether or not the dynamic limits and obstacle avoidance constraints are formulated as hard constraints (as equalities/inequalities) or soft constraints (in the objective function)
 %%
 
-soft_dynamic_limits_constraints=true;
+soft_dynamic_limits_constraints=false;
 soft_obstacle_avoid_constraint=false;
 
 %%
@@ -640,7 +640,7 @@ opts = struct;
 opts.expand=true; %When this option is true, it goes WAY faster!
 opts.print_time=0;
 opts.ipopt.print_level=print_level; 
-opts.ipopt.max_iter=1000;
+opts.ipopt.max_iter=2000;
 opts.ipopt.linear_solver=linear_solver_name;
 opts.jit=jit;%If true, when I call solve(), Matlab will automatically generate a .c file, convert it to a .mex and then solve the problem using that compiled code
 opts.compiler='shell';
