@@ -166,7 +166,7 @@ if __name__ == "__main__":
     record_bag = True
 
     # use tensorboard?
-    launch_tensorboard=True
+    launch_tensorboard=False
 
     # verbose python errors?
     verbose_python_errors=False
@@ -199,6 +199,14 @@ if __name__ == "__main__":
     log_interval=200
 
     assert args.total_demos_per_round>=batch_size #If not, round_{k+1} will train on the same dataset as round_{k} (until enough rounds are taken to generate a new batch of demos)
+
+    ##
+    ## 18.337 specific parameters
+    ##
+
+    # do performance review?
+    do_performance_review = True
+
 
     os.system("rm -rf "+args.log_dir) #Delete the logs
     
@@ -391,32 +399,34 @@ if __name__ == "__main__":
         ## Preliminiary evaluation
         ##
 
-        if args.init_eval:
-            printInBoldBlue("----------------------- Preliminary Evaluation: --------------------")
+        if not do_performance_review:
 
-            test_venv.env_method("changeConstantObstacleAndGtermPos", gterm_pos=np.array([[6.0],[0.0],[1.0]]), obstacle_pos=np.array([[2.0],[0.0],[1.0]])) 
+            if args.init_eval:
+                printInBoldBlue("----------------------- Preliminary Evaluation: --------------------")
 
-            #NOTES: args.n_evals is the number of trajectories collected in the environment
-            #A trajectory is defined as a sequence of steps in the environment (until the environment returns done)
-            #Hence, each trajectory usually contains the result of test_environment_max_steps timesteps (it may contains less if the environent returned done before) 
-            #In other words, episodes in |evaluate_policy() is the number of trajectories
-            #                            |the environment is the number of time steps
+                test_venv.env_method("changeConstantObstacleAndGtermPos", gterm_pos=np.array([[6.0],[0.0],[1.0]]), obstacle_pos=np.array([[2.0],[0.0],[1.0]])) 
 
-            ##
-            ## Evaluate the reward of the expert
-            ##
+                #NOTES: args.n_evals is the number of trajectories collected in the environment
+                #A trajectory is defined as a sequence of steps in the environment (until the environment returns done)
+                #Hence, each trajectory usually contains the result of test_environment_max_steps timesteps (it may contains less if the environent returned done before) 
+                #In other words, episodes in |evaluate_policy() is the number of trajectories
+                #                            |the environment is the number of time steps
 
-            expert_stats = evaluate_policy(expert_policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/teacher")
-            print("[Evaluation] Expert reward: {}, len: {}.\n".format( expert_stats["return_mean"], expert_stats["len_mean"]))
+                ##
+                ## Evaluate the reward of the expert
+                ##
 
-            ##
-            ## Evaluate student reward before training,
-            ##
+                expert_stats = evaluate_policy(expert_policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/teacher")
+                print("[Evaluation] Expert reward: {}, len: {}.\n".format( expert_stats["return_mean"], expert_stats["len_mean"]))
 
-            pre_train_stats = evaluate_policy(trainer.policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/student_pre_train")
-            print("[Evaluation] Student reward: {}, len: {}.".format(pre_train_stats["return_mean"], pre_train_stats["len_mean"]))
+                ##
+                ## Evaluate student reward before training,
+                ##
 
-            del expert_stats
+                pre_train_stats = evaluate_policy(trainer.policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH+"/student_pre_train")
+                print("[Evaluation] Student reward: {}, len: {}.".format(pre_train_stats["return_mean"], pre_train_stats["len_mean"]))
+
+                del expert_stats
 
 
         ##
@@ -437,98 +447,114 @@ if __name__ == "__main__":
         ## Train
         ##
 
-        if args.train:
+        if not do_performance_review:
+            if args.train:
+                stats = {"training":list(), "eval_no_dist":list()}
+                if args.on_policy_trainer == True:
+                    assert trainer.round_num == 0
+
+                policy_path = os.path.join(DATA_POLICY_PATH, "intermediate_policy.pt") # Where to save curr policy
+                trainer.train(n_rounds=args.n_rounds, total_demos_per_round=args.total_demos_per_round, only_collect_data=only_collect_data, bc_train_kwargs=dict(n_epochs=N_EPOCHS, save_full_policy_path=policy_path, log_interval=log_interval))
+        else:
             stats = {"training":list(), "eval_no_dist":list()}
             if args.on_policy_trainer == True:
                 assert trainer.round_num == 0
 
-            policy_path = os.path.join(DATA_POLICY_PATH, "intermediate_policy.pt") # Where to save curr policy
-            trainer.train(n_rounds=args.n_rounds, total_demos_per_round=args.total_demos_per_round, only_collect_data=only_collect_data, bc_train_kwargs=dict(n_epochs=N_EPOCHS, save_full_policy_path=policy_path, log_interval=log_interval))
-
-        ##
-        ## Store the final policy.
-        ##
-
-        if args.train:
-            save_full_policy_path = os.path.join(DATA_POLICY_PATH, FINAL_POLICY_NAME)
-            trainer.save_policy(save_full_policy_path)
-            print(f"[Trainer] Training completed. Policy saved to: {save_full_policy_path}.")
-
-        ##
-        ## Evaluation 
-        ##
-
-        if args.final_eval:
-            printInBoldBlue("----------------------- Evaluation After Training: --------------------")
-
-            ##
-            ## Evaluate reward of student post-training
-            ##
-
-            post_train_stats = dict()
-
-            ##
-            ## Note: no disturbance
-            ##
-
-            ##
-            ## Print
-            ##
-
-            if args.init_eval:
-
-                post_train_stats = evaluate_policy(trainer.policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH + "/student_post_train" )
-                print("[Complete] Reward: Pre: {}, Post: {}.".format( pre_train_stats["return_mean"], post_train_stats["return_mean"]))
-
-                printInBoldBlue("----------------------- Improvement: --------------------")
-
-                if(abs(pre_train_stats["return_mean"])>0):
-                    student_improvement=(post_train_stats["return_mean"]-pre_train_stats["return_mean"])/abs(pre_train_stats["return_mean"])
-                    if(student_improvement>0):
-                        printInBoldGreen(f"Student improvement: {student_improvement*100}%")
-                    else:
-                        printInBoldRed(f"Student improvement: {student_improvement*100}%")
-                
-                print("[Complete] Episode length: Pre: {}, Post: {}.".format( pre_train_stats["len_mean"], post_train_stats["len_mean"]))
-
-                ##
-                ## Clean up
-                ##
-
-                del pre_train_stats, post_train_stats
-
-            ##
-            ## Load and evaluate the saved DAgger policy
-            ##
-
-            load_full_policy_path = os.path.join(DATA_POLICY_PATH, FINAL_POLICY_NAME)
-            final_student_policy = bc.reconstruct_policy(load_full_policy_path)
-            rwrd = evaluate_policy(final_student_policy, test_venv, eval_episodes=args.n_evals, log_path=None)
-
-            ##
-            ## Evaluate the reward of the expert as a sanity check
-            ##
-
-            expert_reward = evaluate_policy(expert_policy, test_venv, eval_episodes=args.n_evals, log_path=None)
-
-            ##
-            ## Print
-            ##
-
-            print("\n")
-            printInBoldRed("----------------------- TEST RESULTS: --------------------")
-            print("\n")
+            elapsed_times = []
+            for i in range(0, 2):
+                policy_path = os.path.join(DATA_POLICY_PATH, "intermediate_policy.pt") # Where to save curr policy
+                start_time = time.time()
+                trainer.train(n_rounds=args.n_rounds, total_demos_per_round=10, only_collect_data=only_collect_data, bc_train_kwargs=dict(n_epochs=N_EPOCHS, save_full_policy_path=policy_path, log_interval=log_interval))
+                end_time = time.time()
+                elapsed_time = end_time - start_time
+                elapsed_times.append(elapsed_time)
             
-            print("[Test] Student Policy: Avg. Cost: {}, Success Rate: {}".format(-rwrd["return_mean"], rwrd["success_rate"]))
-            print("[Test] Expert Policy: Avg. Cost: {}, Success Rate: {}".format(-expert_reward["return_mean"], expert_reward["success_rate"]))
+            print("Average time: {}".format(np.mean(elapsed_times)))
+            # exit()
+        # ##
+        # ## Store the final policy.
+        # ##
 
-            ##
-            ## Plot
-            ##
+        # if args.train:
+        #     save_full_policy_path = os.path.join(DATA_POLICY_PATH, FINAL_POLICY_NAME)
+        #     trainer.save_policy(save_full_policy_path)
+        #     print(f"[Trainer] Training completed. Policy saved to: {save_full_policy_path}.")
 
-            #fig, ax = plt.subplots()
-            #plot_train_traj(ax, stats["training"])
+        # ##
+        # ## Evaluation 
+        # ##
 
-        print("Elapsed time: {}".format(time.time() - t0))
+        # if args.final_eval:
+        #     printInBoldBlue("----------------------- Evaluation After Training: --------------------")
+
+        #     ##
+        #     ## Evaluate reward of student post-training
+        #     ##
+
+        #     post_train_stats = dict()
+
+        #     ##
+        #     ## Note: no disturbance
+        #     ##
+
+        #     ##
+        #     ## Print
+        #     ##
+
+        #     if args.init_eval:
+
+        #         post_train_stats = evaluate_policy(trainer.policy, test_venv, eval_episodes=args.n_evals, log_path=LOG_PATH + "/student_post_train" )
+        #         print("[Complete] Reward: Pre: {}, Post: {}.".format( pre_train_stats["return_mean"], post_train_stats["return_mean"]))
+
+        #         printInBoldBlue("----------------------- Improvement: --------------------")
+
+        #         if(abs(pre_train_stats["return_mean"])>0):
+        #             student_improvement=(post_train_stats["return_mean"]-pre_train_stats["return_mean"])/abs(pre_train_stats["return_mean"])
+        #             if(student_improvement>0):
+        #                 printInBoldGreen(f"Student improvement: {student_improvement*100}%")
+        #             else:
+        #                 printInBoldRed(f"Student improvement: {student_improvement*100}%")
+                
+        #         print("[Complete] Episode length: Pre: {}, Post: {}.".format( pre_train_stats["len_mean"], post_train_stats["len_mean"]))
+
+        #         ##
+        #         ## Clean up
+        #         ##
+
+        #         del pre_train_stats, post_train_stats
+
+        #     ##
+        #     ## Load and evaluate the saved DAgger policy
+        #     ##
+
+        #     load_full_policy_path = os.path.join(DATA_POLICY_PATH, FINAL_POLICY_NAME)
+        #     final_student_policy = bc.reconstruct_policy(load_full_policy_path)
+        #     rwrd = evaluate_policy(final_student_policy, test_venv, eval_episodes=args.n_evals, log_path=None)
+
+        #     ##
+        #     ## Evaluate the reward of the expert as a sanity check
+        #     ##
+
+        #     expert_reward = evaluate_policy(expert_policy, test_venv, eval_episodes=args.n_evals, log_path=None)
+
+        #     ##
+        #     ## Print
+        #     ##
+
+        #     print("\n")
+        #     printInBoldRed("----------------------- TEST RESULTS: --------------------")
+        #     print("\n")
+            
+        #     print("[Test] Student Policy: Avg. Cost: {}, Success Rate: {}".format(-rwrd["return_mean"], rwrd["success_rate"]))
+        #     print("[Test] Expert Policy: Avg. Cost: {}, Success Rate: {}".format(-expert_reward["return_mean"], expert_reward["success_rate"]))
+
+        #     ##
+        #     ## Plot
+        #     ##
+
+        #     #fig, ax = plt.subplots()
+        #     #plot_train_traj(ax, stats["training"])
+
+        # print("Elapsed time: {}".format(time.time() - t0))
 
     my_func(0)
