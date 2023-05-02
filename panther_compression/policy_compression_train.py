@@ -75,7 +75,7 @@ if __name__ == "__main__":
     ### Parameters
     ###
 
-    use_test_run_params = False
+    use_test_run_params = True
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--home_dir", type=str, default="")
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     use_one_zero_beta = False
 
     # when you want to collect data and not train student
-    only_collect_data = False
+    only_collect_data = True
 
     # when you want to train student only from existing data
     train_only_supervised = False
@@ -193,7 +193,7 @@ if __name__ == "__main__":
     weight_prob=0.005
 
     # number of environments
-    num_envs = 16
+    num_envs = 1
 
     # log stats after every log_interval batches.
     log_interval=200

@@ -19,18 +19,18 @@ size = MPI.Comm_size(comm)
 rank = MPI.Comm_rank(comm)
 
 # Define the Python script to run
-script = "/home/kota/Research/deep-panther_ws/src/deep_panther/panther/julia/call_expert.py"
+script = "/home/kota/Research/deep-panther_ws/src/deep_panther/panther_compression/policy_compression_train.py"
 @pyinclude(script)
-obs, act = py"get_expert_action"()
+py"main"()
 
-# Gather the output from each process
-act_buff = MPI.Gather(act,  comm; root=0)
-obs_buff = MPI.Gather(obs,  comm; root=0)
+# # Gather the output from each process
+# act_buff = MPI.Gather(act,  comm; root=0)
+# obs_buff = MPI.Gather(obs,  comm; root=0)
 
-# Finalize MPI
+# # Finalize MPI
 MPI.Finalize()
 
-println("Output from process $rank ", act_buff)
-println("Output from process $rank ", obs_buff)
+# println("Output from process $rank ", act_buff)
+# println("Output from process $rank ", obs_buff)
 
 # put the output into a file
