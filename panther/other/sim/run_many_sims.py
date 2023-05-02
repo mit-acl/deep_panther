@@ -191,7 +191,7 @@ if __name__ == '__main__':
                         #     commands.append("sleep "+str(time_sleep)+" && cd "+folder_bags+" && rosbag record "+recorded_topics+" -o "+sim_name+"_"+agent_name+" __name:="+agent_bag_recorder)
                         sim_name = f"sim_{str(s).zfill(3)}"
                         sim_bag_recorder = sim_name
-                        commands.append('sleep '+str(time_sleep)+' && cd '+folder_bags+' && rosbag record -a -x "camera(.*)" -o '+sim_name+' __name:='+sim_bag_recorder)
+                        commands.append('sleep '+str(time_sleep)+' && cd '+folder_bags+' && rosbag record -a -x "camera" -o '+sim_name+' __name:='+sim_bag_recorder)
                         
                         ## goal checker
                         commands.append(f"sleep {time_sleep} && roslaunch --wait panther goal_reached_checker.launch num_of_agents:={l} circle_radius:={CIRCLE_RADIUS}")

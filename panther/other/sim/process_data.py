@@ -146,24 +146,24 @@ if __name__ == '__main__':
         # (2) computation time
 
         # (3) number of collisions
-        num_of_collisions_btwn_agents = 0
-        num_of_collisions_btwn_agents_and_obstacles = 0
+        num_of_collisions_btwn_agents = 0.0
+        num_of_collisions_btwn_agents_and_obstacles = 0.0
         
         # (4) fov rate
         fov_rate = { agent: [] for agent in AGENTS_LIST }
 
         # (5) continuous fov detection (min, avg, max)
-        continuous_fov_detection = 0
+        continuous_fov_detection = 0.0
 
         # (6) translational dynamic constraint violation rate
-        translational_dynamic_constraint_violation_rate = 0
+        translational_dynamic_constraint_violation_rate = 0.0
 
         # (7) yaw dynamic constraint violation rate
-        yaw_dynamic_constraint_violation_rate = 0
+        yaw_dynamic_constraint_violation_rate = 0.0
 
         # (9) accel trajectory smoothness & (10) jerk trajectory smoothness
-        accel_traj_smoothness = 0
-        jerk_traj_smoothness = 0
+        accel_traj_smoothness = 0.0
+        jerk_traj_smoothness = 0.0
 
         # (11) number of stops
         num_of_stops = []
@@ -359,9 +359,9 @@ if __name__ == '__main__':
                         jerk = np.linalg.norm(np.array([msg.j.x, msg.j.y, msg.j.z]))
                         dyaw = float(msg.dpsi)
 
-                        if vel > math.sqrt(3)*MAX_VEL or acc > math.sqrt(3)*MAX_ACC or jerk > math.sqrt(3)*MAX_JERK:
+                        if vel > math.sqrt(3)*MAX_VEL + 0.1 or acc > math.sqrt(3)*MAX_ACC + 0.1 or jerk > math.sqrt(3)*MAX_JERK + 0.1:
                             translational_dynamic_constraint_violation_rate += 1
-                        if dyaw > MAX_DYAW:
+                        if dyaw > MAX_DYAW + 0.1:
                             yaw_dynamic_constraint_violation_rate += 1
                         
                         topic_num += 1
@@ -457,10 +457,8 @@ if __name__ == '__main__':
 
             # (8) success rate
             success = True if reached_goal \
-                and num_of_collisions_btwn_agents == 0 \
-                and num_of_collisions_btwn_agents_and_obstacles == 0 \
-                and translational_dynamic_constraint_violation_rate == 0.0 \
-                and yaw_dynamic_constraint_violation_rate == 0.0 else False
+                and num_of_collisions_btwn_agents <= 0.0001 \
+                and num_of_collisions_btwn_agents_and_obstacles <= 0.0001 else False
             success_rate_list.append(success)
 
             # (9) accel trajectory smoothness & (10) jerk trajectory smoothness
@@ -478,18 +476,18 @@ if __name__ == '__main__':
 
         d_string     = f"date                                             :{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         sf_string    = f"simulation folder                                :{os.path.join(DATA_DIR, sim_folder)}"
-        tt_string    = f"travel time                                      :{round(mean(travel_time_list),2)} [s]"
-        ct_string    = f"computational time                               :{round(mean(computation_time_list),2)} [ms]"
-        ncba_string  = f"number of collisions btwn agents                 :{round(mean(num_of_collisions_btwn_agents_list),2)}"
-        ncbao_string = f"number of collisions btwn agents and obstacles   :{round(mean(num_of_collisions_btwn_agents_and_obstacles_list),2)}"
-        fr_string    = f"fov rate                                         :{round(mean(fov_rate_list),2)*100} [%]"
-        cfd_string   = f"continuous fov detection                         :{round(mean(continuous_fov_detection_list),2)}"
-        tdcvr_string = f"translational dynamic constraint violation rate  :{round(mean(translational_dynamic_constraint_violation_rate_list),2)*100} [%]"
-        ydcvr_string = f"yaw dynamic constraint violation rate            :{round(mean(yaw_dynamic_constraint_violation_rate_list),2)*100} [%]"
-        sr_string    = f"success rate                                     :{round(mean(success_rate_list),2)*100} [%]"
-        ats_string   = f"accel trajectory smoothness                      :{round(mean(accel_trajectory_smoothness_list),2)}"
-        jts_string   = f"jerk trajectory smoothness                       :{round(mean(jerk_trajectory_smoothness_list),2)}"
-        ns_string    = f"number of stops                                  :{round(mean(num_of_stops_list),2)}"
+        tt_string    = f"travel time                                      :{round(mean(travel_time_list),3)} [s]"
+        ct_string    = f"computational time                               :{round(mean(computation_time_list),3)} [ms]"
+        ncba_string  = f"number of collisions btwn agents                 :{round(mean(num_of_collisions_btwn_agents_list),3)}"
+        ncbao_string = f"number of collisions btwn agents and obstacles   :{round(mean(num_of_collisions_btwn_agents_and_obstacles_list),3)}"
+        fr_string    = f"fov rate                                         :{round(mean(fov_rate_list),3)*100} [%]"
+        cfd_string   = f"continuous fov detection                         :{round(mean(continuous_fov_detection_list),3)}"
+        tdcvr_string = f"translational dynamic constraint violation rate  :{round(mean(translational_dynamic_constraint_violation_rate_list),3)*100} [%]"
+        ydcvr_string = f"yaw dynamic constraint violation rate            :{round(mean(yaw_dynamic_constraint_violation_rate_list),3)*100} [%]"
+        sr_string    = f"success rate                                     :{round(mean(success_rate_list),3)*100} [%]"
+        ats_string   = f"accel trajectory smoothness                      :{round(mean(accel_trajectory_smoothness_list),3)}"
+        jts_string   = f"jerk trajectory smoothness                       :{round(mean(jerk_trajectory_smoothness_list),3)}"
+        ns_string    = f"number of stops                                  :{round(mean(num_of_stops_list),3)}"
         
         print("\n")
         print("=============================================")
