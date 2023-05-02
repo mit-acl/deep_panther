@@ -12,4 +12,4 @@
 
 **/build 
 /matlab/figures
-/julia/evals
+/julia/evals/*
