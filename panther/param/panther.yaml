@@ -144,9 +144,9 @@ z_goal_when_using_rviz: 0.0 #[meters]
 c_smooth_yaw_search: 0.0      #weight for the yaw search
 c_visibility_yaw_search: 10.0  #weight for the yaw search
 c_maxydot_yaw_search: 10.0     #weight for the yaw search
-c_pos_smooth: 0.0001          #weight for the optimization
+c_pos_smooth: 0.00001          #weight for the optimization
 c_yaw_smooth: 0.0          #weight for the optimization
-c_fov: 100.0                 #weight for the optimization
+c_fov: 1000.0                 #weight for the optimization
 c_final_pos: 1000.0           #weight for the optimization
 c_final_yaw: 0.0             #weight for the optimization
 c_total_time: 0.1            #weight for the optimization
