@@ -815,6 +815,7 @@ struct parameters
 {
   //
   // clang-format off
+  bool            add_noise_to_obst;
   bool            use_expert_for_other_agents_in_training;
   double          goal_seen_radius_training;
   bool            use_noised_obst_size;

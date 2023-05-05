@@ -71,6 +71,7 @@ PantherRos::PantherRos(ros::NodeHandle nh1, ros::NodeHandle nh2, ros::NodeHandle
   ROS_INFO("Found transform %s --> %s", name_drone_.c_str(), name_camera_depth_optical_frame_tf_.c_str());
   // std::cout << "par_.b_T_c.matrix()= " << par_.b_T_c.matrix() << std::endl;
 
+  safeGetParam(nh1_, "add_noise_to_obst", par_.add_noise_to_obst);
   safeGetParam(nh1_, "goal_seen_radius_training", par_.goal_seen_radius_training);
   safeGetParam(nh1_, "use_noised_obst_size", par_.use_noised_obst_size);
   safeGetParam(nh1_, "use_clipping", par_.use_clipping);
@@ -543,6 +544,9 @@ void PantherRos::trajCB(const panther_msgs::DynTraj& msg)
   mt::dynTraj tmp;
   tmp.use_pwp_field = msg.use_pwp_field;
 
+  std::default_random_engine generator;
+  std::normal_distribution<double> distribution(0.0, 0.1); //TODO: hardcoded here
+
   if (msg.use_pwp_field)
   {
     tmp.pwp_mean = pwpMsg2Pwp(msg.pwp_mean);
@@ -550,16 +554,40 @@ void PantherRos::trajCB(const panther_msgs::DynTraj& msg)
   }
   else
   {
-    tmp.s_mean.push_back(msg.s_mean[0]);
-    tmp.s_mean.push_back(msg.s_mean[1]);
-    tmp.s_mean.push_back(msg.s_mean[2]);
 
+    if (par_.add_noise_to_obst){
+      
+      tmp.s_mean.push_back(msg.s_mean[0] + "+" + std::to_string(distribution(generator)));
+      tmp.s_mean.push_back(msg.s_mean[1] + "+" + std::to_string(distribution(generator)));
+      tmp.s_mean.push_back(msg.s_mean[2] + "+" + std::to_string(distribution(generator)));
+
+      // std::cout << "tmp.s_mean[0]= " << tmp.s_mean[0] << std::endl;
+      // std::cout << "tmp.s_mean[1]= " << tmp.s_mean[1] << std::endl;
+      // std::cout << "tmp.s_mean[2]= " << tmp.s_mean[2] << std::endl;
+    } 
+    else 
+    {
+      tmp.s_mean.push_back(msg.s_mean[0]);
+      tmp.s_mean.push_back(msg.s_mean[1]);
+      tmp.s_mean.push_back(msg.s_mean[2]);
+    }
     tmp.s_var.push_back(msg.s_var[0]);
     tmp.s_var.push_back(msg.s_var[1]);
     tmp.s_var.push_back(msg.s_var[2]);
   }
 
   tmp.bbox << msg.bbox[0], msg.bbox[1], msg.bbox[2];
+
+  if (par_.add_noise_to_obst){
+    tmp.bbox[0] += distribution(generator);
+    tmp.bbox[1] += distribution(generator);
+    tmp.bbox[2] += distribution(generator);
+  }
+
+  // std::cout << "tmp.bbox[0]= " << tmp.bbox[0] << std::endl;
+  // std::cout << "tmp.bbox[1]= " << tmp.bbox[1] << std::endl;
+  // std::cout << "tmp.bbox[2]= " << tmp.bbox[2] << std::endl;
+
   tmp.id = msg.id;
   tmp.is_agent = msg.is_agent;
   tmp.is_committed = msg.is_committed;
