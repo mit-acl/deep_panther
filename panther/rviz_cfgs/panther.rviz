@@ -66,17 +66,15 @@ Visualization Manager:
       Value: true
     - Class: rviz/TF
       Enabled: true
+      Filter (blacklist): ""
+      Filter (whitelist): ""
       Frame Timeout: 1000
       Frames:
         All Enabled: false
-        SQ01s:
+        obs_4000:
           Value: true
-        SQ01s/camera_depth_optical_frame:
-          Value: false
-        SQ01s/camera_link:
-          Value: false
-        vicon:
-          Value: false
+        obs_4001:
+          Value: true
         world:
           Value: false
       Marker Alpha: 1
@@ -87,11 +85,10 @@ Visualization Manager:
       Show Names: false
       Tree:
         world:
-          vicon:
-            SQ01s:
-              SQ01s/camera_link:
-                SQ01s/camera_depth_optical_frame:
-                  {}
+          obs_4000:
+            {}
+          obs_4001:
+            {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -253,7 +250,7 @@ Visualization Manager:
       Marker Topic: /SQ01s/panther/fov
       Name: SQ01sFOV
       Namespaces:
-        marker_fov: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -293,7 +290,7 @@ Visualization Manager:
       Marker Topic: /obstacles_mesh
       Name: Obstacles
       Namespaces:
-        {}
+        mesh: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -772,9 +769,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8997950553894043
+      Pitch: 0.7647949457168579
       Target Frame: <Fixed Frame>
-      Yaw: 3.1731786727905273
+      Yaw: 3.138178825378418
     Saved: ~
 Window Geometry:
   DepthImage:

@@ -144,9 +144,8 @@ class DynCorridor:
         with open(PANTHER_YAML_PATH) as f:
             PANTHER_YAML_PARAMS = yaml.safe_load(f)
 
-
         self.bbox_dynamic=PANTHER_YAML_PARAMS["obstacle_bbox"] # this corresponds to training_obst_size defined in panther.yaml
-        # self.bbox_dynamic=[0.6, 0.6, 0.6] # this corresponds to training_obst_size defined in panther.yaml
+        self.add_noise_to_obst = PANTHER_YAML_PARAMS["add_noise_to_obst"]
         self.bbox_static_vert=[0.4, 0.4, 4]
         self.bbox_static_horiz=[0.4, 8, 0.4]
         self.percentage_vert=0.0
@@ -154,19 +153,6 @@ class DynCorridor:
         self.max_vel_obstacles=-10.0
 
         self.type_of_obst_traj=type_of_obst_traj #eightCurve, static, square, epitrochoid
-   
-        #HACK
-        # self.num_of_dyn_objects=1;
-        # self.num_of_stat_objects=0;
-        # self.x_min= 4.0
-        # self.x_max= 4.0
-        # self.y_min= 4.0 
-        # self.y_max= 4.0
-        # self.z_min= 1.0 
-        # self.z_max= 1.0
-        # self.scale= [1.0, 1.0, 2.5]
-        # self.bbox_dynamic=[0.2, 0.2, 0.2] 
-        #END OF HACK
 
         self.available_meshes_static=["package://panther/meshes/ConcreteDamage01b/model3.dae", "package://panther/meshes/ConcreteDamage01b/model2.dae"]
         self.available_meshes_dynamic=["package://panther/meshes/ConcreteDamage01b/model4.dae"]
@@ -207,12 +193,10 @@ class DynCorridor:
 
         #self.pubGazeboState = rospy.Publisher('/gazebo/set_model_state', ModelState, queue_size=100)
 
-
         if(gazebo):
             # Spawn all the objects in Gazebo
             for i in range(self.total_num_obs):
                 self.spawnGazeboObstacle(i)
-
 
         rospy.sleep(0.5)
 
@@ -251,13 +235,6 @@ class DynCorridor:
             t=rospy.get_time(); #Same as before, but it's float
 
             marker=self.marker_array.markers[i]
- 
-            # #Hack to produce a static obstacle
-            # x_string='2.5'
-            # y_string='0'
-            # z_string='1'
-            # self.all_dyn_traj[i].s_mean=[x_string, y_string, z_string]
-            # #End of hack
 
             x = eval(self.all_dyn_traj[i].s_mean[0])
             y = eval(self.all_dyn_traj[i].s_mean[1])
@@ -272,182 +249,13 @@ class DynCorridor:
             self.pubTraj.publish(self.all_dyn_traj[i])
             br.sendTransform((x, y, z), (0,0,0,1), t_ros, self.name_obs+str(self.all_dyn_traj[i].id), "world")
 
-
             self.marker_array.markers[i].pose.position.x=x
             self.marker_array.markers[i].pose.position.y=y
             self.marker_array.markers[i].pose.position.z=z
 
-
-
-            #If you want to move the objets in gazebo. BETTER WITH THE PLUGIN
-            # gazebo_state = ModelState()
-            # gazebo_state.model_name = str(i)#"all_"+str(i)
-            # gazebo_state.pose.position.x = x
-            # gazebo_state.pose.position.y = y
-            # gazebo_state.pose.position.z = z
-            # gazebo_state.reference_frame = "world" 
-            # self.pubGazeboState.publish(gazebo_state) 
-
-
-            # x=self.x_all[i];
-            # y=self.y_all[i];
-            # z=self.z_all[i];
-
-            # s="""
-            # rosservice call /gazebo/set_model_state "model_state:
-            #   model_name: '"""+str(i)+"""'
-            #   pose:
-            #     position:
-            #       x: """+str(x)+"""
-            #       y: """+str(y)+"""
-            #       z: """+str(z)+"""
-            #     orientation:
-            #       x: 0.0
-            #       y: 0.0
-            #       z: 0.0
-            #       w: 0.0
-            #   twist:
-            #     linear:
-            #       x: 0.0
-            #       y: 0.0
-            #       z: 0.0
-            #     angular:
-            #       x: 0.0
-            #       y: 0.0
-            #       z: 0.0
-            #   reference_frame: 'world'" 
-            # """
-            # os.system(s) 
-
             #If you want to see the objects in rviz
 
         self.pubShapes_dynamic_mesh.publish(self.marker_array)
-
-        # #####################################################
-        # # START (This is for the benchmark with the code from zhejiang)
-        # # In their code, the function EGOReplanFSM::marker_callback has access to pos/vel from the obstacles through the marker array. The code below publishes the marker array with that info
-        # ###################################################
-        # marker_array_zhejiang=MarkerArray();
-        # for i in range(len(self.marker_array.markers)): 
-
-        #     marker=Marker();
-        #     delta=1e-6; #Don't make it smaller than this
-        #     t0=rospy.get_time();
-        #     t=t0
-        #     # print "t= ", t
-        #     x = eval(self.all_dyn_traj[i].s_mean[0])
-        #     y = eval(self.all_dyn_traj[i].s_mean[1])
-        #     z = eval(self.all_dyn_traj[i].s_mean[2])
-        #     t=t+delta;
-        #     xd = eval(self.all_dyn_traj[i].s_mean[0])
-        #     yd = eval(self.all_dyn_traj[i].s_mean[1])
-        #     zd = eval(self.all_dyn_traj[i].s_mean[2])
-        #     vel=[(xd-x)/delta, (yd-y)/delta, (zd-z)/delta];
-
-
-        #     # print "vel= ", vel
-        #     # print self.all_dyn_traj[i].s_mean
-
-        #     marker.pose.position.x=x;
-        #     marker.pose.position.y=y;
-        #     marker.pose.position.z=z;
-
-        #     marker.pose.orientation.x=vel[0];
-        #     marker.pose.orientation.y=vel[1];
-        #     marker.pose.orientation.z=vel[2];
-        #     marker.pose.orientation.w=1.0;
-
-        #     marker.color.r=vel[0];
-        #     marker.color.g=vel[1];
-        #     marker.color.b=vel[2];
-        #     marker.color.a=0.2;
-
-        #     marker.scale=self.marker_array.markers[i].scale;
-
-        #     marker_array_zhejiang.markers.append(marker)
-
-
-   
-        #     self.all_dyn_traj_zhejiang[i].s_mean[0]=str(x)+'+'+str(vel[0])+'*(t-'+str(t0)+')';
-        #     self.all_dyn_traj_zhejiang[i].s_mean[1]=str(y)+'+'+str(vel[1])+'*(t-'+str(t0)+')';
-        #     self.all_dyn_traj_zhejiang[i].s_mean[2]=str(z)+'+'+str(vel[2])+'*(t-'+str(t0)+')';
-
-        #     self.all_dyn_traj_zhejiang[i].pos.x=x;
-        #     self.all_dyn_traj_zhejiang[i].pos.y=y;
-        #     self.all_dyn_traj_zhejiang[i].pos.z=z;
-
-        #     self.pubTraj_zhejiang.publish(self.all_dyn_traj_zhejiang[i])
-
-        #     self.max_vel_obstacles=max(self.max_vel_obstacles, np.linalg.norm(np.array(vel)))
-        #     # print("self.max_vel_obstacles= ", self.max_vel_obstacles)
-
-
-        # self.pubShapes_dynamic_mesh_zhejiang.publish(marker_array_zhejiang)       
-        # #####################################################
-        # # END
-        # ###################################################
-
-
-        # #####################################################
-        # # Publish the colored markers
-        # ###################################################
-        # id_marker_tmp=0
-        # marker_array_colored=MarkerArray();
-        # for i in range(len(self.marker_array.markers)): 
-
-        #     tinit=rospy.get_time();
-        #     tfinal=rospy.get_time()+5;
-        #     for t in np.linspace(tinit,tfinal,21).tolist():
-        #          # print "t= ", t
-        #         x = eval(self.all_dyn_traj[i].s_mean[0])
-        #         y = eval(self.all_dyn_traj[i].s_mean[1])
-        #         z = eval(self.all_dyn_traj[i].s_mean[2])    
-                
-        #         marker=Marker();           
-
-        #         marker.pose.position.x=x;
-        #         marker.pose.position.y=y;
-        #         marker.pose.position.z=z;
-
-        #         marker.pose.orientation.x=0;
-        #         marker.pose.orientation.y=0;
-        #         marker.pose.orientation.z=0;
-        #         marker.pose.orientation.w=1.0;
-
-        #         marker.color=getColorJet(t,tinit,tfinal)
-
-        #         marker.scale=self.marker_array.markers[i].scale;
-
-        #         marker.header.frame_id = "/world"
-        #         marker.type = marker.CUBE
-        #         marker.action = marker.ADD
-        #         marker.id = id_marker_tmp
-        #         marker.ns = 'colored_dyn_corridor'
-
-        #         marker_array_colored.markers.append(marker)
-        #         id_marker_tmp=id_marker_tmp+1;
-
-
-        #         marker2=copy.deepcopy(marker);
-        #         marker2.color.r=0.0;
-        #         marker2.color.g=0.0;
-        #         marker2.color.b=0.0;
-        #         marker2.color.a=0.3;
-        #         marker2.id = id_marker_tmp
-        #         marker2.scale.x =  marker2.scale.x+0.05;
-        #         marker2.scale.y =  marker2.scale.y+0.05;
-        #         marker2.scale.z =  marker2.scale.z+0.05;
-
-
-        #         marker_array_colored.markers.append(marker2)
-        #         id_marker_tmp=id_marker_tmp+1;
-            
-        # self.pubShapes_dynamic_mesh_colored.publish(marker_array_colored)       
-        # #####################################################
-        # # END
-        # ###################################################
-
-
 
     def static(self,x,y,z):
         return [str(x), str(y), str(z)]
@@ -460,11 +268,7 @@ class DynCorridor:
 
         x_string=str(scale_x/6.0)+'*(sin('+tt +str(offset)+') + 2 * sin(2 * '+tt +str(offset)+'))' +'+' + str(x); #'2*sin(t)' 
         y_string=str(scale_y/5.0)+'*(cos('+tt +str(offset)+') - 2 * cos(2 * '+tt +str(offset)+'))' +'+' + str(y); #'2*cos(t)' 
-        z_string=str(scale_z/2.0)+'*(-sin(3 * '+tt +str(offset)+'))' + '+' + str(z);                               #'1.0'        
-
-        # x_string='3';
-        # y_string='0';
-        # z_string='1';
+        z_string=str(scale_z/2.0)+'*(-sin(3 * '+tt +str(offset)+'))' + '+' + str(z);                              #'1.0'
 
         return [x_string, y_string, z_string]
 
@@ -477,25 +281,10 @@ class DynCorridor:
         cost='cos('+tt+')'
         sint='sin('+tt+')'
 
-
-
         #See https://math.stackexchange.com/questions/69099/equation-of-a-rectangle
         x_string=str(scale_x)+'*0.5*(abs('+cost+')*'+cost + '+abs('+sint+')*'+sint+')'
         y_string=str(scale_x)+'*0.5*(abs('+cost+')*'+cost + '-abs('+sint+')*'+sint+')'
         z_string=x_string
-
-        ##Now let's rotate around the z axis
-        ## Commented for now
-        # costheta='cos('+str(offset)+')';
-        # sintheta='sin('+str(offset)+')';
-        # x_rotated_string='('+costheta+'*'+x_string +'-'+ sintheta+'*'+y_string+')'; 
-        # y_rotated_string='('+sintheta+'*'+x_string +'+'+ costheta+'*'+y_string+')'; 
-        # z_rotated_string=z_string; 
-
-        # x_rotated_string=x_rotated_string+'+' + str(x);
-        # y_rotated_string=y_rotated_string+'+' + str(y);
-        # z_rotated_string=z_rotated_string+'+' + str(z);
-        # return [x_rotated_string, y_rotated_string, z_rotated_string]
 
         #Without rotation
         x_string=x_string+'+' + str(x)
@@ -510,23 +299,19 @@ class DynCorridor:
 
         x_string=str(x)
         y_string=str(y)
-        z_string=str(scale)+'*(-sin( '+tt +str(offset)+'))' + '+' + str(z);  
-
-        # x_string='1';
-        # y_string='1';
-        # z_string='1';                   
+        z_string=str(scale)+'*(-sin( '+tt +str(offset)+'))' + '+' + str(z)               
 
         return [x_string, y_string, z_string]
 
     def eightCurve(self,x,y,z,scale_x, scale_y, scale_z,offset,slower): #The xy projection is an https://mathworld.wolfram.com/v.html
 
-        tt='(t+'+str(offset)+')'+'/' + str(slower);
-        cost='cos('+tt+')';
-        sint='sin('+tt+')';
+        tt='(t+'+str(offset)+')'+'/' + str(slower)
+        cost='cos('+tt+')'
+        sint='sin('+tt+')'
 
-        x_string=str(scale_x)+'*'+sint + '+' + str(x);
-        y_string=str(scale_y)+'*'+sint+'*'+cost + '+' + str(y);
-        z_string=str(scale_z)+'*'+sint+'*'+sint+'*'+cost + '+' + str(z);
+        x_string=str(scale_x)+'*'+sint + '+' + str(x)
+        y_string=str(scale_y)+'*'+sint+'*'+cost + '+' + str(y)
+        z_string=str(scale_z)+'*'+sint+'*'+sint+'*'+cost + '+' + str(z)
 
         return [x_string, y_string, z_string]
 
@@ -534,43 +319,36 @@ class DynCorridor:
     def epitrochoid(self,x,y,z,scale_x, scale_y, scale_z, offset, slower):
 
         #slower=1.0; #The higher, the slower the obstacles move" 
-        tt='(t+'+str(offset)+')'+'/' + str(slower);
-        cost='cos('+tt+')';
-        sint='sin('+tt+')';
+        tt='(t+'+str(offset)+')'+'/' + str(slower)
+        cost='cos('+tt+')'
+        sint='sin('+tt+')'
 
-        a=1.0;
-        b=0.4;
-        h=4.0;
+        a=1.0
+        b=0.4
+        h=4.0
 
-        aplusb='('+str(a)+'+'+str(b)+')';
-        adivbplus1='('+str(a)+'/'+str(b)+'+1)';
+        aplusb='('+str(a)+'+'+str(b)+')'
+        adivbplus1='('+str(a)+'/'+str(b)+'+1)'
 
-
-
-        x_string= str(scale_x/7)+'*'+'(' + aplusb + '*' + cost + '-' + str(h) + '*cos(' + adivbplus1 + '*'+tt +'))+' + str(x);     #str(scale_x/6.0)+'*(sin('+tt +str(offset)+') + 2 * sin(2 * '+tt +str(offset)+'))' +'+' + str(x); #'2*sin(t)' 
+        x_string= str(scale_x/7)+'*'+'(' + aplusb + '*' + cost + '-' + str(h) + '*cos(' + adivbplus1 + '*'+tt +'))+' + str(x)    #str(scale_x/6.0)+'*(sin('+tt +str(offset)+') + 2 * sin(2 * '+tt +str(offset)+'))' +'+' + str(x); #'2*sin(t)' 
         y_string= str(scale_y/7)+'*'+'(' + aplusb + '*' + sint + '-' + str(h) + '*sin(' + adivbplus1 + '*'+tt +'))+' + str(y)
         z_string= str(scale_z)+'*'+'(' +  sint + '*' + cost  +')+' + str(z)
-
-        # x_string='3';
-        # y_string='0';
-        # z_string='1';
 
         return [x_string, y_string, z_string]
 
     def spawnGazeboObstacle(self, i):
 
-            rospack = rospkg.RosPack();
-            path_panther=rospack.get_path('panther');
+            rospack = rospkg.RosPack()
+            path_panther=rospack.get_path('panther')
             path_file=path_panther+"/meshes/tmp_"+str(i)+".urdf"
 
             f = open(path_file, "w") #TODO: This works, but it'd better not having to create this file
-            scale=self.marker_array.markers[i].scale;
-            scale='"'+str(scale.x)+" "+str(scale.y)+" "+str(scale.z)+'"';
+            scale=self.marker_array.markers[i].scale
+            scale='"'+str(scale.x)+" "+str(scale.y)+" "+str(scale.z)+'"'
 
-
-            x=self.all_dyn_traj[i].pos.x;
-            y=self.all_dyn_traj[i].pos.y;
-            z=self.all_dyn_traj[i].pos.z;
+            x=self.all_dyn_traj[i].pos.x
+            y=self.all_dyn_traj[i].pos.y
+            z=self.all_dyn_traj[i].pos.z
 
             #Remember NOT to include de <collision> tag (Gazebo goes much slower if you do so)
             f.write("""

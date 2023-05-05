@@ -65,10 +65,10 @@ if __name__ == '__main__':
     ## Parameters
     ##
 
-    NUM_OF_SIMS = 10
-    NUM_OF_AGENTS = [1, 3]
+    NUM_OF_SIMS = 1
+    NUM_OF_AGENTS = [1]
     NUM_OF_OBS_LIST = [2]
-    CIRCLE_RADIUS = 4.0
+    CIRCLE_RADIUS = 5.0
     USE_PERFECT_CONTROLLER = "true"
     USE_PERFECT_PREDICTION = "true"
     SIM_DURATION = 60 # in seconds
@@ -76,11 +76,11 @@ if __name__ == '__main__':
     RECORD_NODE_NAME = "bag_recorder"
     KILL_ALL = "killall -9 gazebo & killall -9 gzserver  & killall -9 gzclient & pkill -f panther & pkill -f gazebo_ros & pkill -f spawn_model & pkill -f gzserver & pkill -f gzclient  & pkill -f static_transform_publisher &  killall -9 multi_robot_node & killall -9 roscore & killall -9 rosmaster & pkill rmader_node & pkill -f tracker_predictor & pkill -f swarm_traj_planner & pkill -f dynamic_obstacles & pkill -f rosout & pkill -f behavior_selector_node & pkill -f rviz & pkill -f rqt_gui & pkill -f perfect_tracker & pkill -f rmader_commands & pkill -f dynamic_corridor & tmux kill-server & pkill -f perfect_controller & pkill -f publish_in_gazebo"
     TOPICS_TO_RECORD = "/{}/goal /{}/state /tf /tf_static /{}/panther/fov /obstacles_mesh /{}/panther/best_solution_expert /{}/panther/best_solution_student /{}/term_goal /{}/panther/actual_traj /clock /trajs /sim_all_agents_goal_reached /{}/panther/is_ready /{}/panther/log"
-    USE_RVIZ = sys.argv[2] if len(sys.argv) >2 else "false"
+    USE_RVIZ = sys.argv[2] if len(sys.argv) >2 else "true"
     AGENTS_TYPES = ["parm", "parm_star", "primer"]
-    TRAJ_NUM_PER_REPLAN_LIST = [1, 6]
-    DEFAULT_NUM_MAX_OF_OBST = 4 #TODO: hard-coded
-    PRIMER_NUM_MAX_OF_OBST = 4
+    TRAJ_NUM_PER_REPLAN_LIST = [10]
+    DEFAULT_NUM_MAX_OF_OBST = 2 #TODO: hard-coded
+    PRIMER_NUM_MAX_OF_OBST = 2
     
     ##
     ## make sure ROS (and related stuff) is not running
@@ -189,9 +189,14 @@ if __name__ == '__main__':
                         #     agent_bag_recorder = f"{agent_name}_{RECORD_NODE_NAME}"
                         #     agent_bag_recorders.append(agent_bag_recorder)
                         #     commands.append("sleep "+str(time_sleep)+" && cd "+folder_bags+" && rosbag record "+recorded_topics+" -o "+sim_name+"_"+agent_name+" __name:="+agent_bag_recorder)
+
+                        recorded_topics = ""
+                        for i in range(l):
+                            recorded_topics += TOPICS_TO_RECORD.format(*[agent_name for i in range(9)])
+
                         sim_name = f"sim_{str(s).zfill(3)}"
                         sim_bag_recorder = sim_name
-                        commands.append('sleep '+str(time_sleep)+' && cd '+folder_bags+' && rosbag record -a -x "camera(.*)" -o '+sim_name+' __name:='+sim_bag_recorder)
+                        commands.append('sleep '+str(time_sleep)+' && cd '+folder_bags+' && rosbag record '+recorded_topics+' -o '+sim_name+' __name:='+sim_bag_recorder)
                         
                         ## goal checker
                         commands.append(f"sleep {time_sleep} && roslaunch --wait panther goal_reached_checker.launch num_of_agents:={l} circle_radius:={CIRCLE_RADIUS}")
