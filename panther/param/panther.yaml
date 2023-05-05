@@ -80,7 +80,7 @@ delaycheck_time: 0.05 #[s]
 ### You first need to generate panther_compute_cost.casadi by running main.m with 
 ### optimize_n_planes=false, optimize_d_planes=false, and optimize_time_alloc=false. (which is now done by use_panther_star=false)
 ### Don't forget to change the compute_cost.save() line from compute_cost.casadi to panther_compute_cost.casadi
-use_panther_star: true # read the comment above
+#####use_panther_star: true # read the comment above
 impose_FOV_in_trajCB: false # if True, it only allows communication betw obstacle that is in FOV
 use_obstacle_edge_cb: true
 obstacle_edge_cb_duration: 1.0 #seconds
@@ -114,8 +114,8 @@ j_max: [4.0, 4.0, 4.0]   #[m/s3]
 factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
 max_seconds_keeping_traj: 30.0     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
 gamma: 0.1 #[seconds] >0 Time step between discretization points
-use_expert: true
-use_student: false
+#####use_expert: true
+#####use_student: false
 
 # Octopus Search
 #############################################
@@ -144,7 +144,7 @@ c_maxydot_yaw_search: 0.0     #weight for the yaw search
 c_pos_smooth: 0.0003           #weight for the optimization
 c_yaw_smooth: 0.0            #weight for the optimization
 c_fov: 1000.0                 #weight for the optimization
-c_final_pos: 100.0           #weight for the optimization
+c_final_pos: 2000.0           #weight for the optimization
 c_final_yaw: 0.01              #weight for the optimization
 c_total_time: 80             #weight for the optimization
 lambda_obst_avoidance_violation: 1.0 #To compute the augmented cost
