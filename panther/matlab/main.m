@@ -9,7 +9,8 @@
 close all; clc;clear;
 doSetup();
 import casadi.*
-const_p={};    const_y={};
+const_p={};    
+const_y={};
 opti = casadi.Opti();
 
 %%
@@ -39,7 +40,7 @@ if use_panther_star
 else
     optimize_n_planes=false;     %Optimize the normal vector "n" of the planes (the "tilt") (see Panther paper diagram)
     optimize_d_planes=false;     %Optimize the scalar "d" of the planes (the distance) (see Panther paper diagram)
-    optimize_time_alloc=false;
+    optimize_time_alloc=true;
 end
 
 %%
@@ -66,7 +67,7 @@ num_seg=7; %The number of segments in the trajectory (the more segments the less
 %% ATTENTION!!!!! TODO: make this automatic
 %% if you change these two numbers, don't forget to run this main file twice, once with use_panther_star=true and once with use_panther_star=false
 num_max_of_obst = 2; % This is the maximum num of the obstacles that will be considered in the constraints
-num_obst_in_FOV = 1; % This is different from max_num_obst, which is the max number of obst that an agent includes for constraints
+num_obst_in_FOV = 2; % This is different from max_num_obst, which is the max number of obst that an agent includes for constraints
 %% END ATTENTION!!!!!
 
 dim_pos=3; %The dimension of the position trajectory (R3)
@@ -76,6 +77,7 @@ basis="MINVO"; %MINVO OR B_SPLINE or BEZIER. This is the basis used for collisio
 linear_solver_name='ma27'; %mumps [default, comes when installing casadi], ma27, ma57, ma77, ma86, ma97 
 print_level=0; %From 0 (no verbose) to 12 (very verbose), default is 5
 jit=false;
+fov_depth = 5.0; %TODO: hardcoded
 
 %%
 %% Constants for spline fitted to the obstacle trajectory
@@ -336,7 +338,8 @@ for j=1:(sp.num_seg)
       %I need this constraint if alpha is a dec. variable OR if n is a dec
       %variable OR if d is a dec variable
       
-      if(optimize_n_planes || optimize_d_planes || optimize_time_alloc)
+    %   if(optimize_n_planes || optimize_d_planes || optimize_time_alloc)
+      if(optimize_n_planes || optimize_d_planes)
       
           for i=1:num_max_of_obst
             vertexes_ij=obst{i}.vertexes{j};
@@ -420,6 +423,10 @@ for i = 1:num_obst_in_FOV
         %FOV is a cone:  (See more possible versions of this constraint at the end of this file) (inFOV in Panther paper table 2)
         is_in_FOV_tmp=-cos(thetax_half_FOV_deg*pi/180.0) + (c_P(1:3)'/norm(c_P((1:3))))*[0;0;1]; % Constraint is is_in_FOV1>=0
         
+        % is_in_FOV_tmp = if_else(c_P(3) < fov_depth, is_in_FOV_tmp, 0.0); %If the obstacle is farther than fov_depth, then it is not in the FOV (https://www.mathworks.com/matlabcentral/answers/714068-cannot-convert-logical-to-casadi-sx)
+        is_in_FOV_tmp = is_in_FOV_tmp * (1.5*fov_depth - c_P(3))/(1.5*fov_depth);
+        is_in_FOV_tmp = if_else(c_P(3) < 1.5*fov_depth, is_in_FOV_tmp, -1.0); %If the obstacle is farther than fov_depth, then it is not in the FOV (https://www.mathworks.com/matlabcentral/answers/714068-cannot-convert-logical-to-casadi-sx)
+
         gamma=100; %Weight on the field of view soft-constriant
         all_is_in_FOV_smooth=[all_is_in_FOV_smooth  (   1/(1+exp(-gamma*is_in_FOV_tmp))  ) ];
         
@@ -640,7 +647,7 @@ opts = struct;
 opts.expand=true; %When this option is true, it goes WAY faster!
 opts.print_time=0;
 opts.ipopt.print_level=print_level; 
-opts.ipopt.max_iter=2000;
+opts.ipopt.max_iter=100;
 opts.ipopt.linear_solver=linear_solver_name;
 opts.jit=jit;%If true, when I call solve(), Matlab will automatically generate a .c file, convert it to a .mex and then solve the problem using that compiled code
 opts.compiler='shell';
