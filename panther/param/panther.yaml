@@ -1,12 +1,7 @@
 # Training setting
 #############################################
-<<<<<<< HEAD
-###############################################num_of_trajs_per_replan: 10 # num of traj (n_s in Table I in deep panther paper)
-###############################################max_num_of_initial_guesses: 10 # (n_runs in Table I)
-=======
-########num_of_trajs_per_replan: 6 # num of traj (n_s in Table I in deep panther paper)
-########max_num_of_initial_guesses: 6 # (n_runs in Table I)
->>>>>>> a2fbcfcfac2a97cd3000af0fd178fcea826dee48
+num_of_trajs_per_replan: 10 # num of traj (n_s in Table I in deep panther paper)
+max_num_of_initial_guesses: 10 # (n_runs in Table I)
 drone_extra_radius_for_NN: 0.0  #(m) Used for collision checking
 pause_time_when_replanning: false
 replanning_trigger_time_student: 0.01 #[seconds] 
@@ -85,11 +80,7 @@ delaycheck_time: 0.05 #[s]
 ### You first need to generate panther_compute_cost.casadi by running main.m with 
 ### optimize_n_planes=false, optimize_d_planes=false, and optimize_time_alloc=false. (which is now done by use_panther_star=false)
 ### Don't forget to change the compute_cost.save() line from compute_cost.casadi to panther_compute_cost.casadi
-<<<<<<< HEAD
-###############################################use_panther_star: false # read the comment above
-=======
-#######################use_panther_star: false # read the comment above
->>>>>>> a2fbcfcfac2a97cd3000af0fd178fcea826dee48
+use_panther_star: false # read the comment above
 impose_FOV_in_trajCB: false # if True, it only allows communication betw obstacle that is in FOV
 use_obstacle_edge_cb: false
 obstacle_edge_cb_duration: 1.0 #seconds
