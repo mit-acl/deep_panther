@@ -599,9 +599,23 @@ void Panther::updateState(mt::state data)
     tmp.yaw = data.yaw;
     plan_.push_back(tmp);
   }
+  
+  if (plan_.size() == 1)
+  {
+    // std::cout << "plan_.size() == 1" << std::endl;
+    plan_.clear();  // (actually not needed because done in resetInitialization()
+    mt::state tmp;
+    tmp.pos = data.pos;
+    tmp.yaw = data.yaw;
+    plan_.push_back(tmp);
+  }
+  
   mtx_plan_.unlock();
 
   state_initialized_ = true;
+
+  
+
 
   if (need_to_do_stuff_term_goal_)
   {
@@ -932,6 +946,9 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, si::solOrGuess& best_soluti
   }
 
   k_index = plan_.size() - 1 - k_index_end;
+
+  std::cout << "plan_.size()" << plan_.size() << std::endl;
+
   A = plan_.get(k_index);
 
   // std::cout << "When selection A, plan_.size()= " << plan_.size() << std::endl;
