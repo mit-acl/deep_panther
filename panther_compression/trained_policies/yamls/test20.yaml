@@ -1,0 +1,163 @@
+# Training setting
+#############################################
+num_of_trajs_per_replan: 10 # num of traj (n_s in Table I in deep panther paper)
+max_num_of_initial_guesses: 10 # (n_runs in Table I)
+drone_extra_radius_for_NN: 0.0  #(m) Used for collision checking
+pause_time_when_replanning: false
+replanning_trigger_time_student: 0.01 #[seconds] 
+replanning_trigger_time_expert: 0.01 #[seconds] 
+replanning_lookahead_time: 1.0 #[seconds] #distance in time space = t_in - t_1 in Table I
+use_closed_form_yaw_student: false #If false, the NN will predict this closed form for the yaw angle
+make_yaw_NN: false
+prob_choose_cross: 1.0 # how much you wanna choose cross obstacle in training [0.1]
+# training env space size
+training_env_x_max: 10.0
+training_env_x_min: -10.0
+training_env_y_max: 10.0
+training_env_y_min: -10.0
+training_env_z_max: 4.0 # note that agent initial pos_z = 1.0
+training_env_z_min: -2.0 # it is important to have negative z since planning is in agent frame # note that agent initial pos_z = 1.0
+# used for normalizatoin
+max_dist2goal: 25.0
+max_dist2obs: 25.0
+max_side_bbox_obs: 3.0
+max_dist2BSPoscPoint: 25.0
+training_dt: 0.2 #Training timestep in seconds (how much you proceed as a step in an episode)
+yaw_loss_weight: 70.0
+margin_v_factor: 1.5 #relaxation factor for training constraints used in ObservationManager()
+margin_a_factor: 1.5 #relaxation factor for training constraints used in ObservationManager()
+# because of precision error you will see a very small violation of ydot (eg. 1.0000000002143), so it's nice to keep the margin_ydot_factor a little bit bigger
+margin_ydot_factor: 1.5 #relaxation factor for training constraints used in ObservationManager()
+margin_yaw_factor: 1.5 #relaxation factor for training constraints used in ActionManager()
+training_obst_size: [0.5, 0.5, 0.5] #obstacle size in training env
+training_other_agent_size: [0.05, 0.05, 0.05] #agent size in training env
+use_dynamic_obst_in_training: true
+use_other_agents_in_training: false
+use_expert_for_other_agents_in_training: false
+random_num_of_obstacles_in_training: true # need to get rid of this  # if this is True, # of obstacles is [1,num_of_obstacles_in_training]
+# num_of_obstacles_in_training + num_of_other_agents_in_training should not be bigger than num_max_of_obst defined in params_casadi.yaml(main.m)
+num_of_obstacles_in_training: 2
+num_of_other_agents_in_training: 1
+use_clipping: false
+use_noised_obst_size: false # (1) observation of obstacles are noised
+goal_seen_radius_training: 0.5 # [m]
+
+# LSTM
+#############################################
+use_lstm: true # use LSTM?
+use_bn: false # use batch normalization after LSTM
+lstm_dropout: 0.0
+lstm_output_dim: 64
+lstm_num_layers: 1 # if it's more than 1, it is stacked LSTM
+lstm_bidirectional: false
+
+use_lstm_oa: false # set up LSTM for oa = other agents?
+use_bn_oa: false # use batch normalization after LSTM
+lstm_dropout_oa: 0.0
+lstm_output_dim_oa: 64
+lstm_num_layers_oa: 1 # if it's more than 1, it is stacked LSTM
+lstm_bidirectional_oa: false
+
+# FOV setting
+#############################################
+# From https://www.intel.com/content/www/us/en/support/articles/000030385/emerging-technologies/intel-realsense-technology.html
+# Horizontal FOV: 86 [deg]
+# Vertical FOV:   57 [deg]
+# Diagonal FOV:   94 [deg]
+# From https://www.intelrealsense.com/depth-camera-d435/#:~:text=A%20Powerful%2C%20Full%E2%80%91featured%20Depth%20Camera&text=With%20a%20range%20up%20to,2.0%20and%20cross%2Dplatform%20support.
+# Depth: up to 10 [m]
+fov_x_deg: 76.0 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Horizontal FOV
+fov_y_deg: 47.0 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Vertical FOV
+fov_depth: 5.0 #[m] # this value is hard-coded in main.m. So please make sure to change fov_depth in main.m as well
+
+# Primer Setting
+#############################################
+use_mesh_network: false
+use_delaycheck: true
+use_delaycheck_wo_check: false # if you wanna use this, use_delaycheck needs to be true
+delaycheck_time: 0.05 #[s]
+### ATTENTION: this will change which casadi file we will use for optimization
+### You first need to generate panther_compute_cost.casadi by running main.m with 
+### optimize_n_planes=false, optimize_d_planes=false, and optimize_time_alloc=false. (which is now done by use_panther_star=false)
+### Don't forget to change the compute_cost.save() line from compute_cost.casadi to panther_compute_cost.casadi
+use_panther_star: false # read the comment above
+impose_FOV_in_trajCB: false # if True, it only allows communication betw obstacle that is in FOV
+use_obstacle_edge_cb: false
+obstacle_edge_cb_duration: 1.0 #seconds
+look_teammates: false # not used anymore
+dist_from_gterm_to_dummy: 5.0 #[m]
+obstacle_share_cb_duration: 30.0 #seconds
+use_obstacle_share: false
+use_obstacle_shareCB: false # if it's False and use_obstacle_share is True, then an agent will publish whenever it receives obstacle's traj from tracking predictor. (which could be too frequent, so I intoroduced publishObstacleCB) 
+add_noise_to_obst: false
+
+# PANTHER setting 
+#############################################
+agents_ids: ["01", "02", "03"]
+use_ff: true # use feedforward #Needs to be true if you are using perfect_tracker (because the perfect_tracker needs accel)
+goal_radius: 0.5   #(m) Drone has arrived to the goal when distance_to_goal<GOAL_RADIUS
+goal_seen_radius: 10.0 #(m) no more replanning needed sphere (when drone gets close to goal OS fails a lot, so we introduced this)
+Ra: 20.0           # [m] Radius of my planning sphere (planning horizon)
+drone_bbox: [0.05, 0.05, 0.05]  #(m) Used for collision checking
+obstacle_bbox: [0.5, 0.5, 0.5]  #(m) Used for collision checking
+dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
+angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
+# flight space size
+x_min: -100.0  # [m] don't forget the .0  , be careful with setting these to extremely high values (they are used in the constraints, and may introduce numerical issues)
+x_max: 100.0  # [m] don't forget the .0
+y_min: -100.0  # [m] don't forget the .0
+y_max: 100.0   # [m] don't forget the .0
+z_min: -100.0        #[m] points below this are considered ground
+z_max: 100.0         #[m] 
+ydot_max: 1.0           # [rd/s] Maximum angular velocity. 0.4 for Hardware
+v_max: [5.0, 5.0, 5.0]   #[m/s]  7.0
+a_max: [10.0, 10.0, 10.0]   #[m/s2] Note that if a_max.z() > 9.81, the drone may flip
+j_max: [30.0, 30.0, 30.0]   #[m/s3] 
+factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
+lower_bound_alpha: 3.0 # [s] when alpha (total time of trajectory) is too small, PARM fails a lot
+max_seconds_keeping_traj: 5.0     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
+gamma: 0.1 #[seconds] >0 Time step between discretization points
+use_expert: true
+use_student: false
+
+# Octopus Search
+#############################################
+a_star_samp_x: 5
+a_star_samp_y: 5 
+a_star_samp_z: 5 
+a_star_fraction_voxel_size: 0.0 #\in [0,1] The higher, the bigger the voxel size in A* is(i.e. more prunning)
+a_star_bias: 1.0 #Bias (cost=g+bias*h) in the A* search 
+disc_pts_per_interval_oct_search: 4
+max_runtime_octopus_search: 1.0 #[seconds]
+
+# Visualization
+#############################################
+visual: true #publish visualization stuff
+res_plot_traj: 30.0  #Higher --> More resolution when plotting the trajectory 
+color_type_student: "vel" #"vel" or "time" or "aug_cost" or "agent" or "black"
+color_type_expert: "vel" #"vel" or "time" or "aug_cost" or "agent" or "black"
+n_agents: 16 #only used for the color in the trajectory
+z_goal_when_using_rviz: 0.0 #[meters] 
+
+# Optimization
+#############################################
+c_smooth_yaw_search: 0.0      #weight for the yaw search
+c_visibility_yaw_search: 10.0  #weight for the yaw search
+c_maxydot_yaw_search: 10.0     #weight for the yaw search
+c_pos_smooth: 0.00001          #weight for the optimization
+c_yaw_smooth: 0.0          #weight for the optimization
+c_fov: 1000.0                 #weight for the optimization
+c_final_pos: 1000.0           #weight for the optimization
+c_final_yaw: 0.0             #weight for the optimization
+c_total_time: 0.1            #weight for the optimization
+lambda_obst_avoidance_violation: 10000.0   #To compute the augmented cost
+lambda_dyn_lim_violation: 10000.0          #To compute the augmented cost
+num_of_intervals: 7                       #nlopt/num_pol in rmader.yaml (TODO: could be the same as num_seg in params_casadi.yaml)
+
+# Other
+#############################################
+factor_alloc: 1.0 #>=1. Used to find the total duration of a given trajectory. # check if it's used!!
+alpha_shrink: 1.0 #\in [0,1] Only used for MINVO/Bezier
+norminv_prob: 1.0 #For x% bands, set this to norminv(x). #70.0% band <--> 0.524, 80.0% band <--> 0.841, 90.0% band <--> 1.282, 97.5% band <--> 1.96 (i.e. total area is 95%)
+print_graph_yaw_info: false
+mode: panther #  noPA (no_perception_aware), py (first_pos_then_yaw), panther (panther), ysweep (noPA but with sweep in yaw)
