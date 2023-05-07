@@ -73,11 +73,18 @@ def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
 	b=thrust_normalized[1]
 	c=thrust_normalized[2]
 
-	tmp=(1/math.sqrt(2*(1+c)))
-	q_w = tmp*(1+c) #w
-	q_x = tmp*(-b)  #x
-	q_y = tmp*(a)   #y
-	q_z = 0         #z
+	## to deal with c = -1 issue
+	if c != -1:
+		tmp=(1/math.sqrt(2*(1+c)))
+		q_w = tmp*(1+c) #w
+		q_x = tmp*(-b)  #x
+		q_y = tmp*(a)   #y
+		q_z = 0         #z
+	else:
+		q_w = 0 #w
+		q_x = -b  #x
+		q_y = a   #y
+		q_z = 0         #z
 	qabc=pyquaternion.Quaternion(q_w, q_x, q_y, q_z)  #Constructor is Quaternion(w,x,y,z), see http://kieranwynn.github.io/pyquaternion/#object-initialisation
 
 	q_w = math.cos(yaw/2.0);  #w
@@ -299,7 +306,7 @@ class ObstaclesManager():
 		w_pos_obstacle = []
 		center = np.zeros((3,1))
 		for i in range(self.num_obs):
-			radius_obstacle_pos = random.uniform(self.goal_seen_radius*1.5, (self.x_max / 2))
+			radius_obstacle_pos = random.uniform(5-2, 5+2)
 			std_deg = 30
 			theta_obs = random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
 			height_g_term = random.uniform(self.params["training_env_z_min"], self.params["training_env_z_max"])
