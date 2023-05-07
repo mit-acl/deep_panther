@@ -32,8 +32,8 @@ margin_yaw_factor: 1.5 #relaxation factor for training constraints used in Actio
 training_obst_size: [0.5, 0.5, 0.5] #obstacle size in training env
 training_other_agent_size: [0.05, 0.05, 0.05] #agent size in training env
 use_dynamic_obst_in_training: true
-use_other_agents_in_training: false
-use_expert_for_other_agents_in_training: false
+use_other_agents_in_training: true
+use_expert_for_other_agents_in_training: true
 random_num_of_obstacles_in_training: true # need to get rid of this  # if this is True, # of obstacles is [1,num_of_obstacles_in_training]
 # num_of_obstacles_in_training + num_of_other_agents_in_training should not be bigger than num_max_of_obst defined in params_casadi.yaml(main.m)
 num_of_obstacles_in_training: 2
@@ -80,7 +80,7 @@ delaycheck_time: 0.05 #[s]
 ### You first need to generate panther_compute_cost.casadi by running main.m with 
 ### optimize_n_planes=false, optimize_d_planes=false, and optimize_time_alloc=false. (which is now done by use_panther_star=false)
 ### Don't forget to change the compute_cost.save() line from compute_cost.casadi to panther_compute_cost.casadi
-#####use_panther_star: false # read the comment above
+use_panther_star: false # read the comment above
 impose_FOV_in_trajCB: false # if True, it only allows communication betw obstacle that is in FOV
 use_obstacle_edge_cb: false
 obstacle_edge_cb_duration: 1.0 #seconds
@@ -117,8 +117,8 @@ factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
 lower_bound_alpha: 3.0 # [s] when alpha (total time of trajectory) is too small, PARM fails a lot
 max_seconds_keeping_traj: 5.0     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
 gamma: 0.1 #[seconds] >0 Time step between discretization points
-#####use_expert: true
-#####use_student: false
+use_expert: true
+use_student: false
 
 # Octopus Search
 #############################################
