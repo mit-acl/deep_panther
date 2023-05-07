@@ -20,7 +20,7 @@ import rospy
 from snapstack_msgs.msg import State
 import subprocess
 
-def get_start_end_state(num_of_agents, circle_radius) -> (list, list, list, list, list, list, list):
+def get_start_end_state(num_of_agents, circle_radius, INITIAL_POSITIONS_SHAPE) -> (list, list, list, list, list, list, list):
     """
     get start state for the agent_id-th agent
     the agents will be placed in a circle with circle_radius radius, and the goal will be placed in the opposite direction
@@ -38,15 +38,29 @@ def get_start_end_state(num_of_agents, circle_radius) -> (list, list, list, list
     y_goal_list = []
     z_goal_list = []
 
-    for i in range(num_of_agents):
-        angle = 2*math.pi/num_of_agents * i
-        x_start_list.append(circle_radius*math.cos(angle))
-        y_start_list.append(circle_radius*math.sin(angle))
-        z_start_list.append(0.0)
-        yaw_start_list.append(math.atan2(y_start_list[i], x_start_list[i]) + math.pi)
-        x_goal_list.append(-x_start_list[i])
-        y_goal_list.append(-y_start_list[i])
-        z_goal_list.append(0.0)
+    if INITIAL_POSITIONS_SHAPE=="circle":
+
+        for i in range(num_of_agents):
+            angle = 2*math.pi/num_of_agents * i
+            x_start_list.append(circle_radius*math.cos(angle))
+            y_start_list.append(circle_radius*math.sin(angle))
+            z_start_list.append(0.0)
+            yaw_start_list.append(math.atan2(y_start_list[i], x_start_list[i]) + math.pi)
+            x_goal_list.append(-x_start_list[i])
+            y_goal_list.append(-y_start_list[i])
+            z_goal_list.append(0.0)
+
+    elif INITIAL_POSITIONS_SHAPE=="square": #square is supported up to 4 agents
+
+        for i in range(num_of_agents):
+            angle = math.pi/2 * i + math.pi/4
+            x_start_list.append(circle_radius*math.cos(angle))
+            y_start_list.append(circle_radius*math.sin(angle))
+            z_start_list.append(0.0)
+            yaw_start_list.append(math.atan2(y_start_list[i], x_start_list[i]) + math.pi)
+            x_goal_list.append(-x_start_list[i])
+            y_goal_list.append(-y_start_list[i])
+            z_goal_list.append(0.0)
 
     return x_start_list, y_start_list, z_start_list, yaw_start_list, x_goal_list, y_goal_list, z_goal_list
 
@@ -65,8 +79,8 @@ if __name__ == '__main__':
     ## Parameters
     ##
 
-    NUM_OF_SIMS = 5
-    NUM_OF_AGENTS = [1]
+    NUM_OF_SIMS = 1
+    NUM_OF_AGENTS = [2]
     NUM_OF_OBS_LIST = [2]
     CIRCLE_RADIUS = 5.0
     USE_PERFECT_CONTROLLER = "true"
@@ -77,10 +91,11 @@ if __name__ == '__main__':
     KILL_ALL = "killall -9 gazebo & killall -9 gzserver  & killall -9 gzclient & pkill -f panther & pkill -f gazebo_ros & pkill -f spawn_model & pkill -f gzserver & pkill -f gzclient  & pkill -f static_transform_publisher &  killall -9 multi_robot_node & killall -9 roscore & killall -9 rosmaster & pkill rmader_node & pkill -f tracker_predictor & pkill -f swarm_traj_planner & pkill -f dynamic_obstacles & pkill -f rosout & pkill -f behavior_selector_node & pkill -f rviz & pkill -f rqt_gui & pkill -f perfect_tracker & pkill -f rmader_commands & pkill -f dynamic_corridor & tmux kill-server & pkill -f perfect_controller & pkill -f publish_in_gazebo"
     TOPICS_TO_RECORD = "/{}/goal /{}/state /tf /tf_static /{}/panther/fov /obstacles_mesh /{}/panther/best_solution_expert /{}/panther/best_solution_student /{}/term_goal /{}/panther/actual_traj /clock /trajs /sim_all_agents_goal_reached /{}/panther/is_ready /{}/panther/log"
     USE_RVIZ = sys.argv[2] if len(sys.argv) >2 else "true"
-    AGENTS_TYPES = ["parm", "parm_star", "primer"]
+    AGENTS_TYPES = ["parm_star"]
     TRAJ_NUM_PER_REPLAN_LIST = [10]
     DEFAULT_NUM_MAX_OF_OBST = 2 #TODO: hard-coded
     PRIMER_NUM_MAX_OF_OBST = 2
+    INITIAL_POSITIONS_SHAPE = "square" #circle or square (square is up to 4 agents)
     
     ##
     ## make sure ROS (and related stuff) is not running
@@ -175,7 +190,7 @@ if __name__ == '__main__':
                                 
 
                         ## sim_onboard
-                        x_start_list, y_start_list, z_start_list, yaw_start_list, x_goal_list, y_goal_list, z_goal_list = get_start_end_state(l, CIRCLE_RADIUS)
+                        x_start_list, y_start_list, z_start_list, yaw_start_list, x_goal_list, y_goal_list, z_goal_list = get_start_end_state(l, CIRCLE_RADIUS, INITIAL_POSITIONS_SHAPE)
                         for i, (x, y, z, yaw) in enumerate(zip(x_start_list, y_start_list, z_start_list, yaw_start_list)):
                             agent_name = f"SQ{str(i+1).zfill(2)}s"
                             commands.append(f"sleep 5.0 && roslaunch --wait panther sim_onboard.launch quad:={agent_name} perfect_controller:={USE_PERFECT_CONTROLLER} perfect_prediction:={USE_PERFECT_PREDICTION} x:={x} y:={y} z:={z} yaw:={yaw} 2> >(grep -v -e TF_REPEATED_DATA -e buffer)")
