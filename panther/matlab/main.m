@@ -27,7 +27,7 @@ pos_is_fixed=false; %you need to run this file twice to produce the necessary ca
 %% Variables to determine what should be part of the optimization problems
 %%
 
-use_panther_star=false;
+use_panther_star=true;
 
 %%
 %% variables or paramter in optimization 
@@ -66,7 +66,7 @@ num_seg=7; %The number of segments in the trajectory (the more segments the less
 
 %% ATTENTION!!!!! TODO: make this automatic
 %% if you change these two numbers, don't forget to run this main file twice, once with use_panther_star=true and once with use_panther_star=false
-num_max_of_obst = 4; % This is the maximum num of the obstacles that will be considered in the constraints
+num_max_of_obst = 2; % This is the maximum num of the obstacles that will be considered in the constraints
 num_obst_in_FOV = 2; % This is different from max_num_obst, which is the max number of obst that an agent includes for constraints
 %% END ATTENTION!!!!!
 
@@ -356,9 +356,23 @@ for j=1:(sp.num_seg)
       end
     end  
     
+    %Sphere constraints
+    for kk=1:size(Q,2) 
+        tmp=(Q{kk}-p0);
+        const_p{end+1}= (tmp'*tmp)<=(Ra*Ra) ;
+    end
+
     %Min max xyz constraints
     for kk=1:size(Q,2) 
         t_obs=Q{kk};
+        const_p{end+1}= x_lim(1)<=t_obs(1);
+        const_p{end+1}= x_lim(2)>=t_obs(1);
+        
+        const_p{end+1}= y_lim(1)<=t_obs(2);
+        const_p{end+1}= y_lim(2)>=t_obs(2);
+
+        const_p{end+1}= z_lim(1)<=t_obs(3); 
+        const_p{end+1}= z_lim(2)>=t_obs(3);
     end
 end
 
@@ -424,8 +438,8 @@ for i = 1:num_obst_in_FOV
         is_in_FOV_tmp=-cos(thetax_half_FOV_deg*pi/180.0) + (c_P(1:3)'/norm(c_P((1:3))))*[0;0;1]; % Constraint is is_in_FOV1>=0
         
         % is_in_FOV_tmp = if_else(c_P(3) < fov_depth, is_in_FOV_tmp, 0.0); %If the obstacle is farther than fov_depth, then it is not in the FOV (https://www.mathworks.com/matlabcentral/answers/714068-cannot-convert-logical-to-casadi-sx)
-        is_in_FOV_tmp = is_in_FOV_tmp * (1.5*fov_depth - c_P(3))/(1.5*fov_depth);
-        is_in_FOV_tmp = if_else(c_P(3) < 1.5*fov_depth, is_in_FOV_tmp, -1.0); %If the obstacle is farther than fov_depth, then it is not in the FOV (https://www.mathworks.com/matlabcentral/answers/714068-cannot-convert-logical-to-casadi-sx)
+        % is_in_FOV_tmp = is_in_FOV_tmp * (1.5*fov_depth - c_P(3))/(1.5*fov_depth);
+        % is_in_FOV_tmp = if_else(c_P(3) < 1.5*fov_depth, is_in_FOV_tmp, -1.0); %If the obstacle is farther than fov_depth, then it is not in the FOV (https://www.mathworks.com/matlabcentral/answers/714068-cannot-convert-logical-to-casadi-sx)
 
         gamma=100; %Weight on the field of view soft-constriant
         all_is_in_FOV_smooth=[all_is_in_FOV_smooth  (   1/(1+exp(-gamma*is_in_FOV_tmp))  ) ];
@@ -647,7 +661,7 @@ opts = struct;
 opts.expand=true; %When this option is true, it goes WAY faster!
 opts.print_time=0;
 opts.ipopt.print_level=print_level; 
-opts.ipopt.max_iter=50;
+opts.ipopt.max_iter=500;
 opts.ipopt.linear_solver=linear_solver_name;
 opts.jit=jit;%If true, when I call solve(), Matlab will automatically generate a .c file, convert it to a .mex and then solve the problem using that compiled code
 opts.compiler='shell';
