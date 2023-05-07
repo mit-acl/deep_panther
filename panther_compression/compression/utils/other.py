@@ -407,9 +407,25 @@ class OtherAgentsManager():
 		## create self.w_state
 		##
 
+		# choose positions of other agents
+		x_min = 5.0 - 2.0
+		x_max = 5.0 + 2.0
+		
+		if random.random() < 0.5:
+			y_min = 5.0 - 2.0
+			y_max = 5.0 + 2.0
+			y_term_g = -5.0
+		else:
+			y_min = -5.0 - 2.0
+			y_max = -5.0 + 2.0
+			y_term_g = 5.0
+
+		w_pos_x = random.uniform(x_min, x_max)
+		w_pos_y = random.uniform(y_min, y_max)
+
 		self.w_pos = np.array([
-			[random.uniform(self.x_min, self.x_max)],
-			[random.uniform(self.y_min, self.y_max)],
+			[w_pos_x],
+			[w_pos_y],
 			[random.uniform(self.z_min, self.z_max)]
 		])
 
@@ -428,8 +444,8 @@ class OtherAgentsManager():
 		min_dist = 5.0
 		while dist < min_dist:
 			self.w_gterm_pos = np.array([
-				[random.uniform(self.x_min, self.x_max)],
-				[random.uniform(self.y_min, self.y_max)],
+				[w_pos_x],
+				[y_term_g],
 				[random.uniform(self.z_min, self.z_max)]
 			])
 			dist = np.linalg.norm(self.w_gterm_pos - self.w_pos)
@@ -486,7 +502,7 @@ class OtherAgentsManager():
 		## get action from policy
 		##
 
-		oaf_action_n, _ = self.get_oaf_action_n_from_oaf_obs_n(oaf_obs_n)
+		oaf_action_n = self.get_oaf_action_n_from_oaf_obs_n(oaf_obs_n)
 
 		if self.am.isNanAction(oaf_action_n) or not self.am.actionIsNormalized(oaf_action_n):
 			print(f"Nan action!")
@@ -533,7 +549,8 @@ class OtherAgentsManager():
 		"""
 		print("call policy in other agent manager")
 		oaf_action_n = self.policy.predict(oaf_obs_n)
-		return oaf_action_n
+
+		return oaf_action_n[0]
 
 	def get_oaf_obs_from_w_obs(self, w_obstacles):
 		"""
