@@ -79,8 +79,8 @@ if __name__ == '__main__':
     ## Parameters
     ##
 
-    NUM_OF_SIMS = 1
-    NUM_OF_AGENTS = [2]
+    NUM_OF_SIMS = 100
+    NUM_OF_AGENTS = [1]
     NUM_OF_OBS_LIST = [2]
     CIRCLE_RADIUS = 5.0
     USE_PERFECT_CONTROLLER = "true"
@@ -95,7 +95,7 @@ if __name__ == '__main__':
     TRAJ_NUM_PER_REPLAN_LIST = [10]
     DEFAULT_NUM_MAX_OF_OBST = 2 #TODO: hard-coded
     PRIMER_NUM_MAX_OF_OBST = 2
-    INITIAL_POSITIONS_SHAPE = "square" #circle or square (square is up to 4 agents)
+    INITIAL_POSITIONS_SHAPE = "circle" #circle or square (square is up to 4 agents)
     
     ##
     ## make sure ROS (and related stuff) is not running

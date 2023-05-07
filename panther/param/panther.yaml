@@ -32,7 +32,7 @@ margin_yaw_factor: 1.5 #relaxation factor for training constraints used in Actio
 training_obst_size: [0.5, 0.5, 0.5] #obstacle size in training env
 training_other_agent_size: [0.05, 0.05, 0.05] #agent size in training env
 use_dynamic_obst_in_training: true
-use_other_agents_in_training: true
+use_other_agents_in_training: false
 use_expert_for_other_agents_in_training: true
 random_num_of_obstacles_in_training: true # need to get rid of this  # if this is True, # of obstacles is [1,num_of_obstacles_in_training]
 # num_of_obstacles_in_training + num_of_other_agents_in_training should not be bigger than num_max_of_obst defined in params_casadi.yaml(main.m)
@@ -40,7 +40,7 @@ num_of_obstacles_in_training: 2
 num_of_other_agents_in_training: 1
 use_clipping: false
 use_noised_obst_size: false # (1) observation of obstacles are noised
-goal_seen_radius_training: 8.0 # [m]
+goal_seen_radius_training: 3.0 # [m]
 
 # LSTM
 #############################################
@@ -103,19 +103,19 @@ obstacle_bbox: [0.5, 0.5, 0.5]  #(m) Used for collision checking
 dc: 0.01            #(seconds) Duration for the interpolation=Value of the timer pubGoal
 angle_deg_focus_front: 9000 #Angle to decide whether to focus on an obstacle or to focus on front of me, set to very big if you wanna focus always on obstacle
 # flight space size
-x_min: -100.0  # [m] don't forget the .0  , be careful with setting these to extremely high values (they are used in the constraints, and may introduce numerical issues)
-x_max: 100.0  # [m] don't forget the .0
-y_min: -100.0  # [m] don't forget the .0
-y_max: 100.0   # [m] don't forget the .0
-z_min: -100.0        #[m] points below this are considered ground
-z_max: 100.0         #[m] 
-ydot_max: 1.0           # [rd/s] Maximum angular velocity. 0.4 for Hardware
+x_min: -15.0  # [m] don't forget the .0  , be careful with setting these to extremely high values (they are used in the constraints, and may introduce numerical issues)
+x_max: 15.0  # [m] don't forget the .0
+y_min: -15.0  # [m] don't forget the .0
+y_max: 15.0   # [m] don't forget the .0
+z_min: -2.0        #[m] points below this are considered ground
+z_max: 2.0         #[m] 
+ydot_max: 6.28319  # [rd/s] Maximum angular velocity. 0.4 for Hardware
 v_max: [5.0, 5.0, 5.0]   #[m/s]  7.0
 a_max: [10.0, 10.0, 10.0]   #[m/s2] Note that if a_max.z() > 9.81, the drone may flip
 j_max: [30.0, 30.0, 30.0]   #[m/s3] 
 factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
-lower_bound_alpha: 3.0 # [s] when alpha (total time of trajectory) is too small, PARM fails a lot
-max_seconds_keeping_traj: 5.0     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
+lower_bound_alpha: 1.0 # [s] when alpha (total time of trajectory) is too small, PARM fails a lot
+max_seconds_keeping_traj: 20.0     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
 gamma: 0.1 #[seconds] >0 Time step between discretization points
 use_expert: true
 use_student: false
@@ -145,11 +145,11 @@ c_smooth_yaw_search: 0.0      #weight for the yaw search
 c_visibility_yaw_search: 10.0  #weight for the yaw search
 c_maxydot_yaw_search: 10.0     #weight for the yaw search
 c_pos_smooth: 0.0          #weight for the optimization
-c_yaw_smooth: 0.0          #weight for the optimization
-c_fov: 1000.0                 #weight for the optimization
-c_final_pos: 1000.0           #weight for the optimization
+c_yaw_smooth: 0.01          #weight for the optimization
+c_fov: 100.0                 #weight for the optimization
+c_final_pos: 10.0           #weight for the optimization
 c_final_yaw: 0.0             #weight for the optimization
-c_total_time: 0.1            #weight for the optimization
+c_total_time: 0.001           #weight for the optimization
 lambda_obst_avoidance_violation: 10000.0   #To compute the augmented cost
 lambda_dyn_lim_violation: 10000.0          #To compute the augmented cost
 num_of_intervals: 7                       #nlopt/num_pol in rmader.yaml (TODO: could be the same as num_seg in params_casadi.yaml)
