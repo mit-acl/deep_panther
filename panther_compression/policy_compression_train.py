@@ -163,7 +163,7 @@ if __name__ == "__main__":
     reuse_latest_policy = False
 
     # record bags?
-    record_bag = True
+    record_bag = False
 
     # use tensorboard?
     launch_tensorboard=True
