@@ -22,7 +22,6 @@ import numpy as np
 from random import *
 import tf2_ros
 from numpy import linalg as LA
-from run_many_sims import get_start_end_state
 
 class GoalReachedCheck:
 
