@@ -65,7 +65,7 @@ if __name__ == '__main__':
     ## Parameters
     ##
 
-    NUM_OF_SIMS = 1
+    NUM_OF_SIMS = 5
     NUM_OF_AGENTS = [1]
     NUM_OF_OBS_LIST = [2]
     CIRCLE_RADIUS = 5.0
@@ -95,8 +95,8 @@ if __name__ == '__main__':
     os.system("sed -i '/use_panther_star:/s/^/#/g' $(rospack find panther)/param/panther.yaml")
     os.system("sed -i '/use_expert:/s/^/#/g' $(rospack find panther)/param/panther.yaml") ## added : to avoid commenting out use_expert_for_other_agents_in_training
     os.system("sed -i '/use_student:/s/^/#/g' $(rospack find panther)/param/panther.yaml")
-    os.system("sed -i '/num_of_trajs_per_replan:/s/^/#/g' $(rospack find panther)/param/panther.yaml")
-    os.system("sed -i '/max_num_of_initial_guesses:/s/^/#/g' $(rospack find panther)/param/panther.yaml")
+    # os.system("sed -i '/num_of_trajs_per_replan:/s/^/#/g' $(rospack find panther)/param/panther.yaml")
+    # os.system("sed -i '/max_num_of_initial_guesses:/s/^/#/g' $(rospack find panther)/param/panther.yaml")
     # os.system("sed -i '/num_max_of_obst:/s/^/#/g' $(rospack find panther)/matlab/casadi_generated_files/params_casadi.yaml")
 
     ##
@@ -107,7 +107,7 @@ if __name__ == '__main__':
 
         for agent_type in AGENTS_TYPES:
 
-            if traj_num != 6 and agent_type == "primer":
+            if traj_num != 10 and agent_type == "primer":
                 # primer always produce 6 trajs as the NN's output is fixed
                 continue
 
@@ -155,22 +155,22 @@ if __name__ == '__main__':
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_panther_star false")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_expert true")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_student false")
-                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_of_trajs_per_replan {traj_num}")
-                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/max_num_of_initial_guesses {traj_num}")
+                                # commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_of_trajs_per_replan {traj_num}")
+                                # commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/max_num_of_initial_guesses {traj_num}")
                                 # commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_max_of_obst {DEFAULT_NUM_MAX_OF_OBST}")
                             elif agent_type == "parm_star":
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_panther_star true")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_expert true")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_student false")
-                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_of_trajs_per_replan {traj_num}")
-                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/max_num_of_initial_guesses {traj_num}")
+                                # commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_of_trajs_per_replan {traj_num}")
+                                # commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/max_num_of_initial_guesses {traj_num}")
                                 # commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_max_of_obst {DEFAULT_NUM_MAX_OF_OBST}")
                             elif agent_type == "primer":
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_panther_star true")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_expert false")
                                 commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/use_student true")
-                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_of_trajs_per_replan {traj_num}")
-                                commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/max_num_of_initial_guesses {traj_num}")
+                                # commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_of_trajs_per_replan {traj_num}")
+                                # commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/max_num_of_initial_guesses {traj_num}")
                                 # commands.append(f"sleep 2.0 && rosparam set /{agent_name}/panther/num_max_of_obst {PRIMER_NUM_MAX_OF_OBST}")
                                 
 
