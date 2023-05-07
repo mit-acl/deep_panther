@@ -64,8 +64,7 @@ if __name__ == '__main__':
     with open(PANTHER_YAML_PATH) as f:
         PANTHER_YAML_PARAMS = yaml.safe_load(f)
     AGENT_BBOX = np.array(PANTHER_YAML_PARAMS["drone_bbox"]) 
-    # OBSTACLE_BBOX = np.array(PANTHER_YAML_PARAMS["obstacle_bbox"])
-    OBSTACLE_BBOX = np.array([0.6, 0.6, 0.6])
+    OBSTACLE_BBOX = np.array(PANTHER_YAML_PARAMS["obstacle_bbox"])
     BBOX_AGENT_AGENT = AGENT_BBOX / 2  + AGENT_BBOX / 2
     BBOX_AGENT_OBST = AGENT_BBOX / 2 + OBSTACLE_BBOX / 2
     FOV_X_DEG = PANTHER_YAML_PARAMS["fov_x_deg"]
