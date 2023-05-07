@@ -1505,7 +1505,8 @@ class StudentCaller():
 	""" StudentCaller().predict() is called in panther.cpp """
 	def __init__(self, policy_path):
 		# self.student_policy=bc.reconstruct_policy(policy_path)
-		self.student_policy=policy = th.load(policy_path, map_location=utils.get_device("auto")) #Same as doing bc.reconstruct_policy(policy_path) 
+		# self.student_policy=policy = th.load(policy_path, map_location=utils.get_device("auto")) #Same as doing bc.reconstruct_policy(policy_path) 
+		self.student_policy=policy = th.load(policy_path, map_location=utils.get_device("cpu")) #Same as doing bc.reconstruct_policy(policy_path) 
 		self.om=ObservationManager()
 		self.am=ActionManager()
 		self.obsm=ObstaclesManager()
