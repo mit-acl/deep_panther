@@ -66,7 +66,7 @@ num_seg=7; %The number of segments in the trajectory (the more segments the less
 
 %% ATTENTION!!!!! TODO: make this automatic
 %% if you change these two numbers, don't forget to run this main file twice, once with use_panther_star=true and once with use_panther_star=false
-num_max_of_obst = 2; % This is the maximum num of the obstacles that will be considered in the constraints
+num_max_of_obst = 4; % This is the maximum num of the obstacles that will be considered in the constraints
 num_obst_in_FOV = 2; % This is different from max_num_obst, which is the max number of obst that an agent includes for constraints
 %% END ATTENTION!!!!!
 
@@ -647,7 +647,7 @@ opts = struct;
 opts.expand=true; %When this option is true, it goes WAY faster!
 opts.print_time=0;
 opts.ipopt.print_level=print_level; 
-opts.ipopt.max_iter=100;
+opts.ipopt.max_iter=50;
 opts.ipopt.linear_solver=linear_solver_name;
 opts.jit=jit;%If true, when I call solve(), Matlab will automatically generate a .c file, convert it to a .mex and then solve the problem using that compiled code
 opts.compiler='shell';
