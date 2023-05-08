@@ -40,7 +40,7 @@ num_of_obstacles_in_training: 2
 num_of_other_agents_in_training: 1
 use_clipping: false
 use_noised_obst_size: false # (1) observation of obstacles are noised
-goal_seen_radius_training: 3.0 # [m]
+goal_seen_radius_training: 6.0 # [m]
 
 # LSTM
 #############################################
@@ -68,7 +68,7 @@ lstm_bidirectional_oa: false
 # Depth: up to 10 [m]
 fov_x_deg: 76.0 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Horizontal FOV
 fov_y_deg: 47.0 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Vertical FOV
-fov_depth: 8.0 #[m] # this value is hard-coded in main.m. So please make sure to change fov_depth in main.m as well
+fov_depth: 5.0 #[m] # this value is hard-coded in main.m. So please make sure to change fov_depth in main.m as well
 
 # Primer Setting
 #############################################
