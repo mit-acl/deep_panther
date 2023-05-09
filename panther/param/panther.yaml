@@ -32,8 +32,8 @@ margin_yaw_factor: 1.5 #relaxation factor for training constraints used in Actio
 training_obst_size: [0.5, 0.5, 0.5] #obstacle size in training env
 training_other_agent_size: [0.05, 0.05, 0.05] #agent size in training env
 use_dynamic_obst_in_training: true
-use_other_agents_in_training: false
-use_expert_for_other_agents_in_training: true
+use_other_agents_in_training: true
+use_expert_for_other_agents_in_training: false
 random_num_of_obstacles_in_training: false # need to get rid of this  # if this is True, # of obstacles is [1,num_of_obstacles_in_training]
 # num_of_obstacles_in_training + num_of_other_agents_in_training should not be bigger than num_max_of_obst defined in params_casadi.yaml(main.m)
 num_of_obstacles_in_training: 2
@@ -51,7 +51,7 @@ lstm_output_dim: 64
 lstm_num_layers: 1 # if it's more than 1, it is stacked LSTM
 lstm_bidirectional: false
 
-use_lstm_oa: false # set up LSTM for oa = other agents?
+use_lstm_oa: true # set up LSTM for oa = other agents?
 use_bn_oa: false # use batch normalization after LSTM
 lstm_dropout_oa: 0.0
 lstm_output_dim_oa: 64
