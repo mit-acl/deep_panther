@@ -311,9 +311,6 @@ class StudentPolicy(BasePolicy):
         obst_features = features[None, :, self.agent_input_dim:obst_oa_separation_index]
         oa_features = features[None, :, obst_oa_separation_index:obst_oa_separation_index + num_oa*self.lstm_each_obstacle_dim]
         
-        print("num_oa: ", num_oa)
-        print("num_obst: ", num_obst)
-        
         batch_size = features.shape[0]
         num_of_obstacles = int(obst_features.shape[2]/self.lstm_each_obstacle_dim) # need to calculate here because num_of_obstacles depends on each simulation
         

@@ -218,8 +218,9 @@ class MyEnvironment(gym.Env):
     ##
 
     w_obstacles_and_student = self.w_obstacles[:]
+    # test22.pt might not work well if there's another agent
+    # w_obstacles_and_student.extend(w_student_for_other_agents)
     w_obstacles = self.w_obstacles[:]
-    w_obstacles_and_student.extend(w_student_for_other_agents)
 
     num_other_agents = 0
     if self.par.use_other_agents_in_training:
@@ -358,7 +359,8 @@ class MyEnvironment(gym.Env):
     ##
 
     w_obstacles_and_student = self.w_obstacles[:]
-    w_obstacles_and_student.extend(w_student_for_other_agents)
+    # test22.pt might not work well if there's another agent
+    # w_obstacles_and_student.extend(w_student_for_other_agents)
     w_obstacles = self.w_obstacles[:]
 
     num_other_agents = 0

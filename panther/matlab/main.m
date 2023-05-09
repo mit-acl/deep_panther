@@ -27,7 +27,7 @@ pos_is_fixed=false; %you need to run this file twice to produce the necessary ca
 %% Variables to determine what should be part of the optimization problems
 %%
 
-use_panther_star=false;
+use_panther_star=true;
 
 %%
 %% variables or paramter in optimization 
