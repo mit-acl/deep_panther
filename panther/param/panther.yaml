@@ -32,7 +32,7 @@ margin_yaw_factor: 1.5 #relaxation factor for training constraints used in Actio
 training_obst_size: [0.5, 0.5, 0.5] #obstacle size in training env
 training_other_agent_size: [0.05, 0.05, 0.05] #agent size in training env
 use_dynamic_obst_in_training: true
-use_other_agents_in_training: true
+use_other_agents_in_training: false
 use_expert_for_other_agents_in_training: false
 random_num_of_obstacles_in_training: false # need to get rid of this  # if this is True, # of obstacles is [1,num_of_obstacles_in_training]
 # num_of_obstacles_in_training + num_of_other_agents_in_training should not be bigger than num_max_of_obst defined in params_casadi.yaml(main.m)
@@ -40,7 +40,7 @@ num_of_obstacles_in_training: 2
 num_of_other_agents_in_training: 1
 use_clipping: false
 use_noised_obst_size: false # (1) observation of obstacles are noised
-goal_seen_radius_training: 6.0 # [m]
+goal_seen_radius_training: 1.5 # [m]
 
 # LSTM
 #############################################
@@ -51,7 +51,7 @@ lstm_output_dim: 64
 lstm_num_layers: 1 # if it's more than 1, it is stacked LSTM
 lstm_bidirectional: false
 
-use_lstm_oa: true # set up LSTM for oa = other agents?
+use_lstm_oa: false # set up LSTM for oa = other agents?
 use_bn_oa: false # use batch normalization after LSTM
 lstm_dropout_oa: 0.0
 lstm_output_dim_oa: 64
@@ -68,7 +68,7 @@ lstm_bidirectional_oa: false
 # Depth: up to 10 [m]
 fov_x_deg: 76.0 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Horizontal FOV
 fov_y_deg: 47.0 #[deg] \in (0,180] ,  angle between two faces of the tetrahedron. Vertical FOV
-fov_depth: 8.0 #[m] # this value is hard-coded in main.m. So please make sure to change fov_depth in main.m as well
+fov_depth: 6.0 #[m] # this value is hard-coded in main.m. So please make sure to change fov_depth in main.m as well
 
 # Primer Setting
 #############################################
@@ -80,7 +80,7 @@ delaycheck_time: 0.05 #[s]
 ### You first need to generate panther_compute_cost.casadi by running main.m with 
 ### optimize_n_planes=false, optimize_d_planes=false, and optimize_time_alloc=false. (which is now done by use_panther_star=false)
 ### Don't forget to change the compute_cost.save() line from compute_cost.casadi to panther_compute_cost.casadi
-use_panther_star: false # read the comment above
+#use_panther_star: true # read the comment above
 impose_FOV_in_trajCB: false # if True, it only allows communication betw obstacle that is in FOV
 use_obstacle_edge_cb: false
 obstacle_edge_cb_duration: 1.0 #seconds
@@ -117,8 +117,8 @@ factor_alpha: 1.0 #[-] DeltaT = factor_alpha*States_took_previous_replan
 lower_bound_alpha: 1.0 # [s] when alpha (total time of trajectory) is too small, PARM fails a lot
 max_seconds_keeping_traj: 20.0     #% If a trajectory has been kept for this long (since its last update was received), it is deleted
 gamma: 0.1 #[seconds] >0 Time step between discretization points
-use_expert: true
-use_student: false
+#use_expert: true
+#use_student: false
 
 # Octopus Search
 #############################################
@@ -147,7 +147,7 @@ c_maxydot_yaw_search: 10.0     #weight for the yaw search
 c_pos_smooth: 0.0          #weight for the optimization
 c_yaw_smooth: 0.01          #weight for the optimization
 c_fov: 100.0                 #weight for the optimization
-c_final_pos: 10.0           #weight for the optimization
+c_final_pos: 100.0           #weight for the optimization
 c_final_yaw: 0.0             #weight for the optimization
 c_total_time: 0.001           #weight for the optimization
 lambda_obst_avoidance_violation: 10000.0   #To compute the augmented cost
