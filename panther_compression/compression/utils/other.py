@@ -1700,6 +1700,7 @@ class CostComputer():
 			print(f"total_time={total_time}")
 			print(f"f_traj_n={f_traj_n}")
 			print(f"f_traj={f_traj}")
+			return 1e8 # if total_time is small, then this trajectory is not legit
 		
 		##
 		## loop over obstacles
@@ -1854,8 +1855,7 @@ class CostComputer():
 		else:
 			print(index_best_safe_traj)
 			print(index_best_unsafe_traj)
-			print("This should never happen!!")
-			exit();		
+			raise("This should never happen!!")
 
 		result=CostsAndViolationsOfAction(costs=costs, obst_avoidance_violations=obst_avoidance_violations, dyn_lim_violations=dyn_lim_violations, index_best_traj=index_best_traj)
 
