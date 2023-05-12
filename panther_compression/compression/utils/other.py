@@ -313,8 +313,8 @@ class ObstaclesManager():
 			height_obstacle = height_g_term + random.uniform(-0.25, 0.25)
 			w_pos_obstacle.append(center + np.array([[radius_obstacle_pos*math.cos(theta_obs)],[radius_obstacle_pos*math.sin(theta_obs)],[height_obstacle]]))
 		
-		# w_pos_g_term = center + np.array([[random.uniform((self.x_max / 2)*1.5, self.x_max)], [0], [random.uniform(self.z_min, self.z_max)]])
-		w_pos_g_term = center + np.array([[10.0], [0.0], [0.0]])
+		w_pos_g_term = center + np.array([[random.uniform(8.0, 12.0)], [0.0], [random.uniform(self.z_min, self.z_max)]])
+		# w_pos_g_term = center + np.array([[10.0], [0.0], [0.0]])
 
 		return w_pos_obstacle, w_pos_g_term
 	
