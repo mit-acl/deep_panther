@@ -42,6 +42,7 @@ import datetime
 import yaml
 import pprint
 import rospkg
+import pickle
 
 def listdirs(rootdir, subdirs):
     for it in os.scandir(rootdir):
@@ -456,8 +457,8 @@ if __name__ == '__main__':
 
             # (8) success rate
             success = True if reached_goal \
-                and num_of_collisions_btwn_agents <= 0.0001 \
-                and num_of_collisions_btwn_agents_and_obstacles <= 0.0001 else False
+                and num_of_collisions_btwn_agents <= 1e-6 \
+                and num_of_collisions_btwn_agents_and_obstacles <= 1e-6 else False
             success_rate_list.append(success)
 
             # (9) accel trajectory smoothness & (10) jerk trajectory smoothness
@@ -468,6 +469,62 @@ if __name__ == '__main__':
 
             # (11) number of stops
             num_of_stops_list.extend(num_of_stops)
+
+        ##
+        ## Data pickling
+        ##
+
+        # make directory
+        if not os.path.exists(os.path.join(DATA_DIR, sim_folder, "pkls")):
+            os.makedirs(os.path.join(DATA_DIR, sim_folder, "pkls"))
+
+        pickling_folder = os.path.join(DATA_DIR, sim_folder, "pkls")
+
+        # (1) travel time
+        with open(os.path.join(pickling_folder, "travel_time_list.pkl"), "wb") as f:
+            pickle.dump(travel_time_list, f)
+        
+        # (2) computation time
+        with open(os.path.join(pickling_folder, "computation_time_list.pkl"), "wb") as f:
+            pickle.dump(computation_time_list, f)
+        
+        # (3) number of collisions
+        with open(os.path.join(pickling_folder, "num_of_collisions_btwn_agents_list.pkl"), "wb") as f:
+            pickle.dump(num_of_collisions_btwn_agents_list, f)
+        
+        with open(os.path.join(pickling_folder, "num_of_collisions_btwn_agents_and_obstacles_list.pkl"), "wb") as f:
+            pickle.dump(num_of_collisions_btwn_agents_and_obstacles_list, f)
+        
+        # (4) fov rate
+        with open(os.path.join(pickling_folder, "fov_rate_list.pkl"), "wb") as f:
+            pickle.dump(fov_rate_list, f)
+        
+        # (5) continuous fov detection (min, avg, max)
+        with open(os.path.join(pickling_folder, "continuous_fov_detection_list.pkl"), "wb") as f:
+            pickle.dump(continuous_fov_detection_list, f)
+        
+        # (6) translational dynamic constraints violation rate
+        with open(os.path.join(pickling_folder, "translational_dynamic_constraint_violation_rate_list.pkl"), "wb") as f:
+            pickle.dump(translational_dynamic_constraint_violation_rate_list, f)
+        
+        # (7) yaw dynamic constraint violation rate
+        with open(os.path.join(pickling_folder, "yaw_dynamic_constraint_violation_rate_list.pkl"), "wb") as f:
+            pickle.dump(yaw_dynamic_constraint_violation_rate_list, f)
+        
+        # (8) success rate
+        with open(os.path.join(pickling_folder, "success_rate_list.pkl"), "wb") as f:
+            pickle.dump(success_rate_list, f)
+        
+        # (9) accel trajectory smoothness & (10) jerk trajectory smoothness
+        with open(os.path.join(pickling_folder, "accel_trajectory_smoothness_list.pkl"), "wb") as f:
+            pickle.dump(accel_trajectory_smoothness_list, f)
+        
+        with open(os.path.join(pickling_folder, "jerk_trajectory_smoothness_list.pkl"), "wb") as f:
+            pickle.dump(jerk_trajectory_smoothness_list, f)
+        
+        # (11) number of stops
+        with open(os.path.join(pickling_folder, "num_of_stops_list.pkl"), "wb") as f:
+            pickle.dump(num_of_stops_list, f)
 
         ##
         ## Data print per simulation environment (eg. 1_obs_1_agent)

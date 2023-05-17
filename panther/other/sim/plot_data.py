@@ -39,6 +39,12 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.font_manager as font_manager
 from process_data import listdirs
+import pickle
+from pylab import *
+
+##
+##############################################################################
+##
 
 def plot_bar(y_axis_label, fig_name, data1, data2):
 
@@ -93,6 +99,245 @@ def plot_bar(y_axis_label, fig_name, data1, data2):
     plt.title("3 agents with 2 obstacles", fontproperties=font)
     plt.savefig(fig_name, bbox_inches='tight')
     plt.show()
+
+##
+##############################################################################
+##
+
+def organize_for_plot_box_1_traj_6_traj(lists):
+
+    data1 = [[lists[0], lists[1]], [lists[2], lists[3]], lists[4]]
+    data2 = [[lists[5], lists[6]], [lists[7], lists[8]], lists[9]]
+
+    return data1, data2
+
+##
+##############################################################################
+##
+
+def sort_for_plot_box_1_traj_6_traj(data):
+
+    list = []
+
+    for folder in data:
+        if "/1_traj/parm/" in folder:
+            list.append(folder)
+    
+    for folder in data:
+        if "/6_traj/parm/" in folder:
+            list.append(folder)
+
+    for folder in data:
+        if "/1_traj/parm_star/" in folder:
+            list.append(folder)
+
+    for folder in data:
+        if "/6_traj/parm_star/" in folder:
+            list.append(folder)
+    
+    for folder in data:
+        if "/6_traj/primer/" in folder:
+            list.append(folder)
+    
+    return list
+        
+##
+##############################################################################
+##
+
+# function for setting the colors of the box plots pairs (https://stackoverflow.com/questions/16592222/matplotlib-group-boxplots)
+def setBoxColors(bp):
+    setp(bp['boxes'][0], color='blue')
+    setp(bp['caps'][0], color='blue')
+    setp(bp['caps'][1], color='blue')
+    setp(bp['whiskers'][0], color='blue')
+    setp(bp['whiskers'][1], color='blue')
+    # setp(bp['fliers'][0], color='blue')
+    # setp(bp['fliers'][1], color='blue')
+    setp(bp['medians'][0], color='blue')
+
+    setp(bp['boxes'][1], color='red')
+    setp(bp['caps'][2], color='red')
+    setp(bp['caps'][3], color='red')
+    setp(bp['whiskers'][2], color='red')
+    setp(bp['whiskers'][3], color='red')
+    # setp(bp['fliers'][2], color='red')
+    # setp(bp['fliers'][3], color='red')
+    setp(bp['medians'][1], color='red')
+
+##
+##############################################################################
+##
+
+# function for setting the colors of the box plots pairs (https://stackoverflow.com/questions/16592222/matplotlib-group-boxplots)
+def setBoxColors_for_primer(bp):
+    setp(bp['boxes'][0], color='red')
+    setp(bp['caps'][0], color='red')
+    setp(bp['caps'][1], color='red')
+    setp(bp['whiskers'][0], color='red')
+    setp(bp['whiskers'][1], color='red')
+    # setp(bp['fliers'][0], color='red')
+    # setp(bp['fliers'][1], color='red')
+    setp(bp['medians'][0], color='red')
+
+##
+##############################################################################
+##
+
+def plot_box_1_traj_6_traj(y_axis_label, fig_name, data1, data2):
+
+    """ 
+    plot the data in a box plot 
+    
+    data1: 1 agent with 2 obstacles
+        ex. [[[1-traj-parm], [6-traj-parm]], [[1-traj-parm-star, 6-traj-parm-star]], [6-traj-primer]]
+    data2: 3 agents with 2 obstacles
+        ex. [[[1-traj-parm], [6-traj-parm]], [[1-traj-parm-star, 6-traj-parm-star]], [6-traj-primer]]
+    """
+
+    # constants
+    LABELS = ["PARM", "PARM*", "PRIMER"]
+
+    # get rid of the top and right frame
+    mpl.rcParams['axes.spines.right'] = False
+    mpl.rcParams['axes.spines.top'] = False
+
+    # plot data1
+    fig = plt.figure(figsize =(10, 7))
+    # hold(True)
+ 
+    # Creating axes instance
+    ax1 = fig.add_subplot(2,1,1)
+    ax2 = fig.add_subplot(2,1,2)
+
+    # Creating plot
+    # parm
+    bp_parm_1 = ax1.boxplot(data1[0], positions=[1,1.5], widths=0.3, showfliers=False)
+    bp_parm_2 = ax2.boxplot(data2[0], positions=[1,1.5], widths=0.3, showfliers=False)
+    # parm*
+    bp_parm_star_1 = ax1.boxplot(data1[1], positions=[2.5,3], widths=0.3, showfliers=False)
+    bp_parm_star_2 = ax2.boxplot(data2[1], positions=[2.5,3], widths=0.3, showfliers=False)
+    # primer
+    bp_primer_1 = ax1.boxplot(data1[2], positions=[4], widths=0.3, showfliers=False)
+    bp_primer_2 = ax2.boxplot(data2[2], positions=[4], widths=0.3, showfliers=False)
+    # set colors
+    setBoxColors(bp_parm_1)
+    setBoxColors(bp_parm_2)
+    setBoxColors(bp_parm_star_1)
+    setBoxColors(bp_parm_star_2)
+    setBoxColors_for_primer(bp_primer_1)
+    setBoxColors_for_primer(bp_primer_2)
+    # vertical line
+    ax1.axvline(x=2, color='black', linestyle='--')
+    ax1.axvline(x=3.5, color='black', linestyle='--')
+    ax2.axvline(x=2, color='black', linestyle='--')
+    ax2.axvline(x=3.5, color='black', linestyle='--')
+    # make it log scale
+    ax1.set_yscale('log')
+    ax2.set_yscale('log')
+
+    # add space between subplots
+    plt.subplots_adjust(hspace=0.35)
+
+    # make the plot prettier
+    ax1.set_xticks([1.25, 2.75, 4])
+    ax1.set_xticklabels(LABELS, fontproperties=font)
+    ax2.set_xticks([1.25, 2.75, 4])
+    ax2.set_xticklabels(LABELS, fontproperties=font)
+    ax1.set_xlim(0.5, 4.5)
+    ax2.set_xlim(0.5, 4.5)
+    fig.text(0.06, 0.5, y_axis_label, va='center', rotation='vertical', fontproperties=font)
+    ax1.set_title("1 agent with 2 obstacles", fontproperties=font)
+    ax2.set_title("3 agents with 2 obstacles", fontproperties=font)
+    
+    # draw temporary red and blue lines and use them to create a legend
+    hB, = plot([1,1],'b-')
+    hR, = plot([1,1],'r-')
+    ax1.legend((hB, hR),('1 traj', '6 trajs'))
+    ax2.legend((hB, hR),('1 traj', '6 trajs'))
+    hB.set_visible(False)
+    hR.set_visible(False)
+
+    # save figure
+    plt.savefig(fig_name, bbox_inches='tight')
+
+def plot_box(y_axis_label, fig_name, data1, data2):
+
+    # constants
+    LABELS = ["PARM", "PARM*", "PRIMER"]
+    X_AXIS_STEP = 1
+    x_axis = np.arange(1, X_AXIS_STEP*len(LABELS)+1, X_AXIS_STEP) 
+
+    # get rid of the top and right frame
+    mpl.rcParams['axes.spines.right'] = False
+    mpl.rcParams['axes.spines.top'] = False
+
+    # plot data1
+    fig = plt.figure(figsize =(10, 7))
+ 
+    # Creating axes instance
+    ax1 = fig.add_subplot(2,1,1)
+    # ax1.grid(axis='y')
+    ax2 = fig.add_subplot(2,1,2)
+    # ax2.grid(axis='y')
+
+    # Creating plot
+    bp1 = ax1.boxplot(data1, showfliers=False)
+    bp2 = ax2.boxplot(data2, showfliers=False)
+
+    # add space between subplots
+    plt.subplots_adjust(hspace=0.35)
+
+    # make the plot prettier
+    ax1.set_xticklabels(LABELS, fontproperties=font)
+    ax2.set_xticklabels(LABELS, fontproperties=font)
+    fig.text(0.06, 0.5, y_axis_label, va='center', rotation='vertical', fontproperties=font)
+    ax1.set_title("1 agent with 2 obstacles", fontproperties=font)
+    ax2.set_title("2 agents with 2 obstacles", fontproperties=font)
+    
+    # save figure
+    plt.savefig(fig_name, bbox_inches='tight')
+
+# def plot_box(y_axis_label, fig_name, data1, data2):
+
+#     # constants
+#     LABELS = ["Expert", "Student"]
+#     X_AXIS_STEP = 1
+#     x_axis = np.arange(1, X_AXIS_STEP*len(LABELS)+1, X_AXIS_STEP) 
+
+#     # get rid of the top and right frame
+#     mpl.rcParams['axes.spines.right'] = False
+#     mpl.rcParams['axes.spines.top'] = False
+
+#     # plot data1
+#     fig = plt.figure(figsize =(10, 7))
+ 
+#     # Creating axes instance
+#     ax1 = fig.add_subplot(2,1,1)
+#     # ax1.grid(axis='y')
+#     ax2 = fig.add_subplot(2,1,2)
+#     # ax2.grid(axis='y')
+
+#     # Creating plot
+#     bp1 = ax1.boxplot(data1, showfliers=False)
+#     bp2 = ax2.boxplot(data2, showfliers=False)
+
+#     # add space between subplots
+#     plt.subplots_adjust(hspace=0.35)
+
+#     # make the plot prettier
+#     ax1.set_xticklabels(LABELS, fontproperties=font)
+#     ax2.set_xticklabels(LABELS, fontproperties=font)
+#     fig.text(0.06, 0.5, y_axis_label, va='center', rotation='vertical', fontproperties=font)
+#     ax1.set_title("1 agent with 2 obstacles", fontproperties=font)
+#     ax2.set_title("2 agents with 2 obstacles", fontproperties=font)
+    
+#     # save figure
+#     plt.savefig(fig_name, bbox_inches='tight')
+
+##
+##############################################################################
+##
 
 if __name__ == '__main__':
 
@@ -169,106 +414,122 @@ if __name__ == '__main__':
         elif sim_folder.endswith("2_obs_3_agents"):
             two_obs_three_agents_list.append(sim_folder)
 
-    print("two_obs_one_agent_list: ", two_obs_one_agent_list)
-    print("two_obs_three_agents_list: ", two_obs_three_agents_list)
+    sim_folders = sort_for_plot_box_1_traj_6_traj(two_obs_one_agent_list)
+    sim_folders.extend(sort_for_plot_box_1_traj_6_traj(two_obs_three_agents_list))
 
-    for sim_folders in [two_obs_one_agent_list, two_obs_three_agents_list]:
+    for sim_folder in sim_folders:
 
-        for sim_folder in sim_folders:
-
-            with open(os.path.join(sim_folder, "data.txt"), "r") as f:
-                info = f.readlines()
-                # (1) travel time
-                travel_time_list.append(float(info[4].split(":")[1].strip().split(" ")[0]))
-
-                # (2) computation time
-                computation_time_list.append(float(info[5].split(":")[1].strip().split(" ")[0]))
-
-                # (3) number of collisions
-                num_of_collisions_btwn_agents_list.append(float(info[6].split(":")[1].strip()))
-                num_of_collisions_btwn_agents_and_obstacles_list.append(float(info[7].split(":")[1].strip()))
+        # (1) travel time
+        with open(os.path.join(sim_folder, "pkls", "travel_time_list.pkl"), "rb") as f:
+            travel_time_list.append(pickle.load(f))
         
-                # (4) fov rate
-                fov_rate_list.append(float(info[8].split(":")[1].strip().split(" ")[0]))
-
-                # (5) continuous fov detection
-                continuous_fov_detection_list.append(float(info[9].split(":")[1].strip()))
-
-                # (6) translational dynamic constraint violation rate
-                translational_dynamic_constraint_violation_rate_list.append(float(info[10].split(":")[1].strip().split(" ")[0]))
-
-                # (7) yaw dynamic constraint violation rate
-                yaw_dynamic_constraint_violation_rate_list.append(float(info[11].split(":")[1].strip().split(" ")[0]))
-
-                # (8) success rate
-                success_rate_list.append(float(info[12].split(":")[1].strip().split(" ")[0]))
-
-                # (9) accel trajectory smoothness
-                accel_trajectory_smoothness_list.append(float(info[13].split(":")[1].strip()))
-
-                # (10) jerk trajectory smoothness
-                jerk_trajectory_smoothness_list.append(float(info[14].split(":")[1].strip()))
-
-                # (11) number of stops
-                num_of_stops_list.append(float(info[15].split(":")[1].strip()))
-            
-            print("Finished extracting data from {}".format(sim_folder))
+        # (2) computation time
+        with open(os.path.join(sim_folder, "pkls", "computation_time_list.pkl"), "rb") as f:
+            computation_time_list.append(pickle.load(f))
+        
+        # (3) number of collisions
+        with open(os.path.join(sim_folder, "pkls", "num_of_collisions_btwn_agents_list.pkl"), "rb") as f:
+            num_of_collisions_btwn_agents_list.append(pickle.load(f))
+        
+        with open(os.path.join(sim_folder, "pkls", "num_of_collisions_btwn_agents_and_obstacles_list.pkl"), "rb") as f:
+            num_of_collisions_btwn_agents_and_obstacles_list.append(pickle.load(f))
+        
+        # (4) fov rate
+        with open(os.path.join(sim_folder, "pkls", "fov_rate_list.pkl"), "rb") as f:
+            fov_rate_list.append(pickle.load(f))
+        
+        # (5) continuous fov detection
+        with open(os.path.join(sim_folder, "pkls", "continuous_fov_detection_list.pkl"), "rb") as f:
+            continuous_fov_detection_list.append(pickle.load(f))
+        
+        # (6) translational dynamic constraint violation rate
+        with open(os.path.join(sim_folder, "pkls", "translational_dynamic_constraint_violation_rate_list.pkl"), "rb") as f:
+            translational_dynamic_constraint_violation_rate_list.append(pickle.load(f))
+        
+        # (7) yaw dynamic constraint violation rate
+        with open(os.path.join(sim_folder, "pkls", "yaw_dynamic_constraint_violation_rate_list.pkl"), "rb") as f:
+            yaw_dynamic_constraint_violation_rate_list.append(pickle.load(f))
+        
+        # (8) success rate
+        with open(os.path.join(sim_folder, "pkls", "success_rate_list.pkl"), "rb") as f:
+            success_rate_list.append(pickle.load(f))
+        
+        # (9) accel trajectory smoothness
+        with open(os.path.join(sim_folder, "pkls", "accel_trajectory_smoothness_list.pkl"), "rb") as f:
+            accel_trajectory_smoothness_list.append(pickle.load(f))
+        
+        # (10) jerk trajectory smoothness
+        with open(os.path.join(sim_folder, "pkls", "jerk_trajectory_smoothness_list.pkl"), "rb") as f:
+            jerk_trajectory_smoothness_list.append(pickle.load(f))
+        
+        # (11) number of stops
+        with open(os.path.join(sim_folder, "pkls", "num_of_stops_list.pkl"), "rb") as f:
+            num_of_stops_list.append(pickle.load(f))
+        
+        print("Finished extracting data from {}".format(sim_folder))
 
     ##
-    ## change data format for plotting
-    ## (eg. travel_time_list = [[parm's 1 traj, parm's 6 trajs], [parm star's 1 traj, parm star's 6 trajs], [primer]])
-    ## travel_time_list_2obs1agents = [[1, 2], [3, 4], [5]]
-    ## travel_time_list_2obs3agents = [[2, 3], [4, 5], [6]]
+    ## Plot data (box plot)
     ##
 
-    ##
-    ## Plot data
-    ##
+    # if there is not file to save figures, create one
+    if not os.path.exists(FIG_SAVE_DIR):
+        os.makedirs(FIG_SAVE_DIR)
 
     # (1) travel time
-    travel_time_list_2obs1agents = [travel_time_list[0:2], travel_time_list[2:4], travel_time_list[4]]
-    travel_time_list_2obs3agents = [travel_time_list[5:7], travel_time_list[7:9], travel_time_list[9]]
     travel_time_y_axis_label = "Travel time [s]"
-    travel_time_fig_name = "travel_time"
-    plot_bar(y_axis_label=travel_time_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+travel_time_fig_name, data1=travel_time_list_2obs1agents, data2=travel_time_list_2obs3agents)
+    travel_time_fig_name = "travel_time.pdf"
+    data1, data2 = organize_for_plot_box_1_traj_6_traj(travel_time_list)
+    plot_box_1_traj_6_traj(y_axis_label=travel_time_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+travel_time_fig_name, data1=data1, data2=data2)
 
     # (2) computation time
-    computation_time_list_2obs1agents = [computation_time_list[0:2], computation_time_list[2:4], computation_time_list[4]]
-    computation_time_list_2obs3agents = [computation_time_list[5:7], computation_time_list[7:9], computation_time_list[9]]
     computation_time_y_axis_label = "Computation time [s]"
-    computation_time_fig_name = "computation_time"
-    plot_bar(y_axis_label=computation_time_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+computation_time_fig_name, data1=computation_time_list_2obs1agents, data2=computation_time_list_2obs3agents)
+    computation_time_fig_name = "computation_time.pdf"
+    data1, data2 = organize_for_plot_box_1_traj_6_traj(computation_time_list)
+    plot_box_1_traj_6_traj(y_axis_label=computation_time_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+computation_time_fig_name, data1=data1, data2=data2)
 
     # (3) number of collisions
-    num_of_collisions_btwn_agents_list_2obs1agents = [num_of_collisions_btwn_agents_list[0:2], num_of_collisions_btwn_agents_list[2:4], num_of_collisions_btwn_agents_list[4]]
-    num_of_collisions_btwn_agents_list_2obs3agents = [num_of_collisions_btwn_agents_list[5:7], num_of_collisions_btwn_agents_list[7:9], num_of_collisions_btwn_agents_list[9]]
-    num_of_collisions_btwn_agents_y_axis_label = "Number of collisions between agents"
-    num_of_collisions_btwn_agents_fig_name = "num_of_collisions_btwn_agents"
-    plot_bar(y_axis_label=num_of_collisions_btwn_agents_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+num_of_collisions_btwn_agents_fig_name, data1=num_of_collisions_btwn_agents_list_2obs1agents, data2=num_of_collisions_btwn_agents_list_2obs3agents)
+    # num_of_collisions_btwn_agents_y_axis_label = "Number of collisions between agents"
+    # num_of_collisions_btwn_agents_fig_name = "num_of_collisions_btwn_agents"
+    # num_of_collisions_btwn_agents_list.append(num_of_collisions_btwn_agents_list[0])
+    # num_of_collisions_btwn_agents_list.append(num_of_collisions_btwn_agents_list[0])
+    # plot_box(y_axis_label=num_of_collisions_btwn_agents_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+num_of_collisions_btwn_agents_fig_name, data1=num_of_collisions_btwn_agents_list, data2=num_of_collisions_btwn_agents_list)
 
-    num_of_collisions_btwn_agents_and_obstacles_list_2obs1agents = [num_of_collisions_btwn_agents_and_obstacles_list[0:2], num_of_collisions_btwn_agents_and_obstacles_list[2:4], num_of_collisions_btwn_agents_and_obstacles_list[4]]
-    num_of_collisions_btwn_agents_and_obstacles_list_2obs3agents = [num_of_collisions_btwn_agents_and_obstacles_list[5:7], num_of_collisions_btwn_agents_and_obstacles_list[7:9], num_of_collisions_btwn_agents_and_obstacles_list[9]]
-    num_of_collisions_btwn_agents_and_obstacles_y_axis_label = "Number of collisions between agents and obstacles"
-    num_of_collisions_btwn_agents_and_obstacles_fig_name = "num_of_collisions_btwn_agents_and_obstacles"
-    plot_bar(y_axis_label=num_of_collisions_btwn_agents_and_obstacles_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+num_of_collisions_btwn_agents_and_obstacles_fig_name, data1=num_of_collisions_btwn_agents_and_obstacles_list_2obs1agents, data2=num_of_collisions_btwn_agents_and_obstacles_list_2obs3agents)
+    # num_of_collisions_btwn_agents_and_obstacles_y_axis_label = "Number of collisions between agents and obstacles"
+    # num_of_collisions_btwn_agents_and_obstacles_fig_name = "num_of_collisions_btwn_agents_and_obstacles"
+    # num_of_collisions_btwn_agents_and_obstacles_list.append(num_of_collisions_btwn_agents_and_obstacles_list[0])
+    # num_of_collisions_btwn_agents_and_obstacles_list.append(num_of_collisions_btwn_agents_and_obstacles_list[0])
+    # plot_box(y_axis_label=num_of_collisions_btwn_agents_and_obstacles_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+num_of_collisions_btwn_agents_and_obstacles_fig_name, data1=num_of_collisions_btwn_agents_and_obstacles_list, data2=num_of_collisions_btwn_agents_and_obstacles_list)
 
-    # (4) fov rate
-    fov_rate_list_2obs1agents = [fov_rate_list[0:2], fov_rate_list[2:4], fov_rate_list[4]]
-    fov_rate_list_2obs3agents = [fov_rate_list[5:7], fov_rate_list[7:9], fov_rate_list[9]]
-    fov_rate_y_axis_label = "FOV rate [%]"
-    fov_rate_list_fig_name = "fov_rate"
-    plot_bar(y_axis_label=fov_rate_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+fov_rate_list_fig_name, data1=fov_rate_list_2obs1agents, data2=fov_rate_list_2obs3agents)
+    # (4) fov rate (this is 1 or 0 and not good for box plot)
+    # fov_rate_y_axis_label = "FOV rate [/%]"
+    # fov_rate_list_fig_name = "fov_rate"
+    # fov_rate_list = [[int(elem) for elem in elem_list] for elem_list in fov_rate_list]
+    # print(fov_rate_list)
+    # fov_rate_list.append(fov_rate_list[0])
+    # fov_rate_list.append(fov_rate_list[0])
+    # plot_box(y_axis_label=fov_rate_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+fov_rate_list_fig_name, data1=fov_rate_list, data2=fov_rate_list)
 
-    # (5) continuous fov detection
-    continuous_fov_detection_list_2obs1agents = [continuous_fov_detection_list[0:2], continuous_fov_detection_list[2:4], continuous_fov_detection_list[4]]
-    continuous_fov_detection_list_2obs3agents = [continuous_fov_detection_list[5:7], continuous_fov_detection_list[7:9], continuous_fov_detection_list[9]]
-    continuous_fov_detection_y_axis_label = "Continuous FOV detection [%]"
-    continuous_fov_detection_fig_name = "continuous_fov_detection"
-    plot_bar(y_axis_label=continuous_fov_detection_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+continuous_fov_detection_fig_name, data1=continuous_fov_detection_list_2obs1agents, data2=continuous_fov_detection_list_2obs3agents)
+    # (5) continuous fov detection (we are only recording the max fov detection, so no need to plot )
+    # continuous_fov_detection_y_axis_label = "Continuous FOV detection [%]"
+    # continuous_fov_detection_fig_name = "continuous_fov_detection"
+    # continuous_fov_detection_list.append(continuous_fov_detection_list[0])
+    # continuous_fov_detection_list.append(continuous_fov_detection_list[0])
+    # plot_box(y_axis_label=continuous_fov_detection_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+continuous_fov_detection_fig_name, data1=continuous_fov_detection_list, data2=continuous_fov_detection_list)
 
-    # (8) success rate
-    success_rate_list_2obs1agents = [success_rate_list[0:2], success_rate_list[2:4], success_rate_list[4]]
-    success_rate_list_2obs3agents = [success_rate_list[5:7], success_rate_list[7:9], success_rate_list[9]]
-    success_rate_y_axis_label = "Success rate [%]"
-    success_rate_fig_name = "success_rate"
-    plot_bar(y_axis_label=success_rate_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+success_rate_fig_name, data1=success_rate_list_2obs1agents, data2=success_rate_list_2obs3agents)
+    # (9) accel trajectory smoothness
+    accel_trajectory_smoothness_y_axis_label = r"$\int\left\Vert\mathbf{a}\right\Vert^2dt \ [m^2/s^3]$" #"Accel trajectory smoothness [m/s^3]"
+    accel_trajectory_smoothness_fig_name = "accel_trajectory_smoothness.pdf" 
+    data1, data2 = organize_for_plot_box_1_traj_6_traj(accel_trajectory_smoothness_list)
+    plot_box_1_traj_6_traj(y_axis_label=accel_trajectory_smoothness_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+accel_trajectory_smoothness_fig_name, data1=data1, data2=data2)
+
+    # (10) jerk trajectory smoothness
+    jerk_trajectory_smoothness_y_axis_label = r"$\int\left\Vert\mathbf{j}\right\Vert^2dt \ [m^2/3^5]$" #"Jerk trajectory smoothness"
+    jerk_trajectory_smoothness_fig_name = "jerk_trajectory_smoothness.pdf"
+    data1, data2 = organize_for_plot_box_1_traj_6_traj(jerk_trajectory_smoothness_list)
+    plot_box_1_traj_6_traj(y_axis_label=jerk_trajectory_smoothness_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+jerk_trajectory_smoothness_fig_name, data1=data1, data2=data2)
+
+    # # (11) number of stops
+    # num_of_stops_y_axis_label = "Number of stops"
+    # num_of_stops_fig_name = "num_of_stops"
+    # plot_box(y_axis_label=num_of_stops_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+num_of_stops_fig_name, data1=num_of_stops_list[0:2], data2=num_of_stops_list[2:4])

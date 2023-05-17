@@ -20,4 +20,5 @@
 20. test20.pt: 1024x1024x1024x1024x1024x1024 pos_loss: 6e-4, yaw_loss 6e-4, didn't reach goal much
 21. test21.pt: 1024x1024x1024x1024 pos_loss: 7e-4, yaw_loss 5e-4 trained for 1 agent + 2 obsts  
 22. test22.pt: 1024x1024x1024x1024 pos_loss: 1e-3, yaw_loss 4e-3 trained for 1 agent + 2 obsts, without depth consideration in FOV -> pretty conservative, but it's safer  
+23. test23.pt: 1024x1024x1024x1024 pos_loss: 1e-3, yaw_loss 1e-3 trained for 1 agent + 2 obsts, without depth consideration in FOV, and for 5m-radius
 
