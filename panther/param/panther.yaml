@@ -89,7 +89,7 @@ dist_from_gterm_to_dummy: 5.0 #[m]
 obstacle_share_cb_duration: 30.0 #seconds
 use_obstacle_share: false
 use_obstacle_shareCB: false # if it's False and use_obstacle_share is True, then an agent will publish whenever it receives obstacle's traj from tracking predictor. (which could be too frequent, so I intoroduced publishObstacleCB) 
-add_noise_to_obst: false
+add_noise_to_obst: true
 
 # PANTHER setting 
 #############################################
