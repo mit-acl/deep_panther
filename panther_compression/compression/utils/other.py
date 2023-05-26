@@ -313,7 +313,7 @@ class ObstaclesManager():
 			height_obstacle = height_g_term + random.uniform(-0.25, 0.25)
 			w_pos_obstacle.append(center + np.array([[radius_obstacle_pos*math.cos(theta_obs)],[radius_obstacle_pos*math.sin(theta_obs)],[height_obstacle]]))
 		
-		w_pos_g_term = center + np.array([[random.uniform(8.0, 12.0)], [0.0], [random.uniform(self.z_min, self.z_max)]])
+		w_pos_g_term = center + np.array([[random.uniform(8.0, 12.0)], [0.0], [0.0]])
 		# w_pos_g_term = center + np.array([[10.0], [0.0], [0.0]])
 
 		return w_pos_obstacle, w_pos_g_term
@@ -415,10 +415,12 @@ class OtherAgentsManager():
 			y_min = 5.0 - 2.0
 			y_max = 5.0 + 2.0
 			y_term_g = -5.0
+			yaw = - math.pi / 2.0
 		else:
 			y_min = -5.0 - 2.0
 			y_max = -5.0 + 2.0
 			y_term_g = 5.0
+			yaw = math.pi / 2.0
 
 		w_pos_x = random.uniform(x_min, x_max)
 		w_pos_y = random.uniform(y_min, y_max)
@@ -426,12 +428,12 @@ class OtherAgentsManager():
 		self.w_pos = np.array([
 			[w_pos_x],
 			[w_pos_y],
-			[random.uniform(self.z_min, self.z_max)]
+			[0.0]
 		])
 
 		self.w_vel = np.array([[0], [0], [0]])
 		self.w_acc = np.array([[0], [0], [0]])
-		self.w_yaw = np.array([[0]])
+		self.w_yaw = np.array([[yaw]])
 		self.w_dyaw = np.array([[0]])
 
 		self.w_state = State(self.w_pos, self.w_vel, self.w_acc, self.w_yaw, self.w_dyaw)
@@ -523,6 +525,16 @@ class OtherAgentsManager():
 		##
 
 		index_smallest_augmented_cost = self.cost_computer.getIndexBestTraj(self.previous_oaf_obs_n, oaf_action_n)
+
+		if index_smallest_augmented_cost == None:
+			print(f"Nan action!")
+			# return w_obstacles and num_of_other_agents
+			w_other_agents = self.get_static_other_agents()
+			w_obstacles_and_other_agents = w_obstacles[:]
+			w_obstacles_and_other_agents.extend(w_other_agents)
+			return w_obstacles_and_other_agents, self.num_of_other_agents
+
+
 		oaf_traj = self.am.getTrajFromAction(oaf_action, index_smallest_augmented_cost)
 		w_other_agents = self.am.f_traj_and_w_state_2_w_student_for_other_agents(oaf_traj, self.w_state)
 		w_obstacles_and_other_agents = w_obstacles[:]
@@ -1159,7 +1171,8 @@ class ActionManager():
 		self.Npos = self.num_seg + self.deg_pos-1
 
 		self.max_dist2BSPoscPoint=params["max_dist2BSPoscPoint"]
-		self.max_yawcPoint=self.margin_yaw_factor*2.0*math.pi # not sure why but this was 4e3*math.pi before (Kota's change)
+		# self.max_yawcPoint=self.margin_yaw_factor*2.0*math.pi # not sure why but this was 4e3*math.pi before (Kota's change)
+		self.max_yawcPoint=10.0*math.pi # not sure why but this was 4e3*math.pi before (Kota's change)
 		self.fitter_total_time=params["fitter_total_time"]
 
 		self.training_other_agent_size = params["training_other_agent_size"]
@@ -1697,9 +1710,9 @@ class CostComputer():
 		##
 
 		if(total_time<1e-5):
-			print(f"total_time={total_time}")
-			print(f"f_traj_n={f_traj_n}")
-			print(f"f_traj={f_traj}")
+			# print(f"total_time={total_time}")
+			# print(f"f_traj_n={f_traj_n}")
+			# print(f"f_traj={f_traj}")
 			return 1e8 # if total_time is small, then this trajectory is not legit
 		
 		##
@@ -1766,7 +1779,11 @@ class CostComputer():
 
 	def getIndexBestTraj(self, f_obs_n, f_action_n):
 
-		tmp=self.getCostsAndViolationsOfActionFromObsnAndActionn(f_obs_n, f_action_n)
+		tmp = self.getCostsAndViolationsOfActionFromObsnAndActionn(f_obs_n, f_action_n)
+
+		if tmp == None:
+			return None
+
 		return tmp.index_best_traj
 		# smallest_augmented_cost = float('inf')
 		# index_smallest_augmented_cost = 0
@@ -1853,9 +1870,11 @@ class CostComputer():
 		elif(index_best_unsafe_traj is not None):
 			index_best_traj= index_best_unsafe_traj
 		else:
-			print(index_best_safe_traj)
-			print(index_best_unsafe_traj)
-			raise("This should never happen!!")
+			# print(index_best_safe_traj)
+			# print(index_best_unsafe_traj)
+			# raise("This should never happen!!")
+			print('all the generated trajectories are not valid')
+			return None
 
 		result=CostsAndViolationsOfAction(costs=costs, obst_avoidance_violations=obst_avoidance_violations, dyn_lim_violations=dyn_lim_violations, index_best_traj=index_best_traj)
 

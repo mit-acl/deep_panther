@@ -125,8 +125,8 @@ def get_latest_policy():
     # get last item in list
     lastfile = files_sorted[-1]
 
+    # return bc.reconstruct_policy(os.getcwd()+'/trained_policies/policies/test23.pt')
     print("latest file: ", lastfile[0])
-
     return bc.reconstruct_policy(lastfile[0])
 
 #Trainer is the student
