@@ -306,14 +306,14 @@ class ObstaclesManager():
 		w_pos_obstacle = []
 		center = np.zeros((3,1))
 		for i in range(self.num_obs):
-			radius_obstacle_pos = random.uniform(5-2, 5+2)
+			radius_obstacle_pos = random.uniform(3-1, 3+1)
 			std_deg = 30
 			theta_obs = random.uniform(-std_deg*np.pi/180, std_deg*np.pi/180) 
 			height_g_term = random.uniform(self.params["training_env_z_min"], self.params["training_env_z_max"])
 			height_obstacle = height_g_term + random.uniform(-0.25, 0.25)
 			w_pos_obstacle.append(center + np.array([[radius_obstacle_pos*math.cos(theta_obs)],[radius_obstacle_pos*math.sin(theta_obs)],[height_obstacle]]))
 		
-		w_pos_g_term = center + np.array([[random.uniform(8.0, 12.0)], [0.0], [0.0]])
+		w_pos_g_term = center + np.array([[random.uniform(5.0, 7.0)], [0.0], [0.0]])
 		# w_pos_g_term = center + np.array([[10.0], [0.0], [0.0]])
 
 		return w_pos_obstacle, w_pos_g_term
