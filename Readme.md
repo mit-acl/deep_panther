@@ -10,11 +10,12 @@ Deep-PANTHER deployed on different environments. The policy in all the videos ab
 When using Deep-PANTHER, please cite [Deep-PANTHER: Learning-Based Perception-Aware Trajectory Planner in Dynamic Environments](https://arxiv.org/abs/2209.01268) ([pdf](https://arxiv.org/pdf/2209.01268.pdf) and [video](https://www.youtube.com/watch?v=53GBjP1jFW8)):
 
 ```bibtex
-@article{tordesillas2022deep,
-  title={Deep-PANTHER: Learning-Based Perception-Aware Trajectory Planner in Dynamic Environments},
+@article{tordesillas2023deep,
+  title={{Deep-PANTHER}: Learning-based perception-aware trajectory planner in dynamic environments},
   author={Tordesillas, Jesus and How, Jonathan P},
-  journal={arXiv preprint arXiv:2209.01268},
-  year={2022}
+  journal={IEEE Robotics and Automation Letters},
+  year={2023},
+  publisher={IEEE}
 }
 ```
 
