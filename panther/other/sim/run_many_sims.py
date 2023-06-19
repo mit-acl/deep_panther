@@ -62,6 +62,18 @@ def get_start_end_state(num_of_agents, circle_radius, INITIAL_POSITIONS_SHAPE) -
             y_goal_list.append(-y_start_list[i])
             z_goal_list.append(0.0)
 
+    elif INITIAL_POSITIONS_SHAPE=="line": #square is supported up to 4 agents
+
+        for i in range(num_of_agents):
+            x_start_list.append(0.0)
+            # start from one line depending on the number of agents
+            y_start_list.append(i)
+            z_start_list.append(0.0)
+            yaw_start_list.append(0.0)
+            x_goal_list.append(2*circle_radius)
+            y_goal_list.append(num_of_agents-1-i)
+            z_goal_list.append(0.0)
+
     return x_start_list, y_start_list, z_start_list, yaw_start_list, x_goal_list, y_goal_list, z_goal_list
 
 def check_goal_reached():
@@ -79,10 +91,10 @@ if __name__ == '__main__':
     ## Parameters
     ##
 
-    NUM_OF_SIMS = 100
-    NUM_OF_AGENTS = [1]
+    NUM_OF_SIMS = 1
+    NUM_OF_AGENTS = [3]
     NUM_OF_OBS_LIST = [2]
-    CIRCLE_RADIUS = 5.0
+    CIRCLE_RADIUS = 3.0
     USE_PERFECT_CONTROLLER = "true"
     USE_PERFECT_PREDICTION = "true"
     SIM_DURATION = 60 # in seconds
@@ -91,11 +103,12 @@ if __name__ == '__main__':
     KILL_ALL = "killall -9 gazebo & killall -9 gzserver  & killall -9 gzclient & pkill -f panther & pkill -f gazebo_ros & pkill -f spawn_model & pkill -f gzserver & pkill -f gzclient  & pkill -f static_transform_publisher &  killall -9 multi_robot_node & killall -9 roscore & killall -9 rosmaster & pkill rmader_node & pkill -f tracker_predictor & pkill -f swarm_traj_planner & pkill -f dynamic_obstacles & pkill -f rosout & pkill -f behavior_selector_node & pkill -f rviz & pkill -f rqt_gui & pkill -f perfect_tracker & pkill -f rmader_commands & pkill -f dynamic_corridor & tmux kill-server & pkill -f perfect_controller & pkill -f publish_in_gazebo"
     TOPICS_TO_RECORD = "/{}/goal /{}/state /tf /tf_static /{}/panther/fov /obstacles_mesh /{}/panther/best_solution_expert /{}/panther/best_solution_student /{}/term_goal /{}/panther/actual_traj /clock /trajs /sim_all_agents_goal_reached /{}/panther/is_ready /{}/panther/log"
     USE_RVIZ = sys.argv[2] if len(sys.argv) >2 else "true"
-    AGENTS_TYPES = ["parm", "parm_star", "primer"]
+    # AGENTS_TYPES = ["parm", "parm_star", "primer"]
+    AGENTS_TYPES = ["primer"]
     TRAJ_NUM_PER_REPLAN_LIST = [10]
     DEFAULT_NUM_MAX_OF_OBST = 2 #TODO: hard-coded
     PRIMER_NUM_MAX_OF_OBST = 2
-    INITIAL_POSITIONS_SHAPE = "circle" #circle or square (square is up to 4 agents)
+    INITIAL_POSITIONS_SHAPE = "line" #circle or square (square is up to 4 agents) or line
     
     ##
     ## make sure ROS (and related stuff) is not running

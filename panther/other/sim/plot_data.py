@@ -233,8 +233,8 @@ def plot_box_1_traj_6_traj(y_axis_label, fig_name, data1, data2):
     ax2.axvline(x=2, color='black', linestyle='--')
     ax2.axvline(x=3.5, color='black', linestyle='--')
     # make it log scale
-    ax1.set_yscale('log')
-    ax2.set_yscale('log')
+    # ax1.set_yscale('log')
+    # ax2.set_yscale('log')
 
     # add space between subplots
     plt.subplots_adjust(hspace=0.35)
@@ -524,7 +524,7 @@ if __name__ == '__main__':
     plot_box_1_traj_6_traj(y_axis_label=accel_trajectory_smoothness_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+accel_trajectory_smoothness_fig_name, data1=data1, data2=data2)
 
     # (10) jerk trajectory smoothness
-    jerk_trajectory_smoothness_y_axis_label = r"$\int\left\Vert\mathbf{j}\right\Vert^2dt \ [m^2/3^5]$" #"Jerk trajectory smoothness"
+    jerk_trajectory_smoothness_y_axis_label = r"$\int\left\Vert\mathbf{j}\right\Vert^2dt \ [m^2/s^5]$" #"Jerk trajectory smoothness"
     jerk_trajectory_smoothness_fig_name = "jerk_trajectory_smoothness.pdf"
     data1, data2 = organize_for_plot_box_1_traj_6_traj(jerk_trajectory_smoothness_list)
     plot_box_1_traj_6_traj(y_axis_label=jerk_trajectory_smoothness_y_axis_label, fig_name=FIG_SAVE_DIR+"/"+jerk_trajectory_smoothness_fig_name, data1=data1, data2=data2)

@@ -519,21 +519,19 @@ void PantherRos::trajCB(const panther_msgs::DynTraj& msg)
   // Check if this trajectory is in FOV
   //
 
-  if (par_.impose_FOV_in_trajCB)
-  {
-    Eigen::Vector3d c_pos = c_T_b_ * (w_T_b_.inverse()) * w_pos;  // position of the obstacle in the camera frame
-                                                                  // (i.e., depth optical frame)
-    bool inFOV =                                                  // check if it's inside the field of view.
-        c_pos.z() < par_.fov_depth &&                             //////////////////////
-        fabs(atan2(c_pos.x(), c_pos.z())) <
-            ((par_.fov_x_deg * M_PI / 180.0) / 2.0) &&  ///// Note that fov_x_deg means x camera_depth_optical_frame
-        fabs(atan2(c_pos.y(), c_pos.z())) <
-            ((par_.fov_y_deg * M_PI / 180.0) / 2.0);  ///// Note that fov_y_deg means x camera_depth_optical_frame
+  
+  Eigen::Vector3d c_pos = c_T_b_ * (w_T_b_.inverse()) * w_pos;  // position of the obstacle in the camera frame
+                                                                // (i.e., depth optical frame)
+  bool inFOV =                                                  // check if it's inside the field of view.
+      c_pos.z() < par_.fov_depth &&                             //////////////////////
+      fabs(atan2(c_pos.x(), c_pos.z())) <
+          ((par_.fov_x_deg * M_PI / 180.0) / 2.0) &&  ///// Note that fov_x_deg means x camera_depth_optical_frame
+      fabs(atan2(c_pos.y(), c_pos.z())) <
+          ((par_.fov_y_deg * M_PI / 180.0) / 2.0);  ///// Note that fov_y_deg means x camera_depth_optical_frame
 
-    if (inFOV == false)
-    {
-      return;
-    }
+  if (par_.impose_FOV_in_trajCB && inFOV == false)
+  {
+    return;
   }
 
   // if (can_use_its_info == false)
@@ -544,8 +542,23 @@ void PantherRos::trajCB(const panther_msgs::DynTraj& msg)
   mt::dynTraj tmp;
   tmp.use_pwp_field = msg.use_pwp_field;
 
-  std::default_random_engine generator;
-  std::normal_distribution<double> distribution(0.0, 0.1); //TODO: hardcoded here
+  //
+  // add noise to the obstacle trajectory
+  //
+
+  double noise_factor;
+  if (inFOV){
+    noise_factor = 0.01 * par_.obstacle_bbox[0]; // 1% of bbox
+  }
+  else 
+  {
+    noise_factor = 0.1 * par_.obstacle_bbox[0]; // 10% of bbox
+  }
+
+  // generate uniform noise
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<double> dis(-noise_factor, noise_factor);
 
   if (msg.use_pwp_field)
   {
@@ -554,16 +567,12 @@ void PantherRos::trajCB(const panther_msgs::DynTraj& msg)
   }
   else
   {
-
     if (par_.add_noise_to_obst){
       
-      tmp.s_mean.push_back(msg.s_mean[0] + "+" + std::to_string(distribution(generator)));
-      tmp.s_mean.push_back(msg.s_mean[1] + "+" + std::to_string(distribution(generator)));
-      tmp.s_mean.push_back(msg.s_mean[2] + "+" + std::to_string(distribution(generator)));
+      tmp.s_mean.push_back(msg.s_mean[0] + "+" + std::to_string(dis(gen)));
+      tmp.s_mean.push_back(msg.s_mean[1] + "+" + std::to_string(dis(gen)));
+      tmp.s_mean.push_back(msg.s_mean[2] + "+" + std::to_string(dis(gen)));
 
-      // std::cout << "tmp.s_mean[0]= " << tmp.s_mean[0] << std::endl;
-      // std::cout << "tmp.s_mean[1]= " << tmp.s_mean[1] << std::endl;
-      // std::cout << "tmp.s_mean[2]= " << tmp.s_mean[2] << std::endl;
     } 
     else 
     {
@@ -571,22 +580,13 @@ void PantherRos::trajCB(const panther_msgs::DynTraj& msg)
       tmp.s_mean.push_back(msg.s_mean[1]);
       tmp.s_mean.push_back(msg.s_mean[2]);
     }
+
     tmp.s_var.push_back(msg.s_var[0]);
     tmp.s_var.push_back(msg.s_var[1]);
     tmp.s_var.push_back(msg.s_var[2]);
   }
 
   tmp.bbox << msg.bbox[0], msg.bbox[1], msg.bbox[2];
-
-  if (par_.add_noise_to_obst){
-    tmp.bbox[0] += distribution(generator);
-    tmp.bbox[1] += distribution(generator);
-    tmp.bbox[2] += distribution(generator);
-  }
-
-  // std::cout << "tmp.bbox[0]= " << tmp.bbox[0] << std::endl;
-  // std::cout << "tmp.bbox[1]= " << tmp.bbox[1] << std::endl;
-  // std::cout << "tmp.bbox[2]= " << tmp.bbox[2] << std::endl;
 
   tmp.id = msg.id;
   tmp.is_agent = msg.is_agent;
