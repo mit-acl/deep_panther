@@ -91,6 +91,7 @@ fitter_num_of_cps= fitter.num_seg + fitter.deg_pos; %The number of control point
 for i=1:num_max_of_obst
     fitter.ctrl_pts{i}=opti.parameter(fitter.dim_pos,fitter_num_of_cps); %This comes from C++
     fitter.bbox_inflated{i}=opti.parameter(fitter.dim_pos,1); %This comes from C++
+    fitter.linear_uncertainty{i}=opti.parameter(fitter.dim_pos, 1); %This comes from C++
     fitter.bs_casadi{i}=MyCasadiClampedUniformSpline(0,1,fitter.deg_pos,fitter.dim_pos,fitter.num_seg,fitter.ctrl_pts{i}, false);
 end
 fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti);
@@ -271,7 +272,9 @@ for i=1:num_max_of_obst
             t_nobs= max( t_obs/fitter.total_time,  1.0 );  %Note that fitter.bs_casadi{i}.knots=[0...1]
             pos_center_obs=fitter.bs_casadi{i}.getPosT(t_nobs);
             all_centers=[all_centers pos_center_obs];
-            all_vertexes_segment_j=[all_vertexes_segment_j vertexesOfBox(pos_center_obs, fitter.bbox_inflated{i}) ];
+            % Use t_nobs to linearly expand the obstacle bbox
+            bbox_expansion = fitter.linear_uncertainty{i} * t_nobs;
+            all_vertexes_segment_j=[all_vertexes_segment_j vertexesOfBox(pos_center_obs, fitter.bbox_inflated{i} + bbox_expansion) ];
         end
         obst{i}.vertexes{j}=all_vertexes_segment_j;
     end  
@@ -1086,10 +1089,12 @@ function result=createCellArrayofStructsForObstacles(fitter)
     for i=1:num_obs
         name_crtl_pts=['obs_', num2str(i-1), '_ctrl_pts'];  %Note that we use i-1 here because it will be called from C++
         name_bbox_inflated=['obs_', num2str(i-1), '_bbox_inflated'];          %Note that we use i-1 here because it will be called from C++
+        name_linear_expansion=['obs_', num2str(i-1), '_linear_expansion'];          %Note that we use i-1 here because it will be called from C++
         crtl_pts_value=zeros(size(fitter.bs_casadi{i}.CPoints));
         result=[result,...
                 {createStruct(name_crtl_pts,   fitter.ctrl_pts{i} , crtl_pts_value)},...
-                {createStruct(name_bbox_inflated, fitter.bbox_inflated{i} ,  [1;1;1]  )}];
+                {createStruct(name_bbox_inflated, fitter.bbox_inflated{i} ,  [1;1;1]  )}....
+                {createStruct(name_linear_expansion, fitter.linear_uncertainty{i} ,  [1;1;1]  )}];
     end
          
 end

@@ -54,6 +54,7 @@ PYBIND11_MODULE(py_panther, m)
       .def(py::init<>())  /////////////////////////
       .def_readwrite("ctrl_pts", &mt::obstacleForOpt::ctrl_pts)
       .def_readwrite("bbox_inflated", &mt::obstacleForOpt::bbox_inflated)
+      .def_readwrite("linear_uncertainty", &mt::obstacleForOpt::linear_uncertainty)
       .def("printInfo", &mt::obstacleForOpt::printInfo)
       .def("__repr__", [](const mt::obstacleForOpt &a) { return "<py_panther.obstacleForOpt>"; });
 

@@ -91,6 +91,7 @@ struct obstacleForOpt
   // casadi::DM ctrl_pts;
   std::vector<Eigen::Vector3d> ctrl_pts;
   Eigen::Vector3d bbox_inflated;
+  Eigen::Vector3d linear_uncertainty = Eigen::Vector3d::Zero();
   bool is_dummy = false;
   bool is_agent = false;
 
@@ -102,6 +103,7 @@ struct obstacleForOpt
       std::cout << termcolor::yellow << q.transpose() << termcolor::reset << std::endl;
     }
     std::cout << termcolor::blue << "bbox_inflated=" << bbox_inflated.transpose() << termcolor::reset << std::endl;
+    std::cout << termcolor::blue << "linear_uncertainty=" << linear_uncertainty.transpose() << termcolor::reset << std::endl;
   }
 };
 
