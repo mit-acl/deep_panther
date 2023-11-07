@@ -170,7 +170,7 @@ Visualization Manager:
       Use rainbow: true
       Value: true
     - Class: rviz/Marker
-      Enabled: false
+      Enabled: true
       Marker Topic: /SQ01s/panther/fov
       Name: FOV
       Namespaces:
