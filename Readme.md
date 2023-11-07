@@ -177,7 +177,7 @@ Moreover, when using a linear solver different from `mumps`, you may need to sta
   PluginlibFactory: The plugin for class 'jsk_rviz_plugin/TFTrajectory' failed to load.  Error: Failed to load library /opt/ros/noetic/lib//libjsk_rviz_plugins.so. Make sure that you are calling the PLUGINLIB_EXPORT_CLASS macro in the library code, and that names are consistent between this macro and your XML. Error string: Could not load library (Poco exception = libpcl_visualization.so.1.10: cannot open shared object file: No such file or directory)
   ```
 
-  The missing library `libpcl_visualization.so` can be installed as follows:
+  This is a version problem with `libpcl_visualization.so`. The correct version can be installed as follows:
 
   ```bash
   sudo apt-get update
@@ -187,6 +187,8 @@ Moreover, when using a linear solver different from `mumps`, you may need to sta
   wget http://archive.ubuntu.com/ubuntu/pool/universe/p/pcl/libpcl-visualization1.10_1.10.0+dfsg-5ubuntu1_amd64.deb
   sudo dpkg -i libpcl-visualization1.10_1.10.0+dfsg-5ubuntu1_amd64.deb
   ```
+
+  Note, that `sudo apt-get upgrade` will upgrade `libpcl_visualization` again and the error with `TFTrajectory` returns.
 
   <h3>MA27 Installation</h3>
 
