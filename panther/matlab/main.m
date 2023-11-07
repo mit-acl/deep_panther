@@ -661,7 +661,8 @@ compute_dyn_limits_constraints_violation.save('./casadi_generated_files/compute_
 
 %%%%%
 
-my_func = opti.to_function('my_func', par_and_init_guess_exprs, results_expresion, par_and_init_guess_names, results_names);
+options.allow_duplicate_io_names = true;
+my_func = opti.to_function('my_func', par_and_init_guess_exprs, results_expresion, par_and_init_guess_names, results_names, options);
 
 if(pos_is_fixed==true)
     my_func.save('./casadi_generated_files/op_fixed_pos.casadi') %Optimization Problam. The file generated is quite big

@@ -82,8 +82,8 @@ classdef MyCasadiClampedUniformSpline < handle
 
             end
             
-            obj.getPosT=casadi.Function('f',{obj.t},{obj.expression});
-
+            options.allow_free = true;
+            obj.getPosT=casadi.Function('f',{obj.t},{obj.expression}, options);
         end
 
  
