@@ -177,18 +177,22 @@ Moreover, when using a linear solver different from `mumps`, you may need to sta
   PluginlibFactory: The plugin for class 'jsk_rviz_plugin/TFTrajectory' failed to load.  Error: Failed to load library /opt/ros/noetic/lib//libjsk_rviz_plugins.so. Make sure that you are calling the PLUGINLIB_EXPORT_CLASS macro in the library code, and that names are consistent between this macro and your XML. Error string: Could not load library (Poco exception = libpcl_visualization.so.1.10: cannot open shared object file: No such file or directory)
   ```
 
-  This is a version problem with `libpcl_visualization.so`. The correct version can be installed as follows:
+  This is a version problem with `libpcl_visualization.so`. The correct version is `1.10.0+dfsg-5ubuntu1`.
 
   ```bash
   sudo apt-get update
   sudo apt-get install libvtk7.1p
 
-  cd ~/Downloads
-  wget http://archive.ubuntu.com/ubuntu/pool/universe/p/pcl/libpcl-visualization1.10_1.10.0+dfsg-5ubuntu1_amd64.deb
-  sudo dpkg -i libpcl-visualization1.10_1.10.0+dfsg-5ubuntu1_amd64.deb
+  sudo apt install libpcl-apps1.10=1.10.0+dfsg-5ubuntu1 libpcl-common1.10=1.10.0+dfsg-5ubuntu1 libpcl-features1.10=1.10.0+dfsg-5ubuntu1 libpcl-filters1.10=1.10.0+dfsg-5ubuntu1 libpcl-io1.10=1.10.0+dfsg-5ubuntu1 libpcl-kdtree1.10=1.10.0+dfsg-5ubuntu1 libpcl-keypoints1.10=1.10.0+dfsg-5ubuntu1 libpcl-ml1.10=1.10.0+dfsg-5ubuntu1 libpcl-octree1.10=1.10.0+dfsg-5ubuntu1 libpcl-outofcore1.10=1.10.0+dfsg-5ubuntu1 libpcl-people1.10=1.10.0+dfsg-5ubuntu1 libpcl-recognition1.10=1.10.0+dfsg-5ubuntu1 libpcl-registration1.10=1.10.0+dfsg-5ubuntu1 libpcl-sample-consensus1.10=1.10.0+dfsg-5ubuntu1 libpcl-search1.10=1.10.0+dfsg-5ubuntu1 libpcl-segmentation1.10=1.10.0+dfsg-5ubuntu1 libpcl-stereo1.10=1.10.0+dfsg-5ubuntu1 libpcl-surface1.10=1.10.0+dfsg-5ubuntu1 libpcl-tracking1.10=1.10.0+dfsg-5ubuntu1 libpcl-visualization1.10=1.10.0+dfsg-5ubuntu1 libpcl-dev=1.10.0+dfsg-5ubuntu1
+
+  sudo apt install ros-noetic-pcl-ros
   ```
 
-  Note, that `sudo apt-get upgrade` will upgrade `libpcl_visualization` again and the error with `TFTrajectory` returns.
+  Note, that `sudo apt-get upgrade` will upgrade `libpcl` again and the error with `TFTrajectory` returns. To avoid this, set the package on hold
+
+  ```bash
+  sudo apt-mark hold libpcl-apps1.10=1.10.0+dfsg-5ubuntu1 libpcl-common1.10=1.10.0+dfsg-5ubuntu1 libpcl-features1.10=1.10.0+dfsg-5ubuntu1 libpcl-filters1.10=1.10.0+dfsg-5ubuntu1 libpcl-io1.10=1.10.0+dfsg-5ubuntu1 libpcl-kdtree1.10=1.10.0+dfsg-5ubuntu1 libpcl-keypoints1.10=1.10.0+dfsg-5ubuntu1 libpcl-ml1.10=1.10.0+dfsg-5ubuntu1 libpcl-octree1.10=1.10.0+dfsg-5ubuntu1 libpcl-outofcore1.10=1.10.0+dfsg-5ubuntu1 libpcl-people1.10=1.10.0+dfsg-5ubuntu1 libpcl-recognition1.10=1.10.0+dfsg-5ubuntu1 libpcl-registration1.10=1.10.0+dfsg-5ubuntu1 libpcl-sample-consensus1.10=1.10.0+dfsg-5ubuntu1 libpcl-search1.10=1.10.0+dfsg-5ubuntu1 libpcl-segmentation1.10=1.10.0+dfsg-5ubuntu1 libpcl-stereo1.10=1.10.0+dfsg-5ubuntu1 libpcl-surface1.10=1.10.0+dfsg-5ubuntu1 libpcl-tracking1.10=1.10.0+dfsg-5ubuntu1 libpcl-visualization1.10=1.10.0+dfsg-5ubuntu1 libpcl-dev=1.10.0+dfsg-5ubuntu1
+  ```
 
   <h3>MA27 Installation</h3>
 
