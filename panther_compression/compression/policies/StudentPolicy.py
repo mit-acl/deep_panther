@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
-import gym
+import gymnasium as gym
 import torch as th
 from torch import nn
 import numpy as np
@@ -16,6 +16,9 @@ from stable_baselines3.common.torch_layers import (
 
 from compression.utils.other import ActionManager, ObservationManager
 from colorama import init, Fore, Back, Style
+
+from gymnasium import spaces
+
 # CAP the standard deviation of the actor
 LOG_STD_MAX = 2
 LOG_STD_MIN = -20
@@ -36,8 +39,8 @@ class StudentPolicy(BasePolicy):
 
     def __init__(
         self,
-        observation_space: gym.spaces.Space,
-        action_space: gym.spaces.Space,
+        observation_space: spaces.Space,
+        action_space: spaces.Space,
         lr_schedule = Callable[[float], float], #TODO: Andrea: not used, dummy
         net_arch: [List[int]] = [64, 64],
         features_extractor_class: Type[BaseFeaturesExtractor] = FlattenExtractor,
@@ -127,7 +130,7 @@ class StudentPolicy(BasePolicy):
         :return:
             Mean, standard deviation and optional keyword arguments.
         """
-        features = self.extract_features(obs_n)
+        features = self.extract_features(obs_n, self.features_extractor)
         latent_pi = self.latent_pi(features)
         mean_actions = self.mu(latent_pi)
 

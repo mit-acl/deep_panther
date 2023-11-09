@@ -7,7 +7,7 @@ from compression.utils.other import numpy3XmatrixToListOf3dVectors, computeTotal
 from colorama import init, Fore, Back, Style
 import py_panther
 import math 
-from gym import spaces
+from gymnasium import spaces
 
 
 ###

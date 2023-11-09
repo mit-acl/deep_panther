@@ -11,6 +11,8 @@ import random
 import pytest
 import time
 
+import gymnasium as gym
+from gymnasium import spaces
 
 import numpy.matlib
 
@@ -29,6 +31,36 @@ import tf.transformations
 from joblib import Parallel, delayed
 import multiprocessing
 ##
+
+def cast_gym_to_gymnasium(space):
+    def cast_to_box(space):
+        return spaces.Box(space.low, space.high)
+
+    def cast_to_discrete(space):
+        return spaces.Discrete(space.n)
+
+    def cast_to_multi_discrete(space):
+        return spaces.MultiDiscrete(space.nvec)
+
+    def cast_to_multi_binary(space):
+        return spaces.MultiBinary(space.n)
+
+    def cast_to_dict(space):
+        return spaces.Dict(space)
+
+    space_types = {
+        "<class 'gym.spaces.box.Box'>": cast_to_box,
+        "<class 'gym.spaces.box.Discrete'>": cast_to_discrete,
+        "<class 'gym.spaces.box.MultiDiscrete'>": cast_to_multi_discrete,
+        "<class 'gym.spaces.box.MultiBinary'>": cast_to_multi_binary,
+        "<class 'gym.spaces.box.Dict'>": cast_to_dict,
+    }
+
+    for class_name, cast_fn in space_types.items():
+        if str(space.__class__) == class_name:
+            return cast_fn(space)
+    else:
+        raise ValueError(f"Error: Cannot cast tyoe {type(space)} to a gymnasium type.")
 
 
 class ExpertDidntSucceed(Exception):
@@ -1115,6 +1147,7 @@ class StudentCaller():
 	def __init__(self, policy_path):
 		# self.student_policy=bc.reconstruct_policy(policy_path)
 		self.student_policy=policy = th.load(policy_path, map_location=utils.get_device("auto")) #Same as doing bc.reconstruct_policy(policy_path) 
+		self.student_policy.observation_space = cast_gym_to_gymnasium(self.student_policy.observation_space)
 		self.om=ObservationManager();
 		self.am=ActionManager();
 		self.cc=CostComputer();

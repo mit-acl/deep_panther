@@ -5,8 +5,9 @@ from random import random, shuffle
 from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed, computeTotalTime
 from colorama import init, Fore, Back, Style
 import py_panther
-import math 
-from gym import spaces
+import math
+import gymnasium as gym
+from gymnasium import spaces
 
 
 ###

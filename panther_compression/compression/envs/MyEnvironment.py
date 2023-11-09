@@ -1,8 +1,8 @@
-import gym
+import gymnasium as gym
 import sys
 import numpy as np
 import copy
-from gym import spaces
+from gymnasium import spaces
 from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager, getPANTHERparamsAsCppStruct, computeTotalTime, getObsAndGtermToCrossPath, posAccelYaw2TfMatrix
 from compression.utils.other import TfMatrix2RosQuatAndVector3, TfMatrix2RosPose
 from compression.utils.other import CostComputer
