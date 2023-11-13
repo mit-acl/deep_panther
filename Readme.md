@@ -111,7 +111,13 @@ If you want to...
 
 * **Modify the optimization problem:**, You will need to have MATLAB installed (especifically, you will need the `Symbolic Math Toolbox` and the `Phased Array System Toolbox` installed), and follow the steps detailed in the MATLAB section below. You can then make any modification in the optimization problem by modifying the file `main.m`, and then running it. This will generate all the necessary `.casadi` files in the `casadi_generated_files` folder, which will be read by the C++ code.
 
-* **Train the policy:** You first need to install a linear solver (see instructions below). Then, you can train a new policy but simply running `python3 policy_compression_train.py` inside the `panther_compression` folder. 
+* **Train the policy:** You first need to install a linear solver (see instructions below). Additionally, you need the following Python packages.
+
+  ```
+  pip install IPython pycryptodomex gnupg
+  ```
+
+  Then, you can train a new policy but simply running `python3 policy_compression_train.py` inside the `panther_compression` folder. 
 
 
 <details>

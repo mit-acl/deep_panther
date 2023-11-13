@@ -7,7 +7,7 @@ import os
 import tempfile
 import time
 import argparse
-import gymnasium
+import gymnasium as gym
 import numpy as np
 import pprint
 from stable_baselines3.common import on_policy_algorithm
@@ -295,10 +295,6 @@ if __name__ == "__main__":
             trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA) 
         else: 
             trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA)
-
-
-
-
 
         if(args.init_and_final_eval):
             printInBoldBlue("---------------- Preliminiary Evaluation: --------------------")

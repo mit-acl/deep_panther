@@ -126,7 +126,7 @@ class MyEnvironment(gym.Env):
     """Set seed function in this environment and calls
     the openAi gym seed function"""
     np.random.seed(seed)
-    super().seed(seed)
+    super().reset(seed=seed)
 
   def get_len_ep(self):
     return self.len_episode
