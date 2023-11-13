@@ -149,7 +149,7 @@ if __name__ == "__main__":
         #This places all the demos in the round-000 folder
         os.system("find "+demos_dir+" -type f -print0 | xargs -0 mv -t "+demos_dir)
         os.system("rm -rf "+demos_dir+"/round*")
-        os.system("mkdir "+demos_dir+"/round-000")
+        os.system("mkdir -p "+demos_dir+"/round-000")
         os.system("mv "+demos_dir+"/*.npz "+demos_dir+"/round-000")
         #########
 

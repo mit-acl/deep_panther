@@ -6,7 +6,8 @@ from imitation.data import types, rollout
 from imitation.data.rollout import generate_trajectories, rollout_stats
 from compression.policies.StudentPolicy import StudentPolicy
 from compression.utils.eval import evaluate_policy, rollout_stats, compute_success
-from compression.utils.utils import ExpertDidntSucceed, ActionManager
+from compression.utils.utils import ExpertDidntSucceed
+from compression.utils.ActionManager import ActionManager
 
 def make_simple_dagger_trainer(tmpdir, venv, rampdown_rounds, custom_logger, lr, batch_size, weight_prob, expert_policy, type_loss, only_test_loss=False, epsilon_RWTA=0.05):
     beta_schedule=dagger.LinearBetaSchedule(rampdown_rounds)
