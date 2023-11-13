@@ -1,5 +1,6 @@
 from imitation.algorithms import bc
-from compression.utils.other import ObservationManager, ActionManager
+from compression.utils.ActionManager import ActionManager
+from compression.utils.ObservationManager import ObservationManager
 
 from compression.policies.ExpertPolicy import ExpertPolicy
 import numpy as np

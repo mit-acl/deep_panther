@@ -27,7 +27,6 @@
 #include <iostream>
 #include <fstream>
 #include <math.h>  // for sqrt
-#include <ros/package.h>
 
 using namespace boost;
 using namespace std;

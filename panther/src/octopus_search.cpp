@@ -7,7 +7,6 @@
  * -------------------------------------------------------------------------- */
 #include <vector>
 #include <random>
-#include "ros/ros.h"
 
 #include "timer.hpp"
 #include "termcolor.hpp"

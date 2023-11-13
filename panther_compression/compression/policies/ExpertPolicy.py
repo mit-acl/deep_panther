@@ -1,13 +1,15 @@
 import sys
 import numpy as np
+import py_panther
 import copy
 from random import random, shuffle
-from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed, computeTotalTime
+from compression.utils.other import ExpertDidntSucceed, computeTotalTime
+from compression.utils.yaml_utils import getPANTHERparamsAsCppStruct
+from compression.utils.ActionManager import ActionManager
+from compression.utils.ObservationManager import ObservationManager
 from colorama import init, Fore, Back, Style
-import py_panther
 import math 
-from gym import spaces
-
+from gymnasium import spaces
 
 ###
 from joblib import Parallel, delayed

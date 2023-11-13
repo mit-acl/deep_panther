@@ -14,7 +14,8 @@ from stable_baselines3.common.torch_layers import (
     create_mlp,
 )
 
-from compression.utils.other import ActionManager, ObservationManager
+from compression.utils.ActionManager import ActionManager
+from compression.utils.ObservationManager import ObservationManager
 from colorama import init, Fore, Back, Style
 # CAP the standard deviation of the actor
 LOG_STD_MAX = 2

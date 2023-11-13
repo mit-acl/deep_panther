@@ -11,7 +11,6 @@
 #include "solver_ipopt.hpp"
 #include "termcolor.hpp"
 #include "bspline_utils.hpp"
-#include "ros/ros.h"
 
 #include <unsupported/Eigen/Splines>
 #include <iostream>
@@ -20,8 +19,7 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
-
-#include <ros/package.h>
+#include <filesystem>
 
 using namespace termcolor;
 
@@ -100,7 +98,8 @@ casadi::DM eigen3d2CasadiMatrix(const Eigen::Vector3d &data)
 
 Fitter::Fitter(const int fitter_num_samples)
 {
-  std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
+  std::string folder = casadi_folder();
+  //std::string folder = std::filesystem::current_path().string() + "/../matlab/casadi_generated_files/";
   cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
   fitter_num_samples_ = fitter_num_samples;
 }
@@ -125,7 +124,8 @@ std::vector<Eigen::Vector3d> Fitter::fit(std::vector<Eigen::Vector3d> &samples)
 
 ClosedFormYawSolver::ClosedFormYawSolver()
 {
-  std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
+  std::string folder = casadi_folder();
+  //std::string folder = std::filesystem::current_path().string() + "/../matlab/casadi_generated_files/";
   cf_ = casadi::Function::load(folder + "get_optimal_yaw_for_fixed_pos.casadi");
 }
 
@@ -222,7 +222,7 @@ SolverIpopt::SolverIpopt(const mt::parameters &par)
 
   std::cout << bold << "SolverIpopt, reading .casadi files..." << reset << std::endl;
 
-  std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
+  std::string folder = casadi_folder();
   std::fstream myfile(folder + "index_instruction.txt", std::ios_base::in);
   myfile >> index_instruction_;
   cf_op_ = casadi::Function::load(folder + "op.casadi");
