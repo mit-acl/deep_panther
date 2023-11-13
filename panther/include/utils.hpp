@@ -14,20 +14,6 @@
 #include <filesystem>
 #include <iterator>
 
-#define RED_NORMAL 1
-#define RED_TRANS 2
-#define RED_TRANS_TRANS 3
-#define GREEN_NORMAL 4
-#define BLUE_NORMAL 5
-#define BLUE_TRANS 6
-#define BLUE_TRANS_TRANS 7
-#define BLUE_LIGHT 8
-#define YELLOW_NORMAL 9
-#define ORANGE_TRANS 10
-#define BLACK_TRANS 11
-#define BLACK 12
-#define TEAL_NORMAL 13
-
 // #define STATE 0
 // #define INPUT 1
 
@@ -78,6 +64,10 @@ std::vector<double> linspace(T start_in, T end_in, int num_in)
 
 void verify(bool cond, std::string info_if_false);
 
+mt::PieceWisePol composePieceWisePol(const double t, const double dc, mt::PieceWisePol& p1, mt::PieceWisePol& p2);
+
+std::vector<std::string> pieceWisePol2String(const mt::PieceWisePol& pwp);
+
 double getMinTimeDoubleIntegrator1D(const double& p0, const double& v0, const double& pf, const double& vf,
                                     const double& v_max, const double& a_max);
 
@@ -107,7 +97,9 @@ void angle_wrap(double& diff);
 std::vector<double> eigen2std(const Eigen::Vector3d& v);
 
 int nChoosek(int n, int k);
+
 void linearTransformPoly(const Eigen::VectorXd& coeff_old, Eigen::VectorXd& coeff_new, double a, double b);
+
 void changeDomPoly(const Eigen::VectorXd& coeff_p, double tp1, double tp2, Eigen::VectorXd& coeff_q, double tq1,
                    double tq2);
 // sign function
@@ -118,7 +110,9 @@ int sign(T val)
 }
 
 double cdfUnivariateNormalDist(double x, double mu, double std_deviation);
+
 double probUnivariateNormalDistAB(double a, double b, double mu, double std_deviation);
+
 double probMultivariateNormalDist(const Eigen::VectorXd& a, const Eigen::VectorXd& b, const Eigen::VectorXd& mu,
                                   const Eigen::VectorXd& std_deviation);
 

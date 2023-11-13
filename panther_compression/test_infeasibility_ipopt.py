@@ -2,9 +2,8 @@ import sys
 import numpy as np
 import copy
 from random import random, shuffle
-from compression.utils.other import ExpertDidntSucceed, computeTotalTime
+from compression.utils.utils import ExpertDidntSucceed, computeTotalTime, numpy3XmatrixToListOf3dVectors
 from compression.utils.yaml_utils import getPANTHERparamsAsCppStruct
-from compression.utils.other import numpy3XmatrixToListOf3dVectors, computeTotalTime
 from compression.utils.ActionManager import ActionManager
 from compression.utils.ObservationManager import ObservationManager
 from colorama import init, Fore, Back, Style

@@ -23,6 +23,20 @@
 
 #include "ros/ros.h"
 
+#define RED_NORMAL 1
+#define RED_TRANS 2
+#define RED_TRANS_TRANS 3
+#define GREEN_NORMAL 4
+#define BLUE_NORMAL 5
+#define BLUE_TRANS 6
+#define BLUE_TRANS_TRANS 7
+#define BLUE_LIGHT 8
+#define YELLOW_NORMAL 9
+#define ORANGE_TRANS 10
+#define BLACK_TRANS 11
+#define BLACK 12
+#define TEAL_NORMAL 13
+
 template <typename T>
 bool safeGetParam(ros::NodeHandle& nh, std::string const& param_name, T& param_value)
 {
@@ -48,10 +62,6 @@ panther_msgs::PieceWisePolTraj pwp2PwpMsg(const mt::PieceWisePol& pwp);
 visualization_msgs::Marker edges2Marker(const mt::Edges& edges, std_msgs::ColorRGBA color_marker);
 
 geometry_msgs::Pose identityGeometryMsgsPose();
-
-mt::PieceWisePol composePieceWisePol(const double t, const double dc, mt::PieceWisePol& p1, mt::PieceWisePol& p2);
-
-std::vector<std::string> pieceWisePol2String(const mt::PieceWisePol& piecewisepol);
 
 std_msgs::ColorRGBA getColorJet(double v, double vmin, double vmax);
 

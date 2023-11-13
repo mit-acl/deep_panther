@@ -3,7 +3,7 @@ import numpy as np
 import py_panther
 import copy
 from random import random, shuffle
-from compression.utils.other import ExpertDidntSucceed, computeTotalTime
+from compression.utils.utils import ExpertDidntSucceed, computeTotalTime
 from compression.utils.yaml_utils import getPANTHERparamsAsCppStruct
 from compression.utils.ActionManager import ActionManager
 from compression.utils.ObservationManager import ObservationManager

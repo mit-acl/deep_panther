@@ -1,4 +1,4 @@
-from compression.utils.other import posAccelYaw2TfMatrix, State
+from compression.utils.State import State
 from compression.utils.ActionManager import ActionManager
 from compression.utils.ObservationManager import ObservationManager
 import numpy as np

@@ -3,6 +3,8 @@ import random
 import py_panther
 
 from .yaml_utils import readPANTHERparams
+from .utils import listOf3dVectors2numpy3Xmatrix, Trefoil
+from .Obstacle import Obstacle
 
 class ObstaclesManager():
 

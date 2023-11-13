@@ -7,6 +7,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "utils.hpp"
+#include "ros_utils.hpp"
 #include "exprtk.hpp"
 
 int main()

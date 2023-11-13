@@ -1,4 +1,5 @@
 #include "utils.hpp"
+#include "ros_utils.hpp"
 #include "panther.hpp"
 #include <pybind11/embed.h>
 #include <iostream>
@@ -28,7 +29,7 @@ public:
                               "final_policy.pt";
 
     student_caller_ptr_ = new pybind11::object;
-    *student_caller_ptr_ = pybind11::module::import("compression.utils.other").attr("StudentCaller")(policy_path);
+    *student_caller_ptr_ = pybind11::module::import("compression.utils.StudentCaller").attr("StudentCaller")(policy_path);
     std::cout << "Timer has been created" << std::endl;
   };
 

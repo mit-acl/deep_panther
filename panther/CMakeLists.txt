@@ -4,7 +4,7 @@ project(panther)
 
 # add_definitions(-std=c++17)
 # set(CMAKE_CXX_STANDARD 17)
-add_definitions(-std=c++14)
+add_definitions(-std=c++17)
 #add_definitions(-std=c99)
 
 find_package( Eigen3 REQUIRED )

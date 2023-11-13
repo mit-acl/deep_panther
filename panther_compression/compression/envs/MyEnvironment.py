@@ -3,16 +3,15 @@ import sys
 import numpy as np
 import copy
 from gymnasium import spaces
-from compression.utils.other import GTermManager, State, computeTotalTime, getObsAndGtermToCrossPath, posAccelYaw2TfMatrix
+from compression.utils.utils import GTermManager, computeTotalTime, getObsAndGtermToCrossPath, posAccelYaw2TfMatrix, listOf3dVectors2numpy3Xmatrix
+from compression.utils.State import State
 from compression.utils.yaml_utils import getPANTHERparamsAsCppStruct
 from compression.utils.ActionManager import ActionManager
 from compression.utils.ObservationManager import ObservationManager
 from compression.utils.ObstaclesManager import ObstaclesManager
 from compression.utils.ros_utils import TfMatrix2RosQuatAndVector3, TfMatrix2RosPose
-from compression.utils.other import CostComputer
-from compression.utils.other import MyClampedUniformBSpline
-from compression.utils.other import listOf3dVectors2numpy3Xmatrix
-from compression.utils.other import ClosedFormYawSubstituter
+from compression.utils.CostComputer import CostComputer, ClosedFormYawSubstituter
+from compression.utils.MyClampedUniformBSpline import MyClampedUniformBSpline
 from colorama import init, Fore, Back, Style
 import py_panther
 ##### For rosbag logging

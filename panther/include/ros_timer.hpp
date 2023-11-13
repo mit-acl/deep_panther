@@ -3,7 +3,7 @@
 
 #include <ros/ros.h>
 
-namespace PANTHER_timers
+namespace PANTHER_timers {
 
 class ROSTimer
 {

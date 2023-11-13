@@ -18,7 +18,7 @@ public:
                               "final_policy.pt";
 
     student_caller_ptr_ = new pybind11::object;
-    *student_caller_ptr_ = pybind11::module::import("compression.utils.other").attr("StudentCaller")(policy_path);
+    *student_caller_ptr_ = pybind11::module::import("compression.utils.StudentCaller").attr("StudentCaller")(policy_path);
   };
 
   ~Test()
