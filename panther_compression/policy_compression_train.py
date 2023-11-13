@@ -7,7 +7,7 @@ import os
 import tempfile
 import time
 import argparse
-import gymnasium as gym
+import gymnasium
 import numpy as np
 import pprint
 from stable_baselines3.common import on_policy_algorithm
