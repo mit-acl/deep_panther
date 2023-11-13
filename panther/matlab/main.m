@@ -16,7 +16,7 @@ opti = casadi.Opti();
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CONSTANTS! %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+keep_obs_in_FOV = false; %should the obstacle be kept in the FOV?
 pos_is_fixed=false; %you need to run this file twice to produce the necessary casadi files: both with pos_is_fixed=false and pos_is_fixed=true. 
 
 optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
@@ -425,6 +425,10 @@ final_pos_cost=(sp.getPosT(tf_n)- pf)'*(sp.getPosT(tf_n)- pf);
 total_time_cost=alpha*(tf_n-t0_n);
 yaw_smooth_cost=sy.getControlCost()/(alpha^(sy.p-1));
 final_yaw_cost=(sy.getPosT(tf_n)- yf)^2;
+
+if ~keep_obs_in_FOV
+    fov_cost = 0;
+end
 
 total_cost=c_pos_smooth*pos_smooth_cost+...
            c_fov*fov_cost+...

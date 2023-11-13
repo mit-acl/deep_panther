@@ -98,7 +98,6 @@ source ~/.bashrc
 Simply use:
 ```bash
 roslaunch panther simulation.launch
-
 ```
 
 Wait until the terminal says `Planner initialized`. Then, you can press G (or click the option 2D Nav Goal on the top bar of RVIZ) and click any goal for the drone. By default, `simulation.launch` will use the policy Hung_dynamic_obstacles.pt (which was trained with trefoil-knot trajectories). You can change the trajectory followed by the obstacle during testing using the `type_of_obst_traj` field of the launch file.
@@ -165,4 +164,56 @@ Moreover, when using a linear solver different from `mumps`, you may need to sta
 
 </details>
 
+</details>
+
+<details>
+  <summary><b>Known Issues</b></summary>
+
+  <h3>Missing PCL visualizations library</h3>
+
+  When launching the simulation using `roslaunch panther simulation.launch` the following error might occur
+  
+  ```
+  PluginlibFactory: The plugin for class 'jsk_rviz_plugin/TFTrajectory' failed to load.  Error: Failed to load library /opt/ros/noetic/lib//libjsk_rviz_plugins.so. Make sure that you are calling the PLUGINLIB_EXPORT_CLASS macro in the library code, and that names are consistent between this macro and your XML. Error string: Could not load library (Poco exception = libpcl_visualization.so.1.10: cannot open shared object file: No such file or directory)
+  ```
+
+  This is a version problem with `libpcl_visualization.so`. The correct version is `1.10.0+dfsg-5ubuntu1`.
+
+  ```bash
+  sudo apt-get update
+  sudo apt-get install libvtk7.1p
+
+  sudo apt install libpcl-apps1.10=1.10.0+dfsg-5ubuntu1 libpcl-common1.10=1.10.0+dfsg-5ubuntu1 libpcl-features1.10=1.10.0+dfsg-5ubuntu1 libpcl-filters1.10=1.10.0+dfsg-5ubuntu1 libpcl-io1.10=1.10.0+dfsg-5ubuntu1 libpcl-kdtree1.10=1.10.0+dfsg-5ubuntu1 libpcl-keypoints1.10=1.10.0+dfsg-5ubuntu1 libpcl-ml1.10=1.10.0+dfsg-5ubuntu1 libpcl-octree1.10=1.10.0+dfsg-5ubuntu1 libpcl-outofcore1.10=1.10.0+dfsg-5ubuntu1 libpcl-people1.10=1.10.0+dfsg-5ubuntu1 libpcl-recognition1.10=1.10.0+dfsg-5ubuntu1 libpcl-registration1.10=1.10.0+dfsg-5ubuntu1 libpcl-sample-consensus1.10=1.10.0+dfsg-5ubuntu1 libpcl-search1.10=1.10.0+dfsg-5ubuntu1 libpcl-segmentation1.10=1.10.0+dfsg-5ubuntu1 libpcl-stereo1.10=1.10.0+dfsg-5ubuntu1 libpcl-surface1.10=1.10.0+dfsg-5ubuntu1 libpcl-tracking1.10=1.10.0+dfsg-5ubuntu1 libpcl-visualization1.10=1.10.0+dfsg-5ubuntu1 libpcl-dev=1.10.0+dfsg-5ubuntu1
+
+  sudo apt install ros-noetic-pcl-ros
+  ```
+
+  Note, that `sudo apt-get upgrade` will upgrade `libpcl` again and the error with `TFTrajectory` returns. To avoid this, set the package on hold
+
+  ```bash
+  sudo apt-mark hold libpcl-apps1.10=1.10.0+dfsg-5ubuntu1 libpcl-common1.10=1.10.0+dfsg-5ubuntu1 libpcl-features1.10=1.10.0+dfsg-5ubuntu1 libpcl-filters1.10=1.10.0+dfsg-5ubuntu1 libpcl-io1.10=1.10.0+dfsg-5ubuntu1 libpcl-kdtree1.10=1.10.0+dfsg-5ubuntu1 libpcl-keypoints1.10=1.10.0+dfsg-5ubuntu1 libpcl-ml1.10=1.10.0+dfsg-5ubuntu1 libpcl-octree1.10=1.10.0+dfsg-5ubuntu1 libpcl-outofcore1.10=1.10.0+dfsg-5ubuntu1 libpcl-people1.10=1.10.0+dfsg-5ubuntu1 libpcl-recognition1.10=1.10.0+dfsg-5ubuntu1 libpcl-registration1.10=1.10.0+dfsg-5ubuntu1 libpcl-sample-consensus1.10=1.10.0+dfsg-5ubuntu1 libpcl-search1.10=1.10.0+dfsg-5ubuntu1 libpcl-segmentation1.10=1.10.0+dfsg-5ubuntu1 libpcl-stereo1.10=1.10.0+dfsg-5ubuntu1 libpcl-surface1.10=1.10.0+dfsg-5ubuntu1 libpcl-tracking1.10=1.10.0+dfsg-5ubuntu1 libpcl-visualization1.10=1.10.0+dfsg-5ubuntu1 libpcl-dev=1.10.0+dfsg-5ubuntu1
+  ```
+
+  <h3>MA27 Installation</h3>
+
+  Note, that on the HSL website you can download either the source code or the compiled libraries. Make sure to download the **source code**.
+
+  If the steps to install the MA27 above do not work and you still get an error that MA27 cannot be found you might have to do the following:
+
+  ```bash
+  cd ~/installations
+  git clone https://github.com/coin-or-tools/ThirdParty-HSL.git
+  cd ThirdParty-HSL
+  ```
+
+  Now move the Coin-HSL source code to `~/installations/ThirdParty-HSL/coinhsl`. Then
+
+  ```bash
+  cd ~/installations/ThirdParty-HSL
+  ./configure
+  make
+  sudo make install
+  ```
+
+  These instructions are taken from [here](https://coin-or.github.io/Ipopt/INSTALL.html).
 </details>

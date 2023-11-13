@@ -8,8 +8,10 @@ from compression.utils.yaml_utils import getPANTHERparamsAsCppStruct
 from compression.utils.ActionManager import ActionManager
 from compression.utils.ObservationManager import ObservationManager
 from colorama import init, Fore, Back, Style
-import math 
+import py_panther
+import math
 from gymnasium import spaces
+
 
 ###
 from joblib import Parallel, delayed

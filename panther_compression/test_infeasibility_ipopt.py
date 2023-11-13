@@ -10,7 +10,7 @@ from compression.utils.ObservationManager import ObservationManager
 from colorama import init, Fore, Back, Style
 import py_panther
 import math 
-from gym import spaces
+from gymnasium import spaces
 
 
 ###
