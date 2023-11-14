@@ -115,7 +115,7 @@ if __name__ == "__main__":
     # exit();
     
     only_collect_data=False
-    train_only_supervised=True
+    train_only_supervised=False
     reuse_previous_samples=False
 
     record_bag=True
@@ -241,7 +241,7 @@ if __name__ == "__main__":
         printInBoldBlue("---------------- Making Environments: -------------------")
         print("[Train Env] Making training environment...")
         # train_env = gym.make(ENV_NAME)
-        # train_env.seed(args.seed)
+        # train_env.reset(seed=args.seed)
         # train_env.action_space.seed(args.seed)
         # train_env.set_len_ep(args.train_environment_max_steps) 
         # if(record_bag):
@@ -266,7 +266,7 @@ if __name__ == "__main__":
             # Create and set properties for EVALUATION environment
             print("[Test Env] Making test environment...")
             test_venv = util.make_vec_env(env_name=ENV_NAME, n_envs=num_envs, seed=args.seed, parallel=False)#Note that parallel applies to the environment step, not to the expert step
-            test_venv.seed(args.seed)
+            test_venv.reset(seed=args.seed)
             test_venv.env_method("set_len_ep", (args.test_environment_max_steps)) 
             print("[Test Env] Ep. Len:  {} [steps].".format(test_venv.get_attr("len_episode")))
 
@@ -274,7 +274,7 @@ if __name__ == "__main__":
                 test_venv.env_method("setID", i, indices=[i]) 
 
             # test_venv = gym.make(ENV_NAME)
-            # test_venv.seed(args.seed)
+            # test_venv.reset(seed=args.seed)
             # test_venv.action_space.seed(args.seed)
             # test_venv.set_len_ep(args.test_environment_max_steps)
             # print(f"[Train Env] Ep. Len:  {test_venv.get_len_ep()} [steps].")

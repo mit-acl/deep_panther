@@ -2,7 +2,9 @@ import gymnasium as gym
 import sys
 import numpy as np
 import copy
+
 from gymnasium import spaces
+
 from compression.utils.utils import GTermManager, computeTotalTime, getObsAndGtermToCrossPath, posAccelYaw2TfMatrix, listOf3dVectors2numpy3Xmatrix
 from compression.utils.State import State
 from compression.utils.yaml_utils import getPANTHERparamsAsCppStruct
@@ -12,8 +14,10 @@ from compression.utils.ObstaclesManager import ObstaclesManager
 from compression.utils.ros_utils import TfMatrix2RosQuatAndVector3, TfMatrix2RosPose
 from compression.utils.CostComputer import CostComputer, ClosedFormYawSubstituter
 from compression.utils.MyClampedUniformBSpline import MyClampedUniformBSpline
+
 from colorama import init, Fore, Back, Style
 import py_panther
+
 ##### For rosbag logging
 import rosbag
 from geometry_msgs.msg import PointStamped, TransformStamped, PoseStamped, Vector3, Quaternion, Pose
@@ -85,6 +89,8 @@ class MyEnvironment(gym.Env):
 
     self.id=0
 
+    self.seed = None
+
     self.reset()
 
   def __del__(self):
@@ -125,8 +131,10 @@ class MyEnvironment(gym.Env):
   def seed(self, seed=None):
     """Set seed function in this environment and calls
     the openAi gym seed function"""
-    np.random.seed(seed)
-    super().reset(seed=seed)
+    self.seed = seed
+    if seed is not None:
+      np.random.seed(seed)
+      self.reset(seed=seed)
 
   def get_len_ep(self):
     return self.len_episode
@@ -135,7 +143,8 @@ class MyEnvironment(gym.Env):
     assert len_ep > 0, "Episode len > 0!"
     self.len_episode = len_ep
     # self.printwithName(f"Ep. len updated to {self.len_episode } [steps].")
-    self.reset()
+    if self.seed is not None:
+      self.reset(seed=self.seed)
 
   def step(self, f_action_n):
 
@@ -290,10 +299,12 @@ class MyEnvironment(gym.Env):
     self.previous_f_observation=f_observation
     self.previous_f_obs_n=f_observationn
 
-    return f_observationn, reward, done, info
+    return f_observationn, reward, done, False, info
 
-  def reset(self):
+  def reset(self, seed = None, options = None):
     self.printwithNameAndColor("Resetting environment")
+
+    super().reset(seed=seed, options=options)
 
     self.time=0.0
     self.timestep = 0
@@ -340,7 +351,7 @@ class MyEnvironment(gym.Env):
     self.previous_f_obs_n=f_observationn
     # assert observation.shape == self.observation_shape
     # self.printwithName(f"returning obs={observation}")
-    return f_observationn
+    return f_observationn, {}
 
  
   def render(self, mode='human'):
