@@ -114,12 +114,14 @@ if __name__ == "__main__":
     # print(f"only_test_loss={args.only_test_loss}")
     # exit();
     
+    set_focus_on_obstacle=False
+
     only_collect_data=False
     train_only_supervised=False
     reuse_previous_samples=False
 
     record_bag=True
-    launch_tensorboard=True
+    launch_tensorboard=False
     verbose_python_errors=False
     batch_size = 256
     N_EPOCHS = 250           #WAS 50!! Num epochs for training.
@@ -287,7 +289,7 @@ if __name__ == "__main__":
 
         printInBoldBlue("---------------- Making Expert Policy: --------------------")
         # Create expert policy 
-        expert_policy = ExpertPolicy()
+        expert_policy = ExpertPolicy(set_focus_on_obstacle=set_focus_on_obstacle)
 
         printInBoldBlue("---------------- Making Learner Policy: -------------------")
         # Create learner policy
