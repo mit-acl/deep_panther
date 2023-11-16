@@ -6,14 +6,13 @@ from stable_baselines3.common import utils as sb3_utils
 
 from .ActionManager import ActionManager
 from .ObservationManager import ObservationManager
-from .utils import cast_gym_to_gymnasium, convertPPState2State, convertPPObstacles2Obstacles
+from .utils import convertPPState2State, convertPPObstacles2Obstacles
 from .CostComputer import CostComputer, ClosedFormYawSubstituter
 
 class StudentCaller():
 	def __init__(self, policy_path):
 		# self.student_policy=bc.reconstruct_policy(policy_path)
 		self.student_policy=policy = th.load(policy_path, map_location=sb3_utils.get_device("auto")) #Same as doing bc.reconstruct_policy(policy_path)
-		self.student_policy.observation_space = cast_gym_to_gymnasium(self.student_policy.observation_space) # TODO: temporary fix
 		self.om=ObservationManager();
 		self.am=ActionManager();
 		self.cc=CostComputer();
