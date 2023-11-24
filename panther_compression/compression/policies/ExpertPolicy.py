@@ -67,7 +67,7 @@ class ExpertPolicy(object):
         #From https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/policies.py#L41
         # In the case of policies, the prediction is an action.
         # In the case of critics, it is the estimated value of the observation.
-    def predict(self, obs_n, deterministic=True):
+    def predict(self, obs_n, deterministic=True, verbose=True):
 
         if(self.om.isNanObservation(obs_n)):
             return self.am.getNanAction(), {"Q": 0.0} 
@@ -111,13 +111,15 @@ class ExpertPolicy(object):
         info=ExpertPolicy.my_SolverIpopt.getInfoLastOpt();
 
         
-        if(succeed==False):
-            self.printFailedOpt(info);
+        if not succeed:
+            if verbose:
+                self.printFailedOpt(info);
             # exit();
             # raise ExpertDidntSucceed()
             return self.am.getNanAction(), {"Q": 0.0} 
         else:
-            self.printSucessOpt(info);
+            if verbose:
+                self.printSucessOpt(info);
 
         best_solutions=ExpertPolicy.my_SolverIpopt.getBestSolutions();
 
