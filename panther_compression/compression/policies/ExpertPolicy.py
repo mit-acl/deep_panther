@@ -27,7 +27,7 @@ class ExpertPolicy(object):
     #Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
     my_SolverIpopt=py_panther.SolverIpopt(getPANTHERparamsAsCppStruct())
 
-    def __init__(self, set_focus_on_obstacle = True):
+    def __init__(self):
         self.am=ActionManager();
         self.om=ObservationManager();
 
@@ -42,8 +42,6 @@ class ExpertPolicy(object):
         self.par_a_max=par.a_max
         self.par_factor_alloc=par.factor_alloc
         self.drone_extra_radius_for_NN=par.drone_extra_radius_for_NN
-
-        self.set_focus_on_obstacle = set_focus_on_obstacle
 
         # self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
 
@@ -99,7 +97,6 @@ class ExpertPolicy(object):
         total_time=computeTotalTime(init_state, final_state, self.par_v_max, self.par_a_max, self.par_factor_alloc)
 
         ExpertPolicy.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
-        ExpertPolicy.my_SolverIpopt.setFocusOnObstacle(self.set_focus_on_obstacle);
         obstacles=self.om.getObstacles(obs)
         ####
         for i in range(len(obstacles)):
