@@ -15,7 +15,8 @@ class ObstaclesManager():
 	params=readPANTHERparams()
 	fitter = py_panther.Fitter(params["fitter_num_samples"]);
 
-	def __init__(self):
+	def __init__(self, dim=3):
+		self.dim=dim;
 		self.num_obs=1;
 		self.params=readPANTHERparams();
 		# self.fitter_total_time=params["fitter_total_time"];
@@ -43,7 +44,7 @@ class ObstaclesManager():
 
 	def getSizeAllObstacles(self):
 		#Size of the ctrl_pts + bbox
-		return self.num_obs*(3*self.getCPsPerObstacle() + 3) 
+		return self.num_obs*(self.dim*self.getCPsPerObstacle() + self.dim) 
 
 	def getFutureWPosStaticObstacles(self):
 		w_obs=[];
@@ -54,7 +55,7 @@ class ObstaclesManager():
 				# w_ctrl_pts_ob.append(np.array([[2],[2],[2]]))
 
 			# bbox_ob=np.array([[0.5],[0.5], [0.5]]);
-			bbox_inflated=np.array([[0.8],[0.8], [0.8]])+2*self.params["drone_radius"]*np.ones((3,1));
+			bbox_inflated=np.array([[0.8],[0.8], [0.8]])+2*self.params["drone_radius"]*np.ones((self.dim,1));
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 		return w_obs;
 
@@ -66,7 +67,7 @@ class ObstaclesManager():
 		# print(f"Using random_scale={self.random_scale}")
 
 		###HACK TO GENERATE A STATIC OBSTACLE
-		self.random_scale=np.zeros((3,1))
+		self.random_scale=np.zeros((self.dim,1))
 		####################################
 
 		trefoil=Trefoil(pos=self.random_pos, scale=self.random_scale, offset=self.random_offset, slower=1.5);
@@ -80,6 +81,6 @@ class ObstaclesManager():
 
 			w_ctrl_pts_ob=listOf3dVectors2numpy3Xmatrix(w_ctrl_pts_ob_list)
 
-			bbox_inflated=np.array([[0.8],[0.8], [0.8]])+2*self.params["drone_radius"]*np.ones((3,1));
+			bbox_inflated=np.array([[0.8],[0.8], [0.8]])+2*self.params["drone_radius"]*np.ones((self.dim,1));
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
 		return w_obs;

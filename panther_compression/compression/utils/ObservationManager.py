@@ -9,14 +9,16 @@ from .ObstaclesManager import ObstaclesManager
 from colorama import Fore, Style
 
 class ObservationManager():
-	def __init__(self):
-		self.obsm=ObstaclesManager();
+	def __init__(self, dim=3):
+		self.dim = dim
+		self.obsm=ObstaclesManager(dim=dim);
 		#Observation =       [f_v, f_a, yaw_dot, f_g,  [f_ctrl_pts_o0], bbox_o0, [f_ctrl_pts_o1], bbox_o1 ,...]
 		#
 		# Where f_ctrl_pts_oi = [cp0.transpose(), cp1.transpose(), ...]
-		self.observation_size= 3 +  3 +   1    + 3   + self.obsm.getSizeAllObstacles();
+		self.observation_size= self.dim + self.dim + 1 + self.dim + self.obsm.getSizeAllObstacles();
 
 		params=readPANTHERparams();
+
 		self.v_max=np.array(params["v_max"]).reshape(3,1);
 		self.a_max=np.array(params["a_max"]).reshape(3,1);
 		self.j_max=np.array(params["j_max"]).reshape(3,1);
@@ -25,14 +27,21 @@ class ObservationManager():
 		self.max_dist2obs=params["max_dist2obs"];
 		self.max_side_bbox_obs=params["max_side_bbox_obs"];
 		self.Ra=params["Ra"]
-		ones13=np.ones((1,3));
-		#Note that the sqrt(3) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
-		margin_v=np.sqrt(3)
-		margin_a=np.sqrt(3)
+		ones13=np.ones((1,self.dim));
+		#Note that the sqrt(self.dim) is needed because the expert/student plan in f_frame --> bouding ball around the box v_max, a_max,... 
+		margin_v=np.sqrt(self.dim)
+		margin_a=np.sqrt(self.dim)
 		margin_ydot=1.5 
-		self.normalization_constant=np.concatenate((margin_v*self.v_max.T*ones13, margin_a*self.a_max.T*ones13, margin_ydot*self.ydot_max*np.ones((1,1)), self.Ra*ones13), axis=1)
+		self.normalization_constant=np.concatenate(
+			(
+				margin_v*self.v_max[:self.dim, :].T*ones13,
+				margin_a*self.a_max[:self.dim, :].T*ones13,
+				margin_ydot*self.ydot_max*np.ones((1,1)),
+				self.Ra*ones13
+			), axis=1
+		)
 		for i in range(self.obsm.getNumObs()):
-			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,3*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)
+			self.normalization_constant=np.concatenate((self.normalization_constant, self.max_dist2obs*np.ones((1,self.dim*self.obsm.getCPsPerObstacle())), self.max_side_bbox_obs*ones13), axis=1)
 
 		# assert print("Shape observation=", observation.shape==)
 
@@ -82,7 +91,7 @@ class ObservationManager():
 		print("----------------------")
 
 	def get_f_StateFromf_obs(self,f_obs):
-		pos=np.zeros((3,1))
+		pos=np.zeros((self.dim,1))
 		vel=self.getf_v(f_obs)
 		accel=self.getf_a(f_obs)
 		yaw=np.zeros((1,1))
@@ -92,15 +101,15 @@ class ObservationManager():
 
 
 	def getIndexStartObstacleI(self,i):
-		return 10+(self.obsm.getCPsPerObstacle()+3)*i
+		return 10+(self.obsm.getCPsPerObstacle()+self.dim)*i
 
 	def getCtrlPtsObstacleI(self,obs,i):
 		index_start_obstacle_i=self.getIndexStartObstacleI(i)
 		ctrl_pts=[]; 
 		num_cps_per_obstacle=self.obsm.getCPsPerObstacle();
 		for j in range(num_cps_per_obstacle):
-			index_start_cpoint=index_start_obstacle_i+3*j
-			cpoint_j=obs[0,index_start_cpoint:index_start_cpoint+3].reshape(3,1)
+			index_start_cpoint=index_start_obstacle_i+self.dim*j
+			cpoint_j=obs[0,index_start_cpoint:index_start_cpoint+self.dim].reshape(self.dim,1)
 			ctrl_pts.append(cpoint_j)
 
 		return ctrl_pts
@@ -108,23 +117,23 @@ class ObservationManager():
 	def getBboxInflatedObstacleI(self,obs,i):
 		index_start_obstacle_i=self.getIndexStartObstacleI(i)
 
-		tmp=index_start_obstacle_i+3*self.obsm.getCPsPerObstacle()
+		tmp=index_start_obstacle_i+self.dim*self.obsm.getCPsPerObstacle()
 
-		bbox_inflated=obs[0,tmp:tmp+4].reshape(3,1)
+		bbox_inflated=obs[0,tmp:tmp+4].reshape(self.dim,1)
 
 		return bbox_inflated
 
 	def getf_v(self, obs):
-		return obs[0,0:3].reshape((3,1)) #Column vector
+		return obs[0,0:self.dim].reshape((self.dim,1)) #Column vector
 
 	def getf_a(self, obs):
-		return obs[0,3:6].reshape((3,1)) #Column vector
+		return obs[0,self.dim:2*self.dim].reshape((self.dim,1)) #Column vector
 
 	def getyaw_dot(self, obs):
-		return obs[0,6].reshape((1,1)) 
+		return obs[0,2*self.dim].reshape((1,1)) 
 
 	def getf_g(self, obs):
-		return obs[0,7:10].reshape((3,1)) #Column vector
+		return obs[0,2*self.dim+1:3*self.dim+1].reshape((self.dim,1)) #Column vector
 
 	def getObstacles(self, obs):
 		# print("obs is= ", obs)

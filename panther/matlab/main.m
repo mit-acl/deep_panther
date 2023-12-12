@@ -37,7 +37,7 @@ num_max_of_obst=1; %This is the maximum num of the obstacles
 %Constants for spline fitted to the obstacle trajectory
 fitter.deg_pos=3;
 fitter.num_seg=7;
-fitter.dim_pos=3;
+fitter.dim_pos=2;
 fitter.num_samples=20;
 fitter_num_of_cps= fitter.num_seg + fitter.deg_pos;
 for i=1:num_max_of_obst
@@ -65,7 +65,7 @@ jit=false;
 t0_n=0.0; 
 tf_n=1.0;
 
-dim_pos=3;
+dim_pos=2;
 dim_yaw=1;
 
 offset_vel=0.1;

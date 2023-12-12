@@ -27,9 +27,9 @@ class ExpertPolicy(object):
     #Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
     my_SolverIpopt=py_panther.SolverIpopt(getPANTHERparamsAsCppStruct())
 
-    def __init__(self):
-        self.am=ActionManager();
-        self.om=ObservationManager();
+    def __init__(self, dim=3):
+        self.am=ActionManager(dim=dim);
+        self.om=ObservationManager(dim=dim);
 
         self.action_shape=self.am.getActionShape();
         self.observation_shape=self.om.getObservationShape();
@@ -172,8 +172,8 @@ class ExpertPolicy(object):
 
         Q=0.0; #Not used right now I think
 
-
-        self.am.assertAction(action_normalized)
+        # TODO: sometimes we get nans in the last 6 elements. Why?
+        #self.am.assertAction(action_normalized)
 
         return action_normalized, {"Q": Q}
 

@@ -11,7 +11,8 @@ from .State import State
 from .yaml_utils import readPANTHERparams
 
 class ActionManager():
-	def __init__(self):
+	def __init__(self, dim=3):
+		self.dim = dim
 		params=readPANTHERparams();
 		self.deg_pos=params["deg_pos"];
 		self.deg_yaw=params["deg_yaw"];
@@ -32,7 +33,7 @@ class ActionManager():
 		self.num_traj_per_action=params["num_of_trajs_per_replan"];
 
 		self.total_num_pos_ctrl_pts = self.num_seg + self.deg_pos
-		self.traj_size_pos_ctrl_pts = 3*(self.total_num_pos_ctrl_pts - 5);
+		self.traj_size_pos_ctrl_pts = self.dim*(self.total_num_pos_ctrl_pts - 5);
 		self.traj_size_yaw_ctrl_pts = (self.num_seg + self.deg_yaw - 3);
 		# self.traj_size = self.traj_size_pos_ctrl_pts + self.traj_size_yaw_ctrl_pts + 1 + 1; # Last two numbers are time and prob that traj is real
 		self.traj_size = self.traj_size_pos_ctrl_pts + self.traj_size_yaw_ctrl_pts + 1; # Last number is time
@@ -67,7 +68,8 @@ class ActionManager():
 
 	def assertAction(self,action):
 		assert action.shape==self.getActionShape(), f"[Env] ERROR: action.shape={action.shape} but should be={self.getActionShape()}"
-		assert not np.isnan(np.sum(action)), f"Action has nan"
+		assert np.all(~np.isnan(action)), f"Action has nan"
+		#assert not np.isnan(np.sum(action)), f"Action has nan"
 
 
 	def getDummyOptimalNormalizedAction(self):
@@ -80,7 +82,7 @@ class ActionManager():
 		dummy=np.ones((self.num_traj_per_action,self.traj_size))
 
 		for i in range((dummy.shape[0])):
-			for j in range(0,self.traj_size_pos_ctrl_pts,3):
+			for j in range(0,self.traj_size_pos_ctrl_pts,self.dim):
 				dummy[i,j]=i+j/10
 
 		return dummy
@@ -120,7 +122,7 @@ class ActionManager():
 		return action[index_traj,-1]
 
 	def getPosCtrlPts(self, action, index_traj):
-		return action[index_traj,0:self.traj_size_pos_ctrl_pts].reshape((3,-1), order='F')
+		return action[index_traj,0:self.traj_size_pos_ctrl_pts].reshape((self.dim,-1), order='F')
 
 	def getYawCtrlPts(self, action, index_traj):
 		return action[index_traj,self.traj_size_pos_ctrl_pts:-1].reshape((1,-1));
@@ -196,7 +198,7 @@ class ActionManager():
 		#Convert to w frame
 		w_pos_ctrl_pts = w_state.w_T_f * f_pos_ctrl_pts;
 
-		pf=w_pos_ctrl_pts[:,-1].reshape((3,1)); #Assumming final vel and accel=0 
+		pf=w_pos_ctrl_pts[:,-1].reshape((self.dim,1)); #Assumming final vel and accel=0 
 		p0=w_state.w_pos
 		v0=w_state.w_vel
 		a0=w_state.w_accel
@@ -286,7 +288,7 @@ class ActionManager():
 
 		# print(f"f_action={f_action}")
 		# print(f"total_time={total_time}")
-		w_posBS = MyClampedUniformBSpline(0.0, total_time, self.deg_pos, 3, self.num_seg, w_pos_ctrl_pts, no_deriv) #def __init__():[BSpline(knots_pos, w_pos_ctrl_pts[0,:], self.deg_pos)
+		w_posBS = MyClampedUniformBSpline(0.0, total_time, self.deg_pos, self.dim, self.num_seg, w_pos_ctrl_pts, no_deriv) #def __init__():[BSpline(knots_pos, w_pos_ctrl_pts[0,:], self.deg_pos)
 
 		w_yawBS = MyClampedUniformBSpline(0.0, total_time, self.deg_yaw, 1, self.num_seg, w_yaw_ctrl_pts, no_deriv)
 		
@@ -303,8 +305,8 @@ class ActionManager():
 
 		#Append position control points
 		for i in range(3,len(sol_or_guess.qp)-2):
-			# print(sol_or_guess.qp[i].reshape(1,3))
-			traj=np.concatenate((traj, sol_or_guess.qp[i].reshape(1,3)), axis=1)
+			# print(sol_or_guess.qp[i].reshape(1,self.dim))
+			traj=np.concatenate((traj, sol_or_guess.qp[i].reshape(1,self.dim)), axis=1)
 
 		#Append yaw control points
 		for i in range(2,len(sol_or_guess.qy)-1):
