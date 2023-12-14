@@ -13,6 +13,7 @@
 #include <deque>
 #include <filesystem>
 #include <iterator>
+#include <casadi/casadi.hpp>
 
 // #define STATE 0
 // #define INPUT 1
@@ -128,6 +129,10 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& v)
   }
   return out;
 }
+
+casadi::DM throwOutThirdDimension(casadi::DM matrix);
+
+std::vector<double> throwOutThirdDimension(std::vector<double> vector);
 
 std::string casadi_folder();
 

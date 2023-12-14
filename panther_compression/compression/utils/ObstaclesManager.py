@@ -15,9 +15,9 @@ class ObstaclesManager():
 	params=readPANTHERparams()
 	fitter = py_panther.Fitter(params["fitter_num_samples"]);
 
-	def __init__(self, dim=3):
+	def __init__(self, dim=3, num_obs=1):
 		self.dim=dim;
-		self.num_obs=1;
+		self.num_obs=num_obs;
 		self.params=readPANTHERparams();
 		# self.fitter_total_time=params["fitter_total_time"];
 		self.fitter_num_seg=self.params["fitter_num_seg"];

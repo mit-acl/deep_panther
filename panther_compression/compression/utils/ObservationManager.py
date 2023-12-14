@@ -9,9 +9,9 @@ from .ObstaclesManager import ObstaclesManager
 from colorama import Fore, Style
 
 class ObservationManager():
-	def __init__(self, dim=3):
+	def __init__(self, dim=3, num_obs=1):
 		self.dim = dim
-		self.obsm=ObstaclesManager(dim=dim);
+		self.obsm=ObstaclesManager(dim=dim, num_obs=num_obs);
 		#Observation =       [f_v, f_a, yaw_dot, f_g,  [f_ctrl_pts_o0], bbox_o0, [f_ctrl_pts_o1], bbox_o1 ,...]
 		#
 		# Where f_ctrl_pts_oi = [cp0.transpose(), cp1.transpose(), ...]
@@ -101,7 +101,7 @@ class ObservationManager():
 
 
 	def getIndexStartObstacleI(self,i):
-		return 10+(self.obsm.getCPsPerObstacle()+self.dim)*i
+		return (3*self.dim+1) + i*self.dim*(self.obsm.getCPsPerObstacle()+1)
 
 	def getCtrlPtsObstacleI(self,obs,i):
 		index_start_obstacle_i=self.getIndexStartObstacleI(i)
@@ -110,30 +110,42 @@ class ObservationManager():
 		for j in range(num_cps_per_obstacle):
 			index_start_cpoint=index_start_obstacle_i+self.dim*j
 			cpoint_j=obs[0,index_start_cpoint:index_start_cpoint+self.dim].reshape(self.dim,1)
+			if self.dim == 2:
+				cpoint_j = np.vstack((cpoint_j, np.zeros((1, 1))))
 			ctrl_pts.append(cpoint_j)
 
 		return ctrl_pts
 
 	def getBboxInflatedObstacleI(self,obs,i):
 		index_start_obstacle_i=self.getIndexStartObstacleI(i)
-
 		tmp=index_start_obstacle_i+self.dim*self.obsm.getCPsPerObstacle()
 
-		bbox_inflated=obs[0,tmp:tmp+4].reshape(self.dim,1)
-
+		bbox_inflated=obs[0,tmp:tmp+self.dim].reshape(self.dim,1)
+		
+		if self.dim == 2:
+			bbox_inflated = np.vstack((bbox_inflated, np.zeros((1, 1))))
 		return bbox_inflated
 
 	def getf_v(self, obs):
-		return obs[0,0:self.dim].reshape((self.dim,1)) #Column vector
+		v = obs[0,0:self.dim].reshape((self.dim,1)) #Column vector
+		if self.dim == 2:
+			v = np.vstack((v, np.zeros((1, 1))))
+		return v
 
 	def getf_a(self, obs):
-		return obs[0,self.dim:2*self.dim].reshape((self.dim,1)) #Column vector
+		a = obs[0,self.dim:2*self.dim].reshape((self.dim,1)) #Column vector
+		if self.dim == 2:
+			a = np.vstack((a, np.zeros((1, 1))))
+		return a
 
 	def getyaw_dot(self, obs):
 		return obs[0,2*self.dim].reshape((1,1)) 
 
 	def getf_g(self, obs):
-		return obs[0,2*self.dim+1:3*self.dim+1].reshape((self.dim,1)) #Column vector
+		g = obs[0,2*self.dim+1:3*self.dim+1].reshape((self.dim,1)) #Column vector
+		if self.dim == 2:
+			g = np.vstack((g, np.zeros((1, 1))))
+		return g
 
 	def getObstacles(self, obs):
 		# print("obs is= ", obs)
@@ -145,7 +157,6 @@ class ObservationManager():
 			bbox_inflated=self.getBboxInflatedObstacleI(obs,i)
 
 			obstacle=py_panther.obstacleForOpt()
-
 			obstacle.ctrl_pts=ctrl_pts
 			obstacle.bbox_inflated=bbox_inflated
 
@@ -155,7 +166,7 @@ class ObservationManager():
 
 	def getInit_f_StateFromObservation(self, obs):
 		init_state=py_panther.state();  #Everything initialized as zero
-		init_state.pos= np.array([[0.0],[0.0],[0.0]]);#Because it's in f frame
+		init_state.pos = np.zeros((3, 1)); #Because it's in f frame
 		init_state.vel= self.getf_v(obs);
 		init_state.accel= self.getf_a(obs);
 		init_state.yaw= 0.0  #Because it's in f frame

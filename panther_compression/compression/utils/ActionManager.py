@@ -82,7 +82,7 @@ class ActionManager():
 		dummy=np.ones((self.num_traj_per_action,self.traj_size))
 
 		for i in range((dummy.shape[0])):
-			for j in range(0,self.traj_size_pos_ctrl_pts,self.dim):
+			for j in range(0, self.traj_size_pos_ctrl_pts, self.dim):
 				dummy[i,j]=i+j/10
 
 		return dummy
@@ -122,7 +122,7 @@ class ActionManager():
 		return action[index_traj,-1]
 
 	def getPosCtrlPts(self, action, index_traj):
-		return action[index_traj,0:self.traj_size_pos_ctrl_pts].reshape((self.dim,-1), order='F')
+		return action[index_traj,0:self.traj_size_pos_ctrl_pts].reshape((self.dim, -1), order='F')
 
 	def getYawCtrlPts(self, action, index_traj):
 		return action[index_traj,self.traj_size_pos_ctrl_pts:-1].reshape((1,-1));
@@ -198,7 +198,7 @@ class ActionManager():
 		#Convert to w frame
 		w_pos_ctrl_pts = w_state.w_T_f * f_pos_ctrl_pts;
 
-		pf=w_pos_ctrl_pts[:,-1].reshape((self.dim,1)); #Assumming final vel and accel=0 
+		pf=w_pos_ctrl_pts[0:self.dim,-1].reshape((self.dim,1)); #Assumming final vel and accel=0 
 		p0=w_state.w_pos
 		v0=w_state.w_vel
 		a0=w_state.w_accel
@@ -306,7 +306,7 @@ class ActionManager():
 		#Append position control points
 		for i in range(3,len(sol_or_guess.qp)-2):
 			# print(sol_or_guess.qp[i].reshape(1,self.dim))
-			traj=np.concatenate((traj, sol_or_guess.qp[i].reshape(1,self.dim)), axis=1)
+			traj=np.concatenate((traj, sol_or_guess.qp[i][0:self.dim].reshape(1,self.dim)), axis=1)
 
 		#Append yaw control points
 		for i in range(2,len(sol_or_guess.qy)-1):

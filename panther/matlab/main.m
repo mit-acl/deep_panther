@@ -28,16 +28,18 @@ soft_obstacle_avoid_constraint=false;
 
 make_plots=false;
 
+dim_pos=2;
+dim_yaw=1;
 
 deg_pos=3;
 deg_yaw=2;
 num_seg =6; %number of segments
-num_max_of_obst=1; %This is the maximum num of the obstacles 
+num_max_of_obst=3; %This is the maximum num of the obstacles 
 
 %Constants for spline fitted to the obstacle trajectory
 fitter.deg_pos=3;
 fitter.num_seg=7;
-fitter.dim_pos=2;
+fitter.dim_pos=dim_pos;
 fitter.num_samples=20;
 fitter_num_of_cps= fitter.num_seg + fitter.deg_pos;
 for i=1:num_max_of_obst
@@ -64,9 +66,6 @@ jit=false;
 
 t0_n=0.0; 
 tf_n=1.0;
-
-dim_pos=2;
-dim_yaw=1;
 
 offset_vel=0.1;
 
@@ -114,12 +113,12 @@ total_time=alpha*(tf_n-t0_n); %Total time is (tf_n-t0_n)*alpha.
 
 %%%%% Initial and final conditions, and max values
 %FOR POSITION
-p0=opti.parameter(3,1); v0=opti.parameter(3,1); a0=opti.parameter(3,1);
-pf=opti.parameter(3,1); vf=opti.parameter(3,1); af=opti.parameter(3,1);
+p0=opti.parameter(dim_pos,1); v0=opti.parameter(dim_pos,1); a0=opti.parameter(dim_pos,1);
+pf=opti.parameter(dim_pos,1); vf=opti.parameter(dim_pos,1); af=opti.parameter(dim_pos,1);
 
-v_max=opti.parameter(3,1);
-a_max=opti.parameter(3,1);
-j_max=opti.parameter(3,1);
+v_max=opti.parameter(dim_pos,1);
+a_max=opti.parameter(dim_pos,1);
+j_max=opti.parameter(dim_pos,1);
 
 %Normalized v0, a0, v_max,...
 v0_n=v0*alpha;
@@ -144,9 +143,9 @@ ydot_max_n=ydot_max*alpha; %v_max for yaw
 n={}; d={};
 for i=1:(num_max_of_obst*num_seg)
     if(optimize_n_planes)
-        n{i}=opti.variable(3,1); 
+        n{i}=opti.variable(dim_pos,1); % TODO: should this be 3 instead of dim_pos?
     else
-        n{i}=opti.parameter(3,1); 
+        n{i}=opti.parameter(dim_pos,1); % TODO: should this be 3 instead of dim_pos?
     end
   
     if(optimize_d_planes)
@@ -372,6 +371,10 @@ h=alpha*(t_opt_n_samples(2)-t_opt_n_samples(1));
 for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
     
     w_t_b = sp.getPosT(t_opt_n);
+    if dim_pos == 2
+        w_t_b=[w_t_b; 0.0];
+    end
+
     a=sp.getAccelT(t_opt_n)/(alpha^(2));
     
     qpsi=[cos(yaw/2), 0, 0, sin(yaw/2)]; %Note that qpsi has norm=1
@@ -379,10 +382,16 @@ for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
     q=multquat(qabc,qpsi); %Note that q is guaranteed to have norm=1
     w_R_b=toRotMat(q);
   
-    w_T_b=[w_R_b w_t_b; zeros(1,3) 1];     w_T_c=w_T_b*b_T_c;     c_T_b=invPose(b_T_c);     b_T_w=invPose(w_T_b);
+    w_T_b=[w_R_b w_t_b; zeros(1,3) 1];
+    w_T_c=w_T_b*b_T_c;
+    c_T_b=invPose(b_T_c);
+    b_T_w=invPose(w_T_b);
     
     w_fevar=obst{1}.centers(:,simpson_index); %TODO: For now, only choosing one obstacle
-    
+    if dim_pos == 2
+        w_fevar=[w_fevar; 0.0];
+    end
+
     c_P=c_T_b*b_T_w*[w_fevar;1]; %Position of the feature in the camera frame
     s=c_P(1:2)/(c_P(3));  %Note that here we are not using f (the focal length in meters) because it will simply add a constant factor in ||s|| and in ||s_dot||
     
@@ -510,9 +519,9 @@ yCPs=sy.getCPsAsMatrix();
 % all_w_fe_value=cell2mat(all_w_fe_value);
 % all_w_velfewrtworld_value=cell2mat(all_w_velfewrtworld_value);
 
-v_max_value=1.6*ones(3,1);
-a_max_value=5*ones(3,1);
-j_max_value=50*ones(3,1);
+v_max_value=1.6*ones(dim_pos,1);
+a_max_value=5*ones(dim_pos,1);
+j_max_value=50*ones(dim_pos,1);
 
 alpha_value=15.0;
 
@@ -565,8 +574,19 @@ tmp1=[0, 0, 0, 1.64678, 2.85231, 4.05784, 5.70462, 5.70462, 5.70462;
 tmp2=[0, 0, 0.281832, 0.888652, 1.82877, 2.19427, 2.34944, 2.34944];
 
 
-
 % all_obstacle_bbox_inflated_value= ones(size(all_obstacle_bbox_inflated));
+p0_value=p0_value(1:dim_pos, :);
+tmp1=tmp1(1:dim_pos, :);
+
+v0_value=v0_value(1:dim_pos, :);
+a0_value=a0_value(1:dim_pos, :);
+
+pf_value=pf_value(1:dim_pos, :);
+vf_value=vf_value(1:dim_pos, :);
+af_value=af_value(1:dim_pos, :);
+
+all_nd=all_nd(1:dim_pos+1, :);
+all_nd_value=all_nd_value(1:dim_pos+1, :);
 
 par_and_init_guess= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV_deg_value)},...
               {createStruct('thetay_FOV_deg', thetay_FOV_deg, thetay_FOV_deg_value)},...
@@ -937,10 +957,12 @@ all_yaw_value=linspace(0,pi,numel(t_opt_n_samples));
 solution=f(all_yaw_value, alpha_value, ydot0_value, ydotf_value);
 sy_tmp=MyClampedUniformSpline(t0_n,tf_n,deg_yaw, dim_yaw, num_seg, opti);  %creating another object to not mess up with sy
 sy_tmp.updateCPsWithSolution(full(solution)');
+
+if (make_plots)
 sy_tmp.plotPosVelAccelJerk();
 subplot(4,1,1); hold on;
 plot(t_opt_n_samples, all_yaw_value, 'o')
-
+end
 
 f.save('./casadi_generated_files/fit_yaw.casadi') 
 
@@ -988,7 +1010,7 @@ samples_value=[sin(t)+2*sin(2*t);
                cos(t)-2*cos(2*t);
                -sin(3*t)];
 
-
+samples_value=samples_value(1:dim_pos, :);
 solution=f(samples_value);
 
 %%
@@ -1003,8 +1025,15 @@ fitter.bs.updateCPsWithSolution(full(solution));
 
 % sp_tmp.plotPosVelAccelJerk();
 
-fitter.bs.plotPos3D();
-scatter3(samples_value(1,:), samples_value(2,:), samples_value(3,:))
+if (make_plots)
+    if fitter.dim_pos == 3
+        fitter.bs.plotPos3D();
+        scatter3(samples_value(1,:), samples_value(2,:), samples_value(3,:))
+    else
+        fitter.bs.plotPos2D();
+        scatter(samples_value(1,:), samples_value(2,:))
+    end
+end
 
 f.save('./casadi_generated_files/fit3d.casadi') 
 
@@ -1038,7 +1067,12 @@ for t=all_t_n
     a = a_n/(alpha^2);
 
     ee=pos_feature-pos;
-    xi=a+[0 0 9.81]';
+    
+    g = [0 0]';
+    if dim_pos == 3
+        g = [0 0 9.81]';
+    end
+    xi=a+g;
 
     r0_star=(ee*norm(xi)^2 - (ee'*xi)*xi);
     r0_star=r0_star/norm(r0_star);
@@ -1047,6 +1081,11 @@ for t=all_t_n
 
     qabc=qabcFromAccel(a, 9.81);
     Rabc=toRotMat(qabc);
+
+    if dim_pos == 2
+        pos = [pos; 0.0];
+        tmp = [tmp; 0.0];
+    end
     w_Tabc_b0y=[Rabc pos; 0 0 0 1]; %The frame "b0y" stands for "body zero yaw", and has yaw=0
     
     b0y_r0star=invPose(w_Tabc_b0y)*[tmp;1]; %express the vector in the frame "b0y" 
@@ -1127,18 +1166,23 @@ ydotf_value=0.0;
 
 disp("Calling function")
 tic
+
+pCPs_value = pCPs_value(1:dim_pos, :);
+pCPs_feature_value = pCPs_feature_value(1:dim_pos, :);
 result=f('pCPs', pCPs_value, 'pCPs_feature', pCPs_feature_value, 'alpha', alpha_value, ...
         'y0', y0_value,'ydot0', ydot0_value, 'ydotf', ydotf_value);
 toc
 disp("Function called")
 
 sy.updateCPsWithSolution(full(result.solution)')
-figure
-sy.plotPos();
-subplot(1,1,1); hold on;
-% plot(all_t_n,full(result.all_yaw),'o')
-plot(all_t_n,full(result.all_yaw_corrected),'o')
 
+if (make_plots)
+    figure
+    sy.plotPos();
+    subplot(1,1,1); hold on;
+    % plot(all_t_n,full(result.all_yaw),'o')
+    plot(all_t_n,full(result.all_yaw_corrected),'o')
+end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1159,7 +1203,7 @@ plot(all_t_n,full(result.all_yaw_corrected),'o')
 
         result=[result,...
                 {createStruct(name_crtl_pts,   fitter.ctrl_pts{i} , crtl_pts_value)},...
-                {createStruct(name_bbox_inflated, fitter.bbox_inflated{i} ,  [1;1;1]  )}];
+                {createStruct(name_bbox_inflated, fitter.bbox_inflated{i} ,  ones(fitter.dim_pos, 1)  )}];
 
     end
          

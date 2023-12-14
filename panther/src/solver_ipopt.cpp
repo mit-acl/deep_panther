@@ -51,7 +51,10 @@ std::vector<Eigen::Vector3d> casadiMatrix2StdVectorEigen3d(const casadi::DM &qp_
   std::vector<Eigen::Vector3d> qp;
   for (int i = 0; i < qp_casadi.columns(); i++)
   {
-    qp.push_back(Eigen::Vector3d(double(qp_casadi(0, i)), double(qp_casadi(1, i)), double(qp_casadi(2, i))));
+    double z_component = 0.0;
+    if (qp_casadi.size(1) == 3)
+      z_component = double(qp_casadi(2, i));
+    qp.push_back(Eigen::Vector3d(double(qp_casadi(0, i)), double(qp_casadi(1, i)), z_component));
   }
   return qp;
 }
@@ -172,6 +175,7 @@ std::vector<double> ClosedFormYawSolver::getyCPsfrompCPSUsingClosedForm(
 
 SolverIpopt::SolverIpopt(const mt::parameters &par)
 {
+  dim_ = 3;
   par_ = par;
   // log_ptr_ = log_ptr;
 
@@ -618,6 +622,7 @@ double SolverIpopt::computeCost(si::solOrGuess sol_or_guess)
   std::map<std::string, casadi::DM> map_arguments = getMapConstantArguments();
 
   casadi::DM matrix_qp = stdVectorEigen3d2CasadiMatrix(sol_or_guess.qp);
+  if (dim_ == 2) matrix_qp = throwOutThirdDimension(matrix_qp);
   casadi::DM matrix_qy = stdVectorDouble2CasadiRowVector(sol_or_guess.qy);
 
   map_arguments["alpha"] = sol_or_guess.getTotalTime();
@@ -636,6 +641,7 @@ double SolverIpopt::computeDynLimitsConstraintsViolation(si::solOrGuess sol_or_g
   std::map<std::string, casadi::DM> map_arguments = getMapConstantArguments();
 
   casadi::DM matrix_qp = stdVectorEigen3d2CasadiMatrix(sol_or_guess.qp);
+  if (dim_ == 2) matrix_qp = throwOutThirdDimension(matrix_qp);
   casadi::DM matrix_qy = stdVectorDouble2CasadiRowVector(sol_or_guess.qy);
 
   map_arguments["alpha"] = sol_or_guess.getTotalTime();
@@ -676,6 +682,17 @@ std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
   map_arguments["pf"] = eigen2std(final_state_.pos);
   map_arguments["vf"] = eigen2std(final_state_.vel);
   map_arguments["af"] = eigen2std(final_state_.accel);
+
+  if (dim_ == 2)
+  {
+    map_arguments["p0"] = throwOutThirdDimension(map_arguments["p0"]);
+    map_arguments["v0"] = throwOutThirdDimension(map_arguments["v0"]);
+    map_arguments["a0"] = throwOutThirdDimension(map_arguments["a0"]);
+    map_arguments["pf"] = throwOutThirdDimension(map_arguments["pf"]);
+    map_arguments["vf"] = throwOutThirdDimension(map_arguments["vf"]);
+    map_arguments["af"] = throwOutThirdDimension(map_arguments["af"]);
+  }
+
   map_arguments["y0"] = initial_state_.yaw;
   map_arguments["yf"] = final_state_.yaw;
 
@@ -691,6 +708,14 @@ std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
   map_arguments["v_max"] = eigen2std(par_.v_max);
   map_arguments["a_max"] = eigen2std(par_.a_max);
   map_arguments["j_max"] = eigen2std(par_.j_max);
+
+  if (dim_ == 2)
+  {
+    map_arguments["v_max"] = throwOutThirdDimension(map_arguments["v_max"]);
+    map_arguments["a_max"] = throwOutThirdDimension(map_arguments["a_max"]);
+    map_arguments["j_max"] = throwOutThirdDimension(map_arguments["j_max"]);
+  }
+
   map_arguments["ydot_max"] = par_.ydot_max;
   map_arguments["x_lim"] = std::vector<double>{ par_.x_min, par_.x_max };
   map_arguments["y_lim"] = std::vector<double>{ par_.y_min, par_.y_max };
@@ -698,8 +723,16 @@ std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
 
   for (int i = 0; i < par_.num_max_of_obst; i++)
   {  // clang-format off
-    map_arguments["obs_" + std::to_string(i) + "_ctrl_pts"] = stdVectorEigen3d2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
-    map_arguments["obs_" + std::to_string(i) + "_bbox_inflated"] = eigen3d2CasadiMatrix(obstacles_for_opt_[i].bbox_inflated);
+    casadi::DM ctrl_pts_matrix = stdVectorEigen3d2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
+    casadi::DM bbox_matrix = eigen3d2CasadiMatrix(obstacles_for_opt_[i].bbox_inflated);
+    if (dim_ == 2)
+    {
+      ctrl_pts_matrix = throwOutThirdDimension(ctrl_pts_matrix);
+      bbox_matrix = throwOutThirdDimension(bbox_matrix);
+    }
+
+    map_arguments["obs_" + std::to_string(i) + "_ctrl_pts"] = ctrl_pts_matrix;
+    map_arguments["obs_" + std::to_string(i) + "_bbox_inflated"] = bbox_matrix;
      // clang-format on
   }
 
@@ -798,16 +831,25 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   // #pragma omp parallel for
   for (auto p_guess : p_guesses)
   {
-    static casadi::DM all_nd(4, max_num_of_planes);
-    all_nd = casadi::DM::zeros(4, max_num_of_planes);
+    int all_nd_dim = 4;
+    if (dim_ == 2) all_nd_dim = 3;
+
+    static casadi::DM all_nd(all_nd_dim, max_num_of_planes);
+    all_nd = casadi::DM::zeros(all_nd_dim, max_num_of_planes);
     for (int i = 0; i < p_guess.n.size(); i++)
     {
       // The optimized curve is on the side n'x+d <= -1
       // The obstacle is on the side n'x+d >= 1
       all_nd(0, i) = p_guess.n[i].x();
       all_nd(1, i) = p_guess.n[i].y();
-      all_nd(2, i) = p_guess.n[i].z();
-      all_nd(3, i) = p_guess.d[i];
+
+      if (dim_ == 3)
+      {
+        all_nd(2, i) = p_guess.n[i].z();
+        all_nd(3, i) = p_guess.d[i];
+      } else {
+        all_nd(2, i) = p_guess.d[i];
+      }
     }
 
     map_arguments["all_nd"] = all_nd;
@@ -815,14 +857,13 @@ bool SolverIpopt::optimize(bool supress_all_prints)
     ///////////////// GUESS FOR POSITION CONTROL POINTS
 
     casadi::DM matrix_qp_guess = stdVectorEigen3d2CasadiMatrix(p_guess.qp);
-
+    if (dim_ == 2) matrix_qp_guess = throwOutThirdDimension(matrix_qp_guess);
     map_arguments["pCPs"] = matrix_qp_guess;
 
     ////////////////////////////////Generate Yaw Guess
     casadi::DM matrix_qy_guess(1, sy_.N);  // TODO: do this just once?
-
     matrix_qy_guess = generateYawGuess(matrix_qp_guess, initial_state_.yaw, initial_state_.dyaw, final_state_.dyaw,
-                                       t_init_, t_final_guess_);
+                                       t_init_, t_final_guess_, dim_);
 
     map_arguments["yCPs"] = matrix_qy_guess;
 
@@ -862,8 +903,8 @@ bool SolverIpopt::optimize(bool supress_all_prints)
       map_arguments["c_fov"] = par_.c_fov;
       // std::cout << bold << green << "Optimizing for YAW and POSITION!" << reset << std::endl;
 
-      // printMap(map_arguments);
-
+      printMap(map_arguments);
+      
       result = cf_op_(map_arguments);
     }
     else if (par_.mode == "py" && focus_on_obstacle_ == true)
@@ -1496,3 +1537,8 @@ bool SolverIpopt::getIntersectionWithPlane(const Eigen::Vector3d &P1, const Eige
 
 //   return ("");
 // }
+
+void SolverIpopt::setDim(int dim)
+{
+  dim_ = dim;
+}

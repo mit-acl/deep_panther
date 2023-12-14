@@ -214,6 +214,7 @@ public:
   }
   void setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obstacles_for_opt);
   mt::parameters par_;
+  int dim_;
   // mt::trajectory traj_solution_;
   si::solOrGuess getBestSolution();
   std::vector<si::solOrGuess> getBestSolutions();
@@ -226,6 +227,8 @@ public:
   double computeDynLimitsConstraintsViolation(si::solOrGuess guess);
 
   std::string getInfoLastOpt();
+
+  void setDim(int dim);
 
 protected:
 private:
@@ -303,7 +306,7 @@ private:
 
   void findCentroidHull(const Polyhedron_Std &hull, Eigen::Vector3d &centroid);
 
-  casadi::DM generateYawGuess(casadi::DM matrix_qp_guess, double y0, double ydot0, double ydotf, double t0, double tf);
+  casadi::DM generateYawGuess(casadi::DM matrix_qp_guess, double y0, double ydot0, double ydotf, double t0, double tf, int dim);
 
   std::vector<Eigen::Vector3d> n_;  // Each n_[i] has 3 elements (nx,ny,nz)
   std::vector<double> d_;           // d_[i] has 1 element

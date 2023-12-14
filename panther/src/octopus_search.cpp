@@ -571,7 +571,7 @@ bool OctopusSearch::computeUpperAndLowerConstraints(const int i, const Eigen::Ve
 
   if (i == (N_ - 3))
   {                                       // impose also that aNm3 is satisfied
-    Eigen::Vector3d vNm2(0.0, 0.0, 0.0);  // Due to the stop condition
+    Eigen::Vector3d vNm2 = Eigen::Vector3d::Zero();  // Due to the stop condition
 
     double c = (knots_(N_ - 3 + p_ + 1) - knots_(N_ - 3 + 2)) / (p_ - 1);
 

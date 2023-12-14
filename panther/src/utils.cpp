@@ -456,6 +456,22 @@ std::vector<double> eigen2std(const Eigen::Vector3d& v)
 //   return std::vector<float>{ v.x(), v.y(), v.z() };
 // }
 
+casadi::DM throwOutThirdDimension(casadi::DM matrix)
+{
+  casadi::DM matrix_2D(2, matrix.columns());
+  for (int j = 0; j < matrix.columns(); j++)
+  {
+    matrix_2D(0, j) = matrix(0, j);
+    matrix_2D(1, j) = matrix(1, j);
+  }
+  return matrix_2D;
+}
+
+std::vector<double> throwOutThirdDimension(std::vector<double> vector)
+{
+  return std::vector<double> { vector[0], vector[1] };
+}
+
 std::string casadi_folder()
 {
   std::string this_file = __FILE__;
@@ -466,3 +482,4 @@ std::string casadi_folder()
   std::string string_folder{folder.u8string()};
   return string_folder + "/";
 }
+

@@ -27,9 +27,13 @@ class ExpertPolicy(object):
     #Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
     my_SolverIpopt=py_panther.SolverIpopt(getPANTHERparamsAsCppStruct())
 
-    def __init__(self, dim=3):
-        self.am=ActionManager(dim=dim);
-        self.om=ObservationManager(dim=dim);
+    def __init__(self, dim=3, num_obs=1):
+        self.dim = dim;
+        self.num_obs = num_obs;
+        ExpertPolicy.my_SolverIpopt.setDim(self.dim);
+
+        self.am=ActionManager(dim=self.dim);
+        self.om=ObservationManager(dim=self.dim, num_obs=self.num_obs);
 
         self.action_shape=self.am.getActionShape();
         self.observation_shape=self.om.getObservationShape();
