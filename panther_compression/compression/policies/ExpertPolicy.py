@@ -72,7 +72,7 @@ class ExpertPolicy(object):
     def predict(self, obs_n, deterministic=True, verbose=True):
 
         if(self.om.isNanObservation(obs_n)):
-            return self.am.getNanAction(), {"Q": 0.0} 
+            return self.am.getNanAction(), {"Q": 0.0, "guesses": None}
 
         # print(f"self.observation_shape={self.observation_shape}")
         # obs_n=obs_n.reshape((-1,*self.observation_shape)) #Not sure why this is needed
@@ -111,19 +111,20 @@ class ExpertPolicy(object):
         succeed=ExpertPolicy.my_SolverIpopt.optimize(True);
         info=ExpertPolicy.my_SolverIpopt.getInfoLastOpt();
 
+        # process guesses
+        guesses = self.am.guesses2action(ExpertPolicy.my_SolverIpopt.getGuesses())
         
         if not succeed:
             if verbose:
                 self.printFailedOpt(info);
             # exit();
             # raise ExpertDidntSucceed()
-            return self.am.getNanAction(), {"Q": 0.0} 
+            return self.am.getNanAction(), {"Q": 0.0, "guesses": guesses}
         else:
             if verbose:
                 self.printSucessOpt(info);
 
         best_solutions=ExpertPolicy.my_SolverIpopt.getBestSolutions();
-
 
         ##############################################################
         # if(self.am.use_closed_form_yaw_student==True):
@@ -178,8 +179,7 @@ class ExpertPolicy(object):
 
         # TODO: sometimes we get nans in the last 6 elements. Why?
         #self.am.assertAction(action_normalized)
-
-        return action_normalized, {"Q": Q}
+        return action_normalized, {"Q": Q, "guesses": guesses}
 
 
         # #### End of call the optimization

@@ -123,7 +123,7 @@ class ObservationManager():
 		bbox_inflated=obs[0,tmp:tmp+self.dim].reshape(self.dim,1)
 		
 		if self.dim == 2:
-			bbox_inflated = np.vstack((bbox_inflated, np.zeros((1, 1))))
+			bbox_inflated = np.vstack((bbox_inflated, 10000 * np.ones((1, 1)))) # TODO: find a better solution for 2D
 		return bbox_inflated
 
 	def getf_v(self, obs):

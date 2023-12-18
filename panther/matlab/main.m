@@ -34,7 +34,7 @@ dim_yaw=1;
 deg_pos=3;
 deg_yaw=2;
 num_seg =6; %number of segments
-num_max_of_obst=3; %This is the maximum num of the obstacles 
+num_max_of_obst=2; %This is the maximum num of the obstacles 
 
 %Constants for spline fitted to the obstacle trajectory
 fitter.deg_pos=3;

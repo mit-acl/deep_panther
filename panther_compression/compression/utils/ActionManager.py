@@ -335,3 +335,10 @@ class ActionManager():
 
 		assert action.shape==self.getActionShape()
 		return action
+
+	def guesses2action(self, guesses):
+		action=np.empty((0,self.traj_size));
+		for guess in guesses:
+			traj=self.solOrGuess2traj(guess)
+			action=np.concatenate((action, traj), axis=0)
+		return action
