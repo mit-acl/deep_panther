@@ -305,12 +305,10 @@ for j=1:(sp.num_seg)
       
       if(optimize_n_planes || optimize_d_planes || optimize_time_alloc)
       
-          for i=1:num_max_of_obst
-            vertexes_ij=obst{i}.vertexes{j};
+            vertexes_ij=obst{obst_index}.vertexes{j};
             for kk=1:size(vertexes_ij,2)
                 const_p_obs_avoid{end+1}= n{ip}'*vertexes_ij(:,kk) + d{ip} >= 1; 
             end
-          end
       
       end
       
