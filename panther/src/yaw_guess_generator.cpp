@@ -147,10 +147,10 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
 
     if (isnan(visibility))
     {
-      //std::cout << red << bold
-      //          << "visibility is nan. This happens when Hopf fib sing has been found (i.e., bar{xi} =[0 0 -1]) "
-      //          << reset << std::endl;
-      //std::cout << "Using visibility=0" << std::endl;
+      std::cout << red << bold
+                << "visibility is nan. This happens when Hopf fib sing has been found (i.e., bar{xi} =[0 0 -1]) "
+                << reset << std::endl;
+      std::cout << "Using visibility=0" << std::endl;
       visibility = 0;
     }
 
