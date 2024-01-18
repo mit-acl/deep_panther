@@ -9,15 +9,15 @@ from .ObstaclesManager import ObstaclesManager
 from colorama import Fore, Style
 
 class ObservationManager():
-	def __init__(self, dim=3, num_obs=1):
+	def __init__(self, dim=3, num_obs=1, additional_config=None):
 		self.dim = dim
-		self.obsm=ObstaclesManager(dim=dim, num_obs=num_obs);
+		self.obsm=ObstaclesManager(dim=dim, num_obs=num_obs, additional_config=additional_config);
 		#Observation =       [f_v, f_a, yaw_dot, f_g,  [f_ctrl_pts_o0], bbox_o0, [f_ctrl_pts_o1], bbox_o1 ,...]
 		#
 		# Where f_ctrl_pts_oi = [cp0.transpose(), cp1.transpose(), ...]
 		self.observation_size= self.dim + self.dim + 1 + self.dim + self.obsm.getSizeAllObstacles();
 
-		params=readPANTHERparams();
+		params=readPANTHERparams(additional_config=additional_config);
 
 		self.v_max=np.array(params["v_max"]).reshape(3,1);
 		self.a_max=np.array(params["a_max"]).reshape(3,1);

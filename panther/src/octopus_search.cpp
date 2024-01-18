@@ -84,6 +84,7 @@ void OctopusSearch::setUp(double t_min, double t_max, const ConvexHullsOfCurves_
   num_of_normals_ = num_of_segments_ * num_of_obst_;
 
   hulls_ = hulls;
+  std::cout << hulls.size() << " hulls with " << hulls[0].size() << " elements" << std::endl;
 
   double deltaT = (t_max - t_min) / (1.0 * (M_ - 2 * p_ - 1 + 1));
 

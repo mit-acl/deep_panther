@@ -27,13 +27,15 @@ class ExpertPolicy(object):
     #Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
     my_SolverIpopt=py_panther.SolverIpopt(getPANTHERparamsAsCppStruct())
 
-    def __init__(self, dim=3, num_obs=1):
+    def __init__(self, dim=3, num_obs=1, additional_config=None):
         self.dim = dim;
         self.num_obs = num_obs;
+        
+        ExpertPolicy.my_SolverIpopt = py_panther.SolverIpopt(getPANTHERparamsAsCppStruct(additional_config=additional_config))
         ExpertPolicy.my_SolverIpopt.setDim(self.dim);
 
-        self.am=ActionManager(dim=self.dim);
-        self.om=ObservationManager(dim=self.dim, num_obs=self.num_obs);
+        self.am=ActionManager(dim=self.dim, additional_config=additional_config);
+        self.om=ObservationManager(dim=self.dim, num_obs=self.num_obs, additional_config=additional_config);
 
         self.action_shape=self.am.getActionShape();
         self.observation_shape=self.om.getObservationShape();
@@ -41,7 +43,7 @@ class ExpertPolicy(object):
         self.action_space = spaces.Box(low = -1.0, high = 1.0, shape=self.action_shape)
         self.observation_space = spaces.Box(low = -1.0, high = 1.0, shape=self.observation_shape)
 
-        par=getPANTHERparamsAsCppStruct()
+        par=getPANTHERparamsAsCppStruct(additional_config=additional_config)
         self.par_v_max=par.v_max
         self.par_a_max=par.a_max
         self.par_factor_alloc=par.factor_alloc
@@ -72,7 +74,7 @@ class ExpertPolicy(object):
     def predict(self, obs_n, deterministic=True, verbose=True):
 
         if(self.om.isNanObservation(obs_n)):
-            return self.am.getNanAction(), {"Q": 0.0, "guesses": None}
+            return self.am.getNanAction(), {"Q": 0.0, "guesses": None, "total_time": 0.0}
 
         # print(f"self.observation_shape={self.observation_shape}")
         # obs_n=obs_n.reshape((-1,*self.observation_shape)) #Not sure why this is needed
@@ -119,7 +121,7 @@ class ExpertPolicy(object):
                 self.printFailedOpt(info);
             # exit();
             # raise ExpertDidntSucceed()
-            return self.am.getNanAction(), {"Q": 0.0, "guesses": guesses}
+            return self.am.getNanAction(), {"Q": 0.0, "guesses": guesses, "total_time": total_time}
         else:
             if verbose:
                 self.printSucessOpt(info);
@@ -162,6 +164,8 @@ class ExpertPolicy(object):
 
         action=self.am.solsOrGuesses2action(best_solutions)
 
+        total_time=[self.am.getTotalTime(action, i) for i in range(action.shape[0])]
+
         # for i in range(action.shape[0]):
         #     print(self.am.getYawCtrlPts(action, i))
         #
@@ -179,7 +183,7 @@ class ExpertPolicy(object):
 
         # TODO: sometimes we get nans in the last 6 elements. Why?
         #self.am.assertAction(action_normalized)
-        return action_normalized, {"Q": Q, "guesses": guesses}
+        return action_normalized, {"Q": Q, "guesses": guesses, "total_time": total_time}
 
 
         # #### End of call the optimization

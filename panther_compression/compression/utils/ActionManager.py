@@ -11,9 +11,9 @@ from .State import State
 from .yaml_utils import readPANTHERparams
 
 class ActionManager():
-	def __init__(self, dim=3):
+	def __init__(self, dim=3, additional_config=None):
 		self.dim = dim
-		params=readPANTHERparams();
+		params=readPANTHERparams(additional_config=additional_config);
 		self.deg_pos=params["deg_pos"];
 		self.deg_yaw=params["deg_yaw"];
 		self.num_seg=params["num_seg"];

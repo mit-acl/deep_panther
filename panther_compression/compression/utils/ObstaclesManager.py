@@ -15,10 +15,10 @@ class ObstaclesManager():
 	params=readPANTHERparams()
 	fitter = py_panther.Fitter(params["fitter_num_samples"]);
 
-	def __init__(self, dim=3, num_obs=1):
+	def __init__(self, dim=3, num_obs=1, additional_config=None):
 		self.dim=dim;
 		self.num_obs=num_obs;
-		self.params=readPANTHERparams();
+		self.params=readPANTHERparams(additional_config=additional_config);
 		# self.fitter_total_time=params["fitter_total_time"];
 		self.fitter_num_seg=self.params["fitter_num_seg"];
 		self.fitter_deg_pos=self.params["fitter_deg_pos"];
@@ -44,7 +44,7 @@ class ObstaclesManager():
 
 	def getSizeAllObstacles(self):
 		#Size of the ctrl_pts + bbox
-		return self.num_obs*(self.dim*self.getCPsPerObstacle() + self.dim) 
+		return self.num_obs*(self.dim*self.getCPsPerObstacle() + self.dim)
 
 	def getFutureWPosStaticObstacles(self):
 		w_obs=[];

@@ -28,13 +28,13 @@ soft_obstacle_avoid_constraint=false;
 
 make_plots=false;
 
-dim_pos=2;
+dim_pos=3;
 dim_yaw=1;
 
 deg_pos=3;
 deg_yaw=2;
 num_seg =6; %number of segments
-num_max_of_obst=2; %This is the maximum num of the obstacles 
+num_max_of_obst=1; %This is the maximum num of the obstacles 
 
 %Constants for spline fitted to the obstacle trajectory
 fitter.deg_pos=3;
@@ -303,16 +303,11 @@ for j=1:(sp.num_seg)
       %variable OR if d is a dec variable
       
       if(optimize_n_planes || optimize_d_planes || optimize_time_alloc)
-      
-          for i=1:num_max_of_obst
-            vertexes_ij=obst{i}.vertexes{j};
-            for kk=1:size(vertexes_ij,2)
-                const_p_obs_avoid{end+1}= n{ip}'*vertexes_ij(:,kk) + d{ip} >= 1; 
-            end
-          end
-      
+        vertexes_ij=obst{obst_index}.vertexes{j};
+        for kk=1:size(vertexes_ij,2)
+            const_p_obs_avoid{end+1}= n{ip}'*vertexes_ij(:,kk) + d{ip} >= 1; 
+        end
       end
-      
       
       %and the control points on the other side
       for kk=1:size(Q,2)
