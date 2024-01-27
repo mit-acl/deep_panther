@@ -28,13 +28,13 @@ soft_obstacle_avoid_constraint=false;
 
 make_plots=false;
 
-dim_pos=3;
+dim_pos=2;
 dim_yaw=1;
 
 deg_pos=3;
 deg_yaw=2;
 num_seg =6; %number of segments
-num_max_of_obst=1; %This is the maximum num of the obstacles 
+num_max_of_obst=3; %This is the maximum num of the obstacles 
 
 %Constants for spline fitted to the obstacle trajectory
 fitter.deg_pos=3;
@@ -48,7 +48,7 @@ for i=1:num_max_of_obst
     fitter.bs_casadi{i}=MyCasadiClampedUniformSpline(0,1,fitter.deg_pos,fitter.dim_pos,fitter.num_seg,fitter.ctrl_pts{i}, false);
 end
 fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti);
-fitter.total_time=6.0; %Time from (time at point d) to end of the fitted spline
+fitter.total_time=30.0; %Time from (time at point d) to end of the fitted spline
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
