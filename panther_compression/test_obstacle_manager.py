@@ -1,4 +1,4 @@
-from compression.utils.other import ObstaclesManager
+from compression.utils.ObstaclesManager import ObstaclesManager
 
 
 obstacle_manager=ObstaclesManager()

@@ -7,7 +7,7 @@ import os
 import tempfile
 import time
 import argparse
-import gym
+import gymnasium as gym
 import numpy as np
 import pprint
 from stable_baselines3.common import on_policy_algorithm
@@ -114,12 +114,14 @@ if __name__ == "__main__":
     # print(f"only_test_loss={args.only_test_loss}")
     # exit();
     
+    set_focus_on_obstacle=False
+
     only_collect_data=False
-    train_only_supervised=True
+    train_only_supervised=False
     reuse_previous_samples=False
 
     record_bag=True
-    launch_tensorboard=True
+    launch_tensorboard=False
     verbose_python_errors=False
     batch_size = 256
     N_EPOCHS = 250           #WAS 50!! Num epochs for training.
@@ -149,7 +151,7 @@ if __name__ == "__main__":
         #This places all the demos in the round-000 folder
         os.system("find "+demos_dir+" -type f -print0 | xargs -0 mv -t "+demos_dir)
         os.system("rm -rf "+demos_dir+"/round*")
-        os.system("mkdir "+demos_dir+"/round-000")
+        os.system("mkdir -p "+demos_dir+"/round-000")
         os.system("mv "+demos_dir+"/*.npz "+demos_dir+"/round-000")
         #########
 
@@ -241,7 +243,7 @@ if __name__ == "__main__":
         printInBoldBlue("---------------- Making Environments: -------------------")
         print("[Train Env] Making training environment...")
         # train_env = gym.make(ENV_NAME)
-        # train_env.seed(args.seed)
+        # train_env.reset(seed=args.seed)
         # train_env.action_space.seed(args.seed)
         # train_env.set_len_ep(args.train_environment_max_steps) 
         # if(record_bag):
@@ -266,7 +268,7 @@ if __name__ == "__main__":
             # Create and set properties for EVALUATION environment
             print("[Test Env] Making test environment...")
             test_venv = util.make_vec_env(env_name=ENV_NAME, n_envs=num_envs, seed=args.seed, parallel=False)#Note that parallel applies to the environment step, not to the expert step
-            test_venv.seed(args.seed)
+            test_venv.reset(seed=args.seed)
             test_venv.env_method("set_len_ep", (args.test_environment_max_steps)) 
             print("[Test Env] Ep. Len:  {} [steps].".format(test_venv.get_attr("len_episode")))
 
@@ -274,7 +276,7 @@ if __name__ == "__main__":
                 test_venv.env_method("setID", i, indices=[i]) 
 
             # test_venv = gym.make(ENV_NAME)
-            # test_venv.seed(args.seed)
+            # test_venv.reset(seed=args.seed)
             # test_venv.action_space.seed(args.seed)
             # test_venv.set_len_ep(args.test_environment_max_steps)
             # print(f"[Train Env] Ep. Len:  {test_venv.get_len_ep()} [steps].")
@@ -287,7 +289,7 @@ if __name__ == "__main__":
 
         printInBoldBlue("---------------- Making Expert Policy: --------------------")
         # Create expert policy 
-        expert_policy = ExpertPolicy()
+        expert_policy = ExpertPolicy(set_focus_on_obstacle=set_focus_on_obstacle)
 
         printInBoldBlue("---------------- Making Learner Policy: -------------------")
         # Create learner policy
@@ -295,10 +297,6 @@ if __name__ == "__main__":
             trainer = make_simple_dagger_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, rampdown_rounds=args.rampdown_rounds, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, expert_policy=expert_policy, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA) 
         else: 
             trainer = make_bc_trainer(tmpdir=DATA_POLICY_PATH, venv=train_venv, custom_logger=custom_logger, lr=lr, batch_size=batch_size, weight_prob=weight_prob, type_loss=args.type_loss, only_test_loss=args.only_test_loss, epsilon_RWTA=args.epsilon_RWTA)
-
-
-
-
 
         if(args.init_and_final_eval):
             printInBoldBlue("---------------- Preliminiary Evaluation: --------------------")

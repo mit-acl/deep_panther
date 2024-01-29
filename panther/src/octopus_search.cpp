@@ -7,7 +7,6 @@
  * -------------------------------------------------------------------------- */
 #include <vector>
 #include <random>
-#include "ros/ros.h"
 
 #include "timer.hpp"
 #include "termcolor.hpp"
@@ -85,6 +84,7 @@ void OctopusSearch::setUp(double t_min, double t_max, const ConvexHullsOfCurves_
   num_of_normals_ = num_of_segments_ * num_of_obst_;
 
   hulls_ = hulls;
+  std::cout << hulls.size() << " hulls with " << hulls[0].size() << " elements" << std::endl;
 
   double deltaT = (t_max - t_min) / (1.0 * (M_ - 2 * p_ - 1 + 1));
 
@@ -572,7 +572,7 @@ bool OctopusSearch::computeUpperAndLowerConstraints(const int i, const Eigen::Ve
 
   if (i == (N_ - 3))
   {                                       // impose also that aNm3 is satisfied
-    Eigen::Vector3d vNm2(0.0, 0.0, 0.0);  // Due to the stop condition
+    Eigen::Vector3d vNm2 = Eigen::Vector3d::Zero();  // Due to the stop condition
 
     double c = (knots_(N_ - 3 + p_ + 1) - knots_(N_ - 3 + 2)) / (p_ - 1);
 

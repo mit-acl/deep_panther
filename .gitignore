@@ -1,3 +1,4 @@
+.vscode/
 .rosinstall
 .rosinstall.bak
 *.asv

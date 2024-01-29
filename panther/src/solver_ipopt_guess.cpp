@@ -9,7 +9,6 @@
 #include "solver_ipopt.hpp"
 #include "termcolor.hpp"
 #include "bspline_utils.hpp"
-#include "ros/ros.h"
 
 #include <decomp_util/ellipsoid_decomp.h>  //For Polyhedron definition
 #include <unsupported/Eigen/Splines>
