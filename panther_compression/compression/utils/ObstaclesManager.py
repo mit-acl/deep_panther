@@ -80,7 +80,7 @@ class ObstaclesManager():
 		for i in range(self.num_obs):
 			samples=[]
 			for t_interm in np.linspace(t, t + self.fitter_total_time, num=self.fitter_num_samples):#.tolist():
-				samples.append(trefoil.getPosT(t_interm))
+				samples.append(trefoil.getPosT(t_interm))				
 
 			ObstaclesManager.fitter.setDimension(self.dim)
 			w_ctrl_pts_ob_list=ObstaclesManager.fitter.fit(samples)

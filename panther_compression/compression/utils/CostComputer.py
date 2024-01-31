@@ -31,13 +31,12 @@ class CostComputer():
 	
 	par=getPANTHERparamsAsCppStruct();
 
-
-	def __init__(self, dim=3, num_obs=1):
+	def __init__(self, dim=3, num_obs=1, additional_config=None):
 		# self.par=getPANTHERparamsAsCppStruct();
 		self.dim=dim
-		self.am=ActionManager(dim=dim);
-		self.om=ObservationManager(dim=dim, num_obs=num_obs);	
-		self.obsm=ObstaclesManager(dim=dim, num_obs=num_obs);
+		self.am=ActionManager(dim=dim, additional_config=additional_config);
+		self.om=ObservationManager(dim=dim, num_obs=num_obs, additional_config=additional_config);	
+		self.obsm=ObstaclesManager(dim=dim, num_obs=num_obs, additional_config=additional_config);
 		CostComputer.my_SolverIpopt.setDim(dim);
 		self.num_obstacles=self.obsm.getNumObs();
 

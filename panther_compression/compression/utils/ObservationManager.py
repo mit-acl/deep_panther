@@ -25,6 +25,8 @@ class ObservationManager():
 		self.ydot_max=params["ydot_max"];
 		# self.max_dist2goal=params["max_dist2goal"];
 		self.max_dist2obs=params["max_dist2obs"];
+		print(f"dist2obs {self.max_dist2obs}")
+		
 		self.max_side_bbox_obs=params["max_side_bbox_obs"];
 		self.Ra=params["Ra"]
 		ones13=np.ones((1,self.dim));
