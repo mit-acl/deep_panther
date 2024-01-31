@@ -105,10 +105,16 @@ Fitter::Fitter(const int fitter_num_samples)
   //std::string folder = std::filesystem::current_path().string() + "/../matlab/casadi_generated_files/";
   cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
   fitter_num_samples_ = fitter_num_samples;
+  dim_ = 3;
 }
 
 Fitter::~Fitter()
 {
+}
+
+void Fitter::setDimension(const int dim)
+{
+  dim_ = dim;
 }
 
 std::vector<Eigen::Vector3d> Fitter::fit(std::vector<Eigen::Vector3d> &samples)
@@ -119,6 +125,10 @@ std::vector<Eigen::Vector3d> Fitter::fit(std::vector<Eigen::Vector3d> &samples)
   // Fit a spline to those samples
   std::map<std::string, casadi::DM> map_arg;
   map_arg["samples"] = stdVectorEigen3d2CasadiMatrix(samples);
+  if (dim_ == 2) {
+    map_arg["samples"] = throwOutThirdDimension(map_arg["samples"]);
+  }
+
   std::map<std::string, casadi::DM> result = cf_fit3d_(map_arg);
   std::vector<Eigen::Vector3d> ctrl_pts = casadiMatrix2StdVectorEigen3d(result["result"]);
 
@@ -128,12 +138,18 @@ std::vector<Eigen::Vector3d> Fitter::fit(std::vector<Eigen::Vector3d> &samples)
 ClosedFormYawSolver::ClosedFormYawSolver()
 {
   std::string folder = casadi_folder();
+  dim_ = 2;
   //std::string folder = std::filesystem::current_path().string() + "/../matlab/casadi_generated_files/";
   cf_ = casadi::Function::load(folder + "get_optimal_yaw_for_fixed_pos.casadi");
 }
 
 ClosedFormYawSolver::~ClosedFormYawSolver()
 {
+}
+
+void ClosedFormYawSolver::setDimension(const int dim)
+{
+  dim_ = dim;
 }
 
 std::vector<double> ClosedFormYawSolver::getyCPsfrompCPSUsingClosedForm(
@@ -153,7 +169,10 @@ std::vector<double> ClosedFormYawSolver::getyCPsfrompCPSUsingClosedForm(
   // {
   //   std::cout << it->first << " " << it->second << "\n";
   // }
-
+  if (dim_ == 2) {
+    map_arg["pCPs"] = throwOutThirdDimension(map_arg["pCPs"]);
+    map_arg["pCPs_feature"] = throwOutThirdDimension(map_arg["pCPs_feature"]);
+  }
   std::map<std::string, casadi::DM> result = cf_(map_arg);
 
   std::vector<double> yCps = casadiMatrix2StdVectorDouble(result["solution"]);

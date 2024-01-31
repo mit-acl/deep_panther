@@ -121,7 +121,7 @@ def convertPPObstacles2Obstacles(ppobstacles): #pp stands for py_panther
 		obstacles.append(convertPPObstacle2Obstacle(ppobstacle))
 	return obstacles
 
-def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
+def posAccelYaw2TfMatrix(w_pos, w_accel, yaw, dim=3):
 	axis_z=[0,0,1]
 
 	#Hopf fibration approach
@@ -139,7 +139,6 @@ def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
 	q_z = 0         #z
 	qabc=pyquaternion.Quaternion(q_w, q_x, q_y, q_z)  #Constructor is Quaternion(w,x,y,z), see http://kieranwynn.github.io/pyquaternion/#object-initialisation
 
-
 	q_w = math.cos(yaw/2.0);  #w
 	q_x = 0;                  #x 
 	q_y = 0;                  #y
@@ -149,8 +148,7 @@ def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
 	w_q_b=qabc * qpsi
 
 	w_T_b = w_q_b.transformation_matrix;
-	
-	w_T_b[0:3,3]=w_pos.flatten()
+	w_T_b[0:dim, 3]=w_pos.flatten()
 	# print(w_T_b)
 
 	return TfMatrix(w_T_b)
@@ -163,7 +161,7 @@ class GTermManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.w_gterm=np.array([[random.uniform(-10.0, 10.0)],[random.uniform(-10.0, 10.0)],[random.uniform(1.0,1.0)]]);
+		self.w_gterm=np.array([[random.uniform(5.0, 8.0)],[random.uniform(-4.0, 4.0)],[random.uniform(1.0, 1.0)]]);
 		#self.w_gterm=np.array([[5.0],[0.0],[1.0]]);
 
 	def newRandomPosFarFrom_w_Position(self, w_position):
@@ -182,10 +180,14 @@ class Trefoil():
 	def __init__(self, pos, scale, offset, slower):
 		self.x=pos[0,0];
 		self.y=pos[1,0];
-		self.z=pos[2,0];
+		self.z = 0.0
+		if pos.shape[0] == 3:
+			self.z=pos[2,0];
 		self.scale_x=scale[0,0]
 		self.scale_y=scale[1,0]
-		self.scale_z=scale[2,0]
+		self.scale_z=0
+		if scale.shape[0] == 3:
+			self.scale_z=scale[2,0]
 		self.offset=offset;
 		self.slower=slower;
 

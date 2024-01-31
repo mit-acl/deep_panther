@@ -11,6 +11,7 @@
 #include <iostream>
 #include <iomanip>  // std::setprecision
 #include <deque>
+#include <vector>
 #include "termcolor.hpp"
 #include <Eigen/Dense>
 #include "timer.hpp"

@@ -28,29 +28,29 @@ class CostComputer():
     #Other option would be to do this: https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
 
 	my_SolverIpopt=py_panther.SolverIpopt(getPANTHERparamsAsCppStruct());
-	am=ActionManager();
-	om=ObservationManager();
+	
 	par=getPANTHERparamsAsCppStruct();
-	obsm=ObstaclesManager();
 
 
-	def __init__(self):
+	def __init__(self, dim=3, num_obs=1):
 		# self.par=getPANTHERparamsAsCppStruct();
-
-		self.num_obstacles=CostComputer.obsm.getNumObs()
-
-		
+		self.dim=dim
+		self.am=ActionManager(dim=dim);
+		self.om=ObservationManager(dim=dim, num_obs=num_obs);	
+		self.obsm=ObstaclesManager(dim=dim, num_obs=num_obs);
+		CostComputer.my_SolverIpopt.setDim(dim);
+		self.num_obstacles=self.obsm.getNumObs();
 
 	def setUpSolverIpoptAndGetppSolOrGuess(self, f_obs_n, f_traj_n):
 
 		#Denormalize observation and action
-		f_obs = CostComputer.om.denormalizeObservation(f_obs_n);
-		f_traj = CostComputer.am.denormalizeTraj(f_traj_n);
+		f_obs = self.om.denormalizeObservation(f_obs_n);
+		f_traj = self.am.denormalizeTraj(f_traj_n);
 
 		#Set up SolverIpopt
 		# print("\n========================")
-		init_state=CostComputer.om.getInit_f_StateFromObservation(f_obs)
-		final_state=CostComputer.om.getFinal_f_StateFromObservation(f_obs)
+		init_state=self.om.getInit_f_StateFromObservation(f_obs)
+		final_state=self.om.getFinal_f_StateFromObservation(f_obs)
 		total_time=computeTotalTime(init_state, final_state, CostComputer.par.v_max, CostComputer.par.a_max, CostComputer.par.factor_alloc)
 		# print(f"init_state=")
 		# init_state.printHorizontal();
@@ -59,7 +59,7 @@ class CostComputer():
 		# print(f"total_time={total_time}")
 		CostComputer.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
 		CostComputer.my_SolverIpopt.setFocusOnObstacle(True);
-		obstacles=CostComputer.om.getObstacles(f_obs)
+		obstacles=self.om.getObstacles(f_obs)
 
 		# print(f"obstacles=")
 
@@ -69,8 +69,8 @@ class CostComputer():
 		CostComputer.my_SolverIpopt.setObstaclesForOpt(obstacles);
 
 		###############################
-		f_state=CostComputer.om.get_f_StateFromf_obs(f_obs)
-		f_ppSolOrGuess=CostComputer.am.f_trajAnd_f_State2f_ppSolOrGuess(f_traj, f_state)
+		f_state=self.om.get_f_StateFromf_obs(f_obs)
+		f_ppSolOrGuess=self.am.f_trajAnd_f_State2f_ppSolOrGuess(f_traj, f_state)
 		###############################
 
 		return f_ppSolOrGuess;		
@@ -79,10 +79,10 @@ class CostComputer():
 	def computeObstAvoidanceConstraintsViolation(self, f_obs_n, f_traj_n):
 
 		#Denormalize observation and action
-		f_obs = CostComputer.om.denormalizeObservation(f_obs_n);
-		f_traj = CostComputer.am.denormalizeTraj(f_traj_n);
+		f_obs = self.om.denormalizeObservation(f_obs_n);
+		f_traj = self.am.denormalizeTraj(f_traj_n);
 
-		total_time=CostComputer.am.getTotalTimeTraj(f_traj)
+		total_time=self.am.getTotalTimeTraj(f_traj)
 
 		###Debugging
 		if(total_time<1e-5):
@@ -91,15 +91,15 @@ class CostComputer():
 			print(f"f_traj={f_traj}")
 		######
 
-		f_state = CostComputer.om.get_f_StateFromf_obs(f_obs)
-		f_posBS, f_yawBS = CostComputer.am.f_trajAnd_f_State2fBS(f_traj, f_state, no_deriv=True)
+		f_state = self.om.get_f_StateFromf_obs(f_obs)
+		f_posBS, f_yawBS = self.am.f_trajAnd_f_State2fBS(f_traj, f_state, no_deriv=True)
 
 		violation=0
 
 
 		for i in range(self.num_obstacles):
-			f_posObs_ctrl_pts=listOf3dVectors2numpy3Xmatrix(CostComputer.om.getCtrlPtsObstacleI(f_obs, i))
-			bbox=CostComputer.om.getBboxInflatedObstacleI(f_obs, i)
+			f_posObs_ctrl_pts=listOf3dVectors2numpy3Xmatrix(self.om.getCtrlPtsObstacleI(f_obs, i))
+			bbox=self.om.getBboxInflatedObstacleI(f_obs, i)
 			# print(f"f_posObs_ctrl_pts={f_posObs_ctrl_pts}")
 			# print(f"f_posBS.ctrl_pts={f_posBS.ctrl_pts}")
 
@@ -118,6 +118,9 @@ class CostComputer():
 
 				obs = f_posObstBS.getPosT(t);
 				drone = f_posBS.getPosT(t);
+				
+				if self.dim == 2:
+					drone = np.vstack((drone, np.zeros((1,1))))
 
 				obs_drone = drone - obs #position of the drone wrt the obstacle
 
@@ -136,6 +139,7 @@ class CostComputer():
 	def computeDynLimitsConstraintsViolation(self, f_obs_n, f_traj_n):
 
 		f_ppSolOrGuess=self.setUpSolverIpoptAndGetppSolOrGuess(f_obs_n, f_traj_n)
+		CostComputer.my_SolverIpopt.setDim(self.dim)
 		violation=CostComputer.my_SolverIpopt.computeDynLimitsConstraintsViolation(f_ppSolOrGuess) 
 
 		# #Debugging (when called using the traj from the expert)
@@ -175,6 +179,7 @@ class CostComputer():
 	def computeCost(self, f_obs_n, f_traj_n): 
 		
 		f_ppSolOrGuess=self.setUpSolverIpoptAndGetppSolOrGuess(f_obs_n, f_traj_n)
+		CostComputer.my_SolverIpopt.setDim(self.dim)
 		tmp=CostComputer.my_SolverIpopt.computeCost(f_ppSolOrGuess) 
 
 		return tmp   
@@ -210,6 +215,10 @@ class CostComputer():
 
 	def getCostsAndViolationsOfActionFromObsnAndActionn(self, f_obs_n, f_action_n):
 
+		if self.dim == 2:
+			f_obs_n = np.nan_to_num(f_obs_n)
+			f_action_n = np.nan_to_num(f_action_n)
+	
 		costs=[]
 		obst_avoidance_violations=[]
 		dyn_lim_violations=[]
@@ -245,7 +254,6 @@ class CostComputer():
 		##########################
 
 		# start=time.time();
-
 
 		for i in range( np.shape(f_action_n)[0]): #For each row of action
 
@@ -289,9 +297,9 @@ class CostComputer():
 		return result;
 
 class ClosedFormYawSubstituter():
-	def __init__(self):
+	def __init__(self, dim=3):
 		self.cy=py_panther.ClosedFormYawSolver();
-		self.am=ActionManager();
+		self.am=ActionManager(dim=dim);
 
 	def substituteWithClosedFormYaw(self, f_action_n, w_init_state, w_obstacles):
 

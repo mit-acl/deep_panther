@@ -194,9 +194,12 @@ class ActionManager():
 		knots_pos=generateKnotsForClampedUniformBspline(0.0, total_time, self.deg_pos, self.num_seg)
 
 		f_pos_ctrl_pts = self.getPosCtrlPtsTraj(f_traj)
+		if self.dim == 2:
+			f_pos_ctrl_pts = np.vstack((f_pos_ctrl_pts, np.zeros((1, f_pos_ctrl_pts.shape[1]))))
 
 		#Convert to w frame
 		w_pos_ctrl_pts = w_state.w_T_f * f_pos_ctrl_pts;
+		w_pos_ctrl_pts = w_pos_ctrl_pts[:self.dim]
 
 		pf=w_pos_ctrl_pts[0:self.dim,-1].reshape((self.dim,1)); #Assumming final vel and accel=0 
 		p0=w_state.w_pos
@@ -251,7 +254,10 @@ class ActionManager():
 
 		#Create and fill solOrGuess object
 		w_sol_or_guess=py_panther.solOrGuess();
-
+		
+		if self.dim == 2:
+			w_p_ctrl_pts = np.vstack((w_p_ctrl_pts, np.zeros((1, w_p_ctrl_pts.shape[1]))))
+		
 		w_sol_or_guess.qp=numpy3XmatrixToListOf3dVectors(w_p_ctrl_pts)
 		w_sol_or_guess.qy=numpy3XmatrixToListOf3dVectors(w_y_ctrl_pts)
 

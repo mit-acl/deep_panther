@@ -6,6 +6,7 @@
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 #include "utils.hpp"
+#include <casadi/casadi.hpp>
 
 #include "termcolor.hpp"
 
@@ -475,10 +476,10 @@ std::vector<double> throwOutThirdDimension(std::vector<double> vector)
 std::string casadi_folder()
 {
   std::string this_file = __FILE__;
-  std::filesystem::path folder = std::filesystem::path(this_file);
+  fs::path folder = fs::path(this_file);
   folder.remove_filename();
-  folder = folder / std::filesystem::path("../matlab/casadi_generated_files/");
-  folder = std::filesystem::canonical(folder);
+  folder = folder / fs::path("../matlab/casadi_generated_files/");
+  folder = fs::canonical(folder);
   std::string string_folder{folder.u8string()};
   return string_folder + "/";
 }

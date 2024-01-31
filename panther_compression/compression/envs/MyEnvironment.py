@@ -39,21 +39,21 @@ class MyEnvironment(gym.Env):
   """
   metadata = {'render.modes': ['human']}
 
-  def __init__(self):
+  def __init__(self, dim=3, num_obs=1):
     super().__init__() #Equivalently, we could also write super(MyEnvironment, self).__init__()    , see 2nd paragraph of https://stackoverflow.com/a/576183
 
     self.verbose = False
 
+    self.dim = dim
     self.len_episode = 200     # Time steps [-]
-
-    self.am=ActionManager();
-    self.om=ObservationManager();
-    self.obsm=ObstaclesManager();
+    self.am=ActionManager(dim=dim);
+    self.om=ObservationManager(dim=dim, num_obs=num_obs);
+    self.obsm=ObstaclesManager(dim=dim, num_obs=num_obs);
     self.gm=GTermManager();
-    self.cfys=ClosedFormYawSubstituter();
+    self.cfys=ClosedFormYawSubstituter(dim=dim);
 
 
-    self.cost_computer=CostComputer()
+    self.cost_computer=CostComputer(dim=dim, num_obs=num_obs)
 
     self.action_shape=self.am.getActionShape();
     self.observation_shape=self.om.getObservationShape();
@@ -76,7 +76,6 @@ class MyEnvironment(gym.Env):
     self.par=getPANTHERparamsAsCppStruct();
     # self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
     #######
-    print("Creating new environment!")
 
     self.constant_obstacle_pos=None
     self.constant_gterm_pos=None
@@ -147,7 +146,6 @@ class MyEnvironment(gym.Env):
       self.reset(seed=self.seed)
 
   def step(self, f_action_n):
-
     # self.printwithName(f"Received actionN={f_action_n}")
 
     if(self.am.isNanAction(f_action_n)):
@@ -183,7 +181,9 @@ class MyEnvironment(gym.Env):
 
     self.printwithNameAndColor(f"Choosing traj_{index_smallest_augmented_cost}")
     f_traj=self.am.getTrajFromAction(f_action, index_smallest_augmented_cost)
+    f_traj=np.nan_to_num(f_traj)
     f_traj_n=self.am.getTrajFromAction(f_action_n, index_smallest_augmented_cost)
+    f_traj_n=np.nan_to_num(f_traj_n)
     w_posBS, w_yawBS= self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
 
     ####################################
@@ -207,7 +207,7 @@ class MyEnvironment(gym.Env):
 
     #Update state
     self.w_state= State(w_posBS.getPosT(actual_dt), w_posBS.getVelT(actual_dt), w_posBS.getAccelT(actual_dt), \
-                        w_yawBS.getPosT(actual_dt), w_yawBS.getVelT(actual_dt));
+                        w_yawBS.getPosT(actual_dt), w_yawBS.getVelT(actual_dt), dim=self.dim);
 
     # self.printwithName("w and f state AFTER UPDATE")
     # self.w_state.print_w_frameHorizontal(self.name);
@@ -227,9 +227,9 @@ class MyEnvironment(gym.Env):
     f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles);
     f_observationn=self.om.normalizeObservation(f_observation);
 
-
-    dist_current_2gterm=np.linalg.norm(self.w_state.w_pos-self.gm.get_w_GTermPos()) #From the current position to the goal
-    dist_endtraj_2gterm=np.linalg.norm(w_posBS.getLastPos()-self.gm.get_w_GTermPos()) #From the end of the current traj to the goal
+    w_g = self.gm.get_w_GTermPos()[:self.dim]
+    dist_current_2gterm=np.linalg.norm(self.w_state.w_pos-w_g) #From the current position to the goal
+    dist_endtraj_2gterm=np.linalg.norm(w_posBS.getLastPos()-w_g) #From the end of the current traj to the goal
 
 
     goal_reached=(dist_current_2gterm<2.0 and dist_endtraj_2gterm<self.par.goal_radius) 
@@ -310,12 +310,14 @@ class MyEnvironment(gym.Env):
     self.timestep = 0
     self.force_done=False
 
-    p0=np.array([[0.0],[0.0],[1.0]])
-    v0=np.array([[0.0],[0.0],[0.0]])
-    a0=np.array([[0.0],[0.0],[0.0]])
+    p0=np.zeros((2, 1))
+    if self.dim == 3:
+      p0=np.array([[0.0],[0.0],[1.0]])
+    v0=np.zeros((self.dim, 1))
+    a0=np.zeros((self.dim, 1))
     y0=np.array([[0.0]])
     ydot0=np.array([[0.0]])
-    self.w_state=State(p0, v0, a0, y0, ydot0)
+    self.w_state=State(p0, v0, a0, y0, ydot0, dim=self.dim)
 
     if(isinstance(self.constant_obstacle_pos, type(None)) and isinstance(self.constant_gterm_pos, type(None))):
 
@@ -479,7 +481,7 @@ class MyEnvironment(gym.Env):
           pose_stamped=PoseStamped();
           pose_stamped.header.frame_id="world"
           pose_stamped.header.stamp=time_now
-          tf_matrix=posAccelYaw2TfMatrix(w_posBS.getPosT(t_i),w_posBS.getAccelT(t_i),w_yawBS.getPosT(t_i))
+          tf_matrix=posAccelYaw2TfMatrix(w_posBS.getPosT(t_i),w_posBS.getAccelT(t_i),w_yawBS.getPosT(t_i), dim=self.dim)
 
           pose_stamped.pose=TfMatrix2RosPose(tf_matrix)
 

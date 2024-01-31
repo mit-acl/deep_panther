@@ -72,7 +72,7 @@ class ExpertPolicy(object):
         # In the case of policies, the prediction is an action.
         # In the case of critics, it is the estimated value of the observation.
     def predict(self, obs_n, deterministic=True, verbose=True):
-
+        ExpertPolicy.my_SolverIpopt.setDim(self.dim);
         if(self.om.isNanObservation(obs_n)):
             return self.am.getNanAction(), {"Q": 0.0, "guesses": None, "total_time": 0.0}
 
@@ -198,7 +198,6 @@ class ExpertPolicy(object):
 
         # action=self.am.getDummyOptimalNormalizedAction()
     def predictSeveral(self, obs_n, deterministic=True):
-
         def my_func(thread_index):
             return self.predict( obs_n[thread_index,:,:], deterministic=deterministic)[0]
 

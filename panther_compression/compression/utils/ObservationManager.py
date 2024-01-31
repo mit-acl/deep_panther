@@ -96,7 +96,7 @@ class ObservationManager():
 		accel=self.getf_a(f_obs)
 		yaw=np.zeros((1,1))
 		yaw_dot=self.getyaw_dot(f_obs)
-		state=State(pos, vel, accel, yaw, yaw_dot)
+		state=State(pos[:self.dim], vel[:self.dim], accel[:self.dim], yaw, yaw_dot, dim=self.dim)
 		return state
 
 
@@ -233,13 +233,12 @@ class ObservationManager():
 		# print("w_state.f_vel().flatten()= ", w_state.f_vel().flatten())
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
 		# print("w_state.f_accel().flatten()= ", w_state.f_accel().flatten())
-		observation=np.concatenate((w_state.f_vel().flatten(), w_state.f_accel().flatten(), w_state.yaw_dot.flatten(), f_g.flatten()));
+		observation=np.concatenate((w_state.f_vel().flatten(), w_state.f_accel().flatten(), w_state.yaw_dot.flatten(), f_g.flatten()[:self.dim]));
 
 		#Convert obs to f frame and append ethem to observation
 		for w_obstacle in w_obstacles:
 			assert type(w_obstacle.ctrl_pts).__module__ == np.__name__, "the ctrl_pts should be a numpy matrix, not a list"
-			observation=np.concatenate((observation, (w_state.f_T_w*w_obstacle.ctrl_pts).flatten(order='F'), (w_obstacle.bbox_inflated).flatten()))
-
+			observation=np.concatenate((observation, (w_state.f_T_w*w_obstacle.ctrl_pts)[:self.dim].flatten(order='F'), (w_obstacle.bbox_inflated).flatten()))
 
 		observation=observation.reshape(self.getObservationShape())
 

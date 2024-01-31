@@ -174,12 +174,15 @@ public:
 
   ~Fitter();
 
+  void setDimension(const int dim);
+
   std::vector<Eigen::Vector3d> fit(std::vector<Eigen::Vector3d> &samples);
 
 protected:
 private:
   casadi::Function cf_fit3d_;
   int fitter_num_samples_;
+  int dim_;
 };
 
 class ClosedFormYawSolver
@@ -189,12 +192,15 @@ public:
 
   ~ClosedFormYawSolver();
 
+  void setDimension(const int dim);
+
   std::vector<double> getyCPsfrompCPSUsingClosedForm(std::vector<Eigen::Vector3d> &pCPs, double total_time,
                                                      const std::vector<Eigen::Vector3d> &pCPs_feature, const double y0,
                                                      const double ydot0, const double ydotf);
 
 protected:
 private:
+  int dim_;
   casadi::Function cf_;
 };
 
