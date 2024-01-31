@@ -18,4 +18,5 @@
 	url = https://github.com/catkin/catkin_simple
 [submodule "panther_compression/imitation"]
 	path = panther_compression/imitation
-	url = git@github.com:janneshb/imitation.git
+	url = https://github.com/jtorde/imitation.git
+
