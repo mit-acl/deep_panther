@@ -19,4 +19,3 @@
 [submodule "panther_compression/imitation"]
 	path = panther_compression/imitation
 	url = https://github.com/jtorde/imitation.git
-
