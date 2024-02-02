@@ -13,7 +13,7 @@ dim = size(accel, 1);
 ax=accel(1);
 ay=accel(2);
 
-az=-gravity;
+az=0;
 if dim == 3
     az=accel(3);
 end

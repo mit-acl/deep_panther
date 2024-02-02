@@ -26,15 +26,24 @@ optimize_time_alloc=true;
 soft_dynamic_limits_constraints=false;
 soft_obstacle_avoid_constraint=false;
 
-make_plots=false;
+make_plots=true;
 
+%%%%%%%%%
+% total time
+total_time_fitter = 30.0;
+
+%%%%%%%%%%%
+% 3D or 2D?
 dim_pos=2;
 dim_yaw=1;
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This is the maximum num of the obstacles 
+num_max_of_obst=1; 
+
 deg_pos=3;
 deg_yaw=2;
-num_seg =6; %number of segments
-num_max_of_obst=3; %This is the maximum num of the obstacles 
+num_seg =6; % number of segments
 
 %Constants for spline fitted to the obstacle trajectory
 fitter.deg_pos=3;
@@ -48,7 +57,7 @@ for i=1:num_max_of_obst
     fitter.bs_casadi{i}=MyCasadiClampedUniformSpline(0,1,fitter.deg_pos,fitter.dim_pos,fitter.num_seg,fitter.ctrl_pts{i}, false);
 end
 fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti);
-fitter.total_time=30.0; %Time from (time at point d) to end of the fitted spline
+fitter.total_time=total_time_fitter; %Time from (time at point d) to end of the fitted spline
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -120,24 +129,10 @@ v_max=opti.parameter(dim_pos,1);
 a_max=opti.parameter(dim_pos,1);
 j_max=opti.parameter(dim_pos,1);
 
-%Normalized v0, a0, v_max,...
-v0_n=v0*alpha;
-a0_n=a0*(alpha^2);
-vf_n=vf*alpha;
-af_n=af*(alpha^2);
-v_max_n=v_max*alpha;
-a_max_n=a_max*(alpha^2); 
-j_max_n=j_max*(alpha^3);
-
 %FOR YAW
 y0=opti.parameter(1,1); ydot0=opti.parameter(1,1); 
 yf=opti.parameter(1,1); ydotf=opti.parameter(1,1);
 ydot_max=opti.parameter(1,1);
-
-ydot0_n=ydot0*alpha;
-ydotf_n=ydotf*alpha;
-ydot_max_n=ydot_max*alpha; %v_max for yaw
-
 
 %%%%% Planes
 n={}; d={};
@@ -367,7 +362,7 @@ for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
     
     w_t_b = sp.getPosT(t_opt_n);
     if dim_pos == 2
-        w_t_b=[w_t_b; 0.0];
+        w_t_b=[w_t_b; 0.0]; % optimizing in x-y-plane
     end
 
     a=sp.getAccelT(t_opt_n)/(alpha^(2));
@@ -431,7 +426,7 @@ yaw_smooth_cost=sy.getControlCost()/(alpha^(sy.p-1));
 final_yaw_cost=(sy.getPosT(tf_n)- yf)^2;
 
 if ~keep_obs_in_FOV
-    fov_cost = 0;
+    fov_cost = 0; % ignore optimization over yaw angle
 end
 
 total_cost=c_pos_smooth*pos_smooth_cost+...
@@ -813,65 +808,82 @@ sp.plotPosVelAccelJerk(v_max_n_value, a_max_n_value, j_max_n_value)
 sy.plotPosVelAccelJerk(ydot_max_n_value)
 % sy.plotPosVelAccelJerkFiniteDifferences();
 
-sp.plotPos3D();
-plotSphere( sp.getPosT(t0_n),0.2,'b'); plotSphere( sp.getPosT(tf_n),0.2,'r'); 
+if dim_pos == 3
+    sp.plotPos3D();
+    plotSphere( sp.getPosT(t0_n),0.2,'b'); plotSphere( sp.getPosT(tf_n),0.2,'r');
+    view([280,15]);
+else
+    sp.plotPos2D();
+    p0_t = sp.getPosT(t0_n);
+    pf_t = sp.getPosT(tf_n);
+    plot(p0_t(1), p0_t(2), 'bo');
+    plot(pf_t(1), pf_t(2), 'ro');
+end
 
-view([280,15]); axis equal
+axis equal
+
 % 
 disp("Plotting")
 
 
-
-for t_nobs=t_opt_n_samples %t0:0.3:tf  
+if keep_obs_in_FOV && dim_pos == 3
+    for t_nobs=t_opt_n_samples %t0:0.3:tf  
+        
+        w_t_b = sp.getPosT(t_nobs);
     
-    w_t_b = sp.getPosT(t_nobs);
-%     accel = sp.getAccelT(t_i);% sol.value(A{n})*Tau_i;
+    %     accel = sp.getAccelT(t_i);% sol.value(A{n})*Tau_i;
+        
+        accel_n = sp.getAccelT(t_nobs);
+        accel = accel_n/(alpha_sol^2);
+        
+        yaw = sy.getPosT(t_nobs);
+    %         psiT=sol.value(Psi{n})*Tau_i;
     
-    accel_n = sp.getAccelT(t_nobs);
-    accel = accel_n/(alpha_sol^2);
+        qabc=qabcFromAccel(accel, 9.81);
     
-    yaw = sy.getPosT(t_nobs);
-%         psiT=sol.value(Psi{n})*Tau_i;
-
-    qabc=qabcFromAccel(accel, 9.81);
-
-    qpsi=[cos(yaw/2), 0, 0, sin(yaw/2)]; %Note that qpsi has norm=1
-    q=multquat(qabc,qpsi); %Note that q is guaranteed to have norm=1
-
-    w_R_b=toRotMat(q);
-    w_T_b=[w_R_b w_t_b; 0 0 0 1];
-    plotAxesArrowsT(0.5,w_T_b)
+        qpsi=[cos(yaw/2), 0, 0, sin(yaw/2)]; %Note that qpsi has norm=1
+        q=multquat(qabc,qpsi); %Note that q is guaranteed to have norm=1
     
-    %Plot the FOV cone
-    w_T_c=w_T_b*b_T_c_value;
-    position=w_T_c(1:3,4);
-    direction=w_T_c(1:3,3);
-    length=1;
-    plotCone(position,direction,thetax_FOV_deg_value,length); 
+        w_R_b=toRotMat(q);
+        w_T_b=[w_R_b w_t_b; 0 0 0 1];
+        plotAxesArrowsT(0.5, w_T_b(1:dim_pos))
+        
+        %Plot the FOV cone
+        w_T_c=w_T_b*b_T_c_value;
+        position=w_T_c(1:3,4);
+        direction=w_T_c(1:3,3);
+        length=1;
+        plotCone(position,direction,thetax_FOV_deg_value,length); 
 
-end
+    end
 
-for i=1:num_max_of_obst
-    tmp=substituteWithSolution(obst{1}.centers, results_solved, par_and_init_guess);
-    for ii=1:size(tmp,2)
-        plotSphere(tmp(:,ii),0.2,'g');
+    for i=1:num_max_of_obst
+        tmp=substituteWithSolution(obst{1}.centers, results_solved, par_and_init_guess);
+        disp(tmp)
+        for ii=1:size(tmp,2)
+            plotSphere(tmp(:,ii),0.2,'g');
+        end
     end
 end
 
+grid on; xlabel('x'); ylabel('y');
 
-grid on; xlabel('x'); ylabel('y'); zlabel('z'); camlight; lightangle(gca,45,0)
+if dim_pos == 3
+    zlabel('z'); camlight; lightangle(gca,45,0)
+end
+
 
 syms x y z real
 all_nd_solved=full(sol.all_nd);
-cte_visualization=repmat(vecnorm(all_nd_solved),4,1); %Does not changes the planes
+cte_visualization=repmat(vecnorm(all_nd_solved),dim_pos+1,1); %Does not changes the planes
 all_nd_solved=all_nd_solved./cte_visualization;
 
-for i=1:size(all_nd_solved,2)
-    fimplicit3(all_nd_solved(:,i)'*[x;y;z;1],[-4 4 -4 4 -2 2], 'MeshDensity',2, 'FaceAlpha',0.6) 
+if dim_pos == 3
+    for i=1:size(all_nd_solved,2)
+        fimplicit3(all_nd_solved(:,i)'*[x;y;z;1],[-4 4 -4 4 -2 2], 'MeshDensity',2, 'FaceAlpha',0.6)
+    end
+    view(-91,90)
 end
-
-view(-91,90)
-
 
 all_fov_costs_evaluated=substituteWithSolution(all_fov_costs, results_solved, par_and_init_guess);
 
@@ -1252,7 +1264,11 @@ end
 
 %This checks whether it is a pure variable/parameter in the optimization (returns true) or not (returns false). Note that with an expression that is a combination of several double/variables/parameters will return false
 function result=isPureParamOrVariable(expression)
-    result=expression.is_valid_input();
+    if isa(expression, 'double')
+        result = false;
+    else
+        result=expression.is_valid_input();
+    end
 end
 
 %ONLY WORKS IF print_time=1
