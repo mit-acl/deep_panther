@@ -82,7 +82,8 @@ cd deep_panther
 git lfs install
 git submodule init && git submodule update
 cd panther_compression/imitation
-pip install numpy Cython wheel seals rospkg defusedxml empy pyquaternion pytest
+pip install numpy Cython wheel seals rospkg defusedxml pyquaternion pytest
+pip install empy==3.3.4 #See https://github.com/mit-acl/deep_panther/issues/8
 pip install -e .
 sudo apt-get install python3-catkin-tools #To use catkin build
 sudo apt-get install ros-"${ROS_DISTRO}"-rviz-visual-tools ros-"${ROS_DISTRO}"-pybind11-catkin ros-"${ROS_DISTRO}"-tf2-sensor-msgs ros-"${ROS_DISTRO}"-jsk-rviz-plugins
