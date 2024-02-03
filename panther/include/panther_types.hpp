@@ -242,7 +242,7 @@ struct state
 
   void setZero()
   {
-    assert(pos.size() == vel.size() == accel.size() == jerk.size());
+    assert(pos.size() == vel.size() && vel.size() == accel.size() && accel.size() == jerk.size());
     assert(pos.size() > 0);
     setZero(pos.size());
   }

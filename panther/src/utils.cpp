@@ -93,7 +93,7 @@ double getMinTimeDoubleIntegratorND(const Eigen::VectorXd& p0, const Eigen::Vect
                                     const Eigen::VectorXd& vf, const Eigen::VectorXd& v_max,
                                     const Eigen::VectorXd& a_max)
 {
-  assert(p0.size() == v0.size() == pf.size() == vf.size() == v_max.size() == a_max.size());
+  assert(p0.size() == v0.size() && v0.size() == pf.size() && pf.size() == vf.size()); // we allow v_max and a_max to always be 3D for shared config files
   std::vector<double> min_i;
   for (int i = 0; i < p0.size(); i++) {
     min_i.push_back(
@@ -424,7 +424,7 @@ bool boxIntersectsSphere(Eigen::Vector3d center, double r, Eigen::Vector3d c1, E
 
 void saturate(Eigen::Vector3d& tmp, const Eigen::Vector3d& min, const Eigen::Vector3d& max)
 {
-  assert(tmp.size() == min.size() == max.size());
+  assert(tmp.size() == min.size() && min.size() == max.size());
   for (int i = 0; i < tmp.size(); i++) saturate(tmp(i), min(i), max(i));
 }
 
