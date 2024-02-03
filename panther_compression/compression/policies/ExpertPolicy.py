@@ -72,7 +72,7 @@ class ExpertPolicy(object):
         # In the case of critics, it is the estimated value of the observation.
     def predict(self, obs_n, deterministic=True, verbose=True):
         if(self.om.isNanObservation(obs_n)):
-            return self.am.getNanAction(), {"Q": 0.0, "guesses": None, "total_time": 0.0}
+            return self.am.getNanAction(), {"Q": 0.0, "guesses": None}
 
         # print(f"self.observation_shape={self.observation_shape}")
         # obs_n=obs_n.reshape((-1,*self.observation_shape)) #Not sure why this is needed
@@ -121,7 +121,7 @@ class ExpertPolicy(object):
                 self.printFailedOpt(info);
             # exit();
             # raise ExpertDidntSucceed()
-            return self.am.getNanAction(), {"Q": 0.0, "guesses": guesses, "total_time": total_time}
+            return self.am.getNanAction(), {"Q": 0.0, "guesses": guesses}
         else:
             if verbose:
                 self.printSucessOpt(info);
@@ -183,7 +183,7 @@ class ExpertPolicy(object):
 
         # TODO: sometimes we get nans in the last 6 elements. Why?
         #self.am.assertAction(action_normalized)
-        return action_normalized, {"Q": Q, "guesses": guesses, "total_time": total_time}
+        return action_normalized, {"Q": Q, "guesses": guesses}
 
 
         # #### End of call the optimization
