@@ -96,11 +96,11 @@ class ActionManager():
 
 	def normalizeAction(self, action):
 		action_normalized=np.empty(action.shape)
-		action_normalized[:,0:-1]=action[:,0:-1]/self.normalization_constant #Elementwise division
+		action_normalized[:,0:-1]=action[:,0:-1]/self.normalization_constant[:action.shape[0]] #Elementwise division
 		action_normalized[:,-1]=(2.0/self.fitter_total_time)*action[:,-1]-1 #Note that action[0,-1] is in [0, fitter_total_time]
 		# action_normalized[:,-1]=(2.0/1.0)*action[:,-1]-1 #Note that action[0,-1] is in [0, 1]
 
-		for index_traj in range(self.num_traj_per_action):
+		for index_traj in range(action.shape[0]):
 			time_normalized=self.getTotalTime(action_normalized, index_traj);
 			slack=1-abs(time_normalized);
 			if(slack<0):

@@ -118,14 +118,12 @@ class CostComputer():
 				drone = f_posBS.getPosT(t);
 				
 				obs_drone = drone - obs #position of the drone wrt the obstacle
-
-				if np.all(abs(obs_drone[:, 0] <= bbox[:, 0]/2)):
+				if np.all(abs(obs_drone[:, 0]) <= bbox[:, 0]/2):
 					for i in range(obs_drone.shape[0]):
 						obs_dronecoord = obs_drone[i, 0]
 						tmp = bbox[i, 0] / 2
 						violation += min(abs(tmp - obs_dronecoord), abs(obs_dronecoord - (-tmp)) )
-					# print("THERE IS VIOLATION in obs avoid")
-					# exit()
+
 		return violation
 
 	def computeDynLimitsConstraintsViolation(self, f_obs_n, f_traj_n):
@@ -150,6 +148,7 @@ class CostComputer():
 		
 		# start=time.time();
 		obst_avoidance_violation = self.computeObstAvoidanceConstraintsViolation(f_obs_n, f_traj_n)
+		# print(f"violation: {obst_avoidance_violation}")
 		# print(f"--- computeObstAvoidanceConstraintsViolation took {(time.time() - start)*(1e3)} ms")
 
 
@@ -202,20 +201,18 @@ class CostComputer():
 		# 		index_smallest_augmented_cost = i
 		# return index_smallest_augmented_cost
 
+	def getCostsAndViolationsOfActionFromObsAndAction(self, f_obs, f_action):
+		f_obs_n = self.om.normalizeObservation(f_obs)
+		f_action_n = self.am.normalizeAction(f_action)
+		return self.getCostsAndViolationsOfActionFromObsnAndActionn(f_obs_n, f_action_n)
 
 	def getCostsAndViolationsOfActionFromObsnAndActionn(self, f_obs_n, f_action_n):
-
-		if self.dim == 2:
-			f_obs_n = np.nan_to_num(f_obs_n)
-			f_action_n = np.nan_to_num(f_action_n)
-	
 		costs=[]
 		obst_avoidance_violations=[]
 		dyn_lim_violations=[]
 		augmented_costs=[];
 
 		alls=[];
-
 
 		smallest_augmented_safe_cost = float('inf')
 		smallest_augmented_unsafe_cost = float('inf')
