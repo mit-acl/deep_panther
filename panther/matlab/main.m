@@ -125,9 +125,10 @@ total_time=alpha*(tf_n-t0_n); %Total time is (tf_n-t0_n)*alpha.
 p0=opti.parameter(dim_pos,1); v0=opti.parameter(dim_pos,1); a0=opti.parameter(dim_pos,1);
 pf=opti.parameter(dim_pos,1); vf=opti.parameter(dim_pos,1); af=opti.parameter(dim_pos,1);
 
-v_max=opti.parameter(dim_pos,1);
-a_max=opti.parameter(dim_pos,1);
-j_max=opti.parameter(dim_pos,1);
+% dimension set to 3 so we don't have to change all the configs for 2D
+v_max=opti.parameter(3,1);
+a_max=opti.parameter(3,1);
+j_max=opti.parameter(3,1);
 
 %FOR YAW
 y0=opti.parameter(1,1); ydot0=opti.parameter(1,1); 
@@ -509,9 +510,9 @@ yCPs=sy.getCPsAsMatrix();
 % all_w_fe_value=cell2mat(all_w_fe_value);
 % all_w_velfewrtworld_value=cell2mat(all_w_velfewrtworld_value);
 
-v_max_value=1.6*ones(dim_pos,1);
-a_max_value=5*ones(dim_pos,1);
-j_max_value=50*ones(dim_pos,1);
+v_max_value=1.6*ones(3,1);
+a_max_value=5*ones(3,1);
+j_max_value=50*ones(3,1);
 
 alpha_value=15.0;
 

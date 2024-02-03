@@ -44,6 +44,10 @@
 
 // #define UNKOWN_AND_OCCUPIED_SPACE 2
 
+std::vector<Eigen::VectorXd> dynamicVecOfVec(std::vector<Eigen::VectorXd> &v);
+std::vector<Eigen::VectorXd> dynamicVecOfVec(std::vector<Eigen::Vector2d> &v);
+std::vector<Eigen::VectorXd> dynamicVecOfVec(std::vector<Eigen::Vector3d> &v);
+
 // TODO: put this in a namespace
 
 // https://stackoverflow.com/questions/27028226/python-linspace-in-c
@@ -86,12 +90,12 @@ std::vector<std::string> pieceWisePol2String(const mt::PieceWisePol& pwp);
 double getMinTimeDoubleIntegrator1D(const double& p0, const double& v0, const double& pf, const double& vf,
                                     const double& v_max, const double& a_max);
 
-double getMinTimeDoubleIntegrator3D(const Eigen::Vector3d& p0, const Eigen::Vector3d& v0, const Eigen::Vector3d& pf,
-                                    const Eigen::Vector3d& vf, const Eigen::Vector3d& v_max,
-                                    const Eigen::Vector3d& a_max);
+double getMinTimeDoubleIntegratorND(const Eigen::VectorXd& p0, const Eigen::VectorXd& v0, const Eigen::VectorXd& pf,
+                                    const Eigen::VectorXd& vf, const Eigen::VectorXd& v_max,
+                                    const Eigen::VectorXd& a_max);
 
-double getMinTimeDoubleIntegrator3DFromState(mt::state initial_state, mt::state final_state,
-                                             const Eigen::Vector3d& v_max, const Eigen::Vector3d& a_max);
+double getMinTimeDoubleIntegratorNDFromState(mt::state initial_state, mt::state final_state,
+                                             const Eigen::VectorXd& v_max, const Eigen::VectorXd& a_max);
 
 bool boxIntersectsSphere(Eigen::Vector3d center, double r, Eigen::Vector3d c1, Eigen::Vector3d c2);
 
@@ -103,13 +107,17 @@ void saturate(int& var, const int min, const int max);
 
 void saturate(double& var, const double min, const double max);
 
-void saturate(Eigen::Vector3d& tmp, const Eigen::Vector3d& min, const Eigen::Vector3d& max);
+void saturate(Eigen::VectorXd& tmp, const Eigen::VectorXd& min, const Eigen::VectorXd& max);
 
-double angleBetVectors(const Eigen::Vector3d& a, const Eigen::Vector3d& b);
+double angleBetVectors(const Eigen::VectorXd& a, const Eigen::VectorXd& b);
 
 void angle_wrap(double& diff);
 
-std::vector<double> eigen2std(const Eigen::Vector3d& v);
+std::vector<double> eigen2std(const Eigen::Vector2d &v);
+
+std::vector<double> eigen2std(const Eigen::Vector3d &v);
+
+std::vector<double> eigen2std(const Eigen::VectorXd &v);
 
 int nChoosek(int n, int k);
 
@@ -144,9 +152,13 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& v)
   return out;
 }
 
-casadi::DM throwOutThirdDimension(casadi::DM matrix);
+casadi::DM checkDimensions(casadi::DM matrix, int dim);
 
-std::vector<double> throwOutThirdDimension(std::vector<double> vector);
+std::vector<Eigen::VectorXd> checkDimensions(std::vector<Eigen::VectorXd> matrix, int dim);
+
+std::vector<Eigen::VectorXd> checkDimensions(std::vector<Eigen::Vector3d> matrix, int dim);
+
+std::vector<Eigen::VectorXd> checkDimensions(std::vector<Eigen::Vector2d> matrix, int dim);
 
 std::string casadi_folder();
 

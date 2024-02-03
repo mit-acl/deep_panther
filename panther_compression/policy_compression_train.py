@@ -67,8 +67,6 @@ def single_true(iterable):
 
 
 if __name__ == "__main__":
-
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=2)
     parser.add_argument("--dim", type=int, default=3)

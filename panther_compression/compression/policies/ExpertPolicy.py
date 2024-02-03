@@ -32,7 +32,6 @@ class ExpertPolicy(object):
         self.num_obs = num_obs;
         
         ExpertPolicy.my_SolverIpopt = py_panther.SolverIpopt(getPANTHERparamsAsCppStruct(additional_config=additional_config))
-        ExpertPolicy.my_SolverIpopt.setDim(self.dim);
 
         self.am=ActionManager(dim=self.dim, additional_config=additional_config);
         self.om=ObservationManager(dim=self.dim, num_obs=self.num_obs, additional_config=additional_config);
@@ -72,7 +71,6 @@ class ExpertPolicy(object):
         # In the case of policies, the prediction is an action.
         # In the case of critics, it is the estimated value of the observation.
     def predict(self, obs_n, deterministic=True, verbose=True):
-        ExpertPolicy.my_SolverIpopt.setDim(self.dim);
         if(self.om.isNanObservation(obs_n)):
             return self.am.getNanAction(), {"Q": 0.0, "guesses": None, "total_time": 0.0}
 
@@ -99,7 +97,7 @@ class ExpertPolicy(object):
         final_state=self.om.getFinal_f_StateFromObservation(obs);        
 
         # invsqrt3_vector=math.sqrt(3)*np.ones((3,1));
-        # total_time=self.par.factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, self.par.v_max*invsqrt3_vector, self.par.a_max*invsqrt3_vector)
+        # total_time=self.par.factor_alloc*py_panther.getMinTimeDoubleIntegratorNDFromState(init_state, final_state, self.par.v_max*invsqrt3_vector, self.par.a_max*invsqrt3_vector)
         total_time=computeTotalTime(init_state, final_state, self.par_v_max, self.par_a_max, self.par_factor_alloc)
 
         ExpertPolicy.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
@@ -107,15 +105,17 @@ class ExpertPolicy(object):
         ####
         for i in range(len(obstacles)):
             obstacles[i].bbox_inflated = obstacles[i].bbox_inflated  +  self.drone_extra_radius_for_NN*np.ones_like(obstacles[i].bbox_inflated)
+        
         ExpertPolicy.my_SolverIpopt.setObstaclesForOpt(obstacles);
 
         # with nostdout():
         succeed=ExpertPolicy.my_SolverIpopt.optimize(True);
+
         info=ExpertPolicy.my_SolverIpopt.getInfoLastOpt();
 
         # process guesses
         guesses = self.am.guesses2action(ExpertPolicy.my_SolverIpopt.getGuesses())
-        
+
         if not succeed:
             if verbose:
                 self.printFailedOpt(info);
@@ -125,9 +125,9 @@ class ExpertPolicy(object):
         else:
             if verbose:
                 self.printSucessOpt(info);
-
+        
         best_solutions=ExpertPolicy.my_SolverIpopt.getBestSolutions();
-
+        
         ##############################################################
         # if(self.am.use_closed_form_yaw_student==True):
         #     #Set the yaw elements to zero
@@ -197,6 +197,7 @@ class ExpertPolicy(object):
         # action=self.am.normalizeAction(action)
 
         # action=self.am.getDummyOptimalNormalizedAction()
+
     def predictSeveral(self, obs_n, deterministic=True):
         def my_func(thread_index):
             return self.predict( obs_n[thread_index,:,:], deterministic=deterministic)[0]

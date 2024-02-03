@@ -100,18 +100,17 @@ private:
 ////////////////////////////////////////
 
 casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, double ydot0, double ydotf, double t0,
-                                         double tf, int dim)
+                                         double tf)
 {
   WeightMap weightmap = get(boost::edge_weight, mygraph_);
 
   std::map<std::string, casadi::DM> map_arg;
-
   map_arg["pCPs"] = matrix_qp_guess;
+
   map_arg["alpha"] = (tf - t0);
   for (int i = 0; i < par_.num_max_of_obst; i++)
   {
-    casadi::DM obs_ctrl_pts = stdVectorEigen3d2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
-    if (dim == 2) obs_ctrl_pts = throwOutThirdDimension(obs_ctrl_pts);
+    casadi::DM obs_ctrl_pts = stdVectorEigen2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
     map_arg["obs_" + std::to_string(i) + "_ctrl_pts"] = obs_ctrl_pts;
   }
   map_arg["thetax_FOV_deg"] = par_.fov_x_deg;

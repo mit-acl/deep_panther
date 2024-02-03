@@ -15,7 +15,7 @@ PYBIND11_MODULE(py_panther, m)
 {
   m.doc() = "pybind11 py_panther plugin";
 
-  m.def("getMinTimeDoubleIntegrator3DFromState", &getMinTimeDoubleIntegrator3DFromState);
+  m.def("getMinTimeDoubleIntegratorNDFromState", &getMinTimeDoubleIntegratorNDFromState);
 
   py::class_<mt::state>(m, "state")
       .def(py::init<>())  /////////////////////////
@@ -26,6 +26,8 @@ PYBIND11_MODULE(py_panther, m)
       .def_readwrite("dyaw", &mt::state::dyaw)
       .def_readwrite("ddyaw", &mt::state::ddyaw)
       .def("printHorizontal", &mt::state::printHorizontal)
+      .def("setZero", py::overload_cast<>(&mt::state::setZero))
+      .def("setZero", py::overload_cast<int>(&mt::state::setZero))
       .def("__repr__", [](const mt::state &a) { return "<py_panther.state>"; });
 
   py::class_<si::solOrGuess>(m, "solOrGuess")
@@ -149,7 +151,6 @@ PYBIND11_MODULE(py_panther, m)
       .def("setInitStateFinalStateInitTFinalT", &SolverIpopt::setInitStateFinalStateInitTFinalT)
       .def("setFocusOnObstacle", &SolverIpopt::setFocusOnObstacle)
       .def("setObstaclesForOpt", &SolverIpopt::setObstaclesForOpt)
-      .def("setDim", &SolverIpopt::setDim)
       .def("getBestSolutions", &SolverIpopt::getBestSolutions)
       .def("getBestSolution", &SolverIpopt::getBestSolution)
       .def("getGuesses", &SolverIpopt::getGuesses)
@@ -161,13 +162,11 @@ PYBIND11_MODULE(py_panther, m)
 
   py::class_<Fitter>(m, "Fitter")
       .def(py::init<int>())  /////////////////////////
-      .def("fit", &Fitter::fit)
-      .def("setDimension", &Fitter::setDimension)
+      .def("fit", &Fitter::pybind_fit)
       .def("__repr__", [](const Fitter &a) { return "<py_panther.Fitter>"; });
 
   py::class_<ClosedFormYawSolver>(m, "ClosedFormYawSolver")
       .def(py::init<>())  /////////////////////////
-      .def("setDimension", &ClosedFormYawSolver::setDimension)
       .def("getyCPsfrompCPSUsingClosedForm", &ClosedFormYawSolver::getyCPsfrompCPSUsingClosedForm)
       .def("__repr__", [](const Fitter &a) { return "<py_panther.ClosedFormYawSolver>"; });
 }

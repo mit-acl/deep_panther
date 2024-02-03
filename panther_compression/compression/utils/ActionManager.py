@@ -5,7 +5,7 @@ import py_panther
 from colorama import Fore, Style
 
 from .MyClampedUniformBSpline import MyClampedUniformBSpline
-from .utils import generateKnotsForClampedUniformBspline, numpy3XmatrixToListOf3dVectors
+from .utils import generateKnotsForClampedUniformBspline, numpyNXmatrixToListOfNdVectors
 from .State import State
 
 from .yaml_utils import readPANTHERparams
@@ -255,11 +255,8 @@ class ActionManager():
 		#Create and fill solOrGuess object
 		w_sol_or_guess=py_panther.solOrGuess();
 		
-		if self.dim == 2:
-			w_p_ctrl_pts = np.vstack((w_p_ctrl_pts, np.zeros((1, w_p_ctrl_pts.shape[1]))))
-		
-		w_sol_or_guess.qp=numpy3XmatrixToListOf3dVectors(w_p_ctrl_pts)
-		w_sol_or_guess.qy=numpy3XmatrixToListOf3dVectors(w_y_ctrl_pts)
+		w_sol_or_guess.qp=numpyNXmatrixToListOfNdVectors(w_p_ctrl_pts)
+		w_sol_or_guess.qy=numpyNXmatrixToListOfNdVectors(w_y_ctrl_pts)
 
 		w_sol_or_guess.knots_p=knots_p
 		w_sol_or_guess.knots_y=knots_y
@@ -312,7 +309,7 @@ class ActionManager():
 		#Append position control points
 		for i in range(3,len(sol_or_guess.qp)-2):
 			# print(sol_or_guess.qp[i].reshape(1,self.dim))
-			traj=np.concatenate((traj, sol_or_guess.qp[i][0:self.dim].reshape(1,self.dim)), axis=1)
+			traj=np.concatenate((traj, sol_or_guess.qp[i].reshape(1,self.dim)), axis=1)
 
 		#Append yaw control points
 		for i in range(2,len(sol_or_guess.qy)-1):

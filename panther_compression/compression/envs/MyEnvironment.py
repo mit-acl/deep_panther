@@ -5,7 +5,7 @@ import copy
 
 from gymnasium import spaces
 
-from compression.utils.utils import GTermManager, computeTotalTime, getObsAndGtermToCrossPath, posAccelYaw2TfMatrix, listOf3dVectors2numpy3Xmatrix
+from compression.utils.utils import GTermManager, computeTotalTime, getObsAndGtermToCrossPath, posAccelYaw2TfMatrix, listOfNdVectors2numpyNXmatrix
 from compression.utils.State import State
 from compression.utils.yaml_utils import getPANTHERparamsAsCppStruct
 from compression.utils.ActionManager import ActionManager
@@ -322,6 +322,7 @@ class MyEnvironment(gym.Env):
     if(isinstance(self.constant_obstacle_pos, type(None)) and isinstance(self.constant_gterm_pos, type(None))):
 
       self.obsm.newRandomPos();
+      self.gm.newRandomPos();
 
       prob_choose_cross=1.0;
       if np.random.uniform(0, 1) < 1 - prob_choose_cross:
@@ -332,11 +333,15 @@ class MyEnvironment(gym.Env):
         self.obsm.setPos(w_pos_obstacle)
         self.gm.setPos(w_pos_g_term);        
         # self.printwithNameAndColor("Using cross!")
-
+      
     else:
       self.obsm.setPos(self.constant_obstacle_pos)
       self.gm.setPos(self.constant_gterm_pos);
 
+
+
+    
+    
 
     
     # observation = self.om.getRandomNormalizedObservation()
@@ -419,7 +424,7 @@ class MyEnvironment(gym.Env):
         tf=self.time + np.max(f_action[:,-1]) #self.am.getTotalTime()#self.par.fitter_total_time
 
         bspline_obs_i=MyClampedUniformBSpline(t0=t0, tf=tf, deg=self.par.deg_pos, \
-                                        dim=3, num_seg=self.par.num_seg, ctrl_pts=listOf3dVectors2numpy3Xmatrix(obstacles[i].ctrl_pts) )
+                                        dim=3, num_seg=self.par.num_seg, ctrl_pts=listOfNdVectors2numpyNXmatrix(self.dim, obstacles[i].ctrl_pts) )
 
         id_sample=0
         num_samples=20

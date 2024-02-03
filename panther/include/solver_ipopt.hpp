@@ -9,6 +9,7 @@
 #ifndef SOLVER_IPOPT_HPP
 #define SOLVER_IPOPT_HPP
 
+#include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/StdVector>
 
@@ -21,6 +22,7 @@
 #include "timer.hpp"
 #include "separator.hpp"
 #include "octopus_search.hpp"
+#include "utils.hpp"
 #include "bspline_utils.hpp"
 
 #include <decomp_geometry/polyhedron.h>
@@ -34,17 +36,19 @@
 
 typedef PANTHER_timers::Timer MyTimer;
 
-std::vector<Eigen::Vector3d> casadiMatrix2StdVectorEigen3d(const casadi::DM &qp_casadi);
+std::vector<Eigen::VectorXd> casadiMatrix2StdVectorEigen(const casadi::DM &qp_casadi);
 std::vector<double> casadiMatrix2StdVectorDouble(const casadi::DM &qy_casadi);
-casadi::DM stdVectorEigen3d2CasadiMatrix(const std::vector<Eigen::Vector3d> &qp);
-casadi::DM stdVectorDouble2CasadiRowVector(const std::vector<Eigen::Vector3d> &qp);
-casadi::DM eigen3d2CasadiMatrix(const Eigen::Vector3d &data);
+casadi::DM stdVectorEigen2CasadiMatrix(const std::vector<Eigen::VectorXd> &qp);
+casadi::DM stdVectorEigen2CasadiMatrix(std::vector<Eigen::Vector2d> &qp);
+casadi::DM stdVectorEigen2CasadiMatrix(std::vector<Eigen::Vector3d> &qp);
+casadi::DM stdVectorDouble2CasadiRowVector(const std::vector<double> &qy);
+casadi::DM eigen2CasadiMatrix(const Eigen::VectorXd &data);
 
 namespace si  // Solver Ipopt
 {
 struct solOrGuess
 {
-  std::vector<Eigen::Vector3d> qp;
+  std::vector<Eigen::VectorXd> qp;
   std::vector<double> qy;
 
   // mt::PieceWisePol pwp;
@@ -174,15 +178,16 @@ public:
 
   ~Fitter();
 
-  void setDimension(const int dim);
+  std::vector<Eigen::VectorXd> pybind_fit(std::vector<Eigen::VectorXd> &samples);
+  std::vector<Eigen::VectorXd> fit(std::vector<Eigen::VectorXd> &samples);
+  std::vector<Eigen::VectorXd> fit(std::vector<Eigen::Vector2d> &samples);
+  std::vector<Eigen::VectorXd> fit(std::vector<Eigen::Vector3d> &samples);
 
-  std::vector<Eigen::Vector3d> fit(std::vector<Eigen::Vector3d> &samples);
 
 protected:
 private:
   casadi::Function cf_fit3d_;
   int fitter_num_samples_;
-  int dim_;
 };
 
 class ClosedFormYawSolver
@@ -192,15 +197,12 @@ public:
 
   ~ClosedFormYawSolver();
 
-  void setDimension(const int dim);
-
-  std::vector<double> getyCPsfrompCPSUsingClosedForm(std::vector<Eigen::Vector3d> &pCPs, double total_time,
-                                                     const std::vector<Eigen::Vector3d> &pCPs_feature, const double y0,
+  std::vector<double> getyCPsfrompCPSUsingClosedForm(std::vector<Eigen::VectorXd> &pCPs, double total_time,
+                                                     const std::vector<Eigen::VectorXd> &pCPs_feature, const double y0,
                                                      const double ydot0, const double ydotf);
 
 protected:
 private:
-  int dim_;
   casadi::Function cf_;
 };
 
@@ -220,7 +222,6 @@ public:
   }
   void setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obstacles_for_opt);
   mt::parameters par_;
-  int dim_;
   // mt::trajectory traj_solution_;
   si::solOrGuess getBestSolution();
   std::vector<si::solOrGuess> getBestSolutions();
@@ -233,8 +234,6 @@ public:
   double computeDynLimitsConstraintsViolation(si::solOrGuess guess);
 
   std::string getInfoLastOpt();
-
-  void setDim(int dim);
 
 protected:
 private:
@@ -292,7 +291,7 @@ private:
   bool generateAStarGuess(std::vector<os::solution> &p_guesses);
   // bool generateStraightLineGuess(std::vector<os::solution> &p_guesses);
 
-  void printStd(const std::vector<Eigen::Vector3d> &v);
+  void printStd(const std::vector<Eigen::VectorXd> &v);
   void printStd(const std::vector<double> &v);
   void generateGuessNDFromQ(const std::vector<Eigen::Vector3d> &q, std::vector<Eigen::Vector3d> &n,
                             std::vector<double> &d);
@@ -310,9 +309,9 @@ private:
 
   void printQND(std::vector<Eigen::Vector3d> &q, std::vector<Eigen::Vector3d> &n, std::vector<double> &d);
 
-  void findCentroidHull(const Polyhedron_Std &hull, Eigen::Vector3d &centroid);
+  Eigen::VectorXd findCentroidHull(const Polyhedron_Std &hull, int n);
 
-  casadi::DM generateYawGuess(casadi::DM matrix_qp_guess, double y0, double ydot0, double ydotf, double t0, double tf, int dim);
+  casadi::DM generateYawGuess(casadi::DM matrix_qp_guess, double y0, double ydot0, double ydotf, double t0, double tf);
 
   std::vector<Eigen::Vector3d> n_;  // Each n_[i] has 3 elements (nx,ny,nz)
   std::vector<double> d_;           // d_[i] has 1 element
@@ -399,7 +398,7 @@ private:
 
   // std::shared_ptr<mt::log> log_ptr_;
 
-  casadi::DM eigen2casadi(const Eigen::Vector3d &a);
+  casadi::DM eigen2casadi(const Eigen::VectorXd &a);
 
   bool focus_on_obstacle_;
 

@@ -19,13 +19,12 @@ class ObservationManager():
 
 		params=readPANTHERparams(additional_config=additional_config);
 
-		self.v_max=np.array(params["v_max"]).reshape(3,1);
+		self.v_max=np.array(params["v_max"]).reshape(3,1); # always reshape into 3, regardless of dimension
 		self.a_max=np.array(params["a_max"]).reshape(3,1);
 		self.j_max=np.array(params["j_max"]).reshape(3,1);
 		self.ydot_max=params["ydot_max"];
 		# self.max_dist2goal=params["max_dist2goal"];
 		self.max_dist2obs=params["max_dist2obs"];
-		print(f"dist2obs {self.max_dist2obs}")
 		
 		self.max_side_bbox_obs=params["max_side_bbox_obs"];
 		self.Ra=params["Ra"]
@@ -112,8 +111,6 @@ class ObservationManager():
 		for j in range(num_cps_per_obstacle):
 			index_start_cpoint=index_start_obstacle_i+self.dim*j
 			cpoint_j=obs[0,index_start_cpoint:index_start_cpoint+self.dim].reshape(self.dim,1)
-			if self.dim == 2:
-				cpoint_j = np.vstack((cpoint_j, np.zeros((1, 1))))
 			ctrl_pts.append(cpoint_j)
 
 		return ctrl_pts
@@ -123,31 +120,19 @@ class ObservationManager():
 		tmp=index_start_obstacle_i+self.dim*self.obsm.getCPsPerObstacle()
 
 		bbox_inflated=obs[0,tmp:tmp+self.dim].reshape(self.dim,1)
-		
-		if self.dim == 2:
-			bbox_inflated = np.vstack((bbox_inflated, 10000 * np.ones((1, 1)))) # TODO: find a better solution for 2D
 		return bbox_inflated
 
 	def getf_v(self, obs):
-		v = obs[0,0:self.dim].reshape((self.dim,1)) #Column vector
-		if self.dim == 2:
-			v = np.vstack((v, np.zeros((1, 1))))
-		return v
+		return obs[0, 0:self.dim].reshape((self.dim, 1))
 
 	def getf_a(self, obs):
-		a = obs[0,self.dim:2*self.dim].reshape((self.dim,1)) #Column vector
-		if self.dim == 2:
-			a = np.vstack((a, np.zeros((1, 1))))
-		return a
+		return obs[0,self.dim:2*self.dim].reshape((self.dim, 1))
 
 	def getyaw_dot(self, obs):
 		return obs[0,2*self.dim].reshape((1,1)) 
 
 	def getf_g(self, obs):
-		g = obs[0,2*self.dim+1:3*self.dim+1].reshape((self.dim,1)) #Column vector
-		if self.dim == 2:
-			g = np.vstack((g, np.zeros((1, 1))))
-		return g
+		return obs[0,2*self.dim+1:3*self.dim+1].reshape((self.dim,1))
 
 	def getObstacles(self, obs):
 		# print("obs is= ", obs)
@@ -167,17 +152,19 @@ class ObservationManager():
 		return obstacles
 
 	def getInit_f_StateFromObservation(self, obs):
-		init_state=py_panther.state();  #Everything initialized as zero
-		init_state.pos = np.zeros((3, 1)); #Because it's in f frame
-		init_state.vel= self.getf_v(obs);
-		init_state.accel= self.getf_a(obs);
-		init_state.yaw= 0.0  #Because it's in f frame
+		init_state=py_panther.state();
+		init_state.setZero(self.dim);
+		init_state.pos = np.zeros((self.dim, 1)); #Because it's in f frame
+		init_state.vel = self.getf_v(obs);
+		init_state.accel = self.getf_a(obs);
+		init_state.yaw = 0.0  #Because it's in f frame
 		init_state.dyaw = self.getyaw_dot(obs);
 		return init_state
 
 	def getFinal_f_StateFromObservation(self, obs):
-		final_state=py_panther.state();  #Everything initialized as zero
-		final_state.pos= self.getf_g(obs);
+		final_state = py_panther.state();
+		final_state.setZero(self.dim);
+		final_state.pos = self.getf_g(obs);
 		# final_state.vel= 
 		# final_state.accel= 
 		# final_state.yaw= 
@@ -225,8 +212,9 @@ class ObservationManager():
 		random_normalized_observation=np.random.uniform(-1,1, size=self.getObservationShape())
 		return random_normalized_observation
 
-	def get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self,w_state, w_gterm_pos, w_obstacles):
-
+	def get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self, w_state, w_gterm_pos, w_obstacles):
+		#print(f"  pos: {w_state.w_pos.T}")
+		#print(f"  Tf: {w_state.f_T_w.T}")
 		f_gterm_pos=w_state.f_T_w * w_gterm_pos
 
 		dist2gterm=np.linalg.norm(f_gterm_pos);
@@ -240,7 +228,10 @@ class ObservationManager():
 		#Convert obs to f frame and append ethem to observation
 		for w_obstacle in w_obstacles:
 			assert type(w_obstacle.ctrl_pts).__module__ == np.__name__, "the ctrl_pts should be a numpy matrix, not a list"
-			observation=np.concatenate((observation, (w_state.f_T_w*w_obstacle.ctrl_pts)[:self.dim].flatten(order='F'), (w_obstacle.bbox_inflated).flatten()))
+			ctrl_pts = w_obstacle.ctrl_pts
+			if ctrl_pts.shape[0] == 2:
+				ctrl_pts = np.vstack((ctrl_pts, np.zeros((1, ctrl_pts.shape[1]))))
+			observation=np.concatenate((observation, (w_state.f_T_w * ctrl_pts)[:self.dim].flatten(order='F'), (w_obstacle.bbox_inflated).flatten()))
 
 		observation=observation.reshape(self.getObservationShape())
 

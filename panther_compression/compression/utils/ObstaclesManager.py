@@ -3,7 +3,7 @@ import random
 import py_panther
 
 from .yaml_utils import readPANTHERparams
-from .utils import listOf3dVectors2numpy3Xmatrix, Trefoil
+from .utils import listOfNdVectors2numpyNXmatrix, Trefoil
 from .Obstacle import Obstacle
 
 class ObstaclesManager():
@@ -17,7 +17,6 @@ class ObstaclesManager():
 
 	def __init__(self, dim=3, num_obs=1, additional_config=None):
 		self.dim=dim;
-		ObstaclesManager.fitter.setDimension(self.dim);
 		self.num_obs=num_obs;
 		self.params=readPANTHERparams(additional_config=additional_config);
 		# self.fitter_total_time=params["fitter_total_time"];
@@ -35,7 +34,7 @@ class ObstaclesManager():
 			self.random_scale=np.array([[random.uniform(0.5, 4.0)],[random.uniform(0.5, 4.0)],[random.uniform(0.5, 4.0)]]);
 			#self.random_pos=np.array([[2.5],[1.0],[1.0]]);
 		elif self.dim == 2:
-			self.random_pos=np.array([[random.uniform(1.5, 6.0)],[random.uniform(-3.0, 3.0)]]);
+			self.random_pos=np.array([[random.uniform(2.0, 6.0)],[random.uniform(-6.0, 6.0)]]);
 			self.random_offset=random.uniform(0.0, 10*np.pi)
 			self.random_scale=np.array([[random.uniform(0.5, 4.0)],[random.uniform(0.5, 4.0)]]);
 
@@ -80,12 +79,11 @@ class ObstaclesManager():
 		for i in range(self.num_obs):
 			samples=[]
 			for t_interm in np.linspace(t, t + self.fitter_total_time, num=self.fitter_num_samples):#.tolist():
-				samples.append(trefoil.getPosT(t_interm))				
+				samples.append(trefoil.getPosT(t_interm)[:self.dim])
 
-			ObstaclesManager.fitter.setDimension(self.dim)
 			w_ctrl_pts_ob_list=ObstaclesManager.fitter.fit(samples)
 
-			w_ctrl_pts_ob=listOf3dVectors2numpy3Xmatrix(w_ctrl_pts_ob_list)
+			w_ctrl_pts_ob=listOfNdVectors2numpyNXmatrix(self.dim, w_ctrl_pts_ob_list)
 
 			bbox_inflated=0.8*np.ones((self.dim, 1))+2*self.params["drone_radius"]*np.ones((self.dim,1));
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
