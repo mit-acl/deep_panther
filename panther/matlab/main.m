@@ -6,7 +6,8 @@
 %  * See LICENSE file for the license information
 %  * -------------------------------------------------------------------------- */
 
-close all; clc;clear;
+close all; clc;
+if ~exist('plotting_enabled', 'var') clear; end
 doSetup();
 import casadi.*
 
@@ -61,6 +62,13 @@ fitter.total_time=total_time_fitter; %Time from (time at point d) to end of the 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
+% Overwrite make_plots if set by generateCasadiFiles.m
+% this enables us to run
+% matlab -nodisplay -nosplash -nodesktop -r "addpath('.'); plotting_enabled=false; main; exit;"
+% from command line to only generate the Casadi files without having to open MATLAB.
+if exist('plotting_enabled', 'var')
+    make_plots = plotting_enabled;
+end
 
 sampler.num_samples_obstacle_per_segment = 4;                    %This is used for both the feature sampling (simpson), and the obstacle avoidance sampling
 sampler.num_samples=sampler.num_samples_obstacle_per_segment*num_seg;    %This will also be the num_of_layers in the graph yaw search of C++
