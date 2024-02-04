@@ -167,7 +167,6 @@ class CostComputer():
 		return cost, obst_avoidance_violation, dyn_lim_violation, augmented_cost
 
 	def computeCost(self, f_obs_n, f_traj_n): 
-		
 		f_ppSolOrGuess=self.setUpSolverIpoptAndGetppSolOrGuess(f_obs_n, f_traj_n)
 		tmp=CostComputer.my_SolverIpopt.computeCost(f_ppSolOrGuess)
 
@@ -272,8 +271,9 @@ class CostComputer():
 			# print(f"Choosing traj {index_best_unsafe_traj} ")
 			index_best_traj= index_best_unsafe_traj
 		else:
-			print("This should never happen!!")
-			exit();		
+			raise Exception("This should never happen!!")
+			#print("This should never happen!!")
+			#exit();		
 
 		# print(f" computeNOTParallel took {(time.time() - start)*(1e3)} ms")
 

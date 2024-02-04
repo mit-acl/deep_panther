@@ -310,9 +310,7 @@ class MyEnvironment(gym.Env):
     self.timestep = 0
     self.force_done=False
 
-    p0=np.zeros((2, 1))
-    if self.dim == 3:
-      p0=np.array([[0.0],[0.0],[1.0]])
+    p0=np.zeros((self.dim, 1))
     v0=np.zeros((self.dim, 1))
     a0=np.zeros((self.dim, 1))
     y0=np.array([[0.0]])
@@ -414,7 +412,7 @@ class MyEnvironment(gym.Env):
       point_msg.header.stamp = time_now;
       point_msg.point.x=f_g[0,0]
       point_msg.point.y=f_g[1,0]
-      point_msg.point.z=f_g[2,0]
+      point_msg.point.z=f_g[2,0] if f_g.shape[0] == 3 else 0.0;
 
       marker_array_msg=MarkerArray()
 
@@ -423,8 +421,11 @@ class MyEnvironment(gym.Env):
         t0=self.time
         tf=self.time + np.max(f_action[:,-1]) #self.am.getTotalTime()#self.par.fitter_total_time
 
+        obs_ctrl_pos = listOfNdVectors2numpyNXmatrix(self.dim, obstacles[i].ctrl_pts)
+        if obs_ctrl_pos.shape[0] == 2:
+          obs_ctrl_pos = np.vstack((obs_ctrl_pos, np.zeros((1, obs_ctrl_pos.shape[1]))))
         bspline_obs_i=MyClampedUniformBSpline(t0=t0, tf=tf, deg=self.par.deg_pos, \
-                                        dim=3, num_seg=self.par.num_seg, ctrl_pts=listOfNdVectors2numpyNXmatrix(self.dim, obstacles[i].ctrl_pts) )
+                                        dim=3, num_seg=self.par.num_seg, ctrl_pts=obs_ctrl_pos)
 
         id_sample=0
         num_samples=20
@@ -440,14 +441,14 @@ class MyEnvironment(gym.Env):
           pos=bspline_obs_i.getPosT(t_interm)
           marker_msg.pose.position.x = pos[0];
           marker_msg.pose.position.y = pos[1];
-          marker_msg.pose.position.z = pos[2];
+          marker_msg.pose.position.z = pos[2] if pos.shape[0] == 3 else 0.0;
           marker_msg.pose.orientation.x = 0.0;
           marker_msg.pose.orientation.y = 0.0;
           marker_msg.pose.orientation.z = 0.0;
           marker_msg.pose.orientation.w = 1.0;
           marker_msg.scale.x = obstacles[0].bbox_inflated[0];
           marker_msg.scale.y = obstacles[0].bbox_inflated[1];
-          marker_msg.scale.z = obstacles[0].bbox_inflated[2];
+          marker_msg.scale.z = obstacles[0].bbox_inflated[2] if obstacles[0].bbox_inflated.shape[0] == 3 else 1.0;
           marker_msg.color.a = 1.0*(num_samples-id_sample)/num_samples; 
           marker_msg.color.r = 0.0;
           marker_msg.color.g = 1.0;
