@@ -10,8 +10,8 @@
 
 #include "solver_ipopt.hpp"
 #include "termcolor.hpp"
+#include "utils.hpp"
 #include "bspline_utils.hpp"
-#include "ros/ros.h"
 
 #include <unsupported/Eigen/Splines>
 #include <iostream>
@@ -20,8 +20,8 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
-
-#include <ros/package.h>
+#include <filesystem>
+#include <cassert>
 
 using namespace termcolor;
 
@@ -48,12 +48,17 @@ int sgn(T val)
   return (T(0) < val) - (val < T(0));
 }
 
-std::vector<Eigen::Vector3d> casadiMatrix2StdVectorEigen3d(const casadi::DM &qp_casadi)
+std::vector<Eigen::VectorXd> casadiMatrix2StdVectorEigen(const casadi::DM &qp_casadi)
 {
-  std::vector<Eigen::Vector3d> qp;
+  assert(qp_casadi.rows() > 0 && qp_casadi.columns() > 0);
+  const int n = qp_casadi.rows();
+  std::vector<Eigen::VectorXd> qp;
+
   for (int i = 0; i < qp_casadi.columns(); i++)
   {
-    qp.push_back(Eigen::Vector3d(double(qp_casadi(0, i)), double(qp_casadi(1, i)), double(qp_casadi(2, i))));
+    Eigen::VectorXd qp_i = Eigen::VectorXd::Zero(n);
+    for (int j = 0; j < n; j++) qp_i[j] = double(qp_casadi(j, i));
+    qp.push_back(qp_i);
   }
   return qp;
 }
@@ -63,16 +68,31 @@ std::vector<double> casadiMatrix2StdVectorDouble(const casadi::DM &qy_casadi)
   return static_cast<std::vector<double>>(qy_casadi);
 }
 
-casadi::DM stdVectorEigen3d2CasadiMatrix(const std::vector<Eigen::Vector3d> &qp)
+casadi::DM stdVectorEigen2CasadiMatrix(const std::vector<Eigen::VectorXd> &qp)
 {
-  casadi::DM casadi_matrix(3, qp.size());  // TODO: do this just once?
-  for (int i = 0; i < casadi_matrix.columns(); i++)
+  assert(qp.size() > 0);
+  const int m = qp.size();
+  const int n = qp[0].size();
+  
+  casadi::DM casadi_matrix(n, m);
+  for (int j = 0; j < m; j++)
   {
-    casadi_matrix(0, i) = qp[i].x();
-    casadi_matrix(1, i) = qp[i].y();
-    casadi_matrix(2, i) = qp[i].z();
+    for (int i = 0; i < n; i++)
+    {
+      casadi_matrix(i, j) = qp[j][i];
+    }
   }
   return casadi_matrix;
+}
+
+casadi::DM stdVectorEigen2CasadiMatrix(std::vector<Eigen::Vector2d> &qp)
+{
+  return stdVectorEigen2CasadiMatrix(dynamicVecOfVec(qp));
+}
+
+casadi::DM stdVectorEigen2CasadiMatrix(std::vector<Eigen::Vector3d> &qp)
+{
+  return stdVectorEigen2CasadiMatrix(dynamicVecOfVec(qp));
 }
 
 casadi::DM stdVectorDouble2CasadiRowVector(const std::vector<double> &qy)
@@ -85,14 +105,12 @@ casadi::DM stdVectorDouble2CasadiRowVector(const std::vector<double> &qy)
   return casadi_matrix;
 }
 
-casadi::DM eigen3d2CasadiMatrix(const Eigen::Vector3d &data)
+casadi::DM eigen2CasadiMatrix(const Eigen::VectorXd &data)
 {
-  casadi::DM casadi_matrix(3, 1);
+  const int n = data.size();
+  casadi::DM casadi_matrix(n, 1);
 
-  casadi_matrix(0, 0) = data.x();
-  casadi_matrix(1, 0) = data.y();
-  casadi_matrix(2, 0) = data.z();
-
+  for (int i = 0; i < n; i++) casadi_matrix(i, 0) = data[i];
   return casadi_matrix;
 }
 
@@ -100,7 +118,8 @@ casadi::DM eigen3d2CasadiMatrix(const Eigen::Vector3d &data)
 
 Fitter::Fitter(const int fitter_num_samples)
 {
-  std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
+  std::string folder = casadi_folder();
+  //std::string folder = std::filesystem::current_path().string() + "/../matlab/casadi_generated_files/";
   cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
   fitter_num_samples_ = fitter_num_samples;
 }
@@ -109,23 +128,42 @@ Fitter::~Fitter()
 {
 }
 
-std::vector<Eigen::Vector3d> Fitter::fit(std::vector<Eigen::Vector3d> &samples)
+std::vector<Eigen::VectorXd> Fitter::pybind_fit(std::vector<Eigen::VectorXd> &samples)
+{
+  // this function exists to have an unambiguous fit function for the py_bind export
+  return fit(samples);
+}
+
+std::vector<Eigen::VectorXd> Fitter::fit(std::vector<Eigen::VectorXd> &samples)
 {
   verify(samples.size() == fitter_num_samples_, "The number of samples needs to be equal to "
                                                 "fitter_num_samples");
 
   // Fit a spline to those samples
   std::map<std::string, casadi::DM> map_arg;
-  map_arg["samples"] = stdVectorEigen3d2CasadiMatrix(samples);
+  map_arg["samples"] = stdVectorEigen2CasadiMatrix(samples);
   std::map<std::string, casadi::DM> result = cf_fit3d_(map_arg);
-  std::vector<Eigen::Vector3d> ctrl_pts = casadiMatrix2StdVectorEigen3d(result["result"]);
+  std::vector<Eigen::VectorXd> ctrl_pts = casadiMatrix2StdVectorEigen(result["result"]);
 
   return ctrl_pts;
 }
 
+std::vector<Eigen::VectorXd> Fitter::fit(std::vector<Eigen::Vector2d> &samples)
+{
+  std::vector<Eigen::VectorXd> vec_xd(samples.begin(), samples.end());
+  return fit(vec_xd);
+}
+
+std::vector<Eigen::VectorXd> Fitter::fit(std::vector<Eigen::Vector3d> &samples)
+{
+  std::vector<Eigen::VectorXd> vec_xd(samples.begin(), samples.end());
+  return fit(vec_xd);
+}
+
 ClosedFormYawSolver::ClosedFormYawSolver()
 {
-  std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
+  std::string folder = casadi_folder();
+  //std::string folder = std::filesystem::current_path().string() + "/../matlab/casadi_generated_files/";
   cf_ = casadi::Function::load(folder + "get_optimal_yaw_for_fixed_pos.casadi");
 }
 
@@ -134,13 +172,14 @@ ClosedFormYawSolver::~ClosedFormYawSolver()
 }
 
 std::vector<double> ClosedFormYawSolver::getyCPsfrompCPSUsingClosedForm(
-    std::vector<Eigen::Vector3d> &pCPs, double total_time, const std::vector<Eigen::Vector3d> &pCPs_feature,
+    std::vector<Eigen::VectorXd> &pCPs, double total_time, const std::vector<Eigen::VectorXd> &pCPs_feature,
     const double y0, const double ydot0, const double ydotf)
 {
   // Fit a spline to those samples
   std::map<std::string, casadi::DM> map_arg;
-  map_arg["pCPs"] = stdVectorEigen3d2CasadiMatrix(pCPs);
-  map_arg["pCPs_feature"] = stdVectorEigen3d2CasadiMatrix(pCPs_feature);
+  
+  map_arg["pCPs"] = stdVectorEigen2CasadiMatrix(pCPs);
+  map_arg["pCPs_feature"] = stdVectorEigen2CasadiMatrix(pCPs_feature);
   map_arg["alpha"] = total_time;
   map_arg["y0"] = y0;
   map_arg["ydot0"] = ydot0;
@@ -222,7 +261,7 @@ SolverIpopt::SolverIpopt(const mt::parameters &par)
 
   std::cout << bold << "SolverIpopt, reading .casadi files..." << reset << std::endl;
 
-  std::string folder = ros::package::getPath("panther") + "/matlab/casadi_generated_files/";
+  std::string folder = casadi_folder();
   std::fstream myfile(folder + "index_instruction.txt", std::ios_base::in);
   myfile >> index_instruction_;
   cf_op_ = casadi::Function::load(folder + "op.casadi");
@@ -351,8 +390,8 @@ bool SolverIpopt::isInCollision(mt::state state, double t)
 
     mt::state state_obs = getStatePosSplineT(obstacle_i.ctrl_pts, knots_p, sp_.p, t);
 
-    Eigen::Array<double, 3, 1> distance = (state_obs.pos - state.pos).array().abs();
-    Eigen::Vector3d delta = obstacle_i.bbox_inflated / 2.0;
+    Eigen::ArrayXd distance = (state_obs.pos - state.pos).array().abs();
+    Eigen::VectorXd delta = obstacle_i.bbox_inflated / 2.0;
 
     // std::cout << "obstacle_i.bbox_inflated= " << obstacle_i.bbox_inflated.transpose() << std::endl;
 
@@ -373,6 +412,12 @@ void SolverIpopt::setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obst
 {
   obstacles_for_opt_ = obstacles_for_opt;
 
+  // determine dimension
+  const int dim_ = obstacles_for_opt[0].bbox_inflated.size();
+  assert(dim_ == 2 || dim_ == 3);
+
+  const int n_vertices_ = 8; // always 8, for both 2D and 3D. 3D is "faked" using obstacles with bbox_z=1000
+
   ////// Set the hulls for use in Octopus Search
   hulls_.clear();
 
@@ -385,7 +430,7 @@ void SolverIpopt::setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obst
   {
     VertexesObstacle vertexes_obstacle_i;
 
-    // std::vector<Eigen::Vector3d> ctrl_pts_obs_i = casadiMatrix2StdVectorEigen3d(obstacle_i.ctrl_pts);
+    // std::vector<Eigen::VectorXd> ctrl_pts_obs_i = casadiMatrix2StdVectorEigen(obstacle_i.ctrl_pts);
 
     for (int j = 0; j < par_.num_seg; j++)
     {
@@ -394,7 +439,8 @@ void SolverIpopt::setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obst
 
       // std::cout << "times.size()= " << times.size() << std::endl;
 
-      VertexesInterval vertexes_interval_j(3, 8 * times.size());  // For each sample, there are 8 vertexes
+      // obstacles are always 3D, even if scenario is 2D.
+      VertexesInterval vertexes_interval_j(3, n_vertices_ * times.size());  // For each sample, there are 8 vertexes
 
       for (int k = 0; k < times.size(); k++)
       {
@@ -402,17 +448,31 @@ void SolverIpopt::setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obst
 
         mt::state state = getStatePosSplineT(obstacle_i.ctrl_pts, knots_p, sp_.p, times[k]);
 
-        Eigen::Vector3d delta = obstacle_i.bbox_inflated / 2.0;
+        Eigen::VectorXd delta = obstacle_i.bbox_inflated / 2.0;
+
+        double pos_z = 0.0;
+        double delta_z = 1000.0;
+        if (dim_ == 3) {
+          pos_z = state.pos.z();
+          delta_z = delta.z();
+        }
 
         // clang-format off
-         vertexes_interval_j.col(8*k)=     (Eigen::Vector3d(state.pos.x() + delta.x(), state.pos.y() + delta.y(), state.pos.z() + delta.z()));
-         vertexes_interval_j.col(8*k+1)=   (Eigen::Vector3d(state.pos.x() + delta.x(), state.pos.y() - delta.y(), state.pos.z() - delta.z()));
-         vertexes_interval_j.col(8*k+2)=   (Eigen::Vector3d(state.pos.x() + delta.x(), state.pos.y() + delta.y(), state.pos.z() - delta.z()));
-         vertexes_interval_j.col(8*k+3)=   (Eigen::Vector3d(state.pos.x() + delta.x(), state.pos.y() - delta.y(), state.pos.z() + delta.z()));
-         vertexes_interval_j.col(8*k+4)=   (Eigen::Vector3d(state.pos.x() - delta.x(), state.pos.y() - delta.y(), state.pos.z() - delta.z()));
-         vertexes_interval_j.col(8*k+5)=   (Eigen::Vector3d(state.pos.x() - delta.x(), state.pos.y() + delta.y(), state.pos.z() + delta.z()));
-         vertexes_interval_j.col(8*k+6)=   (Eigen::Vector3d(state.pos.x() - delta.x(), state.pos.y() + delta.y(), state.pos.z() - delta.z()));
-         vertexes_interval_j.col(8*k+7)=   (Eigen::Vector3d(state.pos.x() - delta.x(), state.pos.y() - delta.y(), state.pos.z() + delta.z()));
+        vertexes_interval_j.col(8*k)=     (Eigen::Vector3d(state.pos.x() + delta.x(), state.pos.y() + delta.y(), pos_z + delta_z));
+        vertexes_interval_j.col(8*k+1)=   (Eigen::Vector3d(state.pos.x() + delta.x(), state.pos.y() - delta.y(), pos_z - delta_z));
+        vertexes_interval_j.col(8*k+2)=   (Eigen::Vector3d(state.pos.x() + delta.x(), state.pos.y() + delta.y(), pos_z - delta_z));
+        vertexes_interval_j.col(8*k+3)=   (Eigen::Vector3d(state.pos.x() + delta.x(), state.pos.y() - delta.y(), pos_z + delta_z));
+        vertexes_interval_j.col(8*k+4)=   (Eigen::Vector3d(state.pos.x() - delta.x(), state.pos.y() - delta.y(), pos_z - delta_z));
+        vertexes_interval_j.col(8*k+5)=   (Eigen::Vector3d(state.pos.x() - delta.x(), state.pos.y() + delta.y(), pos_z + delta_z));
+        vertexes_interval_j.col(8*k+6)=   (Eigen::Vector3d(state.pos.x() - delta.x(), state.pos.y() + delta.y(), pos_z - delta_z));
+        vertexes_interval_j.col(8*k+7)=   (Eigen::Vector3d(state.pos.x() - delta.x(), state.pos.y() - delta.y(), pos_z + delta_z));
+
+        /*
+        vertexes_interval_j.col(8*k)=     (Eigen::Vector2d(state.pos.x() + delta.x(), state.pos.y() + delta.y()));
+        vertexes_interval_j.col(8*k+1)=   (Eigen::Vector2d(state.pos.x() + delta.x(), state.pos.y() - delta.y()));
+        vertexes_interval_j.col(8*k+2)=   (Eigen::Vector2d(state.pos.x() - delta.x(), state.pos.y() - delta.y()));
+        vertexes_interval_j.col(8*k+3)=   (Eigen::Vector2d(state.pos.x() - delta.x(), state.pos.y() + delta.y()));
+        */
         // clang-format on
 
         // std::cout << "vertexes_interval_j= \n" << vertexes_interval_j << std::endl;
@@ -430,12 +490,11 @@ void SolverIpopt::setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obst
   //////
 }
 
-casadi::DM SolverIpopt::eigen2casadi(const Eigen::Vector3d &a)
+casadi::DM SolverIpopt::eigen2casadi(const Eigen::VectorXd &a)
 {
-  casadi::DM b = casadi::DM::zeros(3, 1);
-  b(0, 0) = a(0);
-  b(1, 0) = a(1);
-  b(2, 0) = a(2);
+  const int n = a.size();
+  casadi::DM b = casadi::DM::zeros(n, 1);
+  for (int i; i < n; i++) b(i, 0) = a(i);
   return b;
 };
 
@@ -444,9 +503,9 @@ bool SolverIpopt::setInitStateFinalStateInitTFinalT(mt::state initial_state, mt:
                                                     double &t_final)
 {
   ///////////////////////////
-  Eigen::Vector3d p0 = initial_state.pos;
-  Eigen::Vector3d v0 = initial_state.vel;
-  Eigen::Vector3d a0 = initial_state.accel;
+  Eigen::VectorXd p0 = initial_state.pos;
+  Eigen::VectorXd v0 = initial_state.vel;
+  Eigen::VectorXd a0 = initial_state.accel;
 
   initial_state_ = initial_state;
   final_state_ = final_state;
@@ -602,7 +661,7 @@ si::solOrGuess SolverIpopt::fillTrajBestSolutionAndGetIt()
   // Force last vel and jerk =final_state_ (which it's not guaranteed because of the discretization with par_.dc)
   best_solution.traj.back().vel = final_state_.vel;
   best_solution.traj.back().accel = final_state_.accel;
-  best_solution.traj.back().jerk = Eigen::Vector3d::Zero();
+  best_solution.traj.back().jerk = Eigen::VectorXd::Zero(final_state_.vel.size());
   best_solution.traj.back().ddyaw = final_state_.ddyaw;
 
   return best_solution;
@@ -617,10 +676,11 @@ double SolverIpopt::computeCost(si::solOrGuess sol_or_guess)
 {
   std::map<std::string, casadi::DM> map_arguments = getMapConstantArguments();
 
-  casadi::DM matrix_qp = stdVectorEigen3d2CasadiMatrix(sol_or_guess.qp);
+  casadi::DM matrix_qp = stdVectorEigen2CasadiMatrix(sol_or_guess.qp);
   casadi::DM matrix_qy = stdVectorDouble2CasadiRowVector(sol_or_guess.qy);
 
   map_arguments["alpha"] = sol_or_guess.getTotalTime();
+  
   map_arguments["pCPs"] = matrix_qp;
   map_arguments["yCPs"] = matrix_qy;
   // map_arguments["all_nd"] = all_nd;                                 // Only appears in the constraints
@@ -635,7 +695,7 @@ double SolverIpopt::computeDynLimitsConstraintsViolation(si::solOrGuess sol_or_g
 {
   std::map<std::string, casadi::DM> map_arguments = getMapConstantArguments();
 
-  casadi::DM matrix_qp = stdVectorEigen3d2CasadiMatrix(sol_or_guess.qp);
+  casadi::DM matrix_qp = stdVectorEigen2CasadiMatrix(sol_or_guess.qp);
   casadi::DM matrix_qy = stdVectorDouble2CasadiRowVector(sol_or_guess.qy);
 
   map_arguments["alpha"] = sol_or_guess.getTotalTime();
@@ -662,9 +722,6 @@ double SolverIpopt::computeDynLimitsConstraintsViolation(si::solOrGuess sol_or_g
 
 std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
 {
-  // Conversion DM <--> Eigen:  https://github.com/casadi/casadi/issues/2563
-  auto eigen2std = [](Eigen::Vector3d &v) { return std::vector<double>{ v.x(), v.y(), v.z() }; };
-
   std::map<std::string, casadi::DM> map_arguments;
   map_arguments["thetax_FOV_deg"] = par_.fov_x_deg;
   map_arguments["thetay_FOV_deg"] = par_.fov_y_deg;
@@ -698,8 +755,11 @@ std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
 
   for (int i = 0; i < par_.num_max_of_obst; i++)
   {  // clang-format off
-    map_arguments["obs_" + std::to_string(i) + "_ctrl_pts"] = stdVectorEigen3d2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
-    map_arguments["obs_" + std::to_string(i) + "_bbox_inflated"] = eigen3d2CasadiMatrix(obstacles_for_opt_[i].bbox_inflated);
+    casadi::DM ctrl_pts_matrix = stdVectorEigen2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
+    casadi::DM bbox_matrix = eigen2CasadiMatrix(obstacles_for_opt_[i].bbox_inflated);
+
+    map_arguments["obs_" + std::to_string(i) + "_ctrl_pts"] = ctrl_pts_matrix;
+    map_arguments["obs_" + std::to_string(i) + "_bbox_inflated"] = bbox_matrix;
      // clang-format on
   }
 
@@ -724,6 +784,9 @@ std::map<std::string, casadi::DM> SolverIpopt::getMapConstantArguments()
 
 bool SolverIpopt::optimize(bool supress_all_prints)
 {
+  const int dim_ = initial_state_.pos.size();
+  assert(dim_ == 2 || dim_ == 3);
+
   info_last_opt_ = "";
 
   PrintSupresser print_supresser;
@@ -798,29 +861,37 @@ bool SolverIpopt::optimize(bool supress_all_prints)
   // #pragma omp parallel for
   for (auto p_guess : p_guesses)
   {
-    static casadi::DM all_nd(4, max_num_of_planes);
-    all_nd = casadi::DM::zeros(4, max_num_of_planes);
+    int all_nd_dim = 4;
+    if (dim_ == 2) all_nd_dim = 3;
+
+    static casadi::DM all_nd(all_nd_dim, max_num_of_planes);
+    all_nd = casadi::DM::zeros(all_nd_dim, max_num_of_planes);
     for (int i = 0; i < p_guess.n.size(); i++)
     {
       // The optimized curve is on the side n'x+d <= -1
       // The obstacle is on the side n'x+d >= 1
       all_nd(0, i) = p_guess.n[i].x();
       all_nd(1, i) = p_guess.n[i].y();
-      all_nd(2, i) = p_guess.n[i].z();
-      all_nd(3, i) = p_guess.d[i];
+
+      if (dim_ == 3)
+      {
+        all_nd(2, i) = p_guess.n[i].z();
+        all_nd(3, i) = p_guess.d[i];
+      } else {
+        all_nd(2, i) = p_guess.d[i];
+      }
     }
 
     map_arguments["all_nd"] = all_nd;
 
     ///////////////// GUESS FOR POSITION CONTROL POINTS
+    casadi::DM matrix_qp_guess  = checkDimensions(stdVectorEigen2CasadiMatrix(p_guess.qp), dim_); // (p_guess.qp[0].size(), p_guess.qp.size());
 
-    casadi::DM matrix_qp_guess = stdVectorEigen3d2CasadiMatrix(p_guess.qp);
-
+    // guesses are always 3D --> Make sure the casadi solver gets the right dimensional data
     map_arguments["pCPs"] = matrix_qp_guess;
 
     ////////////////////////////////Generate Yaw Guess
     casadi::DM matrix_qy_guess(1, sy_.N);  // TODO: do this just once?
-
     matrix_qy_guess = generateYawGuess(matrix_qp_guess, initial_state_.yaw, initial_state_.dyaw, final_state_.dyaw,
                                        t_init_, t_final_guess_);
 
@@ -830,7 +901,7 @@ bool SolverIpopt::optimize(bool supress_all_prints)
     guess.deg_p = par_.deg_pos;
     guess.deg_y = par_.deg_yaw;
     guess.is_guess = true;
-    guess.qp = p_guess.qp;
+    guess.qp = checkDimensions(p_guess.qp, dim_);
     guess.qy = casadiMatrix2StdVectorDouble(matrix_qy_guess);
     guess.knots_p = constructKnotsClampedUniformSpline(t_init_, t_final_guess_, sp_.p, sp_.num_seg);
     guess.knots_y = constructKnotsClampedUniformSpline(t_init_, t_final_guess_, sy_.p, sy_.num_seg);
@@ -862,8 +933,8 @@ bool SolverIpopt::optimize(bool supress_all_prints)
       map_arguments["c_fov"] = par_.c_fov;
       // std::cout << bold << green << "Optimizing for YAW and POSITION!" << reset << std::endl;
 
-      // printMap(map_arguments);
-
+      printMap(map_arguments);
+      
       result = cf_op_(map_arguments);
     }
     else if (par_.mode == "py" && focus_on_obstacle_ == true)
@@ -966,7 +1037,7 @@ bool SolverIpopt::optimize(bool supress_all_prints)
       //   qp.push_back(Eigen::Vector3d(double(qp_casadi(0, i)), double(qp_casadi(1, i)), double(qp_casadi(2, i))));
       // }
 
-      solution.qp = casadiMatrix2StdVectorEigen3d(result["pCPs"]);
+      solution.qp = casadiMatrix2StdVectorEigen(result["pCPs"]);
 
       solution.knots_p = getKnotsSolution(guess.knots_p, alpha_guess, double(result["alpha"]));
       solution.knots_y = getKnotsSolution(guess.knots_y, alpha_guess, double(result["alpha"]));
@@ -1381,9 +1452,7 @@ void SolverIpopt::fillPlanesFromNDQ(const std::vector<Eigen::Vector3d> &n, const
     for (int i = 0; i < par_.num_seg; i++)
     {
       int ip = obst_index * par_.num_seg + i;  // index plane
-      Eigen::Vector3d centroid_hull;
-      findCentroidHull(hulls_[obst_index][i], centroid_hull);
-
+      Eigen::Vector3d centroid_hull = findCentroidHull(hulls_[obst_index][i], 3);
       Eigen::Vector3d point_in_plane;
 
       Eigen::Matrix<double, 3, 4> Qmv, Qbs;  // minvo. each column contains a MINVO control point

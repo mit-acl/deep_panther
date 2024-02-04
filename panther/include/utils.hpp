@@ -9,36 +9,25 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
-#include <std_msgs/ColorRGBA.h>
-#include <geometry_msgs/Vector3.h>
-#include <geometry_msgs/Point.h>
-#include <visualization_msgs/Marker.h>
-
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-#include "visualization_msgs/Marker.h"
-#include "visualization_msgs/MarkerArray.h"
 #include "panther_types.hpp"
 #include <deque>
+#include <iterator>
+#include <casadi/casadi.hpp>
 
-#include <panther_msgs/PieceWisePolTraj.h>
-#include <panther_msgs/CoeffPoly.h>
-#include <panther_msgs/Log.h>
-
-#include "ros/ros.h"
-
-#define RED_NORMAL 1
-#define RED_TRANS 2
-#define RED_TRANS_TRANS 3
-#define GREEN_NORMAL 4
-#define BLUE_NORMAL 5
-#define BLUE_TRANS 6
-#define BLUE_TRANS_TRANS 7
-#define BLUE_LIGHT 8
-#define YELLOW_NORMAL 9
-#define ORANGE_TRANS 10
-#define BLACK_TRANS 11
-#define BLACK 12
-#define TEAL_NORMAL 13
+#ifndef __has_include
+  static_assert(false, "__has_include not supported");
+#else
+#  if __cplusplus >= 201703L && __has_include(<filesystem>)
+#    include <filesystem>
+     namespace fs = std::filesystem;
+#  elif __has_include(<experimental/filesystem>)
+#    include <experimental/filesystem>
+     namespace fs = std::experimental::filesystem;
+#  elif __has_include(<boost/filesystem.hpp>)
+#    include <boost/filesystem.hpp>
+     namespace fs = boost::filesystem;
+#  endif
+#endif
 
 // #define STATE 0
 // #define INPUT 1
@@ -55,18 +44,11 @@
 
 // #define UNKOWN_AND_OCCUPIED_SPACE 2
 
-// TODO: put this in a namespace
+std::vector<Eigen::VectorXd> dynamicVecOfVec(std::vector<Eigen::VectorXd> &v);
+std::vector<Eigen::VectorXd> dynamicVecOfVec(std::vector<Eigen::Vector2d> &v);
+std::vector<Eigen::VectorXd> dynamicVecOfVec(std::vector<Eigen::Vector3d> &v);
 
-template <typename T>
-bool safeGetParam(ros::NodeHandle& nh, std::string const& param_name, T& param_value)
-{
-  if (!nh.getParam(param_name, param_value))
-  {
-    ROS_ERROR("Failed to find parameter: %s", nh.resolveName(param_name, true).c_str());
-    exit(1);
-  }
-  return true;
-}
+// TODO: put this in a namespace
 
 // https://stackoverflow.com/questions/27028226/python-linspace-in-c
 template <typename T>
@@ -101,79 +83,46 @@ std::vector<double> linspace(T start_in, T end_in, int num_in)
 
 void verify(bool cond, std::string info_if_false);
 
+mt::PieceWisePol composePieceWisePol(const double t, const double dc, mt::PieceWisePol& p1, mt::PieceWisePol& p2);
+
+std::vector<std::string> pieceWisePol2String(const mt::PieceWisePol& pwp);
+
 double getMinTimeDoubleIntegrator1D(const double& p0, const double& v0, const double& pf, const double& vf,
                                     const double& v_max, const double& a_max);
 
-double getMinTimeDoubleIntegrator3D(const Eigen::Vector3d& p0, const Eigen::Vector3d& v0, const Eigen::Vector3d& pf,
-                                    const Eigen::Vector3d& vf, const Eigen::Vector3d& v_max,
-                                    const Eigen::Vector3d& a_max);
+double getMinTimeDoubleIntegratorND(const Eigen::VectorXd& p0, const Eigen::VectorXd& v0, const Eigen::VectorXd& pf,
+                                    const Eigen::VectorXd& vf, const Eigen::VectorXd& v_max,
+                                    const Eigen::VectorXd& a_max);
 
-double getMinTimeDoubleIntegrator3DFromState(mt::state initial_state, mt::state final_state,
-                                             const Eigen::Vector3d& v_max, const Eigen::Vector3d& a_max);
-
-panther_msgs::Log log2LogMsg(mt::log log);
-visualization_msgs::MarkerArray pwp2ColoredMarkerArray(mt::PieceWisePol& pwp, double t_init, double t_final,
-                                                       int samples, std::string ns, Eigen::Vector3d& color);
-
-mt::PieceWisePol createPwpFromStaticPosition(const mt::state& current_state);
-
-mt::PieceWisePol pwpMsg2Pwp(const panther_msgs::PieceWisePolTraj& pwp_msg);
-panther_msgs::PieceWisePolTraj pwp2PwpMsg(const mt::PieceWisePol& pwp);
-
-visualization_msgs::Marker edges2Marker(const mt::Edges& edges, std_msgs::ColorRGBA color_marker);
-
-geometry_msgs::Pose identityGeometryMsgsPose();
-
-mt::PieceWisePol composePieceWisePol(const double t, const double dc, mt::PieceWisePol& p1, mt::PieceWisePol& p2);
+double getMinTimeDoubleIntegratorNDFromState(mt::state initial_state, mt::state final_state,
+                                             const Eigen::VectorXd& v_max, const Eigen::VectorXd& a_max);
 
 bool boxIntersectsSphere(Eigen::Vector3d center, double r, Eigen::Vector3d c1, Eigen::Vector3d c2);
 
 void printStateDeque(std::deque<mt::state>& data);
 
-std::vector<std::string> pieceWisePol2String(const mt::PieceWisePol& piecewisepol);
-
 void printStateVector(std::vector<mt::state>& data);
-
-std_msgs::ColorRGBA getColorJet(double v, double vmin, double vmax);
-
-std_msgs::ColorRGBA getColorInterpBetween2Colors(double v, double vmin, double vmax, std_msgs::ColorRGBA min_color,
-                                                 std_msgs::ColorRGBA max_color);
-std_msgs::ColorRGBA color(int id);
-
-void quaternion2Euler(tf2::Quaternion q, double& roll, double& pitch, double& yaw);
-
-void quaternion2Euler(Eigen::Quaterniond q, double& roll, double& pitch, double& yaw);
-
-void quaternion2Euler(geometry_msgs::Quaternion q, double& roll, double& pitch, double& yaw);
 
 void saturate(int& var, const int min, const int max);
 
 void saturate(double& var, const double min, const double max);
 
-void saturate(Eigen::Vector3d& tmp, const Eigen::Vector3d& min, const Eigen::Vector3d& max);
+void saturate(Eigen::VectorXd& tmp, const Eigen::VectorXd& min, const Eigen::VectorXd& max);
 
-visualization_msgs::Marker getMarkerSphere(double scale, int my_color);
-
-double angleBetVectors(const Eigen::Vector3d& a, const Eigen::Vector3d& b);
+double angleBetVectors(const Eigen::VectorXd& a, const Eigen::VectorXd& b);
 
 void angle_wrap(double& diff);
 
-geometry_msgs::Point pointOrigin();
+std::vector<double> eigen2std(const Eigen::Vector2d &v);
 
-Eigen::Vector3d vec2eigen(geometry_msgs::Vector3 vector);
+std::vector<double> eigen2std(const Eigen::Vector3d &v);
 
-geometry_msgs::Vector3 eigen2rosvector(Eigen::Vector3d vector);
-
-geometry_msgs::Point eigen2point(Eigen::Vector3d vector);
-
-std::vector<double> eigen2std(const Eigen::Vector3d& v);
-
-geometry_msgs::Vector3 vectorNull();
-
-geometry_msgs::Vector3 vectorUniform(double a);
+std::vector<double> eigen2std(const Eigen::VectorXd &v);
 
 int nChoosek(int n, int k);
+
 void linearTransformPoly(const Eigen::VectorXd& coeff_old, Eigen::VectorXd& coeff_new, double a, double b);
+
 void changeDomPoly(const Eigen::VectorXd& coeff_p, double tp1, double tp2, Eigen::VectorXd& coeff_q, double tq1,
                    double tq2);
 // sign function
@@ -184,7 +133,9 @@ int sign(T val)
 }
 
 double cdfUnivariateNormalDist(double x, double mu, double std_deviation);
+
 double probUnivariateNormalDistAB(double a, double b, double mu, double std_deviation);
+
 double probMultivariateNormalDist(const Eigen::VectorXd& a, const Eigen::VectorXd& b, const Eigen::VectorXd& mu,
                                   const Eigen::VectorXd& std_deviation);
 
@@ -201,10 +152,14 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& v)
   return out;
 }
 
-visualization_msgs::MarkerArray trajectory2ColoredMarkerArray(const mt::trajectory& data, double max_value, int increm,
-                                                              std::string ns, double scale, std::string color_type,
-                                                              int id_agent, int n_agents, double min_cost = 0.0,
-                                                              double max_cost = 0.0, double cost = 0.0,
-                                                              bool collides = false);
+casadi::DM checkDimensions(casadi::DM matrix, int dim);
+
+std::vector<Eigen::VectorXd> checkDimensions(std::vector<Eigen::VectorXd> matrix, int dim);
+
+std::vector<Eigen::VectorXd> checkDimensions(std::vector<Eigen::Vector3d> matrix, int dim);
+
+std::vector<Eigen::VectorXd> checkDimensions(std::vector<Eigen::Vector2d> matrix, int dim);
+
+std::string casadi_folder();
 
 #endif

@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
-import gym
+import gymnasium as gym
 import torch as th
 from torch import nn
 
@@ -13,9 +13,12 @@ from stable_baselines3.common.torch_layers import (
     create_mlp,
 )
 
-from compression.utils.other import ActionManager, ObservationManager
+from compression.utils.ActionManager import ActionManager
+from compression.utils.ObservationManager import ObservationManager
+
 from colorama import init, Fore, Back, Style
 
+from gymnasium import spaces
 
 
 class StudentPolicy(BasePolicy):
@@ -33,8 +36,8 @@ class StudentPolicy(BasePolicy):
 
     def __init__(
         self,
-        observation_space: gym.spaces.Space,
-        action_space: gym.spaces.Space,
+        observation_space: spaces.Space,
+        action_space: spaces.Space,
         lr_schedule = Callable[[float], float], #TODO: Andrea: not used, dummy
         net_arch: [List[int]] = [64, 64],
         features_extractor_class: Type[BaseFeaturesExtractor] = FlattenExtractor,

@@ -15,6 +15,7 @@
 
 #include "panther.hpp"
 #include "timer.hpp"
+#include "ros_timer.hpp"
 #include "termcolor.hpp"
 #include "bspline_utils.hpp"
 
@@ -64,7 +65,7 @@ Panther::Panther(mt::parameters par) : par_(par)
 
     student_caller_ptr_ = new pybind11::object;
     *student_caller_ptr_ =
-        pybind11::module::import("compression.utils.other").attr("StudentCaller")(par_.student_policy_path);
+        pybind11::module::import("compression.utils.StudentCaller").attr("StudentCaller")(par_.student_policy_path);
 
     ///// TODO: The first ~5 calls to the student are very slow. It is due to the
     // because of having declared the variables just after class CostComputer(): (see python file), and not inside
@@ -702,7 +703,7 @@ bool Panther::replan(mt::Edges& edges_obstacles_out, mt::trajectory& X_safe_out,
   ////////////////////////Compute trajectory to focus on //////////////////
   /////////////////////////////////////////////////////////////////////////
 
-  double time_allocated = getMinTimeDoubleIntegrator3D(A.pos, A.vel, G.pos, G.vel, par_.v_max, par_.a_max);
+  double time_allocated = getMinTimeDoubleIntegratorND(A.pos, A.vel, G.pos, G.vel, par_.v_max, par_.a_max);
   double t_final = t_start + par_.factor_alloc * time_allocated;
   double max_prob_collision = -std::numeric_limits<double>::max();  // it's actually a heuristics of the probability
                                                                     // (we are summing below --> can be >1)

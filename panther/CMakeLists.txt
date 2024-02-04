@@ -4,7 +4,7 @@ project(panther)
 
 # add_definitions(-std=c++17)
 # set(CMAKE_CXX_STANDARD 17)
-add_definitions(-std=c++14)
+add_definitions(-std=c++17)
 #add_definitions(-std=c99)
 
 find_package( Eigen3 REQUIRED )
@@ -73,28 +73,28 @@ add_executable( test_mparser src/test_mparser.cpp )
 target_link_libraries( test_mparser mparser )
 
 
-add_executable(${PROJECT_NAME}_node src/panther_node.cpp src/panther_ros.cpp src/panther.cpp src/solver_ipopt.cpp src/solver_ipopt_utils.cpp src/utils.cpp src/solver_ipopt_guess.cpp src/yaw_guess_generator.cpp src/octopus_search.cpp src/bspline_utils.cpp)
+add_executable(${PROJECT_NAME}_node src/panther_node.cpp src/panther_ros.cpp src/panther.cpp src/solver_ipopt.cpp src/solver_ipopt_utils.cpp src/utils.cpp src/ros_utils.cpp src/solver_ipopt_guess.cpp src/yaw_guess_generator.cpp src/octopus_search.cpp src/bspline_utils.cpp)
 target_include_directories (${PROJECT_NAME}_node PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${DECOMP_UTIL_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
-target_link_libraries(${PROJECT_NAME}_node PUBLIC  mparser ${CASADI_LIBRARIES} ${catkin_LIBRARIES} ${DECOMP_UTIL_LIBRARIES} ${Boost_LIBRARIES})  #${CGAL_LIBS}
+target_link_libraries(${PROJECT_NAME}_node PUBLIC  mparser ${CASADI_LIBRARIES} ${catkin_LIBRARIES} ${DECOMP_UTIL_LIBRARIES} ${Boost_LIBRARIES} stdc++fs)  #${CGAL_LIBS}
 add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS} )
 
-add_executable(test_octopus_search src/examples/test_octopus_search.cpp src/octopus_search.cpp src/bspline_utils.cpp src/utils.cpp) 
-add_dependencies(test_octopus_search ${catkin_EXPORTED_TARGETS} )
-target_link_libraries(test_octopus_search ${catkin_LIBRARIES}) 
+add_executable(test_octopus_search src/examples/test_octopus_search.cpp src/octopus_search.cpp src/bspline_utils.cpp src/utils.cpp src/ros_utils.cpp)
+add_dependencies(test_octopus_search ${catkin_EXPORTED_TARGETS})
+target_link_libraries(test_octopus_search ${catkin_LIBRARIES} ${CASADI_LIBRARIES}) 
 
-add_executable(test_utils src/examples/test_utils.cpp src/utils.cpp)
+add_executable(test_utils src/examples/test_utils.cpp src/utils.cpp src/ros_utils.cpp)
 add_dependencies(test_utils ${catkin_EXPORTED_TARGETS})
-target_link_libraries(test_utils ${catkin_LIBRARIES})
+target_link_libraries(test_utils ${catkin_LIBRARIES} ${CASADI_LIBRARIES})
 
 add_executable(test_bspline_utils src/examples/test_bspline_utils.cpp src/bspline_utils.cpp)
 add_dependencies(test_bspline_utils ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_bspline_utils ${catkin_LIBRARIES})
 
-add_executable(tracker_predictor_node src/tracker_predictor_node.cpp src/tracker_predictor.cpp src/utils.cpp)
+add_executable(tracker_predictor_node src/tracker_predictor_node.cpp src/tracker_predictor.cpp src/utils.cpp src/ros_utils.cpp)
 add_dependencies(tracker_predictor_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(tracker_predictor_node ${catkin_LIBRARIES} ${CASADI_LIBRARIES})
 
-add_executable(test_tracker_predictor src/examples/test_tracker_predictor.cpp src/tracker_predictor.cpp src/utils.cpp)
+add_executable(test_tracker_predictor src/examples/test_tracker_predictor.cpp src/tracker_predictor.cpp src/utils.cpp src/ros_utils.cpp)
 add_dependencies(test_tracker_predictor ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_tracker_predictor ${catkin_LIBRARIES} ${CASADI_LIBRARIES})
 
@@ -104,8 +104,18 @@ add_library(disable_physics src/disable_physics.cpp)
 target_link_libraries(disable_physics ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
 target_link_libraries(move_model ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
 
-pybind_add_module(py_panther MODULE src/py_panther.cpp src/solver_ipopt.cpp src/solver_ipopt_utils.cpp src/utils.cpp src/solver_ipopt_guess.cpp src/yaw_guess_generator.cpp src/octopus_search.cpp src/bspline_utils.cpp)
-target_link_libraries(py_panther PRIVATE ${catkin_LIBRARIES} ${CASADI_LIBRARIES})
+pybind_add_module(py_panther MODULE
+	src/py_panther.cpp
+	src/solver_ipopt.cpp
+	src/solver_ipopt_utils.cpp
+	src/utils.cpp
+	src/solver_ipopt_guess.cpp
+	src/yaw_guess_generator.cpp
+	src/octopus_search.cpp
+	src/bspline_utils.cpp
+)
+
+target_link_libraries(py_panther PRIVATE ${catkin_LIBRARIES} ${CASADI_LIBRARIES} stdc++fs)
 
 
 

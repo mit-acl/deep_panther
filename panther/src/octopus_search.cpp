@@ -7,12 +7,13 @@
  * -------------------------------------------------------------------------- */
 #include <vector>
 #include <random>
-#include "ros/ros.h"
 
 #include "timer.hpp"
 #include "termcolor.hpp"
 #include "octopus_search.hpp"
 #include "bspline_utils.hpp"
+#include "utils.hpp"
+
 using namespace termcolor;
 
 typedef PANTHER_timers::Timer MyTimer;
@@ -85,6 +86,7 @@ void OctopusSearch::setUp(double t_min, double t_max, const ConvexHullsOfCurves_
   num_of_normals_ = num_of_segments_ * num_of_obst_;
 
   hulls_ = hulls;
+  std::cout << hulls.size() << " hulls with " << hulls[0].size() << " elements" << std::endl;
 
   double deltaT = (t_max - t_min) / (1.0 * (M_ - 2 * p_ - 1 + 1));
 
@@ -125,7 +127,7 @@ void OctopusSearch::setVisual(bool visual)
 void OctopusSearch::getBestTrajFound(mt::trajectory& best_traj_found, mt::PieceWisePol& pwp, double dc)
 {
   mt::trajectory traj;
-  CPs2TrajAndPwp_old(best_solution_.qp, best_traj_found, pwp, N_, p_, num_seg_, knots_, dc);
+  CPs2TrajAndPwp_old(dynamicVecOfVec(best_solution_.qp), best_traj_found, pwp, N_, p_, num_seg_, knots_, dc);
 }
 
 void OctopusSearch::getEdgesConvexHulls(mt::Edges& edges_convex_hulls)
@@ -187,7 +189,7 @@ void OctopusSearch::getBestTrajsFound(std::vector<mt::trajectory>& all_trajs_fou
 
     mt::trajectory traj;
     mt::PieceWisePol pwp;
-    CPs2TrajAndPwp_old(cps, traj, pwp, N_, p_, num_seg_, knots_, 0.01);  // Last number is the resolution
+    CPs2TrajAndPwp_old(dynamicVecOfVec(cps), traj, pwp, N_, p_, num_seg_, knots_, 0.01);  // Last number is the resolution
 
     all_trajs_found.push_back(traj);
   }
@@ -216,7 +218,7 @@ void OctopusSearch::getAllTrajsFound(std::vector<mt::trajectory>& all_trajs_foun
 
     mt::trajectory traj;
     mt::PieceWisePol pwp;
-    CPs2TrajAndPwp_old(cps, traj, pwp, N_, p_, num_seg_, knots_, 0.01);  // Last number is the resolution
+    CPs2TrajAndPwp_old(dynamicVecOfVec(cps), traj, pwp, N_, p_, num_seg_, knots_, 0.01);  // Last number is the resolution
 
     all_trajs_found.push_back(traj);
   }
@@ -308,7 +310,7 @@ void OctopusSearch::setBias(double bias)
   bias_ = bias;
 }
 
-void OctopusSearch::setGoal(Eigen::Vector3d& goal)
+void OctopusSearch::setGoal(const Eigen::Vector3d& goal)
 {
   goal_ = goal;
 }
@@ -572,7 +574,7 @@ bool OctopusSearch::computeUpperAndLowerConstraints(const int i, const Eigen::Ve
 
   if (i == (N_ - 3))
   {                                       // impose also that aNm3 is satisfied
-    Eigen::Vector3d vNm2(0.0, 0.0, 0.0);  // Due to the stop condition
+    Eigen::Vector3d vNm2 = Eigen::Vector3d::Zero();  // Due to the stop condition
 
     double c = (knots_(N_ - 3 + p_ + 1) - knots_(N_ - 3 + 2)) / (p_ - 1);
 
@@ -648,7 +650,7 @@ void OctopusSearch::computeInverses()
   }
 }
 
-void OctopusSearch::setq0q1q2(Eigen::Vector3d& q0, Eigen::Vector3d& q1, Eigen::Vector3d& q2)
+void OctopusSearch::setq0q1q2(const Eigen::Vector3d& q0, const Eigen::Vector3d& q1, const Eigen::Vector3d& q2)
 {
   q0_ = q0;
   q1_ = q1;

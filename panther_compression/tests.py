@@ -1,4 +1,6 @@
-from compression.utils.other import ActionManager, posAccelYaw2TfMatrix, State, ObservationManager
+from compression.utils.State import State
+from compression.utils.ActionManager import ActionManager
+from compression.utils.ObservationManager import ObservationManager
 import numpy as np
 
 np.set_printoptions(linewidth=np.nan)

@@ -11,6 +11,7 @@
 #include <iostream>
 #include <iomanip>  // std::setprecision
 #include <deque>
+#include <vector>
 #include "termcolor.hpp"
 #include <Eigen/Dense>
 #include "timer.hpp"
@@ -19,12 +20,12 @@
 // #include <any>
 // #include <utility>
 
-typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Polyhedron_Std;
+typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> Polyhedron_Std;
 typedef std::vector<Polyhedron_Std> ConvexHullsOfCurve_Std;
 typedef std::vector<ConvexHullsOfCurve_Std> ConvexHullsOfCurves_Std;
 
 // Same as above, but with different names
-typedef Eigen::Matrix<double, 3, Eigen::Dynamic> VertexesInterval;
+typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> VertexesInterval;
 typedef std::vector<Polyhedron_Std> VertexesObstacle;
 typedef std::vector<ConvexHullsOfCurve_Std> VertexesObstacles;
 
@@ -45,7 +46,7 @@ enum PlannerStatus
 
 namespace mt  // panther_types
 {
-typedef std::pair<Eigen::Vector3d, Eigen::Vector3d> Edge;
+typedef std::pair<Eigen::VectorXd, Eigen::VectorXd> Edge;
 typedef std::vector<Edge> Edges;
 
 struct log
@@ -65,11 +66,11 @@ struct log
   double obst_avoidance_violation = 0.0;
   double dyn_lim_violation = 0.0;
 
-  Eigen::Vector3d tracking_now_pos;
-  Eigen::Vector3d tracking_now_vel;
+  Eigen::VectorXd tracking_now_pos;
+  Eigen::VectorXd tracking_now_vel;
 
-  Eigen::Vector3d pos;         // Current position of the UAV
-  Eigen::Vector3d G_term_pos;  // Position of the terminal goal
+  Eigen::VectorXd pos;         // Current position of the UAV
+  Eigen::VectorXd G_term_pos;  // Position of the terminal goal
 
   bool success_guess_pos = false;   //
   bool success_guess_yaw = false;   //
@@ -83,8 +84,8 @@ struct obstacleForOpt
 {
   // casadi::DM bbox_inflated;
   // casadi::DM ctrl_pts;
-  std::vector<Eigen::Vector3d> ctrl_pts;
-  Eigen::Vector3d bbox_inflated;
+  std::vector<Eigen::VectorXd> ctrl_pts;
+  Eigen::VectorXd bbox_inflated;
 
   void printInfo()
   {
@@ -99,10 +100,10 @@ struct obstacleForOpt
 
 struct state
 {
-  Eigen::Vector3d pos = Eigen::Vector3d::Zero();
-  Eigen::Vector3d vel = Eigen::Vector3d::Zero();
-  Eigen::Vector3d accel = Eigen::Vector3d::Zero();
-  Eigen::Vector3d jerk = Eigen::Vector3d::Zero();
+  Eigen::VectorXd pos;
+  Eigen::VectorXd vel;
+  Eigen::VectorXd accel;
+  Eigen::VectorXd jerk;
 
   double yaw = 0;
   double dyaw = 0;
@@ -110,51 +111,117 @@ struct state
 
   state()
   {
-    setZero();
+  }
+
+  void setPos(const double x, const double y)
+  {
+    pos.resize(2);
+    pos << x, y;
   }
 
   void setPos(const double x, const double y, const double z)
   {
+    pos.resize(3);
     pos << x, y, z;
   }
+  
+  void setVel(const double x, const double y)
+  {
+    vel.resize(2);
+    vel << x, y;
+  }
+
   void setVel(const double x, const double y, const double z)
   {
+    vel.resize(3);
     vel << x, y, z;
   }
+
+  void setAccel(const double x, const double y)
+  {
+    accel.resize(2);
+    accel << x, y;
+  }
+
   void setAccel(const double x, const double y, const double z)
   {
+    accel.resize(3);
     accel << x, y, z;
+  }
+
+  void setJerk(const double x, const double y)
+  {
+    jerk.resize(2);
+    jerk << x, y;
   }
 
   void setJerk(const double x, const double y, const double z)
   {
+    jerk.resize(3);
     jerk << x, y, z;
   }
 
-  void setPos(const Eigen::Vector3d& data)
+  void setPos(const Eigen::VectorXd& data)
   {
-    pos << data.x(), data.y(), data.z();
+    assert(data.size() == 2 || data.size() == 3);
+    pos.resize(data.size());
+    if (data.size() == 2) {
+      pos << data.x(), data.y();
+    } else {
+      pos << data.x(), data.y(), data.z();
+    }
   }
 
-  void setVel(const Eigen::Vector3d& data)
+  void setVel(const Eigen::VectorXd& data)
   {
-    vel << data.x(), data.y(), data.z();
+    assert(data.size() == 2 || data.size() == 3);
+    vel.resize(data.size());
+    if (data.size() == 2) {
+      vel << data.x(), data.y();
+    } else {
+      vel << data.x(), data.y(), data.z();
+    }
   }
 
-  void setAccel(const Eigen::Vector3d& data)
+  void setAccel(const Eigen::VectorXd& data)
   {
-    accel << data.x(), data.y(), data.z();
+    assert(data.size() == 2 || data.size() == 3);
+    accel.resize(data.size());
+    if (data.size() == 2) {
+      accel << data.x(), data.y();
+    } else {
+      accel << data.x(), data.y(), data.z();
+    }
   }
 
-  void setJerk(const Eigen::Vector3d& data)
+  void setJerk(const Eigen::VectorXd& data)
   {
-    jerk << data.x(), data.y(), data.z();
+    assert(data.size() == 2 || data.size() == 3);
+    jerk.resize(data.size());
+    if (data.size() == 2) {
+      jerk << data.x(), data.y();
+    } else {
+      jerk << data.x(), data.y(), data.z();
+    }
+  }
+
+  void setState(const Eigen::Matrix<double, 6, 1>& data)
+  {
+    pos.resize(2);
+    pos << data(0, 0), data(1, 0);
+    vel.resize(2);
+    vel << data(2, 0), data(3, 0);
+    accel.resize(2);
+    accel << data(4, 0), data(5, 0);
   }
 
   void setState(const Eigen::Matrix<double, 9, 1>& data)
   {
+    pos.resize(3);
     pos << data(0, 0), data(1, 0), data(2, 0);
+    vel.resize(3);
     vel << data(3, 0), data(4, 0), data(5, 0);
+    accel.resize(3);
     accel << data(6, 0), data(7, 0), data(8, 0);
   }
 
@@ -162,20 +229,34 @@ struct state
   {
     yaw = data;
   }
+  
   void setDYaw(const double& data)
   {
     dyaw = data;
   }
+  
   void setDDYaw(const double& data)
   {
     ddyaw = data;
   }
+
   void setZero()
   {
-    pos = Eigen::Vector3d::Zero();
-    vel = Eigen::Vector3d::Zero();
-    accel = Eigen::Vector3d::Zero();
-    jerk = Eigen::Vector3d::Zero();
+    assert(pos.size() == vel.size() && vel.size() == accel.size() && accel.size() == jerk.size());
+    assert(pos.size() > 0);
+    setZero(pos.size());
+  }
+
+  void setZero(int dim)
+  {
+    pos.resize(dim);
+    pos.setZero();
+    vel.resize(dim);
+    vel.setZero();
+    accel.resize(dim);
+    accel.setZero();
+    jerk.resize(dim);
+    jerk.setZero();
     yaw = 0;
     dyaw = 0;
     ddyaw = 0;
@@ -620,6 +701,7 @@ struct PieceWisePol
 
   // times has n+1 elements
   std::vector<double> times;  // [t0,t1,t2,...,tn+1]
+  int dim_;
 
   // coefficients has n elements
   // The coeffients are such that pol(t)=coeff_of_that_interval*[u^deg u^{deg-1} ... u 1]
@@ -627,6 +709,34 @@ struct PieceWisePol
   std::vector<Eigen::VectorXd> all_coeff_x;  // [a b c d ...]' of Int0 , [a b c d ...]' of Int1,...
   std::vector<Eigen::VectorXd> all_coeff_y;  // [a b c d ...]' of Int0 , [a b c d ...]' of Int1,...
   std::vector<Eigen::VectorXd> all_coeff_z;  // [a b c d ...]' of Int0 , [a b c d ...]' of Int1,...
+
+  void setAllCoefficients(std::vector<std::vector<Eigen::VectorXd>> all_coeffs)
+  {
+    if (all_coeffs.size() == 2)
+    {
+      dim_ = 2;
+      setAllCoefficients(all_coeffs[0], all_coeffs[1]);
+    } else {
+      dim_ = 3;
+      setAllCoefficients(all_coeffs[0], all_coeffs[1], all_coeffs[2]);
+    }
+  }
+
+  void setAllCoefficients(std::vector<Eigen::VectorXd> all_coeff_x_, std::vector<Eigen::VectorXd> all_coeff_y_)
+  {
+    dim_ = 2;
+    all_coeff_x = all_coeff_x_;
+    all_coeff_y = all_coeff_y_;
+    all_coeff_z.clear();
+  }
+
+  void setAllCoefficients(std::vector<Eigen::VectorXd> all_coeff_x_, std::vector<Eigen::VectorXd> all_coeff_y_, std::vector<Eigen::VectorXd> all_coeff_z_)
+  {
+    dim_ = 3;
+    all_coeff_x = all_coeff_x_;
+    all_coeff_y = all_coeff_y_;
+    all_coeff_z = all_coeff_z_;
+  }
 
   void clear()
   {
@@ -639,6 +749,11 @@ struct PieceWisePol
   int getDeg() const
   {
     return (all_coeff_x.back().rows() - 1);  // should be the same for y and z
+  }
+
+  int getDim() const
+  {
+    return dim_;
   }
 
   int getNumOfIntervals() const
@@ -778,7 +893,7 @@ struct dynTrajCompiled
   mt::PieceWisePol pwp_mean;
   mt::PieceWisePol pwp_var;
 
-  Eigen::Vector3d bbox;
+  Eigen::VectorXd bbox;
   int id;
   double time_received;  // time at which this trajectory was received from an agent
   bool is_agent;         // true for a trajectory of an agent, false for an obstacle
@@ -834,9 +949,9 @@ struct parameters
   double          z_min;                              //void setVar_z_min(const std::string& value) { z_min = std::stod(value); };
   double          z_max;                              //void setVar_z_max(const std::string& value) { z_max = std::stod(value); };
   double          ydot_max;                           //void setVar_ydot_max(const std::string& value) { ydot_max = std::stod(value); };
-  Eigen::Vector3d          v_max;                              
-  Eigen::Vector3d          a_max;
-  Eigen::Vector3d          j_max;
+  Eigen::VectorXd v_max;                              
+  Eigen::VectorXd a_max;
+  Eigen::VectorXd j_max;
   double          factor_alpha;                       //void setVar_factor_alpha(const std::string& value) { factor_alpha = std::stod(value); };
   double          max_seconds_keeping_traj;           //void setVar_ydot_max(const std::string& value) { ydot_max = std::stod(value); };
   int             a_star_samp_x;                      //void setVar_a_star_samp_x(const std::string& value) { a_star_samp_x = std::stoi(value); };

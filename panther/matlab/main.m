@@ -6,7 +6,8 @@
 %  * See LICENSE file for the license information
 %  * -------------------------------------------------------------------------- */
 
-close all; clc;clear;
+close all; clc;
+if ~exist('plotting_enabled', 'var') clear; end
 doSetup();
 import casadi.*
 
@@ -16,7 +17,7 @@ opti = casadi.Opti();
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CONSTANTS! %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+keep_obs_in_FOV = false; %should the obstacle be kept in the FOV?
 pos_is_fixed=false; %you need to run this file twice to produce the necessary casadi files: both with pos_is_fixed=false and pos_is_fixed=true. 
 
 optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
@@ -26,18 +27,29 @@ optimize_time_alloc=true;
 soft_dynamic_limits_constraints=false;
 soft_obstacle_avoid_constraint=false;
 
-make_plots=false;
+make_plots=true;
 
+%%%%%%%%%
+% total time
+total_time_fitter = 30.0;
+
+%%%%%%%%%%%
+% 3D or 2D?
+dim_pos=2;
+dim_yaw=1;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This is the maximum num of the obstacles 
+num_max_of_obst=1; 
 
 deg_pos=3;
 deg_yaw=2;
-num_seg =6; %number of segments
-num_max_of_obst=1; %This is the maximum num of the obstacles 
+num_seg =6; % number of segments
 
 %Constants for spline fitted to the obstacle trajectory
 fitter.deg_pos=3;
 fitter.num_seg=7;
-fitter.dim_pos=3;
+fitter.dim_pos=dim_pos;
 fitter.num_samples=20;
 fitter_num_of_cps= fitter.num_seg + fitter.deg_pos;
 for i=1:num_max_of_obst
@@ -46,10 +58,17 @@ for i=1:num_max_of_obst
     fitter.bs_casadi{i}=MyCasadiClampedUniformSpline(0,1,fitter.deg_pos,fitter.dim_pos,fitter.num_seg,fitter.ctrl_pts{i}, false);
 end
 fitter.bs=       MyClampedUniformSpline(0,1, fitter.deg_pos, fitter.dim_pos, fitter.num_seg, opti);
-fitter.total_time=6.0; %Time from (time at point d) to end of the fitted spline
+fitter.total_time=total_time_fitter; %Time from (time at point d) to end of the fitted spline
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
+% Overwrite make_plots if set by generateCasadiFiles.m
+% this enables us to run
+% matlab -nodisplay -nosplash -nodesktop -r "addpath('.'); plotting_enabled=false; main; exit;"
+% from command line to only generate the Casadi files without having to open MATLAB.
+if exist('plotting_enabled', 'var')
+    make_plots = plotting_enabled;
+end
 
 sampler.num_samples_obstacle_per_segment = 4;                    %This is used for both the feature sampling (simpson), and the obstacle avoidance sampling
 sampler.num_samples=sampler.num_samples_obstacle_per_segment*num_seg;    %This will also be the num_of_layers in the graph yaw search of C++
@@ -64,9 +83,6 @@ jit=false;
 
 t0_n=0.0; 
 tf_n=1.0;
-
-dim_pos=3;
-dim_yaw=1;
 
 offset_vel=0.1;
 
@@ -114,39 +130,26 @@ total_time=alpha*(tf_n-t0_n); %Total time is (tf_n-t0_n)*alpha.
 
 %%%%% Initial and final conditions, and max values
 %FOR POSITION
-p0=opti.parameter(3,1); v0=opti.parameter(3,1); a0=opti.parameter(3,1);
-pf=opti.parameter(3,1); vf=opti.parameter(3,1); af=opti.parameter(3,1);
+p0=opti.parameter(dim_pos,1); v0=opti.parameter(dim_pos,1); a0=opti.parameter(dim_pos,1);
+pf=opti.parameter(dim_pos,1); vf=opti.parameter(dim_pos,1); af=opti.parameter(dim_pos,1);
 
+% dimension set to 3 so we don't have to change all the configs for 2D
 v_max=opti.parameter(3,1);
 a_max=opti.parameter(3,1);
 j_max=opti.parameter(3,1);
-
-%Normalized v0, a0, v_max,...
-v0_n=v0*alpha;
-a0_n=a0*(alpha^2);
-vf_n=vf*alpha;
-af_n=af*(alpha^2);
-v_max_n=v_max*alpha;
-a_max_n=a_max*(alpha^2); 
-j_max_n=j_max*(alpha^3);
 
 %FOR YAW
 y0=opti.parameter(1,1); ydot0=opti.parameter(1,1); 
 yf=opti.parameter(1,1); ydotf=opti.parameter(1,1);
 ydot_max=opti.parameter(1,1);
 
-ydot0_n=ydot0*alpha;
-ydotf_n=ydotf*alpha;
-ydot_max_n=ydot_max*alpha; %v_max for yaw
-
-
 %%%%% Planes
 n={}; d={};
 for i=1:(num_max_of_obst*num_seg)
     if(optimize_n_planes)
-        n{i}=opti.variable(3,1); 
+        n{i}=opti.variable(dim_pos,1); % TODO: should this be 3 instead of dim_pos?
     else
-        n{i}=opti.parameter(3,1); 
+        n{i}=opti.parameter(dim_pos,1); % TODO: should this be 3 instead of dim_pos?
     end
   
     if(optimize_d_planes)
@@ -304,16 +307,11 @@ for j=1:(sp.num_seg)
       %variable OR if d is a dec variable
       
       if(optimize_n_planes || optimize_d_planes || optimize_time_alloc)
-      
-          for i=1:num_max_of_obst
-            vertexes_ij=obst{i}.vertexes{j};
-            for kk=1:size(vertexes_ij,2)
-                const_p_obs_avoid{end+1}= n{ip}'*vertexes_ij(:,kk) + d{ip} >= 1; 
-            end
-          end
-      
+        vertexes_ij=obst{obst_index}.vertexes{j};
+        for kk=1:size(vertexes_ij,2)
+            const_p_obs_avoid{end+1}= n{ip}'*vertexes_ij(:,kk) + d{ip} >= 1; 
+        end
       end
-      
       
       %and the control points on the other side
       for kk=1:size(Q,2)
@@ -372,6 +370,10 @@ h=alpha*(t_opt_n_samples(2)-t_opt_n_samples(1));
 for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
     
     w_t_b = sp.getPosT(t_opt_n);
+    if dim_pos == 2
+        w_t_b=[w_t_b; 0.0]; % optimizing in x-y-plane
+    end
+
     a=sp.getAccelT(t_opt_n)/(alpha^(2));
     
     qpsi=[cos(yaw/2), 0, 0, sin(yaw/2)]; %Note that qpsi has norm=1
@@ -379,10 +381,16 @@ for t_opt_n=t_opt_n_samples %TODO: Use a casadi map for this sum
     q=multquat(qabc,qpsi); %Note that q is guaranteed to have norm=1
     w_R_b=toRotMat(q);
   
-    w_T_b=[w_R_b w_t_b; zeros(1,3) 1];     w_T_c=w_T_b*b_T_c;     c_T_b=invPose(b_T_c);     b_T_w=invPose(w_T_b);
+    w_T_b=[w_R_b w_t_b; zeros(1,3) 1];
+    w_T_c=w_T_b*b_T_c;
+    c_T_b=invPose(b_T_c);
+    b_T_w=invPose(w_T_b);
     
     w_fevar=obst{1}.centers(:,simpson_index); %TODO: For now, only choosing one obstacle
-    
+    if dim_pos == 2
+        w_fevar=[w_fevar; 0.0];
+    end
+
     c_P=c_T_b*b_T_w*[w_fevar;1]; %Position of the feature in the camera frame
     s=c_P(1:2)/(c_P(3));  %Note that here we are not using f (the focal length in meters) because it will simply add a constant factor in ||s|| and in ||s_dot||
     
@@ -425,6 +433,10 @@ final_pos_cost=(sp.getPosT(tf_n)- pf)'*(sp.getPosT(tf_n)- pf);
 total_time_cost=alpha*(tf_n-t0_n);
 yaw_smooth_cost=sy.getControlCost()/(alpha^(sy.p-1));
 final_yaw_cost=(sy.getPosT(tf_n)- yf)^2;
+
+if ~keep_obs_in_FOV
+    fov_cost = 0; % ignore optimization over yaw angle
+end
 
 total_cost=c_pos_smooth*pos_smooth_cost+...
            c_fov*fov_cost+...
@@ -561,8 +573,19 @@ tmp1=[0, 0, 0, 1.64678, 2.85231, 4.05784, 5.70462, 5.70462, 5.70462;
 tmp2=[0, 0, 0.281832, 0.888652, 1.82877, 2.19427, 2.34944, 2.34944];
 
 
-
 % all_obstacle_bbox_inflated_value= ones(size(all_obstacle_bbox_inflated));
+p0_value=p0_value(1:dim_pos, :);
+tmp1=tmp1(1:dim_pos, :);
+
+v0_value=v0_value(1:dim_pos, :);
+a0_value=a0_value(1:dim_pos, :);
+
+pf_value=pf_value(1:dim_pos, :);
+vf_value=vf_value(1:dim_pos, :);
+af_value=af_value(1:dim_pos, :);
+
+all_nd=all_nd(1:dim_pos+1, :);
+all_nd_value=all_nd_value(1:dim_pos+1, :);
 
 par_and_init_guess= [ {createStruct('thetax_FOV_deg', thetax_FOV_deg, thetax_FOV_deg_value)},...
               {createStruct('thetay_FOV_deg', thetay_FOV_deg, thetay_FOV_deg_value)},...
@@ -661,7 +684,8 @@ compute_dyn_limits_constraints_violation.save('./casadi_generated_files/compute_
 
 %%%%%
 
-my_func = opti.to_function('my_func', par_and_init_guess_exprs, results_expresion, par_and_init_guess_names, results_names);
+options.allow_duplicate_io_names = true;
+my_func = opti.to_function('my_func', par_and_init_guess_exprs, results_expresion, par_and_init_guess_names, results_names, options);
 
 if(pos_is_fixed==true)
     my_func.save('./casadi_generated_files/op_fixed_pos.casadi') %Optimization Problam. The file generated is quite big
@@ -793,65 +817,82 @@ sp.plotPosVelAccelJerk(v_max_n_value, a_max_n_value, j_max_n_value)
 sy.plotPosVelAccelJerk(ydot_max_n_value)
 % sy.plotPosVelAccelJerkFiniteDifferences();
 
-sp.plotPos3D();
-plotSphere( sp.getPosT(t0_n),0.2,'b'); plotSphere( sp.getPosT(tf_n),0.2,'r'); 
+if dim_pos == 3
+    sp.plotPos3D();
+    plotSphere( sp.getPosT(t0_n),0.2,'b'); plotSphere( sp.getPosT(tf_n),0.2,'r');
+    view([280,15]);
+else
+    sp.plotPos2D();
+    p0_t = sp.getPosT(t0_n);
+    pf_t = sp.getPosT(tf_n);
+    plot(p0_t(1), p0_t(2), 'bo');
+    plot(pf_t(1), pf_t(2), 'ro');
+end
 
-view([280,15]); axis equal
+axis equal
+
 % 
 disp("Plotting")
 
 
-
-for t_nobs=t_opt_n_samples %t0:0.3:tf  
+if keep_obs_in_FOV && dim_pos == 3
+    for t_nobs=t_opt_n_samples %t0:0.3:tf  
+        
+        w_t_b = sp.getPosT(t_nobs);
     
-    w_t_b = sp.getPosT(t_nobs);
-%     accel = sp.getAccelT(t_i);% sol.value(A{n})*Tau_i;
+    %     accel = sp.getAccelT(t_i);% sol.value(A{n})*Tau_i;
+        
+        accel_n = sp.getAccelT(t_nobs);
+        accel = accel_n/(alpha_sol^2);
+        
+        yaw = sy.getPosT(t_nobs);
+    %         psiT=sol.value(Psi{n})*Tau_i;
     
-    accel_n = sp.getAccelT(t_nobs);
-    accel = accel_n/(alpha_sol^2);
+        qabc=qabcFromAccel(accel, 9.81);
     
-    yaw = sy.getPosT(t_nobs);
-%         psiT=sol.value(Psi{n})*Tau_i;
-
-    qabc=qabcFromAccel(accel, 9.81);
-
-    qpsi=[cos(yaw/2), 0, 0, sin(yaw/2)]; %Note that qpsi has norm=1
-    q=multquat(qabc,qpsi); %Note that q is guaranteed to have norm=1
-
-    w_R_b=toRotMat(q);
-    w_T_b=[w_R_b w_t_b; 0 0 0 1];
-    plotAxesArrowsT(0.5,w_T_b)
+        qpsi=[cos(yaw/2), 0, 0, sin(yaw/2)]; %Note that qpsi has norm=1
+        q=multquat(qabc,qpsi); %Note that q is guaranteed to have norm=1
     
-    %Plot the FOV cone
-    w_T_c=w_T_b*b_T_c_value;
-    position=w_T_c(1:3,4);
-    direction=w_T_c(1:3,3);
-    length=1;
-    plotCone(position,direction,thetax_FOV_deg_value,length); 
+        w_R_b=toRotMat(q);
+        w_T_b=[w_R_b w_t_b; 0 0 0 1];
+        plotAxesArrowsT(0.5, w_T_b(1:dim_pos))
+        
+        %Plot the FOV cone
+        w_T_c=w_T_b*b_T_c_value;
+        position=w_T_c(1:3,4);
+        direction=w_T_c(1:3,3);
+        length=1;
+        plotCone(position,direction,thetax_FOV_deg_value,length); 
 
-end
+    end
 
-for i=1:num_max_of_obst
-    tmp=substituteWithSolution(obst{1}.centers, results_solved, par_and_init_guess);
-    for ii=1:size(tmp,2)
-        plotSphere(tmp(:,ii),0.2,'g');
+    for i=1:num_max_of_obst
+        tmp=substituteWithSolution(obst{1}.centers, results_solved, par_and_init_guess);
+        disp(tmp)
+        for ii=1:size(tmp,2)
+            plotSphere(tmp(:,ii),0.2,'g');
+        end
     end
 end
 
+grid on; xlabel('x'); ylabel('y');
 
-grid on; xlabel('x'); ylabel('y'); zlabel('z'); camlight; lightangle(gca,45,0)
+if dim_pos == 3
+    zlabel('z'); camlight; lightangle(gca,45,0)
+end
+
 
 syms x y z real
 all_nd_solved=full(sol.all_nd);
-cte_visualization=repmat(vecnorm(all_nd_solved),4,1); %Does not changes the planes
+cte_visualization=repmat(vecnorm(all_nd_solved),dim_pos+1,1); %Does not changes the planes
 all_nd_solved=all_nd_solved./cte_visualization;
 
-for i=1:size(all_nd_solved,2)
-    fimplicit3(all_nd_solved(:,i)'*[x;y;z;1],[-4 4 -4 4 -2 2], 'MeshDensity',2, 'FaceAlpha',0.6) 
+if dim_pos == 3
+    for i=1:size(all_nd_solved,2)
+        fimplicit3(all_nd_solved(:,i)'*[x;y;z;1],[-4 4 -4 4 -2 2], 'MeshDensity',2, 'FaceAlpha',0.6)
+    end
+    view(-91,90)
 end
-
-view(-91,90)
-
 
 all_fov_costs_evaluated=substituteWithSolution(all_fov_costs, results_solved, par_and_init_guess);
 
@@ -932,10 +973,12 @@ all_yaw_value=linspace(0,pi,numel(t_opt_n_samples));
 solution=f(all_yaw_value, alpha_value, ydot0_value, ydotf_value);
 sy_tmp=MyClampedUniformSpline(t0_n,tf_n,deg_yaw, dim_yaw, num_seg, opti);  %creating another object to not mess up with sy
 sy_tmp.updateCPsWithSolution(full(solution)');
+
+if (make_plots)
 sy_tmp.plotPosVelAccelJerk();
 subplot(4,1,1); hold on;
 plot(t_opt_n_samples, all_yaw_value, 'o')
-
+end
 
 f.save('./casadi_generated_files/fit_yaw.casadi') 
 
@@ -983,7 +1026,7 @@ samples_value=[sin(t)+2*sin(2*t);
                cos(t)-2*cos(2*t);
                -sin(3*t)];
 
-
+samples_value=samples_value(1:dim_pos, :);
 solution=f(samples_value);
 
 %%
@@ -998,8 +1041,15 @@ fitter.bs.updateCPsWithSolution(full(solution));
 
 % sp_tmp.plotPosVelAccelJerk();
 
-fitter.bs.plotPos3D();
-scatter3(samples_value(1,:), samples_value(2,:), samples_value(3,:))
+if (make_plots)
+    if fitter.dim_pos == 3
+        fitter.bs.plotPos3D();
+        scatter3(samples_value(1,:), samples_value(2,:), samples_value(3,:))
+    else
+        fitter.bs.plotPos2D();
+        scatter(samples_value(1,:), samples_value(2,:))
+    end
+end
 
 f.save('./casadi_generated_files/fit3d.casadi') 
 
@@ -1033,7 +1083,12 @@ for t=all_t_n
     a = a_n/(alpha^2);
 
     ee=pos_feature-pos;
-    xi=a+[0 0 9.81]';
+    
+    g = [0 0]';
+    if dim_pos == 3
+        g = [0 0 9.81]';
+    end
+    xi=a+g;
 
     r0_star=(ee*norm(xi)^2 - (ee'*xi)*xi);
     r0_star=r0_star/norm(r0_star);
@@ -1042,6 +1097,11 @@ for t=all_t_n
 
     qabc=qabcFromAccel(a, 9.81);
     Rabc=toRotMat(qabc);
+
+    if dim_pos == 2
+        pos = [pos; 0.0];
+        tmp = [tmp; 0.0];
+    end
     w_Tabc_b0y=[Rabc pos; 0 0 0 1]; %The frame "b0y" stands for "body zero yaw", and has yaw=0
     
     b0y_r0star=invPose(w_Tabc_b0y)*[tmp;1]; %express the vector in the frame "b0y" 
@@ -1122,18 +1182,23 @@ ydotf_value=0.0;
 
 disp("Calling function")
 tic
+
+pCPs_value = pCPs_value(1:dim_pos, :);
+pCPs_feature_value = pCPs_feature_value(1:dim_pos, :);
 result=f('pCPs', pCPs_value, 'pCPs_feature', pCPs_feature_value, 'alpha', alpha_value, ...
         'y0', y0_value,'ydot0', ydot0_value, 'ydotf', ydotf_value);
 toc
 disp("Function called")
 
 sy.updateCPsWithSolution(full(result.solution)')
-figure
-sy.plotPos();
-subplot(1,1,1); hold on;
-% plot(all_t_n,full(result.all_yaw),'o')
-plot(all_t_n,full(result.all_yaw_corrected),'o')
 
+if (make_plots)
+    figure
+    sy.plotPos();
+    subplot(1,1,1); hold on;
+    % plot(all_t_n,full(result.all_yaw),'o')
+    plot(all_t_n,full(result.all_yaw_corrected),'o')
+end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1154,7 +1219,7 @@ plot(all_t_n,full(result.all_yaw_corrected),'o')
 
         result=[result,...
                 {createStruct(name_crtl_pts,   fitter.ctrl_pts{i} , crtl_pts_value)},...
-                {createStruct(name_bbox_inflated, fitter.bbox_inflated{i} ,  [1;1;1]  )}];
+                {createStruct(name_bbox_inflated, fitter.bbox_inflated{i} ,  ones(fitter.dim_pos, 1)  )}];
 
     end
          
@@ -1208,7 +1273,11 @@ end
 
 %This checks whether it is a pure variable/parameter in the optimization (returns true) or not (returns false). Note that with an expression that is a combination of several double/variables/parameters will return false
 function result=isPureParamOrVariable(expression)
-    result=expression.is_valid_input();
+    if isa(expression, 'double')
+        result = false;
+    else
+        result=expression.is_valid_input();
+    end
 end
 
 %ONLY WORKS IF print_time=1

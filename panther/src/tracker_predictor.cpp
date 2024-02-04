@@ -53,6 +53,7 @@
 #include <tf2_eigen/tf2_eigen.h>
 
 #include "utils.hpp"
+#include "ros_utils.hpp"
 
 #include "visualization_msgs/MarkerArray.h"
 

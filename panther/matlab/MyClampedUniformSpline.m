@@ -395,7 +395,7 @@ classdef MyClampedUniformSpline < handle
             end
             ADiffT=A*diffT;
             
-            if(numel(symvar(ADiffT'))==0)
+            if(numel(symvar(sym(ADiffT')))==0)
                 ADiffT=double(ADiffT);
             end
            

@@ -2,12 +2,14 @@ import sys
 import numpy as np
 import copy
 from random import random, shuffle
-from compression.utils.other import ActionManager, ObservationManager, getPANTHERparamsAsCppStruct, ExpertDidntSucceed, computeTotalTime
-from compression.utils.other import numpy3XmatrixToListOf3dVectors, computeTotalTime
+from compression.utils.utils import ExpertDidntSucceed, computeTotalTime, numpyNXmatrixToListOfNdVectors
+from compression.utils.yaml_utils import getPANTHERparamsAsCppStruct
+from compression.utils.ActionManager import ActionManager
+from compression.utils.ObservationManager import ObservationManager
 from colorama import init, Fore, Back, Style
 import py_panther
 import math 
-from gym import spaces
+from gymnasium import spaces
 
 
 ###
@@ -43,7 +45,7 @@ final_state.dyaw = np.array([[0.0]]);
 
 obs=py_panther.obstacleForOpt()
 
-obs.ctrl_pts=numpy3XmatrixToListOf3dVectors(np.array([
+obs.ctrl_pts=numpyNXmatrixToListOfNdVectors(np.array([
 [   3.47 ,  -1.36, -0.0867  ],
 [  3.74 ,-1.29, 0.191  ],
 [   4.07, -0.726,  0.799  ],
@@ -143,7 +145,7 @@ info=my_SolverIpopt.getInfoLastOpt();
 #         final_state=self.om.getFinal_f_StateFromObservation(obs);        
 
 #         # invsqrt3_vector=math.sqrt(3)*np.ones((3,1));
-#         # total_time=self.par.factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, self.par.v_max*invsqrt3_vector, self.par.a_max*invsqrt3_vector)
+#         # total_time=self.par.factor_alloc*py_panther.getMinTimeDoubleIntegratorNDFromState(init_state, final_state, self.par.v_max*invsqrt3_vector, self.par.a_max*invsqrt3_vector)
 #         total_time=computeTotalTime(init_state, final_state, self.par_v_max, self.par_a_max, self.par_factor_alloc)
 
 #         ExpertPolicy.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);

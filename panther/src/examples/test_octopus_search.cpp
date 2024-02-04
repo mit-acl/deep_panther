@@ -10,6 +10,7 @@
 #include "octopus_search.hpp"
 #include "panther_types.hpp"
 #include "utils.hpp"
+#include "ros_utils.hpp"
 #include "ros/ros.h"
 #include "visualization_msgs/MarkerArray.h"
 #include "visualization_msgs/Marker.h"

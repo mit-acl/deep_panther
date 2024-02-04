@@ -1,16 +1,23 @@
-import gym
+import gymnasium as gym
 import sys
 import numpy as np
 import copy
-from gym import spaces
-from compression.utils.other import ActionManager, ObservationManager, GTermManager, State, ObstaclesManager, getPANTHERparamsAsCppStruct, computeTotalTime, getObsAndGtermToCrossPath, posAccelYaw2TfMatrix
-from compression.utils.other import TfMatrix2RosQuatAndVector3, TfMatrix2RosPose
-from compression.utils.other import CostComputer
-from compression.utils.other import MyClampedUniformBSpline
-from compression.utils.other import listOf3dVectors2numpy3Xmatrix
-from compression.utils.other import ClosedFormYawSubstituter
+
+from gymnasium import spaces
+
+from compression.utils.utils import GTermManager, computeTotalTime, getObsAndGtermToCrossPath, posAccelYaw2TfMatrix, listOfNdVectors2numpyNXmatrix
+from compression.utils.State import State
+from compression.utils.yaml_utils import getPANTHERparamsAsCppStruct
+from compression.utils.ActionManager import ActionManager
+from compression.utils.ObservationManager import ObservationManager
+from compression.utils.ObstaclesManager import ObstaclesManager
+from compression.utils.ros_utils import TfMatrix2RosQuatAndVector3, TfMatrix2RosPose
+from compression.utils.CostComputer import CostComputer, ClosedFormYawSubstituter
+from compression.utils.MyClampedUniformBSpline import MyClampedUniformBSpline
+
 from colorama import init, Fore, Back, Style
 import py_panther
+
 ##### For rosbag logging
 import rosbag
 from geometry_msgs.msg import PointStamped, TransformStamped, PoseStamped, Vector3, Quaternion, Pose
@@ -32,21 +39,21 @@ class MyEnvironment(gym.Env):
   """
   metadata = {'render.modes': ['human']}
 
-  def __init__(self):
+  def __init__(self, dim=3, num_obs=1):
     super().__init__() #Equivalently, we could also write super(MyEnvironment, self).__init__()    , see 2nd paragraph of https://stackoverflow.com/a/576183
 
     self.verbose = False
 
+    self.dim = dim
     self.len_episode = 200     # Time steps [-]
-
-    self.am=ActionManager();
-    self.om=ObservationManager();
-    self.obsm=ObstaclesManager();
+    self.am=ActionManager(dim=dim);
+    self.om=ObservationManager(dim=dim, num_obs=num_obs);
+    self.obsm=ObstaclesManager(dim=dim, num_obs=num_obs);
     self.gm=GTermManager();
-    self.cfys=ClosedFormYawSubstituter();
+    self.cfys=ClosedFormYawSubstituter(dim=dim);
 
 
-    self.cost_computer=CostComputer()
+    self.cost_computer=CostComputer(dim=dim, num_obs=num_obs)
 
     self.action_shape=self.am.getActionShape();
     self.observation_shape=self.om.getObservationShape();
@@ -69,7 +76,6 @@ class MyEnvironment(gym.Env):
     self.par=getPANTHERparamsAsCppStruct();
     # self.my_SolverIpopt=py_panther.SolverIpopt(self.par);
     #######
-    print("Creating new environment!")
 
     self.constant_obstacle_pos=None
     self.constant_gterm_pos=None
@@ -81,6 +87,8 @@ class MyEnvironment(gym.Env):
     self.force_done=False
 
     self.id=0
+
+    self.seed = None
 
     self.reset()
 
@@ -122,8 +130,10 @@ class MyEnvironment(gym.Env):
   def seed(self, seed=None):
     """Set seed function in this environment and calls
     the openAi gym seed function"""
-    np.random.seed(seed)
-    super().seed(seed)
+    self.seed = seed
+    if seed is not None:
+      np.random.seed(seed)
+      self.reset(seed=seed)
 
   def get_len_ep(self):
     return self.len_episode
@@ -132,10 +142,10 @@ class MyEnvironment(gym.Env):
     assert len_ep > 0, "Episode len > 0!"
     self.len_episode = len_ep
     # self.printwithName(f"Ep. len updated to {self.len_episode } [steps].")
-    self.reset()
+    if self.seed is not None:
+      self.reset(seed=self.seed)
 
   def step(self, f_action_n):
-
     # self.printwithName(f"Received actionN={f_action_n}")
 
     if(self.am.isNanAction(f_action_n)):
@@ -171,7 +181,9 @@ class MyEnvironment(gym.Env):
 
     self.printwithNameAndColor(f"Choosing traj_{index_smallest_augmented_cost}")
     f_traj=self.am.getTrajFromAction(f_action, index_smallest_augmented_cost)
+    f_traj=np.nan_to_num(f_traj)
     f_traj_n=self.am.getTrajFromAction(f_action_n, index_smallest_augmented_cost)
+    f_traj_n=np.nan_to_num(f_traj_n)
     w_posBS, w_yawBS= self.am.f_trajAnd_w_State2wBS(f_traj, self.w_state)
 
     ####################################
@@ -195,7 +207,7 @@ class MyEnvironment(gym.Env):
 
     #Update state
     self.w_state= State(w_posBS.getPosT(actual_dt), w_posBS.getVelT(actual_dt), w_posBS.getAccelT(actual_dt), \
-                        w_yawBS.getPosT(actual_dt), w_yawBS.getVelT(actual_dt));
+                        w_yawBS.getPosT(actual_dt), w_yawBS.getVelT(actual_dt), dim=self.dim);
 
     # self.printwithName("w and f state AFTER UPDATE")
     # self.w_state.print_w_frameHorizontal(self.name);
@@ -215,9 +227,9 @@ class MyEnvironment(gym.Env):
     f_observation=self.om.get_fObservationFrom_w_stateAnd_w_gtermAnd_w_obstacles(self.w_state, self.gm.get_w_GTermPos(), self.w_obstacles);
     f_observationn=self.om.normalizeObservation(f_observation);
 
-
-    dist_current_2gterm=np.linalg.norm(self.w_state.w_pos-self.gm.get_w_GTermPos()) #From the current position to the goal
-    dist_endtraj_2gterm=np.linalg.norm(w_posBS.getLastPos()-self.gm.get_w_GTermPos()) #From the end of the current traj to the goal
+    w_g = self.gm.get_w_GTermPos()[:self.dim]
+    dist_current_2gterm=np.linalg.norm(self.w_state.w_pos-w_g) #From the current position to the goal
+    dist_endtraj_2gterm=np.linalg.norm(w_posBS.getLastPos()-w_g) #From the end of the current traj to the goal
 
 
     goal_reached=(dist_current_2gterm<2.0 and dist_endtraj_2gterm<self.par.goal_radius) 
@@ -287,25 +299,28 @@ class MyEnvironment(gym.Env):
     self.previous_f_observation=f_observation
     self.previous_f_obs_n=f_observationn
 
-    return f_observationn, reward, done, info
+    return f_observationn, reward, done, False, info
 
-  def reset(self):
+  def reset(self, seed = None, options = None):
     self.printwithNameAndColor("Resetting environment")
+
+    super().reset(seed=seed, options=options)
 
     self.time=0.0
     self.timestep = 0
     self.force_done=False
 
-    p0=np.array([[0.0],[0.0],[1.0]])
-    v0=np.array([[0.0],[0.0],[0.0]])
-    a0=np.array([[0.0],[0.0],[0.0]])
+    p0=np.zeros((self.dim, 1))
+    v0=np.zeros((self.dim, 1))
+    a0=np.zeros((self.dim, 1))
     y0=np.array([[0.0]])
     ydot0=np.array([[0.0]])
-    self.w_state=State(p0, v0, a0, y0, ydot0)
+    self.w_state=State(p0, v0, a0, y0, ydot0, dim=self.dim)
 
     if(isinstance(self.constant_obstacle_pos, type(None)) and isinstance(self.constant_gterm_pos, type(None))):
 
       self.obsm.newRandomPos();
+      self.gm.newRandomPos();
 
       prob_choose_cross=1.0;
       if np.random.uniform(0, 1) < 1 - prob_choose_cross:
@@ -316,11 +331,15 @@ class MyEnvironment(gym.Env):
         self.obsm.setPos(w_pos_obstacle)
         self.gm.setPos(w_pos_g_term);        
         # self.printwithNameAndColor("Using cross!")
-
+      
     else:
       self.obsm.setPos(self.constant_obstacle_pos)
       self.gm.setPos(self.constant_gterm_pos);
 
+
+
+    
+    
 
     
     # observation = self.om.getRandomNormalizedObservation()
@@ -337,7 +356,7 @@ class MyEnvironment(gym.Env):
     self.previous_f_obs_n=f_observationn
     # assert observation.shape == self.observation_shape
     # self.printwithName(f"returning obs={observation}")
-    return f_observationn
+    return f_observationn, {}
 
  
   def render(self, mode='human'):
@@ -393,7 +412,7 @@ class MyEnvironment(gym.Env):
       point_msg.header.stamp = time_now;
       point_msg.point.x=f_g[0,0]
       point_msg.point.y=f_g[1,0]
-      point_msg.point.z=f_g[2,0]
+      point_msg.point.z=f_g[2,0] if f_g.shape[0] == 3 else 0.0;
 
       marker_array_msg=MarkerArray()
 
@@ -402,8 +421,11 @@ class MyEnvironment(gym.Env):
         t0=self.time
         tf=self.time + np.max(f_action[:,-1]) #self.am.getTotalTime()#self.par.fitter_total_time
 
+        obs_ctrl_pos = listOfNdVectors2numpyNXmatrix(self.dim, obstacles[i].ctrl_pts)
+        if obs_ctrl_pos.shape[0] == 2:
+          obs_ctrl_pos = np.vstack((obs_ctrl_pos, np.zeros((1, obs_ctrl_pos.shape[1]))))
         bspline_obs_i=MyClampedUniformBSpline(t0=t0, tf=tf, deg=self.par.deg_pos, \
-                                        dim=3, num_seg=self.par.num_seg, ctrl_pts=listOf3dVectors2numpy3Xmatrix(obstacles[i].ctrl_pts) )
+                                        dim=3, num_seg=self.par.num_seg, ctrl_pts=obs_ctrl_pos)
 
         id_sample=0
         num_samples=20
@@ -419,14 +441,14 @@ class MyEnvironment(gym.Env):
           pos=bspline_obs_i.getPosT(t_interm)
           marker_msg.pose.position.x = pos[0];
           marker_msg.pose.position.y = pos[1];
-          marker_msg.pose.position.z = pos[2];
+          marker_msg.pose.position.z = pos[2] if pos.shape[0] == 3 else 0.0;
           marker_msg.pose.orientation.x = 0.0;
           marker_msg.pose.orientation.y = 0.0;
           marker_msg.pose.orientation.z = 0.0;
           marker_msg.pose.orientation.w = 1.0;
           marker_msg.scale.x = obstacles[0].bbox_inflated[0];
           marker_msg.scale.y = obstacles[0].bbox_inflated[1];
-          marker_msg.scale.z = obstacles[0].bbox_inflated[2];
+          marker_msg.scale.z = obstacles[0].bbox_inflated[2] if obstacles[0].bbox_inflated.shape[0] == 3 else 1.0;
           marker_msg.color.a = 1.0*(num_samples-id_sample)/num_samples; 
           marker_msg.color.r = 0.0;
           marker_msg.color.g = 1.0;
@@ -465,7 +487,7 @@ class MyEnvironment(gym.Env):
           pose_stamped=PoseStamped();
           pose_stamped.header.frame_id="world"
           pose_stamped.header.stamp=time_now
-          tf_matrix=posAccelYaw2TfMatrix(w_posBS.getPosT(t_i),w_posBS.getAccelT(t_i),w_yawBS.getPosT(t_i))
+          tf_matrix=posAccelYaw2TfMatrix(w_posBS.getPosT(t_i),w_posBS.getAccelT(t_i),w_yawBS.getPosT(t_i), dim=self.dim)
 
           pose_stamped.pose=TfMatrix2RosPose(tf_matrix)
 

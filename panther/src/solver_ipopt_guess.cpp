@@ -9,7 +9,6 @@
 #include "solver_ipopt.hpp"
 #include "termcolor.hpp"
 #include "bspline_utils.hpp"
-#include "ros/ros.h"
 
 #include <decomp_util/ellipsoid_decomp.h>  //For Polyhedron definition
 #include <unsupported/Eigen/Splines>
@@ -43,18 +42,18 @@ bool SolverIpopt::generateAStarGuess(std::vector<os::solution>& p_guesses)
   double tNPp = knots_p(sp_.N + sp_.p);
   double tNm1Pp = knots_p(sp_.N - 1 + sp_.p);
 
-  Eigen::Vector3d q0, q1, q2;
+  Eigen::VectorXd q0, q1, q2;
 
   /////////////////////
   // See Mathematica Notebook
 
-  Eigen::Vector3d p0 = initial_state_.pos;
-  Eigen::Vector3d v0 = initial_state_.vel;
-  Eigen::Vector3d a0 = initial_state_.accel;
+  Eigen::VectorXd p0 = initial_state_.pos;
+  Eigen::VectorXd v0 = initial_state_.vel;
+  Eigen::VectorXd a0 = initial_state_.accel;
 
-  Eigen::Vector3d pf = final_state_.pos;
-  Eigen::Vector3d vf = final_state_.vel;
-  Eigen::Vector3d af = final_state_.accel;
+  Eigen::VectorXd pf = final_state_.pos;
+  Eigen::VectorXd vf = final_state_.vel;
+  Eigen::VectorXd af = final_state_.accel;
 
   q0 = p0;
   q1 = p0 + (-t1 + tpP1) * v0 / sp_.p;
@@ -68,13 +67,27 @@ bool SolverIpopt::generateAStarGuess(std::vector<os::solution>& p_guesses)
   //     vf)) /
   //     ((-1 + sp_.p) * sp_.p);
 
-  std::cout << "[NL] Running A* from" << q0.transpose() << " to " << final_state_.pos.transpose()
-            << ", allowing time = " << par_.max_runtime_octopus_search * 1000 << " ms" << std::endl;
+  std::cout << "[NL] Running A* from [" << q0.transpose() << "] to [" << final_state_.pos.transpose()
+            << "], allowing time = " << par_.max_runtime_octopus_search * 1000 << " ms" << std::endl;
 
+  // Resize before running octopus search
+  const int old_size = q0.size();
+  q0.conservativeResize(3);
+  q0.tail(3 - old_size).setZero();
+  
+  q1.conservativeResize(3);
+  q1.tail(3 - old_size).setZero();
+  
+  q2.conservativeResize(3);
+  q2.tail(3 - old_size).setZero();
+
+  pf.conservativeResize(3);
+  pf.tail(3 - old_size).setZero();
+  
   ///////////////////////////////
 
   octopusSolver_ptr_->setq0q1q2(q0, q1, q2);
-  octopusSolver_ptr_->setGoal(final_state_.pos);
+  octopusSolver_ptr_->setGoal(pf);
 
   double goal_size = 0.05;  //[meters]
 

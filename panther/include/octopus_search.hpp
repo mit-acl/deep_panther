@@ -106,8 +106,8 @@ public:
 
   void setMaxValuesAndSamples(const Eigen::Vector3d& v_max, const Eigen::Vector3d& a_max, int num_samples_x,
                               int num_samples_y, int num_samples_z, double fraction_voxel_size);
-  void setq0q1q2(Eigen::Vector3d& q0, Eigen::Vector3d& q1, Eigen::Vector3d& q2);
-  void setGoal(Eigen::Vector3d& goal);
+  void setq0q1q2(const Eigen::Vector3d& q0, const Eigen::Vector3d& q1, const Eigen::Vector3d& q2);
+  void setGoal(const Eigen::Vector3d& goal);
   void setSamples(int num_samples_x, int num_samples_y, int num_samples_z);
 
   void setRunTime(double max_runtime);

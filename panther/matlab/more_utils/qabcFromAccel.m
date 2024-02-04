@@ -9,10 +9,14 @@
 function qabc=qabcFromAccel(accel, gravity)
 
 %gravity should be +9.81, or symbolic
-
+dim = size(accel, 1);
 ax=accel(1);
 ay=accel(2);
-az=accel(3);
+
+az=0;
+if dim == 3
+    az=accel(3);
+end
 
 thrust=[ax ay az+gravity];
 thust_normalized=thrust/(sqrt(thrust(1)^2+thrust(2)^2+thrust(3)^2));%norm(thrust); (norm() creates terms like abs()^2 when using symbolic)

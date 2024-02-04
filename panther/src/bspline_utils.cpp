@@ -12,6 +12,20 @@
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////
+template <int SplineDim>
+Eigen::Spline<double, SplineDim, -1> constructEigenSpline(const int &dim, Eigen::RowVectorXd &knots_p, Eigen::MatrixXd &qp_matrix)
+{
+  assert(dim == 2 || dim == 3);
+  if (dim == 2)
+  {
+    // Construct now the B-Spline, see https://github.com/libigl/eigen/blob/master/unsupported/test/splines.cpp#L37
+    Eigen::Spline<double, 2, Eigen::Dynamic> spline_p(knots_p, qp_matrix);
+    return spline_p;
+  } else {
+    Eigen::Spline<double, 3, Eigen::Dynamic> spline_p(knots_p, qp_matrix);
+    return spline_p;
+  }
+}
 
 Eigen::RowVectorXd constructKnotsClampedUniformSpline(double t_init, double t_end, int deg, int num_seg)
 {
@@ -46,47 +60,62 @@ Eigen::RowVectorXd constructKnotsClampedUniformSpline(double t_init, double t_en
 }
 
 //
-mt::state getStatePosSplineT(const std::vector<Eigen::Vector3d> &qp, const Eigen::RowVectorXd &knots_p, int deg_p,
+mt::state getStatePosSplineT(const std::vector<Eigen::VectorXd> &qp, const Eigen::RowVectorXd &knots_p, int deg_p,
                              double t)
 {
   assert(((knots_p.size() - 1) == (qp.size() - 1) + deg_p + 1) && "M=N+p+1 not satisfied");
 
+  const int dim_ = qp[0].size();
+  assert(dim_ == 2 || dim_ == 3);
+
   int num_seg = (knots_p.size() - 1) - 2 * deg_p;  // M-2*p
 
   // Stack the control points in matrices
-  Eigen::Matrix<double, 3, -1> qp_matrix(3, qp.size());
+  Eigen::MatrixXd qp_matrix(dim_, qp.size());
   for (int i = 0; i < qp.size(); i++)
   {
     qp_matrix.col(i) = qp[i];
   }
 
-  // Construct now the B-Spline, see https://github.com/libigl/eigen/blob/master/unsupported/test/splines.cpp#L37
-  Eigen::Spline<double, 3, Eigen::Dynamic> spline_p(knots_p, qp_matrix);
-
-  Eigen::MatrixXd derivatives_p = spline_p.derivatives(t, 4);  // compute the derivatives up to that order
-
   mt::state state_i;
+  if (dim_ == 3)
+  {
+    Eigen::Spline<double, 3, Eigen::Dynamic> spline_p(knots_p, qp_matrix);
+    Eigen::MatrixXd derivatives_p = spline_p.derivatives(t, 4);  // compute the derivatives up to that order
 
-  state_i.setPos(derivatives_p.col(0));  // First column
-  state_i.setVel(derivatives_p.col(1));
-  state_i.setAccel(derivatives_p.col(2));
-  state_i.setJerk(derivatives_p.col(3));
+    state_i.setPos(derivatives_p.col(0));  // First column
+    state_i.setVel(derivatives_p.col(1));
+    state_i.setAccel(derivatives_p.col(2));
+    state_i.setJerk(derivatives_p.col(3));
 
+  } else {
+    Eigen::Spline<double, 2, Eigen::Dynamic> spline_p(knots_p, qp_matrix);
+    Eigen::MatrixXd derivatives_p = spline_p.derivatives(t, 4);  // compute the derivatives up to that order
+
+    state_i.setPos(derivatives_p.col(0));  // First column
+    state_i.setVel(derivatives_p.col(1));
+    state_i.setAccel(derivatives_p.col(2));
+    state_i.setJerk(derivatives_p.col(3));
+  }
   return state_i;
 }
 
 // Given the control points, this function returns the associated traj and mt::PieceWisePol
-void CPs2Traj(std::vector<Eigen::Vector3d> &qp, std::vector<double> &qy, Eigen::RowVectorXd &knots_p,
+void CPs2Traj(std::vector<Eigen::VectorXd> &qp, std::vector<double> &qy, Eigen::RowVectorXd &knots_p,
               Eigen::RowVectorXd &knots_y, std::vector<mt::state> &traj, int deg_p, int deg_y, double dc)
 {
   assert(((knots_p.size() - 1) == (qp.size() - 1) + deg_p + 1) && "M=N+p+1 not satisfied");
 
+  const int dim_ = qp[0].size();
+  assert(dim_ == 2 || dim_ == 3);
+
   int num_seg = (knots_p.size() - 1) - 2 * deg_p;  // M-2*p
 
   // Stack the control points in matrices
-  Eigen::Matrix<double, 3, -1> qp_matrix(3, qp.size());
+  Eigen::MatrixXd qp_matrix(dim_, qp.size());
   for (int i = 0; i < qp.size(); i++)
   {
+    // resize if necessary
     qp_matrix.col(i) = qp[i];
   }
 
@@ -150,17 +179,20 @@ void CPs2Traj(std::vector<Eigen::Vector3d> &qp, std::vector<double> &qy, Eigen::
 }
 
 // Given the control points, this function returns the associated traj and mt::PieceWisePol
-void CPs2TrajAndPwp(std::vector<Eigen::Vector3d> &qp, std::vector<double> &qy, std::vector<mt::state> &traj,
+void CPs2TrajAndPwp(std::vector<Eigen::VectorXd> &qp, std::vector<double> &qy, std::vector<mt::state> &traj,
                     mt::PieceWisePol &pwp_p, int param_pp, int param_py, Eigen::RowVectorXd &knots_p, double dc)
 {
   assert((param_pp == 3) && "param_pp == 3 not satisfied");
   assert((param_py == 2) && "param_py == 2 not satisfied");  // We are assumming this in the code below
   assert(((knots_p.size() - 1) == (qp.size() - 1) + param_pp + 1) && "M=N+p+1 not satisfied");
 
+  const int dim_ = qp[0].size();
+  assert(dim_ == 2 || dim_ == 3);
+
   int num_seg = (knots_p.size() - 1) - 2 * param_pp;  // M-2*p
 
   // Stack the control points in matrices
-  Eigen::Matrix<double, 3, -1> qp_matrix(3, qp.size());
+  Eigen::MatrixXd qp_matrix(dim_, qp.size());
   for (int i = 0; i < qp.size(); i++)
   {
     qp_matrix.col(i) = qp[i];
@@ -189,8 +221,21 @@ void CPs2TrajAndPwp(std::vector<Eigen::Vector3d> &qp, std::vector<double> &qy, s
     pwp_p.times.push_back(knots_p(i));
   }
 
+  std::vector<std::vector<Eigen::VectorXd>> all_coeffs;
+  for (int i = 0; i < dim_; i++) {
+    std::vector<Eigen::VectorXd> coeffs_i;
+    all_coeffs.push_back(coeffs_i);
+  }
+
   for (int j = 0; j < num_seg; j++)
   {
+    for (int i = 0; i < dim_; i++)
+    {
+      Eigen::Matrix<double, 4, 1> cps_i = (qp_matrix.block(i, j, 1, 4).transpose());
+      all_coeffs[i].push_back((M * cps_i).reverse());  // at^3 + bt^2 + ct + d --> [a b c d]'
+    }
+
+    /*
     Eigen::Matrix<double, 4, 1> cps_x = (qp_matrix.block(0, j, 1, 4).transpose());
     Eigen::Matrix<double, 4, 1> cps_y = (qp_matrix.block(1, j, 1, 4).transpose());
     Eigen::Matrix<double, 4, 1> cps_z = (qp_matrix.block(2, j, 1, 4).transpose());
@@ -198,7 +243,10 @@ void CPs2TrajAndPwp(std::vector<Eigen::Vector3d> &qp, std::vector<double> &qy, s
     pwp_p.all_coeff_x.push_back((M * cps_x).reverse());  // at^3 + bt^2 + ct + d --> [a b c d]'
     pwp_p.all_coeff_y.push_back((M * cps_y).reverse());  // at^3 + bt^2 + ct + d --> [a b c d]'
     pwp_p.all_coeff_z.push_back((M * cps_z).reverse());  // at^3 + bt^2 + ct + d --> [a b c d]'
+    */
   }
+
+  pwp_p.setAllCoefficients(all_coeffs);
 
   /////////////////////////////////////////////////////////////////////
   /// FILL ALL THE FIELDS OF TRAJ (BOTH POSITION AND YAW)
@@ -247,7 +295,7 @@ void CPs2TrajAndPwp(std::vector<Eigen::Vector3d> &qp, std::vector<double> &qy, s
 
 // Given the control points, this function returns the associated traj and mt::PieceWisePol
 // Note that if q.size()!=(N+1), then only some of the knots are used
-void CPs2TrajAndPwp_old(std::vector<Eigen::Vector3d> &q, std::vector<mt::state> &traj, mt::PieceWisePol &pwp, int N,
+void CPs2TrajAndPwp_old(const std::vector<Eigen::VectorXd> &q, std::vector<mt::state> &traj, mt::PieceWisePol &pwp, int N,
                         int p, int num_seg, Eigen::RowVectorXd &knots, double dc)
 {
   // std::cout << "q.size()= " << q.size() << std::endl;
