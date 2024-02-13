@@ -19,6 +19,9 @@ When using Deep-PANTHER, please cite [Deep-PANTHER: Learning-Based Perception-Aw
 }
 ```
 
+## Improvements (January 2024)
+[This pull request](https://github.com/mit-acl/deep_panther/pull/6) solves the issues that appear with the new versions of gym (gymnasium), Casadi, and Matlab. This pull request has been merged on the `develop` branch.
+
 ## General Setup
 
 Deep-PANTHER has been tested with Ubuntu 20.04/ROS Noetic. Other Ubuntu/ROS version may need some minor modifications, feel free to [create an issue](https://github.com/mit-acl/panther/issues) if you have any problems.
