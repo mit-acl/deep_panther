@@ -17,7 +17,7 @@ opti = casadi.Opti();
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%% CONSTANTS! %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-keep_obs_in_FOV = false; %should the obstacle be kept in the FOV?
+keep_obs_in_FOV = true; %should the obstacle be kept in the FOV?
 pos_is_fixed=false; %you need to run this file twice to produce the necessary casadi files: both with pos_is_fixed=false and pos_is_fixed=true. 
 
 optimize_n_planes=true;     %Optimize the normal vector "n" of the planes
@@ -27,11 +27,11 @@ optimize_time_alloc=true;
 soft_dynamic_limits_constraints=false;
 soft_obstacle_avoid_constraint=false;
 
-make_plots=true;
+make_plots=false;
 
 %%%%%%%%%
 % total time
-total_time_fitter = 30.0;
+total_time_fitter = 6.0;
 
 %%%%%%%%%%%
 % 3D or 2D?
@@ -44,7 +44,7 @@ num_max_of_obst=1;
 
 deg_pos=3;
 deg_yaw=2;
-num_seg =6; % number of segments
+num_seg=6; % number of segments
 
 %Constants for spline fitted to the obstacle trajectory
 fitter.deg_pos=3;
@@ -147,9 +147,9 @@ ydot_max=opti.parameter(1,1);
 n={}; d={};
 for i=1:(num_max_of_obst*num_seg)
     if(optimize_n_planes)
-        n{i}=opti.variable(dim_pos,1); % TODO: should this be 3 instead of dim_pos?
+        n{i}=opti.variable(dim_pos,1);
     else
-        n{i}=opti.parameter(dim_pos,1); % TODO: should this be 3 instead of dim_pos?
+        n{i}=opti.parameter(dim_pos,1);
     end
   
     if(optimize_d_planes)
@@ -571,6 +571,7 @@ tmp1=[0, 0, 0, 1.64678, 2.85231, 4.05784, 5.70462, 5.70462, 5.70462;
       0, 0, 0, -0.378827, -1.05089, -1.71629, -2.08373, -2.08373, -2.08373; 
       0, 0, 0, 5.62017e-05, 0.00192903, 0.00290378, 0.00011499, 0.00011499, 0.00011499];
 tmp2=[0, 0, 0.281832, 0.888652, 1.82877, 2.19427, 2.34944, 2.34944];
+
 
 
 % all_obstacle_bbox_inflated_value= ones(size(all_obstacle_bbox_inflated));

@@ -28,7 +28,6 @@
 #include <fstream>
 #include <math.h>  // for sqrt
 #include <casadi/casadi.hpp>
-
 #include "utils.hpp"
 
 using namespace boost;
@@ -106,7 +105,6 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
 
   std::map<std::string, casadi::DM> map_arg;
   map_arg["pCPs"] = matrix_qp_guess;
-
   map_arg["alpha"] = (tf - t0);
   for (int i = 0; i < par_.num_max_of_obst; i++)
   {
@@ -130,7 +128,6 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
   double deltaT = (tf - t0) / (double(num_of_layers_));
 
   //////////////////////// Iterate through all the edges of the graph and add the cost
-
   auto es = boost::edges(mygraph_);
   for (auto ed_ptr = es.first; ed_ptr != es.second; ++ed_ptr)  // ed_ptr is edge descriptor pointer
   {

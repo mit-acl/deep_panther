@@ -119,7 +119,6 @@ casadi::DM eigen2CasadiMatrix(const Eigen::VectorXd &data)
 Fitter::Fitter(const int fitter_num_samples)
 {
   std::string folder = casadi_folder();
-  //std::string folder = std::filesystem::current_path().string() + "/../matlab/casadi_generated_files/";
   cf_fit3d_ = casadi::Function::load(folder + "fit3d.casadi");
   fitter_num_samples_ = fitter_num_samples;
 }
@@ -163,7 +162,6 @@ std::vector<Eigen::VectorXd> Fitter::fit(std::vector<Eigen::Vector3d> &samples)
 ClosedFormYawSolver::ClosedFormYawSolver()
 {
   std::string folder = casadi_folder();
-  //std::string folder = std::filesystem::current_path().string() + "/../matlab/casadi_generated_files/";
   cf_ = casadi::Function::load(folder + "get_optimal_yaw_for_fixed_pos.casadi");
 }
 
@@ -466,13 +464,6 @@ void SolverIpopt::setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obst
         vertexes_interval_j.col(8*k+5)=   (Eigen::Vector3d(state.pos.x() - delta.x(), state.pos.y() + delta.y(), pos_z + delta_z));
         vertexes_interval_j.col(8*k+6)=   (Eigen::Vector3d(state.pos.x() - delta.x(), state.pos.y() + delta.y(), pos_z - delta_z));
         vertexes_interval_j.col(8*k+7)=   (Eigen::Vector3d(state.pos.x() - delta.x(), state.pos.y() - delta.y(), pos_z + delta_z));
-
-        /*
-        vertexes_interval_j.col(8*k)=     (Eigen::Vector2d(state.pos.x() + delta.x(), state.pos.y() + delta.y()));
-        vertexes_interval_j.col(8*k+1)=   (Eigen::Vector2d(state.pos.x() + delta.x(), state.pos.y() - delta.y()));
-        vertexes_interval_j.col(8*k+2)=   (Eigen::Vector2d(state.pos.x() - delta.x(), state.pos.y() - delta.y()));
-        vertexes_interval_j.col(8*k+3)=   (Eigen::Vector2d(state.pos.x() - delta.x(), state.pos.y() + delta.y()));
-        */
         // clang-format on
 
         // std::cout << "vertexes_interval_j= \n" << vertexes_interval_j << std::endl;
@@ -933,8 +924,8 @@ bool SolverIpopt::optimize(bool supress_all_prints)
       map_arguments["c_fov"] = par_.c_fov;
       // std::cout << bold << green << "Optimizing for YAW and POSITION!" << reset << std::endl;
 
-      printMap(map_arguments);
-      
+      // printMap(map_arguments);
+
       result = cf_op_(map_arguments);
     }
     else if (par_.mode == "py" && focus_on_obstacle_ == true)

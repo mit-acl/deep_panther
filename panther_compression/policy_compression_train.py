@@ -67,6 +67,8 @@ def single_true(iterable):
 
 
 if __name__ == "__main__":
+
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=2)
     parser.add_argument("--dim", type=int, default=3)
@@ -117,11 +119,11 @@ if __name__ == "__main__":
     set_focus_on_obstacle=False
 
     only_collect_data=False
-    train_only_supervised=False
+    train_only_supervised=True
     reuse_previous_samples=False
 
-    record_bag=False
-    launch_tensorboard=False
+    record_bag=True
+    launch_tensorboard=True
     verbose_python_errors=False
     batch_size = 256
     N_EPOCHS = 250           #WAS 50!! Num epochs for training.

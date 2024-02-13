@@ -13,9 +13,9 @@
 [submodule "submodules/minvo"]
 	path = submodules/minvo
 	url = https://github.com/mit-acl/minvo.git
-[submodule "catkin_simple"]
-	path = submodules/catkin_simple
-	url = https://github.com/catkin/catkin_simple
 [submodule "panther_compression/imitation"]
 	path = panther_compression/imitation
 	url = https://github.com/jtorde/imitation.git
+[submodule "catkin_simple"]
+	path = submodules/catkin_simple
+	url = https://github.com/catkin/catkin_simple
