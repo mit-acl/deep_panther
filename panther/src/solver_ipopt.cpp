@@ -447,7 +447,8 @@ void SolverIpopt::setObstaclesForOpt(const std::vector<mt::obstacleForOpt> &obst
         mt::state state = getStatePosSplineT(obstacle_i.ctrl_pts, knots_p, sp_.p, times[k]);
 
         Eigen::VectorXd delta = obstacle_i.bbox_inflated / 2.0;
-
+        
+        // in the 2D case, obstacles are made really large in the third dimension to imitate a 2D setup
         double pos_z = 0.0;
         double delta_z = 1000.0;
         if (dim_ == 3) {
