@@ -20,7 +20,7 @@ When using Deep-PANTHER, please cite [Deep-PANTHER: Learning-Based Perception-Aw
 ```
 
 ## Improvements (January 2024)
-[This pull request](https://github.com/mit-acl/deep_panther/pull/6) solves the issues that appear with the new versions of gym (gymnasium), Casadi, and Matlab. This pull request has been merged on the `develop` branch.
+[This](https://github.com/mit-acl/deep_panther/pull/6)  and [this](https://github.com/mit-acl/deep_panther/pull/9) pull requests solve the issues that appear with the new versions of gym (gymnasium), Casadi, and Matlab. They also introduce a way to use deep-panther in 2D (and not just 3D). Both pull requests have been merged on the `develop` branch.
 
 ## General Setup
 
