@@ -38,7 +38,6 @@ def getObsAndGtermToCrossPath():
 	w_pos_g_term = center + np.array([[radius_gterm*math.cos(theta_g_term)],[radius_gterm*math.sin(theta_g_term)],[random.uniform(1.0-1.5, 1.0+1.5)]])
 	########
 
-
 	return w_pos_obstacle, w_pos_g_term
 
 
@@ -64,7 +63,7 @@ def normalize(v):
 
 def computeTotalTime(init_state, final_state, par_vmax, par_amax, par_factor_alloc):
 	# invsqrt3_vector=math.sqrt(3)*np.ones((3,1));
-	total_time=par_factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, par_vmax, par_amax)
+	total_time=par_factor_alloc*py_panther.getMinTimeDoubleIntegratorNDFromState(init_state, final_state, par_vmax, par_amax)
 	return total_time
 
 #Wraps an angle in [-pi, pi)
@@ -72,17 +71,23 @@ def computeTotalTime(init_state, final_state, par_vmax, par_amax, par_factor_all
 def wrapInmPiPi(data): #https://stackoverflow.com/a/15927914
 	return (data + np.pi) % (2 * np.pi) - np.pi
 
-def numpy3XmatrixToListOf3dVectors(data):
+def numpyNXmatrixToListOfNdVectors(data):
 	data_list=[]
 	for i in range(data.shape[1]):
 		data_list.append(data[:,i])
 	return data_list
 
-def listOf3dVectors2numpy3Xmatrix(data_list):
-	data_matrix=np.empty((3, len(data_list)))
+def numpy3XmatrixToListOf3dVectors(data):
+	return numpyNXmatrixToListOfNdVectors(data)
+
+def listOfNdVectors2numpyNXmatrix(N, data_list):
+	data_matrix=np.empty((N, len(data_list)))
 	for i in range(len(data_list)):
-		data_matrix[:,i]=data_list[i].reshape(3,)
+		data_matrix[:,i]=data_list[i].reshape(N,)
 	return data_matrix
+
+def listOf3dVectors2numpy3Xmatrix(data_list):
+	return listOfNdVectors2numpyNXmatrix(3, data_list)
 
 def convertPPState2State(ppstate):
 
@@ -121,24 +126,28 @@ def convertPPObstacles2Obstacles(ppobstacles): #pp stands for py_panther
 		obstacles.append(convertPPObstacle2Obstacle(ppobstacle))
 	return obstacles
 
-def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
+def posAccelYaw2TfMatrix(w_pos, w_accel, yaw, dim=3):
 	axis_z=[0,0,1]
 
 	#Hopf fibration approach
-	thrust=w_accel + np.array([[0.0], [0.0], [9.81]]); 
+	thrust=w_accel + np.array([[0.0], [0.0], [9.81]])[:w_accel.shape[0], :];
+	if thrust.shape[0] == 2:
+		thrust = np.concatenate((thrust, np.array([[9.81]])), axis=0)
 	thrust_normalized=thrust/np.linalg.norm(thrust);
 
-	a=thrust_normalized[0];
-	b=thrust_normalized[1];
-	c=thrust_normalized[2];
+	if not np.all(np.isfinite(thrust_normalized)):
+		qabc = pyquaternion.Quaternion(1.0, 0.0, 0.0, 0.0)
+	else:
+		a=thrust_normalized[0];
+		b=thrust_normalized[1];
+		c=thrust_normalized[2];
 
-	tmp=(1/math.sqrt(2*(1+c)));
-	q_w = tmp*(1+c) #w
-	q_x = tmp*(-b)  #x
-	q_y = tmp*(a)   #y
-	q_z = 0         #z
-	qabc=pyquaternion.Quaternion(q_w, q_x, q_y, q_z)  #Constructor is Quaternion(w,x,y,z), see http://kieranwynn.github.io/pyquaternion/#object-initialisation
-
+		tmp=(1/math.sqrt(2*(1+c)));
+		q_w = tmp*(1+c) #w
+		q_x = tmp*(-b)  #x
+		q_y = tmp*(a)   #y
+		q_z = 0         #z
+		qabc=pyquaternion.Quaternion(q_w, q_x, q_y, q_z)  #Constructor is Quaternion(w,x,y,z), see http://kieranwynn.github.io/pyquaternion/#object-initialisation
 
 	q_w = math.cos(yaw/2.0);  #w
 	q_x = 0;                  #x 
@@ -149,8 +158,10 @@ def posAccelYaw2TfMatrix(w_pos, w_accel, yaw):
 	w_q_b=qabc * qpsi
 
 	w_T_b = w_q_b.transformation_matrix;
-	
-	w_T_b[0:3,3]=w_pos.flatten()
+	w_pos_flat = w_pos.flatten()
+	if dim == 2:
+		w_pos_flat = np.concatenate((w_pos_flat, np.array([0.,])))
+	w_T_b[0:3, 3]=w_pos_flat
 	# print(w_T_b)
 
 	return TfMatrix(w_T_b)
@@ -163,7 +174,7 @@ class GTermManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.w_gterm=np.array([[random.uniform(-10.0, 10.0)],[random.uniform(-10.0, 10.0)],[random.uniform(1.0,1.0)]]);
+		self.w_gterm=np.array([[random.uniform(4.0, 9.0)],[random.uniform(-5.0, 5.0)],[random.uniform(1.0, 1.0)]]);
 		#self.w_gterm=np.array([[5.0],[0.0],[1.0]]);
 
 	def newRandomPosFarFrom_w_Position(self, w_position):
@@ -182,10 +193,14 @@ class Trefoil():
 	def __init__(self, pos, scale, offset, slower):
 		self.x=pos[0,0];
 		self.y=pos[1,0];
-		self.z=pos[2,0];
+		self.z = 0.0
+		if pos.shape[0] == 3:
+			self.z=pos[2,0];
 		self.scale_x=scale[0,0]
 		self.scale_y=scale[1,0]
-		self.scale_z=scale[2,0]
+		self.scale_z=0
+		if scale.shape[0] == 3:
+			self.scale_z=scale[2,0]
 		self.offset=offset;
 		self.slower=slower;
 

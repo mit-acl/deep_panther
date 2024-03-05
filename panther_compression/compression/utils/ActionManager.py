@@ -5,7 +5,7 @@ import py_panther
 from colorama import Fore, Style
 
 from .MyClampedUniformBSpline import MyClampedUniformBSpline
-from .utils import generateKnotsForClampedUniformBspline, numpy3XmatrixToListOf3dVectors
+from .utils import generateKnotsForClampedUniformBspline, numpyNXmatrixToListOfNdVectors
 from .State import State
 
 from .yaml_utils import readPANTHERparams
@@ -96,11 +96,11 @@ class ActionManager():
 
 	def normalizeAction(self, action):
 		action_normalized=np.empty(action.shape)
-		action_normalized[:,0:-1]=action[:,0:-1]/self.normalization_constant #Elementwise division
+		action_normalized[:,0:-1]=action[:,0:-1]/self.normalization_constant[:action.shape[0]] #Elementwise division
 		action_normalized[:,-1]=(2.0/self.fitter_total_time)*action[:,-1]-1 #Note that action[0,-1] is in [0, fitter_total_time]
 		# action_normalized[:,-1]=(2.0/1.0)*action[:,-1]-1 #Note that action[0,-1] is in [0, 1]
 
-		for index_traj in range(self.num_traj_per_action):
+		for index_traj in range(action.shape[0]):
 			time_normalized=self.getTotalTime(action_normalized, index_traj);
 			slack=1-abs(time_normalized);
 			if(slack<0):
@@ -194,9 +194,12 @@ class ActionManager():
 		knots_pos=generateKnotsForClampedUniformBspline(0.0, total_time, self.deg_pos, self.num_seg)
 
 		f_pos_ctrl_pts = self.getPosCtrlPtsTraj(f_traj)
+		if self.dim == 2:
+			f_pos_ctrl_pts = np.vstack((f_pos_ctrl_pts, np.zeros((1, f_pos_ctrl_pts.shape[1]))))
 
 		#Convert to w frame
 		w_pos_ctrl_pts = w_state.w_T_f * f_pos_ctrl_pts;
+		w_pos_ctrl_pts = w_pos_ctrl_pts[:self.dim]
 
 		pf=w_pos_ctrl_pts[0:self.dim,-1].reshape((self.dim,1)); #Assumming final vel and accel=0 
 		p0=w_state.w_pos
@@ -251,9 +254,9 @@ class ActionManager():
 
 		#Create and fill solOrGuess object
 		w_sol_or_guess=py_panther.solOrGuess();
-
-		w_sol_or_guess.qp=numpy3XmatrixToListOf3dVectors(w_p_ctrl_pts)
-		w_sol_or_guess.qy=numpy3XmatrixToListOf3dVectors(w_y_ctrl_pts)
+		
+		w_sol_or_guess.qp=numpyNXmatrixToListOfNdVectors(w_p_ctrl_pts)
+		w_sol_or_guess.qy=numpyNXmatrixToListOfNdVectors(w_y_ctrl_pts)
 
 		w_sol_or_guess.knots_p=knots_p
 		w_sol_or_guess.knots_y=knots_y
@@ -306,7 +309,7 @@ class ActionManager():
 		#Append position control points
 		for i in range(3,len(sol_or_guess.qp)-2):
 			# print(sol_or_guess.qp[i].reshape(1,self.dim))
-			traj=np.concatenate((traj, sol_or_guess.qp[i][0:self.dim].reshape(1,self.dim)), axis=1)
+			traj=np.concatenate((traj, sol_or_guess.qp[i].reshape(1,self.dim)), axis=1)
 
 		#Append yaw control points
 		for i in range(2,len(sol_or_guess.qy)-1):

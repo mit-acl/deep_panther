@@ -49,7 +49,8 @@ class StudentPolicy(BasePolicy):
         activation_fn: Type[nn.Module] = nn.ReLU,
         optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
         optimizer_kwargs: Optional[Dict[str, Any]] = None,
-        
+        dim=3,
+        num_obs=1,
     ):
         if optimizer_kwargs is None:
             optimizer_kwargs = {}
@@ -76,11 +77,10 @@ class StudentPolicy(BasePolicy):
         self.name=Style.BRIGHT+Fore.WHITE+"  [Stu]"+Style.RESET_ALL
 
 
-        self.om=ObservationManager();
-        self.am=ActionManager();
+        self.om=ObservationManager(dim=dim, num_obs=num_obs);
+        self.am=ActionManager(dim=dim);
 
         self.features_dim=self.om.getObservationSize()
-
         print("features_dim= ", self.features_dim)
 
         action_dim = get_action_dim(self.action_space)

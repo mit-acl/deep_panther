@@ -17,10 +17,8 @@ int main()
   // YOU NEED TO CALL THIS FILE (rosrun panther calc) FROM THE panther_compression folder. If not it doesn't detect the
   // module. Other option is to add (in the bashrc) this:
   // export PYTHONPATH="${PYTHONPATH}:$(rospack find panther)/../panther_compression"
-  //std::string policy_path = "/home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/1/"
-  //                          "final_policy.pt";
-
-  std::string policy_path = "/home/jannes/catkin_ws/src/deep_panther/panther_compression/trained_policies/Hung_dynamic_obstacles.pt";
+  std::string policy_path = "/home/jtorde/Desktop/ws/src/panther_plus_plus/panther_compression/evals/tmp_dagger/1/"
+                            "final_policy.pt";
 
   py::object tmp = py::module::import("compression.utils.StudentCaller").attr("StudentCaller")(policy_path);
 

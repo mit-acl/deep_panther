@@ -3,7 +3,7 @@ import random
 import py_panther
 
 from .yaml_utils import readPANTHERparams
-from .utils import listOf3dVectors2numpy3Xmatrix, Trefoil
+from .utils import listOfNdVectors2numpyNXmatrix, Trefoil
 from .Obstacle import Obstacle
 
 class ObstaclesManager():
@@ -28,10 +28,15 @@ class ObstaclesManager():
 		self.newRandomPos();
 
 	def newRandomPos(self):
-		self.random_pos=np.array([[random.uniform(-4.0, 4.0)],[random.uniform(-4.0, 4.0)],[random.uniform(1.0,1.0)]]);
-		self.random_offset=random.uniform(0.0, 10*np.pi)
-		self.random_scale=np.array([[random.uniform(0.5, 4.0)],[random.uniform(0.5, 4.0)],[random.uniform(0.5, 4.0)]]);
-		#self.random_pos=np.array([[2.5],[1.0],[1.0]]);
+		if self.dim == 3:
+			self.random_pos=np.array([[random.uniform(-4.0, 4.0)],[random.uniform(-4.0, 4.0)],[random.uniform(1.0,1.0)]]);
+			self.random_offset=random.uniform(0.0, 10*np.pi)
+			self.random_scale=np.array([[random.uniform(0.5, 4.0)],[random.uniform(0.5, 4.0)],[random.uniform(0.5, 4.0)]]);
+			#self.random_pos=np.array([[2.5],[1.0],[1.0]]);
+		elif self.dim == 2:
+			self.random_pos=np.array([[random.uniform(2.0, 6.0)],[random.uniform(-6.0, 6.0)]]);
+			self.random_offset=random.uniform(0.0, 10*np.pi)
+			self.random_scale=np.array([[random.uniform(0.5, 4.0)],[random.uniform(0.5, 4.0)]]);
 
 	def setPos(self, pos):
 		self.random_pos=pos
@@ -67,20 +72,21 @@ class ObstaclesManager():
 		# print(f"Using random_scale={self.random_scale}")
 
 		###HACK TO GENERATE A STATIC OBSTACLE
-		self.random_scale=np.zeros((self.dim,1))
+		self.random_scale=np.zeros((self.dim, 1))
 		####################################
 
 		trefoil=Trefoil(pos=self.random_pos, scale=self.random_scale, offset=self.random_offset, slower=1.5);
 		for i in range(self.num_obs):
-
 			samples=[]
 			for t_interm in np.linspace(t, t + self.fitter_total_time, num=self.fitter_num_samples):#.tolist():
-				samples.append(trefoil.getPosT(t_interm))
+				samples.append(trefoil.getPosT(t_interm)[:self.dim])
 
 			w_ctrl_pts_ob_list=ObstaclesManager.fitter.fit(samples)
 
-			w_ctrl_pts_ob=listOf3dVectors2numpy3Xmatrix(w_ctrl_pts_ob_list)
+			w_ctrl_pts_ob=listOfNdVectors2numpyNXmatrix(self.dim, w_ctrl_pts_ob_list)
 
-			bbox_inflated=np.array([[0.8],[0.8], [0.8]])+2*self.params["drone_radius"]*np.ones((self.dim,1));
+			bbox_inflated=0.8*np.ones((self.dim, 1))+2*self.params["drone_radius"]*np.ones((self.dim,1));
 			w_obs.append(Obstacle(w_ctrl_pts_ob, bbox_inflated))
+			self.newRandomPos()
+
 		return w_obs;

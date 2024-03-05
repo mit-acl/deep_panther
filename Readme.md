@@ -19,6 +19,9 @@ When using Deep-PANTHER, please cite [Deep-PANTHER: Learning-Based Perception-Aw
 }
 ```
 
+## Improvements (January 2024)
+[This pull request](https://github.com/mit-acl/deep_panther/pull/6) solves the issues that appear with the new versions of gym (gymnasium), Casadi, and Matlab. This pull request has been merged on the `develop` branch.
+
 ## General Setup
 
 Deep-PANTHER has been tested with Ubuntu 20.04/ROS Noetic. Other Ubuntu/ROS version may need some minor modifications, feel free to [create an issue](https://github.com/mit-acl/panther/issues) if you have any problems.
@@ -112,6 +115,8 @@ If you want to...
 
 * **Modify the optimization problem:**, You will need to have MATLAB installed (especifically, you will need the `Symbolic Math Toolbox` and the `Phased Array System Toolbox` installed), and follow the steps detailed in the MATLAB section below. You can then make any modification in the optimization problem by modifying the file `main.m`, and then running it. This will generate all the necessary `.casadi` files in the `casadi_generated_files` folder, which will be read by the C++ code.
 
+* **Switch between 3D and 2D**: modify the `dim_pos` parameter in `main.m` and run the file to generate the CasADi files for 2D/3D. There are no changes necessary to the C++ code as it uses dynamically sized Eigen vectors. The `py_panther` interface accepts either 2D or 3D problems and simply passes them on to the C++ / CasADi components. For development, note, that the octopus search guess generator always uses 3D problem formulations. Usually, you don't need to worry about that, though, as the `py_panther` will cast a 2D problem to a 3D problem using very tall obstacles.
+
 * **Train the policy:** You first need to install a linear solver (see instructions below). Additionally, you need the following Python packages.
 
   ```
@@ -140,6 +145,14 @@ import casadi.*
 x = MX.sym('x')
 disp(jacobian(sin(x),x))
 ```
+
+New CasADi files can be generated without opening MATLAB on desktop using the following command
+
+```bash
+matlab -nodisplay -nosplash -nodesktop -r "addpath('.'); plotting_enabled=false; main; exit;"
+```
+
+from within the `panther/matlab/` directory.
 
 </details>
 

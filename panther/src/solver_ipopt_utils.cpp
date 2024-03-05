@@ -62,9 +62,9 @@ void SolverIpopt::saturateQ(std::vector<Eigen::Vector3d> &q)
   }
 }
 
-void SolverIpopt::findCentroidHull(const Polyhedron_Std &hull, Eigen::Vector3d &centroid)
+Eigen::VectorXd SolverIpopt::findCentroidHull(const Polyhedron_Std &hull, int n)
 {
-  centroid = Eigen::Vector3d::Zero();
+  Eigen::VectorXd centroid = Eigen::VectorXd::Zero(n);
 
   for (int i = 0; i < hull.cols(); i++)
   {
@@ -74,9 +74,10 @@ void SolverIpopt::findCentroidHull(const Polyhedron_Std &hull, Eigen::Vector3d &
   {
     centroid = centroid / hull.cols();
   }
+  return centroid;
 }
 
-void SolverIpopt::printStd(const std::vector<Eigen::Vector3d> &v)
+void SolverIpopt::printStd(const std::vector<Eigen::VectorXd> &v)
 {
   for (auto v_i : v)
   {

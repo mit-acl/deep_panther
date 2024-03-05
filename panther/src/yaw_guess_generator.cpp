@@ -28,7 +28,6 @@
 #include <fstream>
 #include <math.h>  // for sqrt
 #include <casadi/casadi.hpp>
-
 #include "utils.hpp"
 
 using namespace boost;
@@ -100,18 +99,16 @@ private:
 ////////////////////////////////////////
 
 casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, double ydot0, double ydotf, double t0,
-                                         double tf, int dim)
+                                         double tf)
 {
   WeightMap weightmap = get(boost::edge_weight, mygraph_);
 
   std::map<std::string, casadi::DM> map_arg;
-
   map_arg["pCPs"] = matrix_qp_guess;
   map_arg["alpha"] = (tf - t0);
   for (int i = 0; i < par_.num_max_of_obst; i++)
   {
-    casadi::DM obs_ctrl_pts = stdVectorEigen3d2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
-    if (dim == 2) obs_ctrl_pts = throwOutThirdDimension(obs_ctrl_pts);
+    casadi::DM obs_ctrl_pts = stdVectorEigen2CasadiMatrix(obstacles_for_opt_[i].ctrl_pts);
     map_arg["obs_" + std::to_string(i) + "_ctrl_pts"] = obs_ctrl_pts;
   }
   map_arg["thetax_FOV_deg"] = par_.fov_x_deg;
@@ -131,7 +128,6 @@ casadi::DM SolverIpopt::generateYawGuess(casadi::DM matrix_qp_guess, double y0, 
   double deltaT = (tf - t0) / (double(num_of_layers_));
 
   //////////////////////// Iterate through all the edges of the graph and add the cost
-
   auto es = boost::edges(mygraph_);
   for (auto ed_ptr = es.first; ed_ptr != es.second; ++ed_ptr)  // ed_ptr is edge descriptor pointer
   {

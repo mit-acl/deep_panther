@@ -6,8 +6,30 @@
  * See LICENSE file for the license information
  * -------------------------------------------------------------------------- */
 #include "utils.hpp"
+#include <casadi/casadi.hpp>
+#include <vector>
+#include <cassert>
 
 #include "termcolor.hpp"
+
+std::vector<Eigen::VectorXd> dynamicVecOfVec(std::vector<Eigen::Vector2d> &v)
+{
+  std::vector<Eigen::VectorXd> v_dyn;
+  for (int i = 0; i < v.size(); i++) v_dyn.push_back(v[i]);
+  return v_dyn;
+}
+
+std::vector<Eigen::VectorXd> dynamicVecOfVec(std::vector<Eigen::Vector3d> &v)
+{
+  std::vector<Eigen::VectorXd> v_dyn;
+  for (int i = 0; i < v.size(); i++) v_dyn.push_back(v[i]);
+  return v_dyn;
+}
+
+std::vector<Eigen::VectorXd> dynamicVecOfVec(std::vector<Eigen::VectorXd> &v)
+{
+  return v;
+}
 
 // https://en.wikipedia.org/wiki/Normal_distribution#Cumulative_distribution_function
 double cdfUnivariateNormalDist(double x, double mu, double std_deviation)
@@ -67,23 +89,26 @@ double getMinTimeDoubleIntegrator1D(const double& p0, const double& v0, const do
   return time;
 }
 
-double getMinTimeDoubleIntegrator3D(const Eigen::Vector3d& p0, const Eigen::Vector3d& v0, const Eigen::Vector3d& pf,
-                                    const Eigen::Vector3d& vf, const Eigen::Vector3d& v_max,
-                                    const Eigen::Vector3d& a_max)
+double getMinTimeDoubleIntegratorND(const Eigen::VectorXd& p0, const Eigen::VectorXd& v0, const Eigen::VectorXd& pf,
+                                    const Eigen::VectorXd& vf, const Eigen::VectorXd& v_max,
+                                    const Eigen::VectorXd& a_max)
 {
-  double min_x = getMinTimeDoubleIntegrator1D(p0.x(), v0.x(), pf.x(), vf.x(), v_max.x(), a_max.x());
-  double min_y = getMinTimeDoubleIntegrator1D(p0.y(), v0.y(), pf.y(), vf.y(), v_max.y(), a_max.y());
-  double min_z = getMinTimeDoubleIntegrator1D(p0.z(), v0.z(), pf.z(), vf.z(), v_max.z(), a_max.z());
-
-  double min_time = std::max({ min_x, min_y, min_z });  // Note that it's the maximum of all the axes
-
+  assert(p0.size() == v0.size() && v0.size() == pf.size() && pf.size() == vf.size()); // we allow v_max and a_max to always be 3D for shared config files
+  std::vector<double> min_i;
+  for (int i = 0; i < p0.size(); i++) {
+    min_i.push_back(
+      getMinTimeDoubleIntegrator1D(p0[i], v0[i], pf[i], vf[i], v_max[i], a_max[i])
+    );
+  }
+  
+  double min_time = *std::max_element(min_i.begin(), min_i.end());
   return min_time;
 }
 
-double getMinTimeDoubleIntegrator3DFromState(mt::state initial_state, mt::state final_state,
-                                             const Eigen::Vector3d& v_max, const Eigen::Vector3d& a_max)
+double getMinTimeDoubleIntegratorNDFromState(mt::state initial_state, mt::state final_state,
+                                             const Eigen::VectorXd& v_max, const Eigen::VectorXd& a_max)
 {
-  return getMinTimeDoubleIntegrator3D(initial_state.pos, initial_state.vel, final_state.pos, final_state.vel, v_max,
+  return getMinTimeDoubleIntegratorND(initial_state.pos, initial_state.vel, final_state.pos, final_state.vel, v_max,
                                       a_max);
 }
 
@@ -399,9 +424,8 @@ bool boxIntersectsSphere(Eigen::Vector3d center, double r, Eigen::Vector3d c1, E
 
 void saturate(Eigen::Vector3d& tmp, const Eigen::Vector3d& min, const Eigen::Vector3d& max)
 {
-  saturate(tmp(0), min(0), max(0));
-  saturate(tmp(1), min(1), max(1));
-  saturate(tmp(2), min(2), max(2));
+  assert(tmp.size() == min.size() && min.size() == max.size());
+  for (int i = 0; i < tmp.size(); i++) saturate(tmp(i), min(i), max(i));
 }
 
 void saturate(int& var, const int min, const int max)
@@ -429,8 +453,10 @@ void saturate(double& var, const double min, const double max)
   }
 }
 
-double angleBetVectors(const Eigen::Vector3d& a, const Eigen::Vector3d& b)
+double angleBetVectors(const Eigen::VectorXd& a, const Eigen::VectorXd& b)
 {
+  assert(a.size() == b.size());
+  assert(a.size() == 2 || a.size() == 3);
   double tmp = a.dot(b) / (a.norm() * b.norm());
 
   saturate(tmp, -1, 1);
@@ -445,40 +471,70 @@ void angle_wrap(double& diff)
   diff -= M_PI;
 }
 
+std::vector<double> eigen2std(const Eigen::Vector2d& v)
+{
+  std::vector<double> std_vec(v.size());
+  Eigen::Map<Eigen::VectorXd>(std_vec.data(), v.size()) = v;
+  return std_vec;
+}
 
 std::vector<double> eigen2std(const Eigen::Vector3d& v)
 {
-  return std::vector<double>{ v.x(), v.y(), v.z() };
+  std::vector<double> std_vec(v.size());
+  Eigen::Map<Eigen::VectorXd>(std_vec.data(), v.size()) = v;
+  return std_vec;
 }
 
-// std::vector<float> eigen2std(const Eigen::Vector3f& v)
-// {
-//   return std::vector<float>{ v.x(), v.y(), v.z() };
-// }
-
-casadi::DM throwOutThirdDimension(casadi::DM matrix)
+std::vector<double> eigen2std(const Eigen::VectorXd& v)
 {
-  casadi::DM matrix_2D(2, matrix.columns());
+  std::vector<double> std_vec(v.size());
+  Eigen::Map<Eigen::VectorXd>(std_vec.data(), v.size()) = v;
+  return std_vec;
+}
+
+casadi::DM checkDimensions(casadi::DM matrix, int dim)
+{
+  casadi::DM matrix_ND(dim, matrix.columns());
   for (int j = 0; j < matrix.columns(); j++)
   {
-    matrix_2D(0, j) = matrix(0, j);
-    matrix_2D(1, j) = matrix(1, j);
+    for (int i = 0; i < dim; i++) matrix_ND(i, j) = matrix(i, j);
   }
-  return matrix_2D;
+  return matrix_ND;
 }
 
-std::vector<double> throwOutThirdDimension(std::vector<double> vector)
+std::vector<Eigen::VectorXd> checkDimensions(std::vector<Eigen::VectorXd> matrix, int dim)
 {
-  return std::vector<double> { vector[0], vector[1] };
+  int m = matrix.size();
+  int n = dim;
+
+  std::vector<Eigen::VectorXd> matrix_ND;
+  for (int j = 0; j < m; j++)
+  {
+    Eigen::VectorXd col_j(n);
+    for (int i = 0; i < n; i++) col_j[i] = matrix[j][i];
+    matrix_ND.push_back(col_j);
+  }
+  return matrix_ND;
+}
+
+std::vector<Eigen::VectorXd> checkDimensions(std::vector<Eigen::Vector3d> matrix, int dim)
+{
+
+  return checkDimensions(dynamicVecOfVec(matrix), dim);
+}
+
+std::vector<Eigen::VectorXd> checkDimensions(std::vector<Eigen::Vector2d> matrix, int dim)
+{
+  return checkDimensions(dynamicVecOfVec(matrix), dim);
 }
 
 std::string casadi_folder()
 {
   std::string this_file = __FILE__;
-  std::filesystem::path folder = std::filesystem::path(this_file);
+  fs::path folder = fs::path(this_file);
   folder.remove_filename();
-  folder = folder / std::filesystem::path("../matlab/casadi_generated_files/");
-  folder = std::filesystem::canonical(folder);
+  folder = folder / fs::path("../matlab/casadi_generated_files/");
+  folder = fs::canonical(folder);
   std::string string_folder{folder.u8string()};
   return string_folder + "/";
 }

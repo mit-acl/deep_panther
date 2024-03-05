@@ -422,7 +422,7 @@ void PantherRos::publishOwnTraj(const mt::PieceWisePol& pwp)
   msg.pwp_mean = pwp2PwpMsg(pwp);
 
   mt::state tmp;
-  tmp.setZero();
+  tmp.setZero(pwp.getDim());
   msg.pwp_var = pwp2PwpMsg(createPwpFromStaticPosition(tmp));  // zero variance
 
   // msg.function = s;

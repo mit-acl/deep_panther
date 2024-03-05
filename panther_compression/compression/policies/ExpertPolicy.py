@@ -32,7 +32,6 @@ class ExpertPolicy(object):
         self.num_obs = num_obs;
         
         ExpertPolicy.my_SolverIpopt = py_panther.SolverIpopt(getPANTHERparamsAsCppStruct(additional_config=additional_config))
-        ExpertPolicy.my_SolverIpopt.setDim(self.dim);
 
         self.am=ActionManager(dim=self.dim, additional_config=additional_config);
         self.om=ObservationManager(dim=self.dim, num_obs=self.num_obs, additional_config=additional_config);
@@ -72,9 +71,8 @@ class ExpertPolicy(object):
         # In the case of policies, the prediction is an action.
         # In the case of critics, it is the estimated value of the observation.
     def predict(self, obs_n, deterministic=True, verbose=True):
-
         if(self.om.isNanObservation(obs_n)):
-            return self.am.getNanAction(), {"Q": 0.0, "guesses": None, "total_time": 0.0}
+            return self.am.getNanAction(), {"Q": 0.0, "guesses": None}
 
         # print(f"self.observation_shape={self.observation_shape}")
         # obs_n=obs_n.reshape((-1,*self.observation_shape)) #Not sure why this is needed
@@ -99,7 +97,7 @@ class ExpertPolicy(object):
         final_state=self.om.getFinal_f_StateFromObservation(obs);        
 
         # invsqrt3_vector=math.sqrt(3)*np.ones((3,1));
-        # total_time=self.par.factor_alloc*py_panther.getMinTimeDoubleIntegrator3DFromState(init_state, final_state, self.par.v_max*invsqrt3_vector, self.par.a_max*invsqrt3_vector)
+        # total_time=self.par.factor_alloc*py_panther.getMinTimeDoubleIntegratorNDFromState(init_state, final_state, self.par.v_max*invsqrt3_vector, self.par.a_max*invsqrt3_vector)
         total_time=computeTotalTime(init_state, final_state, self.par_v_max, self.par_a_max, self.par_factor_alloc)
 
         ExpertPolicy.my_SolverIpopt.setInitStateFinalStateInitTFinalT(init_state, final_state, 0.0, total_time);
@@ -107,27 +105,29 @@ class ExpertPolicy(object):
         ####
         for i in range(len(obstacles)):
             obstacles[i].bbox_inflated = obstacles[i].bbox_inflated  +  self.drone_extra_radius_for_NN*np.ones_like(obstacles[i].bbox_inflated)
+        
         ExpertPolicy.my_SolverIpopt.setObstaclesForOpt(obstacles);
 
         # with nostdout():
         succeed=ExpertPolicy.my_SolverIpopt.optimize(True);
+
         info=ExpertPolicy.my_SolverIpopt.getInfoLastOpt();
 
         # process guesses
         guesses = self.am.guesses2action(ExpertPolicy.my_SolverIpopt.getGuesses())
-        
+
         if not succeed:
             if verbose:
                 self.printFailedOpt(info);
             # exit();
             # raise ExpertDidntSucceed()
-            return self.am.getNanAction(), {"Q": 0.0, "guesses": guesses, "total_time": total_time}
+            return self.am.getNanAction(), {"Q": 0.0, "guesses": guesses}
         else:
             if verbose:
                 self.printSucessOpt(info);
-
+        
         best_solutions=ExpertPolicy.my_SolverIpopt.getBestSolutions();
-
+        
         ##############################################################
         # if(self.am.use_closed_form_yaw_student==True):
         #     #Set the yaw elements to zero
@@ -183,7 +183,7 @@ class ExpertPolicy(object):
 
         # TODO: sometimes we get nans in the last 6 elements. Why?
         #self.am.assertAction(action_normalized)
-        return action_normalized, {"Q": Q, "guesses": guesses, "total_time": total_time}
+        return action_normalized, {"Q": Q, "guesses": guesses}
 
 
         # #### End of call the optimization
@@ -197,8 +197,8 @@ class ExpertPolicy(object):
         # action=self.am.normalizeAction(action)
 
         # action=self.am.getDummyOptimalNormalizedAction()
-    def predictSeveral(self, obs_n, deterministic=True):
 
+    def predictSeveral(self, obs_n, deterministic=True):
         def my_func(thread_index):
             return self.predict( obs_n[thread_index,:,:], deterministic=deterministic)[0]
 
