@@ -12,10 +12,13 @@ alpha=total_time/total_time_n;  %Please read explanation_normalization.svg
 
 dim_pos=3;
 deg_pos=3;
+dim_yaw=1;
+deg_yaw=3;
 num_seg=5;
 basis="MINVO";
 
 sp=MyClampedUniformSpline(t0_n,tf_n,deg_pos, dim_pos, num_seg, opti); %spline position.
+sy=MyClampedUniformSpline(t0_n,tf_n,deg_yaw, dim_yaw, num_seg, opti); %spline yaw (heading).
 
 constraints=[];
 
@@ -23,25 +26,34 @@ constraints=[];
 constraints{end+1}= sp.getPosT(t0_n)== [0 1 1]' ;
 constraints{end+1}= sp.getVelT(t0_n)== [-3 0 -0.4]' ;
 constraints{end+1}= sp.getAccelT(t0_n)== [0 0 0]' ;
+constraints{end+1}= sy.getPosT(t0_n)== 0 ; %Initial yaw, in rad
+constraints{end+1}= sy.getVelT(t0_n)== 0.2 ;%Initial yaw rate, rad/s
 
 %Final conditions
 constraints{end+1}= sp.getPosT(tf_n)== [1 2 3]' ;
 constraints{end+1}= sp.getVelT(tf_n)== [0 0 0]' ;
 constraints{end+1}= sp.getAccelT(tf_n)== [0 0 0]' ;
+constraints{end+1}= sy.getPosT(tf_n) == -pi/2 ; %Final yaw, in radians
+constraints{end+1}= sy.getVelT(tf_n)== 0 ; %Final yaw rate, rad/s
+
 
 %Dynamic limits
 v_max=2*ones(1,3);
 a_max=7*ones(1,3);
 j_max=50*ones(1,3);
+yaw_dot_max=50;
 
 %Dynamic limits normalized
 v_max_n=v_max*alpha;
 a_max_n=a_max*(alpha^2);
 j_max_n=j_max*(alpha^3);
+yaw_dot_max_n=yaw_dot_max*alpha;
 
 constraints=[constraints sp.getMaxVelConstraints(basis, v_max_n)];      %Max vel constraints (position)
 constraints=[constraints sp.getMaxAccelConstraints(basis, a_max_n)];    %Max accel constraints (position)
 constraints=[constraints sp.getMaxJerkConstraints(basis, j_max_n)];     %Max jerk constraints (position)
+
+constraints=[constraints sy.getMaxVelConstraints(basis, yaw_dot_max_n)];     %Max yaw rate constraints (yaw)
 
 opts = struct;
 opts.expand=true; %When this option is true, it goes WAY faster!
@@ -51,11 +63,17 @@ opts.ipopt.max_iter=500;
 opti.solver('ipopt',opts); %{"ipopt.hessian_approximation":"limited-memory"} 
 
 opti.subject_to(constraints)
-opti.minimize(sp.getControlCost())
+opti.minimize(sp.getControlCost() + sy.getControlCost())
 
 sol = opti.solve();
 
 sp.updateCPsWithSolution(sol.value(sp.getCPsAsMatrix()))
+sy.updateCPsWithSolution(sol.value(sy.getCPsAsMatrix()))
 
 sp.plotPosVelAccelJerk(v_max_n, a_max_n, j_max_n)
+sgtitle('Pos, posDot, posDot2, posDot3')
+
 sp.plotPos3D()
+
+sy.plotPosVelAccelJerk()
+sgtitle('Yaw, yawDot, yawDot2, yawDot3')
