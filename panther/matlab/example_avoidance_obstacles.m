@@ -3,7 +3,7 @@ doSetup();
 import casadi.*
 
 
-waypoints=[[40.          4.          1.         30.06858282  3.          0. 1.        ];
+waypoints_UAV1=[[40.          4.          1.         30.06858282  3.          0. 1.        ];
 [ 51.          23.           2.15058651 128.65980825  -0.44914504  1.           1.        ];
 [66.         11.          2.         81.46923439 -2.83078838  1. 1.        ];
 [86.         14.          1.         21.25050551  2.96401609  1.  1.        ];
@@ -23,18 +23,33 @@ waypoints=[[40.          4.          1.         30.06858282  3.          0. 1.  
 [  23.           32.            1.89247232 -125.83765295   -2.30176089   0.            1.        ];
 [  5.          19.           1.         153.43494882   3.  1.           1.        ];
 [ 13.           3.           1.93749886 173.43494882   0.  0.           1.        ]];
+
 %%
+%nonobsts_wp=waypoints(waypoints(:, 6) == 0, :); %keep the ones that have 0
+%obsts_wp=waypoints(waypoints(:, 6) == 1, :); %keep the ones that have 1
 
-
-%Solve without obstacles
+%Solve without obstacles, UAV 1 
 disp("GOING TO OBTAIN INITIAL GUESS...")
-cps_sol_initial_guess=getSolution(false,waypoints,[],false);
+cps_sol_initial_guess_UAV1=getSolution(false,waypoints_UAV1,[],false, []);
 
-%Solve with obstacles
+%Solve with obstacles, UAV 1 
 disp("GOING TO OBTAIN OPTIMAL SOLUTION...")
-cps_sol=getSolution(true,waypoints,cps_sol_initial_guess,true);
+cps_sol_UAV1=getSolution(true,waypoints_UAV1,cps_sol_initial_guess_UAV1,true, []);
 
-function cps_sol=getSolution(do_plots,waypoints, initial_guess,impose_obstacles)
+waypoints_UAV2=waypoints_UAV1;
+waypoints_UAV2(waypoints_UAV2(:,6)==0,1:3)=waypoints_UAV2(waypoints_UAV2(:,6)==0,1:3)-[5,0,0];
+
+%Solve without obstacles, UAV 2 
+disp("GOING TO OBTAIN INITIAL GUESS...")
+cps_sol_initial_guess_UAV2=getSolution(false,waypoints_UAV2,[],false, []);
+
+%Solve with obstacles, UAV 2 
+disp("GOING TO OBTAIN OPTIMAL SOLUTION...")
+cps_sol_UAV2=getSolution(true,waypoints_UAV2,cps_sol_initial_guess_UAV2,true, cps_sol_UAV1);
+
+mergeFigures(figure(1),figure(3)); axis equal;
+
+function cps_sol=getSolution(do_plots,waypoints, initial_guess,impose_obstacles, cps_sol_UAV1)
 
 if(impose_obstacles==false)
     waypoints(:,6)=0;
@@ -48,7 +63,9 @@ num_max_of_obst = 9;
 
 t0_n=0.0; 
 tf_n=1.0;
-total_time=300;
+total_time=opti.variable(1,1);
+opti.set_initial(total_time,30)
+%total_time=300;
 total_time_n=(tf_n-t0_n);
 alpha=total_time/total_time_n;  %Please read explanation_normalization.svg
 
@@ -66,14 +83,38 @@ sp=MyClampedUniformSpline(t0_n,tf_n,deg_pos, dim_pos, num_seg, opti); %spline po
 
 constraints=[];
 
+constant_vel_norm=100;%m/s
+
+init_heading=[2 2 0]';    init_vel = constant_vel_norm*init_heading/norm(init_heading);
+final_heading=[-1 -1 0]'; final_vel = constant_vel_norm*final_heading/norm(final_heading);
 %Initial heading
-constraints{end+1}= sp.getVelT(t0_n)== [1 1 0]' ;
+%constraints{end+1}= sp.getVelT(t0_n)== init_vel;
 
 %Final heading
-constraints{end+1}= sp.getVelT(tf_n)== [-1 -1 0]' ;
+%constraints{end+1}= sp.getVelT(tf_n)== final_vel;
+
+all_tn_i_for_vel_constraints=0:0.05:1;
+
+%Constant airspeed
+for tn_i=all_tn_i_for_vel_constraints
+    vel_uav=sp.getVelT(tn_i);
+    %constraints{end+1} = vel_uav'*vel_uav == constant_vel_norm^2;
+end
+
+dist_between_UAVs=2;
+if(numel(cps_sol_UAV1)>0)
+    sp_uav1=MyClampedUniformSpline(t0_n,tf_n,deg_pos, dim_pos, num_seg, opti, false);
+    sp_uav1.updateCPsWithSolution(cps_sol_UAV1);
+    for tn_i=all_tn_i_for_vel_constraints
+        pos_uav1=sp_uav1.getPosT(tn_i);
+        pos_uav2=sp.getPosT(tn_i);
+        dist=pos_uav2-pos_uav1;
+        constraints{end+1} = dist'*dist>=dist_between_UAVs^2;
+    end
+end
 
 %Dynamic limits
-v_max=20*ones(1,3);     a_max=200*ones(1,3);        j_max=50*ones(1,3);
+v_max=100*ones(1,3);     a_max=1*ones(1,3);        j_max=50*ones(1,3);
 %Dynamic limits normalized
 v_max_n=v_max*alpha;   a_max_n=a_max*(alpha^2);  j_max_n=j_max*(alpha^3);
 
@@ -87,6 +128,8 @@ opts.print_time=0;
 opts.ipopt.print_level=2; 
 opts.ipopt.max_iter=1000;
 opti.solver('ipopt',opts); %{"ipopt.hessian_approximation":"limited-memory"} 
+
+
 
 %Force it to pass through the non-obstacles waypoints
 penalty_wp_obstacles=0;
@@ -126,7 +169,7 @@ end
 
 %SOLVE
 opti.subject_to(constraints)
-opti.minimize( penalty_wp_obstacles + (1e-10)*sp.getControlCost())% 
+opti.minimize( penalty_wp_obstacles + (1e-9)*sp.getControlCost())% 
 
 tic
 sol = opti.solve();
@@ -146,24 +189,91 @@ if(do_plots)
     pos_nonobsts_wp=nonobsts_wp(:,1:3)';
 
     %PLOTTING
-    sp.plotPosVelAccelJerk(v_max_n, a_max_n, j_max_n)
-    sp.plotPos3D()
+    %sp.plotPosVelAccelJerk(v_max_n, a_max_n, j_max_n)
+    if(numel(cps_sol_UAV1)>0)
+        color='g';
+    else
+        color='b';
+    end
+
+    sp.plotPos3D(color)
+    
     lighting gouraud; shading interp; light('Position', [1 0 1], 'Style', 'infinite');
     for obst_i=1:size(pos_obsts_wp,2)
        plotSphere(pos_obsts_wp(:,obst_i), Ra, 'r');
     end
     for obst_i=1:size(pos_nonobsts_wp,2)
-       plotSphere(pos_nonobsts_wp(:,obst_i), 2, 'b');
+       plotSphere(pos_nonobsts_wp(:,obst_i), 2, color);
     end
     set(gcf, 'Alpha', 0.01);
     xlim([min(waypoints(:,1))-2*Ra,max(waypoints(:,1))+2*Ra])
     ylim([min(waypoints(:,2))-2*Ra,max(waypoints(:,2))+2*Ra])
     zlim([min(waypoints(:,3))-2*Ra,max(waypoints(:,3))+2*Ra])
-end
+
+
+    figure
+    all_vels=[];
+    for tn_i=all_tn_i_for_vel_constraints
+        vel_uav=sp.getVelT(tn_i);
+        all_vels=[all_vels sqrt(vel_uav'*vel_uav)];
+    end
+    plot(all_tn_i_for_vel_constraints, all_vels,'o','LineWidth',4)
+    %ylim([0,5])
+    title("Norm of the velociy")
+
+    sol.value(total_time)
 
 end
 
+end
 
+
+function mergeFigures(fig1, fig2)
+%MERGEFIGURESTOONEAXIS Merges all plots from two figures into a single axis.
+%
+%   mergeFiguresToOneAxis(fig1, fig2)
+%
+%   Inputs:
+%       fig1 - Handle to the first figure
+%       fig2 - Handle to the second figure
+
+    % Validate input
+    if nargin < 2
+        error('Two figure handles are required.');
+    end
+
+    % Create new figure with one axis
+    mergedFig = figure('Name', 'Merged Figure');
+    ax = axes(mergedFig);  % One axis to hold all plots
+    hold(ax, 'on');        % Allow overlaying
+
+    % Merge plots from fig1
+    copyAxesContents(fig1, ax);
+
+    % Merge plots from fig2
+    copyAxesContents(fig2, ax);
+
+    hold(ax, 'off');
+    %legend('show');  % Automatically show legend if any
+end
+
+function copyAxesContents(sourceFig, targetAx)
+    % Get all axes in source figure
+    axesList = findall(sourceFig, 'type', 'axes');
+
+    for k = 1:length(axesList)
+        srcAx = axesList(k);
+        % Copy each child object (lines, surfaces, etc.)
+        children = allchild(srcAx);
+        for c = 1:length(children)
+            obj = copyobj(children(c), targetAx);
+            % Try to preserve styles if applicable
+            if isprop(obj, 'DisplayName')
+                set(obj, 'DisplayName', get(children(c), 'DisplayName'));
+            end
+        end
+    end
+end
 %%CURVATURE CONSTRAINTS
 % Do not work well with standard B-Splines
 % Better impose max accel, jerk,...
